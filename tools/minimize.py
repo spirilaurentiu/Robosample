@@ -3,9 +3,9 @@ from openmm import app
 import openmm as mm
 from openmm import unit
 
-prmtop_file = "examples/pro.prmtop"
-rst7_file = "examples/pro.rst7"
-out_rst7 = "examples/pro-min.rst7"
+prmtop_file = "examples/ffar1.prmtop"
+rst7_file = "examples/ffar1.rst7"
+out_rst7 = "examples/ffar1-min.rst7"
 
 structure = pmd.load_file(prmtop_file, rst7_file)
 system = structure.createSystem(
@@ -30,7 +30,7 @@ simulation = app.Simulation(
 )
 
 simulation.context.setPositions(structure.positions)
-simulation.minimizeEnergy(maxIterations=1000)
+simulation.minimizeEnergy()
 state = simulation.context.getState(getPositions=True)
 
 structure.positions = state.getPositions()

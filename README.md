@@ -18,8 +18,9 @@ If you use **Robosample** in your research, please cite:
 
 The following publications describe the underlying algorithms or demonstrate applications of the software:
 
-> Spiridon, L., & Minh, D. D. (2017). **Hamiltonian Monte Carlo with constrained molecular dynamics as Gibbs sampling.** *Journal of Chemical Theory and Computation*, 13(10), 4649-4659. [![DOI](https://img.shields.io/badge/DOI-10.1021/acs.jctc.7b00570-orange.svg)](https://doi.org/10.1021/acs.jctc.7b00570)
-> Manoliu, L. C. E., Martin, E. C., Milac, A. L., & Spiridon, L. (2021). **Effective Use of Empirical Data for Virtual Screening against APJR GPCR Receptor.** *Molecules*, 26(16), 4894. [![DOI](https://img.shields.io/badge/DOI-10.3390/molecules26164894-green.svg)](https://doi.org/10.3390/molecules26164894)
+* > Spiridon, L., & Minh, D. D. (2017). **Hamiltonian Monte Carlo with constrained molecular dynamics as Gibbs sampling.** *Journal of Chemical Theory and Computation*, 13(10), 4649-4659. [![DOI](https://img.shields.io/badge/DOI-10.1021/acs.jctc.7b00570-orange.svg)](https://doi.org/10.1021/acs.jctc.7b00570)
+
+* > Manoliu, L. C. E., Martin, E. C., Milac, A. L., & Spiridon, L. (2021). **Effective Use of Empirical Data for Virtual Screening against APJR GPCR Receptor.** *Molecules*, 26(16), 4894. [![DOI](https://img.shields.io/badge/DOI-10.3390/molecules26164894-green.svg)](https://doi.org/10.3390/molecules26164894)
 
 ## Check hardware acceleration capabilities
 
@@ -41,27 +42,27 @@ wsl --version
 
 Check that the driver (if already installed) works correctly:
 
-- Userspace tool works, driver communicates with kernel and GPU is accessible: `nvidia-smi` should output a table showing your GPU name (e.g., RTX 4090) and `Driver Version: 5xx.xx`.
+* Userspace tool works, driver communicates with kernel and GPU is accessible: `nvidia-smi` should output a table showing your GPU name (e.g., RTX 4090) and `Driver Version: 5xx.xx`.
 
-- Userspace tool exists: `command -v nvidia-smi` should point to `/usr/bin/nvidia-smi`. If empty, there is a `$PATH` or package issue.
+* Userspace tool exists: `command -v nvidia-smi` should point to `/usr/bin/nvidia-smi`. If empty, there is a `$PATH` or package issue.
 
-- Confirm kernel module is active: `cat /proc/driver/nvidia/version` and, if `nvidia-smi` works, matches `nvidia-smi --query-gpu=driver_version --format=csv,noheader`.
+* Confirm kernel module is active: `cat /proc/driver/nvidia/version` and, if `nvidia-smi` works, matches `nvidia-smi --query-gpu=driver_version --format=csv,noheader`.
 
-- Kernel module is loaded: `lsmod | grep nvidia` which should output `nvidia, nvidia_drm, nvidia_modeset, nvidia_uvm`. If empty, the driver is not loaded.
+* Kernel module is loaded: `lsmod | grep nvidia` which should output `nvidia, nvidia_drm, nvidia_modeset, nvidia_uvm`. If empty, the driver is not loaded.
 
-- Verify module actually exists: `modinfo nvidia | grep filename` and can be inserted manually: `sudo modprobe nvidia`.
+* Verify module actually exists: `modinfo nvidia | grep filename` and can be inserted manually: `sudo modprobe nvidia`.
 
-- `nouveau`, an open-source reverse-engineered Linux graphics driver for NVIDIA cards, is fully disabled. The following commands should return nothing: `lsmod | grep nouveau`, `cat /etc/modprobe.d/* | grep nouveau` and `lsinitramfs /boot/initrd.img-$(uname -r) | grep nouveau`.
+* `nouveau`, an open-source reverse-engineered Linux graphics driver for NVIDIA cards, is fully disabled. The following commands should return nothing: `lsmod | grep nouveau`, `cat /etc/modprobe.d/* | grep nouveau` and `lsinitramfs /boot/initrd.img-$(uname -r) | grep nouveau`.
 
-- Kernel module loads successfully: `dmesg | grep -i nvidia`.
+* Kernel module loads successfully: `dmesg | grep -i nvidia`.
 
-- Driver installed for current kernel: `uname -r` and `dkms status | grep nvidia` should match.
+* Driver installed for current kernel: `uname -r` and `dkms status | grep nvidia` should match.
 
-- Driver bound to GPU: `lspci -k | grep -A 3 -i nvidia` which should output `Kernel driver in use: nvidia`. If it says `nouveau`, the wrong driver bound to this GPU.
+* Driver bound to GPU: `lspci -k | grep -A 3 -i nvidia` which should output `Kernel driver in use: nvidia`. If it says `nouveau`, the wrong driver bound to this GPU.
 
-- Secure Boot is disabled: `mokutil --sb-state`. The DKMS-built nvidia.ko module may be blocked from loading unless it is signed and enrolled via MOK. This is one of the most common post-installation failure modes on UEFI systems.
+* Secure Boot is disabled: `mokutil --sb-state`. The DKMS-built nvidia.ko module may be blocked from loading unless it is signed and enrolled via MOK. This is one of the most common post-installation failure modes on UEFI systems.
 
-- Driver is actually visible: `lspci | grep -i nvidia`.
+* Driver is actually visible: `lspci | grep -i nvidia`.
 
 Please note that `nvcc` is part of CUDA toolkit, not Nvidia driver, so we do not test for it here.
 
@@ -80,9 +81,9 @@ sudo apt autoremove
 
 Confirm that we uninstalled everything:
 
-- `lsmod | grep nvidia` should be empty.
+* `lsmod | grep nvidia` should be empty.
 
-- `lspci -k | grep -A3 -i nvidia` should show `nouveau`.
+* `lspci -k | grep -A3 -i nvidia` should show `nouveau`.
 
 Drivers can be downloaded either manually from the Nnvidia website or automatically by Ubuntu. However, manual downloads don't support DKMS (Dynamic Kernel Module Support), meaning that kernel updates can potentially break the driver installation. `ubuntu-drivers` is safer because it considers Ubuntu version GLIBC and kernel stability, whereas the website just looks at the GPU model. `ubuntu-drivers` uses DKMS, meaning that the driver automatically rebuilds itself when the kernel updates. Note that both methods respect the compatibility matrix.
 
@@ -125,15 +126,15 @@ If not already done, download and install [normal Windows driver (Game Ready or 
 
 Open Linux and check that:
 
-- Windows driver is exposed to WSL: `nvidia-smi` should work and `command -v nvidia-smi` should point to Windows Nvidia driver reflection `/usr/lib/wsl/lib/nvidia-smi`.
+* Windows driver is exposed to WSL: `nvidia-smi` should work and `command -v nvidia-smi` should point to Windows Nvidia driver reflection `/usr/lib/wsl/lib/nvidia-smi`.
 
-- Linux Nvidia driver is not installed: `dpkg -l | grep nvidia` should be empty.
+* Linux Nvidia driver is not installed: `dpkg -l | grep nvidia` should be empty.
 
-- Confirm kernel module is not activate: `/proc/driver/nvidia/version` and `dkms status | grep nvidia` should be empty.
+* Confirm kernel module is not activate: `/proc/driver/nvidia/version` and `dkms status | grep nvidia` should be empty.
 
-- No kernel module attempts exist: `lsmod | grep nvidia` should be empty.
+* No kernel module attempts exist: `lsmod | grep nvidia` should be empty.
 
-- GPU bridge device exists: `ls -l /dev/dxg`.
+* GPU bridge device exists: `ls -l /dev/dxg`.
 
 If any of these tests fail, it means that the driver is incorrectly installed. We begin by checking what drivers we currently have installed:
 
@@ -154,17 +155,17 @@ Shutdown WSL from `Powershell` and restart (WSL does not have a real reboot). Up
 wsl --shutdown
 ```
 
-## OpenCL - vendor based
+## OpenCL * vendor based
 
 OpenCL installation depends on the udnerlying hardware:
 
-- Nvidia GPU: already installed with the divers.
+* Nvidia GPU: already installed with the divers.
 
-- AMD GPU: TODO
+* AMD GPU: TODO
 
-- Intel GPU/CPU: install `sudo apt-get install intel-opencl-icd`
+* Intel GPU/CPU: install `sudo apt-get install intel-opencl-icd`
 
-- AMD CPU: TODO
+* AMD CPU: TODO
 
 Other dependencies will be installed via `conda` (see below).
 
@@ -256,8 +257,8 @@ CUDA Toolkit version is dependent on the major GCC version:
 | **12.4, 12.5, 12.6** | **13.2**                  | 6.x                       |
 | **12.1, 12.2, 12.3** | **12.2**                  | 6.x                       |
 | **12**               | **12.1**                  | 6.x                       |
-| **11.4.1 - 11.8**    | **11**                    | 6.x                       |
-| **11.1 - 11.4.0**    | **10**                    | 6.x                       |
+| **11.4.1 * 11.8**    | **11**                    | 6.x                       |
+| **11.1 * 11.4.0**    | **10**                    | 6.x                       |
 | **11**               | **9**                     | 6.x                       |
 | **10.1, 10.2**       | **8**                     | 4.8.5                     |
 | **9.2, 10.0**        | **7**                     | 4.8.5                     |
@@ -268,11 +269,11 @@ CUDA Toolkit version is dependent on the major GCC version:
 
 The development environment is a combination of `.yaml` files from `envs/`:
 
-- `envs/robo_py312.yaml` (mandatory)
+* `envs/robo_py312.yaml` (mandatory)
 
-- `envs/cuda*.yaml` with the correct CUDA Toolkit/compiler version pair.
+* `envs/cuda*.yaml` with the correct CUDA Toolkit/compiler version pair.
 
-- `envs/util.yaml` for non-essential, but useful packages.
+* `envs/util.yaml` for non-essential, but useful packages.
 
 We combine into an environment that contains all tools needed to configure and build the project. The name of the combined environment is the name of the last `.yaml` file in sequence (in our case, `robo_py312.yaml`):
 
@@ -332,11 +333,11 @@ code Robosample/
 
 The repository comes with a nubmer of pre-configured settings:
 
-- Extensions: Open the extensions tab and type `@recommended`. We recommend using `CodeLLDB` for a better debugging experience and `clangd` for faster code completion (notice that it requries a language server to be installed, so follow their project description).
+* Extensions: Open the extensions tab and type `@recommended`. We recommend using `CodeLLDB` for a better debugging experience and `clangd` for faster code completion (notice that it requries a language server to be installed, so follow their project description).
 
-- Build configurations: type `Left-Ctrl + Shift + P` and run `CMake: Select Configure Preset` and `CMake: Select Build Preset`, then press `F7`. Files will be automatically installed in `python/robosample/`.
+* Build configurations: type `Left-Ctrl + Shift + P` and run `CMake: Select Configure Preset` and `CMake: Select Build Preset`, then press `F7`. Files will be automatically installed in `python/robosample/`.
 
-- Run configurations for `Python` and `C++` debugging.
+* Run configurations for `Python` and `C++` debugging.
 
 To select a build type, press `Ctrl + Shift + P`, then `CMake: Select configure preset` and compile using `F7`.
 

@@ -98,6 +98,29 @@ AMBER_GLYCAM_06_H_ATOM_TYPES = {
     'P ': 'phosphate in phosphates',
 }
 
+AMBER_LIPID_21_ATOM_TYPES = {
+    'cA': 'sp3',
+    'cB': 'sp2',
+    'cC': 'sp2',
+    'cD': 'sp3',
+    'hA': 'sp3',
+    'hB': 'sp3',
+    'hE': 'sp3',
+    'hL': 'sp3',
+    'hN': 'sp3',
+    'hO': 'sp3',
+    'hX': 'sp3',
+    'nA': 'sp3',
+    'nN': 'sp2',
+    'oC': 'sp2',
+    'oH': 'sp3',
+    'oO': 'sp2',
+    'oP': 'sp2',
+    'oS': 'sp3',
+    'oT': 'sp3',
+    'pA': 'sp3',
+}
+
 AMBER_GAFF2_ATOM_TYPES = {
     'c' : 'Sp2 C carbonyl group',
     'cs': 'Sp2 C in c=S',

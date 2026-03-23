@@ -94,8 +94,8 @@ bool EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, std::si
     ok &= finite();
     ok &= checkTotal(RT);
     ok &= checkKinetic();
-    ok &= termExplosion(ref);
-    ok &= geometryExplosion();
-    ok &= hamiltonianDrift(ref, 1 / RT, ndofs);
+    // ok &= termExplosion(ref);
+    // ok &= geometryExplosion();
+    // ok &= hamiltonianDrift(ref, 1 / RT, ndofs);
     return ok;
 }

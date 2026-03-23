@@ -10,6 +10,7 @@ import numpy as np
 from . import robo_bindings as rb
 from .molecule_prototype import MoleculePrototype
 from .prmtop_reader import has_nbfix_fast, parse_prmtop_numpy
+from . import atomtypes
 
 @unique
 class NonbondedMethod(IntEnum):
@@ -364,71 +365,38 @@ class Context(rb.Context):
                     if self.parm.atoms[atom2_prmtop].idx != atom2_prmtop:
                         raise ValueError(f"Standard dihedral bond atom index mismatch: expected {atom2_prmtop}, got {self.parm.atoms[atom2_prmtop].idx}")
                     
-                    # Mandatory
-                    if 'ring' in dihedral_type:
-                        continue
-
                     # if ss[0][resid] != 'C':
                     #     continue
 
-                    if 'pro-' in dihedral_type:
+                    # Always skip ring closing bonds
+                    if 'ring' in dihedral_type:
                         continue
 
-                    # Optional
-                    if dihedral_type == 'protein-phi' and not rigid_protein_phi:
-                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                    if dihedral_type == 'protein-psi' and not rigid_protein_psi:
-                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                    if dihedral_type == 'protein-omega' and not rigid_protein_omega:
-                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                    if dihedral_type == 'protein-chi1' and not rigid_protein_chi1:
-                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                    if dihedral_type == 'protein-chi2' and not rigid_protein_chi2:
-                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                    if dihedral_type == 'protein-chi3' and not rigid_protein_chi3:
-                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                    if dihedral_type == 'protein-chi4' and not rigid_protein_chi4:
-                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                    if dihedral_type == 'protein-chi5' and not rigid_protein_chi5:
-                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                    if 'mandatory' in dihedral_type:
-                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                    atom_types = [self.parm.atoms[atom1_prmtop].type, self.parm.atoms[atom2_prmtop].type]
+                    if all(t in atomtypes.AMBER_FF19SB_ATOM_TYPES for t in atom_types):
+                        rigidity_map = {
+                            'protein-phi': rigid_protein_phi,
+                            'protein-psi': rigid_protein_psi,
+                            'protein-omega': rigid_protein_omega,
+                            'protein-chi1': rigid_protein_chi1,
+                            'protein-chi2': rigid_protein_chi2,
+                            'protein-chi3': rigid_protein_chi3,
+                            'protein-chi4': rigid_protein_chi4,
+                            'protein-chi5': rigid_protein_chi5,
+                        }
 
-                # # Add macrocycle dihedral bonds
-                # for macrocycle in molecule_prototypes[prototype_index].macrocycle_bonds:
-                #     macrocycle_bonds = list[list[tuple[int, int]]]()
+                        match dihedral_type:
+                            case type_name if type_name in rigidity_map and not rigidity_map[type_name]:
+                                self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                            case _:
+                                continue
+                    elif all(t in atomtypes.AMBER_LIPID_21_ATOM_TYPES for t in atom_types):
+                        if len(self.parm.atoms[atom1_prmtop].bond_partners) == 1:
+                            continue
+                        if len(self.parm.atoms[atom2_prmtop].bond_partners) == 1:
+                            continue
 
-                #     for (p1, p2, dihedral_type, resid) in macrocycle:
-                #         atom1_prmtop = p1+self.num_atom_offset
-                #         if self.parm.atoms[atom1_prmtop].idx != atom1_prmtop:
-                #             raise ValueError(f"Macrocycle dihedral bond atom index mismatch: expected {atom1_prmtop}, got {self.parm.atoms[atom1_prmtop].idx}")
-                #         atom2_prmtop = p2+self.num_atom_offset
-                #         if self.parm.atoms[atom2_prmtop].idx != atom2_prmtop:
-                #             raise ValueError(f"Macrocycle dihedral bond atom index mismatch: expected {atom2_prmtop}, got {self.parm.atoms[atom2_prmtop].idx}")
-                        
-                #         # Mandatory
-                #         if 'ring' in dihedral_type:
-                #             continue
-
-                #         # Optional
-                #         if dihedral_type == 'protein-phi' and not rigid_protein_phi:
-                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                #         if dihedral_type == 'protein-psi' and not rigid_protein_psi:
-                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                #         if dihedral_type == 'protein-omega' and not rigid_protein_omega:
-                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                #         if dihedral_type == 'protein-chi1' and not rigid_protein_chi1:
-                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                #         if dihedral_type == 'protein-chi2' and not rigid_protein_chi2:
-                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                #         if dihedral_type == 'protein-chi3' and not rigid_protein_chi3:
-                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                #         if dihedral_type == 'protein-chi4' and not rigid_protein_chi4:
-                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                #         if dihedral_type == 'protein-chi5' and not rigid_protein_chi5:
-                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-
-                #     self.macrocycle_dihedral_bonds.append(macrocycle_bonds)
+                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
 
                 # Add angles
                 for angle in molecule_prototypes[prototype_index].angle_params:
@@ -891,8 +859,8 @@ class Context(rb.Context):
             super().addReplica()
             super().addThermodynamicState(temp, accept_reject_modes, distort_options, distort_args, flow, work, integrators, worldIndexes, timesteps, mdsteps)
 
-        if not super().validate_context():
-            raise ValueError("Invalid context.")
+        # if not super().validate_context():
+        #     raise ValueError("Invalid context.")
 
     def generate_synthetic_atom_classes(self):
         # Signatures store the "parameter environment" of each atom

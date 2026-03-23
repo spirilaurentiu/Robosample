@@ -3,6 +3,8 @@ from collections import defaultdict
 from typing import Dict, List, Tuple, Iterable
 import parmed as pmd
 
+from . import atomtypes
+
 PROTEIN_BACKBONE = {
     ("C", "N", "CA", "C") : 'phi',
     ("N", "CA", "C", "N") : 'psi',
@@ -676,54 +678,64 @@ class DihedralClassifier:
 
     def classify(self, dihedral: pmd.topologyobjects.Dihedral) -> str | None:
 
-        # Try to classify as nucleic acid first
-        # Some glycosidic dihedrals may superficially resemble nucleic acid torsions, so we check for nucleic acid residues first to avoid misclassification.
-        NUCLEIC_RESIDUES = {
-            "DA", "DC", "DG", "DU", "DA3", "DA5", "DC3", "DC5", "DG3", "DG5", "DU3", "DU5", # DNA
-            "A", "C", "G", "U", "A3", "A5", "C3", "C5", "G3", "G5", "U3", "U5", # RNA
-        }
-        residue_names = [dihedral.atom1.residue.name, dihedral.atom2.residue.name, dihedral.atom3.residue.name, dihedral.atom4.residue.name]
-        if all(res in NUCLEIC_RESIDUES for res in residue_names):
-            label = self._classify_nucleic_acid(dihedral)
-            label = 'nucleic-' + label if label else None
-            return label
-        
-        # Next, try to classify as protein (backbone or side chain)
-        label = self._classify_protein(dihedral)
-        if label:
-            return 'protein-' + label
-        
-        # Finally, check for glycan linkages and other glycan-specific dihedrals
-        label = self._classify_glycan_linkage(dihedral)
-        if label:
-            return 'glycan-linkage-' + label
-        
-        # Try glycosidic phi
-        if self._is_glycosidic_phi(dihedral):
-            return 'glycosidic-phi'
-        
-        # Try glycosidic psi
-        if self._is_glycosidic_psi(dihedral):
-            return 'glycosidic-psi'
-        
-        # Try glycosidic omega (hinge)
-        if self._is_glycosidic_omega(dihedral):
-            return 'glycosidic-omega'
-        
-        # If it's not a backbone or linkage dihedral, it might be a pyranose or furanose ring tau or an exocyclic chi
-        # We check these before general substituents to capture specific glycan features.
-        label = self._classify_endocyclic_tau(dihedral)
-        if label:
-            return label
+        # Extract atom types (not atom names) to dispatch to the appropriate classifier
+        atom_types = [dihedral.atom1.type, dihedral.atom2.type, dihedral.atom3.type, dihedral.atom4.type]
 
-        # Check for exocyclic chi angles (hydroxyls, anomeric substituents, sulfates/phosphates)
-        label = self._classify_exocyclic(dihedral)
-        if label:
-            return label
+        # Handle protein backbone and side chains
+        if all(t in atomtypes.AMBER_FF19SB_ATOM_TYPES for t in atom_types):
+            label = self._classify_protein(dihedral)
+            if label:
+                return 'protein-' + label
+            else:
+                return 'protein-other'
+            
+        # Handle lipids
+        if all(t in atomtypes.AMBER_LIPID_21_ATOM_TYPES for t in atom_types):
+            return 'lipid'
+
+        # # Try to classify as nucleic acid first
+        # # Some glycosidic dihedrals may superficially resemble nucleic acid torsions, so we check for nucleic acid residues first to avoid misclassification.
+        # NUCLEIC_RESIDUES = {
+        #     "DA", "DC", "DG", "DU", "DA3", "DA5", "DC3", "DC5", "DG3", "DG5", "DU3", "DU5", # DNA
+        #     "A", "C", "G", "U", "A3", "A5", "C3", "C5", "G3", "G5", "U3", "U5", # RNA
+        # }
+        # residue_names = [dihedral.atom1.residue.name, dihedral.atom2.residue.name, dihedral.atom3.residue.name, dihedral.atom4.residue.name]
+        # if all(res in NUCLEIC_RESIDUES for res in residue_names):
+        #     label = self._classify_nucleic_acid(dihedral)
+        #     label = 'nucleic-' + label if label else None
+        #     return label
         
-        # Check for other substituent dihedrals (N-acetyl, O-acetyl, glycerol tails)
-        label = self._classify_substituent(dihedral)
-        if label:
-            return label
+        # # Finally, check for glycan linkages and other glycan-specific dihedrals
+        # label = self._classify_glycan_linkage(dihedral)
+        # if label:
+        #     return 'glycan-linkage-' + label
+        
+        # # Try glycosidic phi
+        # if self._is_glycosidic_phi(dihedral):
+        #     return 'glycosidic-phi'
+        
+        # # Try glycosidic psi
+        # if self._is_glycosidic_psi(dihedral):
+        #     return 'glycosidic-psi'
+        
+        # # Try glycosidic omega (hinge)
+        # if self._is_glycosidic_omega(dihedral):
+        #     return 'glycosidic-omega'
+        
+        # # If it's not a backbone or linkage dihedral, it might be a pyranose or furanose ring tau or an exocyclic chi
+        # # We check these before general substituents to capture specific glycan features.
+        # label = self._classify_endocyclic_tau(dihedral)
+        # if label:
+        #     return label
+
+        # # Check for exocyclic chi angles (hydroxyls, anomeric substituents, sulfates/phosphates)
+        # label = self._classify_exocyclic(dihedral)
+        # if label:
+        #     return label
+        
+        # # Check for other substituent dihedrals (N-acetyl, O-acetyl, glycerol tails)
+        # label = self._classify_substituent(dihedral)
+        # if label:
+        #     return label
 
         return None

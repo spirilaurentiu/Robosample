@@ -30,6 +30,8 @@ import numpy as np
 # python3 roborun.py 1APQ_TEST ./data-raw/1APQ.prmtop ./data-raw/1APQ_min.inpcrd 6000 0 10 1
 # python3 roborun.py 1A5E_TEST ./data-raw/1A5E.prmtop ./data-raw/1A5E_min.inpcrd 6000 0 10 1
 
+# python3 python/robosample/roborun.py ffar1 examples/ffar1.prmtop examples/ffar1.rst7 6000 0 1 1
+
 # Create the parser
 parser = argparse.ArgumentParser(description='Process PDB code and seed.')
 
@@ -42,15 +44,8 @@ parser.add_argument('equil_steps', type=int, help='The number of equilibration s
 parser.add_argument('prod_steps', type=int, help='The number of production steps.')
 parser.add_argument('write_freq', type=int, help='CSV and DCD write frequency.')
 
-import MDAnalysis as mda
-from MDAnalysis.analysis.dihedrals import Ramachandran
-from MDAnalysis.analysis.bat import BAT
-import matplotlib.pyplot as plt
-
 # Parse the arguments
 args = parser.parse_args()
-
-# get_native_openmm_energy()
 
 # Temperature replica exchange parameters
 T0 = 300.0
@@ -63,17 +58,17 @@ R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 # 6 kcal/mol - tens to hundreds of picoseconds (moderate barrier, ~10KbT)
 # 10 kcal/mol - nanoseconds or longer (high barrier , ~16KbT)
 # 2 ps of MD is enough to explore shallow wells, but not to cross deep barriers without enhanced sampling (e.g., HMC, replica exchange)
-TIMESTEP_TD = 0.015 # Torsional dymaics time step is 10 fs
-MDSTEPS_TD = 2 # Torsional dynamics block trajectory length 1 ps
+TIMESTEP_TD = 0.005 # Torsional dymaics time step is 10 fs
+MDSTEPS_TD = 1000 # Torsional dynamics block trajectory length 1 ps
 
 TIMESTEP_CARTESIAN = 0.001
-MDSTEPS_CARTESIAN = 15
+MDSTEPS_CARTESIAN = 1000
 
 # create robosample context
 context = robosample.Context(name=args.name, seed=args.seed, prmtop=args.prmtop, inpcrd=args.inpcrd, write_freq=args.write_freq, testing=True)
 
-# # Add cartesian world (will integrate with OpenMM)
-# context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
+# Add cartesian world (will integrate with OpenMM)
+context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
 
 # Add torsional world with non-redundant dihedrals
 # sele = [
@@ -82,43 +77,6 @@ context = robosample.Context(name=args.name, seed=args.seed, prmtop=args.prmtop,
 # ]
 sele = context.getDefaultBonds('standard')
 context.addTorsionalWorld(sele).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD)
-
-
-
-
-# # Add one replica at 300 K
-# context.initialize([300.0])
-
-# import numpy as np
-
-# mean_bond_violations = {}
-# mean_angle_violations = {}
-# mean_proper_violations = {}
-# mean_improper_violations = {}
-
-# for num_steps in [1, 2, 4, 8]:
-#     if num_steps == 1:
-#         time_step = 0.01 # 1 fs
-#         num_steps *= 1000
-#     else:
-#         time_step = 0.001
-#     violations = robosample.rb.RigidBodyViolations()
-#     context.getWorld(0).has_rigid_body_violations(time_step, num_steps, violations)
-
-#     mean_bond_violations[num_steps] = np.mean(violations.bond)
-#     mean_angle_violations[num_steps] = np.mean(violations.angle)
-#     mean_proper_violations[num_steps] = np.mean(violations.proper)
-#     mean_improper_violations[num_steps] = np.mean(violations.improper)
-
-# # Compute ratio 2:1, 4:1, 8:1
-# for num_steps in [2, 4, 8]:
-#     assert round(mean_bond_violations[num_steps] / mean_bond_violations[num_steps//2]) == 2
-#     assert round(mean_angle_violations[num_steps] / mean_angle_violations[num_steps//2]) == 2
-#     assert round(mean_proper_violations[num_steps] / mean_proper_violations[num_steps//2]) == 2
-#     assert round(mean_improper_violations[num_steps] / mean_improper_violations[num_steps//2]) == 2
-
-# exit()
-
 
 # for flex in context.getDefaultBonds('macrocycle'):
 # 	context.addTorsionalWorld([flex]).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)

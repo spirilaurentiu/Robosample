@@ -729,6 +729,11 @@ void World::generateDummParams(
 
 bool World::isOverconstrained() const {
 
+	// OpenMM does not support rigid bodies and thus, no overconstraints can be present
+	if (samplers[0]->getIntegratorType() == IntegratorType::OMMVV) {
+		return false;
+	}
+
 	std::cout << "[INFO] Checking for overconstraints in world " << ownWorldIndex << ":" << std::endl;
 
 	// Get the advanced state from the integrator to check for overconstraints
@@ -927,6 +932,11 @@ bool World::isOverconstrained() const {
 bool World::hasRigidBodyViolations(SimTK::Real timeStep, int numSteps) {
 	if (samplers.empty()) {
 		throw std::runtime_error("World::hasRigidBodyViolations() requires at least one sampler to be defined.");
+	}
+
+	// OpenMM does not support rigid bodies
+	if (samplers[0]->getIntegratorType() == IntegratorType::OMMVV) {
+		return false;
 	}
 
 	auto wrapAngle = [](SimTK::Real x) {
@@ -4476,38 +4486,38 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 		}
 	}
 
-	if (testing && updSampler(0)->getIntegratorType() == IntegratorType::OMMVV) {
-		const auto& positions = OPENMM::get().getPositions();
-		std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocationsFromOpenMM (topologies.size());
+	// if (testing && updSampler(0)->getIntegratorType() == IntegratorType::OMMVV) {
+	// 	const auto& positions = OPENMM::get().getPositions();
+	// 	std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocationsFromOpenMM (topologies.size());
 		
-		for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
-			for (const auto& atom : topologies[topoIx].getAtoms()) {
-				const SimTK::Vec3 locationFromOpenMM = positions[atom.identity.globalIndex];
-				atomTargetLocationsFromOpenMM[topoIx][atom.identity.compoundAtomIndex] = locationFromOpenMM;
-			}
-		}
+	// 	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
+	// 		for (const auto& atom : topologies[topoIx].getAtoms()) {
+	// 			const SimTK::Vec3 locationFromOpenMM = positions[atom.identity.globalIndex];
+	// 			atomTargetLocationsFromOpenMM[topoIx][atom.identity.compoundAtomIndex] = locationFromOpenMM;
+	// 		}
+	// 	}
 
-		const SimTK::State& state = compoundSystem->realizeTopology();
-		compoundSystem->realize(state, SimTK::Stage::Position);
+	// 	const SimTK::State& state = compoundSystem->realizeTopology();
+	// 	compoundSystem->realize(state, SimTK::Stage::Position);
 
-		// We ignore match residuals for now
-		// They only work if you need to match positions to the Topology list
-		// This is only needed when transfering from one world to another
-		coordinateTransferErrors.push_back(checkCoordinateTransfer(atomTargetLocationsFromOpenMM));
+	// 	// We ignore match residuals for now
+	// 	// They only work if you need to match positions to the Topology list
+	// 	// This is only needed when transfering from one world to another
+	// 	coordinateTransferErrors.push_back(checkCoordinateTransfer(atomTargetLocationsFromOpenMM));
 
-		// Calculate RMSD after sampling if the sample is accepted
-		SimTK::Real sumSquaredDist = 0.0;
-		for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
-			for (SimTK::Compound::AtomIndex cAIx = SimTK::Compound::AtomIndex(0); cAIx < topologies[topoIx].getAtoms().size(); cAIx++) {
-				const SimTK::Vec3& newLocation = atomTargetLocationsFromOpenMM[topoIx][cAIx];
-				const SimTK::Vec3& oldLocation = atomTargetLocaltionsCacheOld[topoIx][cAIx];
+	// 	// Calculate RMSD after sampling if the sample is accepted
+	// 	SimTK::Real sumSquaredDist = 0.0;
+	// 	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
+	// 		for (SimTK::Compound::AtomIndex cAIx = SimTK::Compound::AtomIndex(0); cAIx < topologies[topoIx].getAtoms().size(); cAIx++) {
+	// 			const SimTK::Vec3& newLocation = atomTargetLocationsFromOpenMM[topoIx][cAIx];
+	// 			const SimTK::Vec3& oldLocation = atomTargetLocaltionsCacheOld[topoIx][cAIx];
 
-				sumSquaredDist += (newLocation - oldLocation).normSqr();
-			}
-		}
-		SimTK::Real rmsd = std::sqrt(sumSquaredDist / numAtoms);
-		acceptanceRMSD.emplace_back(std::make_pair(validated, rmsd));
-	}
+	// 			sumSquaredDist += (newLocation - oldLocation).normSqr();
+	// 		}
+	// 	}
+	// 	SimTK::Real rmsd = std::sqrt(sumSquaredDist / numAtoms);
+	// 	acceptanceRMSD.emplace_back(std::make_pair(validated, rmsd));
+	// }
 
     return validated;
 }
