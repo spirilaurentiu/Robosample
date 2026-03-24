@@ -1,5 +1,12 @@
 name: cuda11.0
+channels:
+  - conda-forge
+  - nvidia
 dependencies:
-  - conda-forge::gcc_linux-64=9.*
-  - conda-forge::gxx_linux-64=9.*
-  - nvidia::cuda-toolkit=11.0
+  - gcc_linux-64=9
+  - gxx_linux-64=9
+  - cuda-toolkit=11.0
+  - cuda-version=11.0
+variables:
+  OPENMM_CUDA_COMPILER: $CONDA_PREFIX/bin/nvcc
+  CUDA_HOST_COMPILER: $CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++

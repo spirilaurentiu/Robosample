@@ -6,6 +6,12 @@
             "type": "shell",
             "command": "nox -s tests",
             "group": "test"
+        },
+        {
+            "label": "Run full PGO/BOLT pipeline",
+            "type": "shell",
+            "command": "nox -s full_pipeline",
+            "group": "test"
         }
     ]
 }

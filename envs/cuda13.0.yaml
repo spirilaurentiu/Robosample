@@ -1,5 +1,12 @@
 name: cuda13.0
+channels:
+  - conda-forge
+  - nvidia
 dependencies:
-  - conda-forge::gcc_linux-64=15.*
-  - conda-forge::gxx_linux-64=15.*
-  - nvidia::cuda-toolkit=13.0
+  - gcc_linux-64=15
+  - gxx_linux-64=15
+  - cuda-toolkit=13.0
+  - cuda-version=13.0
+variables:
+  OPENMM_CUDA_COMPILER: $CONDA_PREFIX/bin/nvcc
+  CUDA_HOST_COMPILER: $CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++

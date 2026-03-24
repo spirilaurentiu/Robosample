@@ -20,8 +20,6 @@ The following publications describe the underlying algorithms or demonstrate app
 
 * > Spiridon, L., & Minh, D. D. (2017). **Hamiltonian Monte Carlo with constrained molecular dynamics as Gibbs sampling.** *Journal of Chemical Theory and Computation*, 13(10), 4649-4659. [![DOI](https://img.shields.io/badge/DOI-10.1021/acs.jctc.7b00570-orange.svg)](https://doi.org/10.1021/acs.jctc.7b00570)
 
-* > Manoliu, L. C. E., Martin, E. C., Milac, A. L., & Spiridon, L. (2021). **Effective Use of Empirical Data for Virtual Screening against APJR GPCR Receptor.** *Molecules*, 26(16), 4894. [![DOI](https://img.shields.io/badge/DOI-10.3390/molecules26164894-green.svg)](https://doi.org/10.3390/molecules26164894)
-
 ## Check hardware acceleration capabilities
 
 On native Linux, output should not be empty:
@@ -66,11 +64,7 @@ Check that the driver (if already installed) works correctly:
 
 Please note that `nvcc` is part of CUDA toolkit, not Nvidia driver, so we do not test for it here.
 
-If any of these tests fail, it means that the driver is incorrectly installed. We begin by checking what drivers we currently have installed:
-
-```bash
-dpkg -l | grep -i nvidia
-```
+If any of these tests fail, it means that the driver is incorrectly installed. We begin by checking what drivers we currently have installed: `dpkg -l | grep -i nvidia`.
 
 Remove the old driver:
 
@@ -87,11 +81,7 @@ Confirm that we uninstalled everything:
 
 Drivers can be downloaded either manually from the Nnvidia website or automatically by Ubuntu. However, manual downloads don't support DKMS (Dynamic Kernel Module Support), meaning that kernel updates can potentially break the driver installation. `ubuntu-drivers` is safer because it considers Ubuntu version GLIBC and kernel stability, whereas the website just looks at the GPU model. `ubuntu-drivers` uses DKMS, meaning that the driver automatically rebuilds itself when the kernel updates. Note that both methods respect the compatibility matrix.
 
-First, check what the recommended version is for your machine:
-
-```bash
-sudo ubuntu-drivers devices
-```
+First, check what the recommended version is for your machine: `sudo ubuntu-drivers devices`.
 
 Install the recommended one (`nvidia-smi` will not work before you `sudo reboot`):
 
@@ -100,27 +90,15 @@ sudo ubuntu-drivers autoinstall
 sudo reboot
 ```
 
-After reboot, check for module load errors:
+After reboot, check for module load errors: `dmesg | grep -i nvidia`.
 
-```bash
-dmesg | grep -i nvidia
-```
-
-Check if the driver communicates with kernel and GPU is accessible:
-
-```bash
-nvidia-smi
-```
+Check if the driver communicates with kernel and GPU is accessible: `nvidia-smi`.
 
 The `CUDA Version` in the `nvidia-smi` is the maximum CUDA runtime API version supported by the driver. The driver does not install any CUDA toolkit.
 
 ### WSL2
 
-In `Powershell`, confirm that `nvidia-smi` works:
-
-```powershell
-nvidia-smi
-```
+In `Powershell`, confirm that `nvidia-smi` works: `nvidia-smi`.
 
 If not already done, download and install [normal Windows driver (Game Ready or Studio)](https://www.nvidia.com/Download/index.aspx). **Do not install Linux drivers**. After installation, **reboot Windows**.
 
@@ -136,11 +114,7 @@ Open Linux and check that:
 
 * GPU bridge device exists: `ls -l /dev/dxg`.
 
-If any of these tests fail, it means that the driver is incorrectly installed. We begin by checking what drivers we currently have installed:
-
-```bash
-dpkg -l | grep -i nvidia
-```
+If any of these tests fail, it means that the driver is incorrectly installed. We begin by checking what drivers we currently have installed: `dpkg -l | grep -i nvidia`.
 
 Remove the old driver:
 
@@ -149,38 +123,31 @@ sudo apt purge "*nvidia*"
 sudo apt autoremove
 ```
 
-Shutdown WSL from `Powershell` and restart (WSL does not have a real reboot). Upon restart, WSL will re-link the `/usr/lib/wsl/lib` directory from the Windows host.
+Shutdown WSL from `Powershell` and restart (WSL does not have a real reboot). Upon restart, WSL will re-link the `/usr/lib/wsl/lib` directory from the Windows host: `wsl --shutdown`.
 
-```powershell
-wsl --shutdown
-```
-
-## OpenCL * vendor based
+## OpenCL
 
 OpenCL installation depends on the udnerlying hardware:
 
 * Nvidia GPU: already installed with the divers.
 
-* AMD GPU: TODO
+* AMD GPU: `TODO`
 
 * Intel GPU/CPU: install `sudo apt-get install intel-opencl-icd`
 
-* AMD CPU: TODO
+* AMD CPU: `TODO`
 
 Other dependencies will be installed via `conda` (see below).
 
-### Miniforge
+---
 
-We will use `miniforge`, a variant of `miniconda` that comes with `mamba` installed (`conda` but with a faster solver).
-To my knowledge, `miniconda` and `miniforge` are theoretically compatible and can run concurrently on the same machine.
-However, uncertainty still looms over this, so we prefer so remove any `miniconda` installations before doing anything else.
+### Install `mamba`
 
-```bash
-conda deactivate
-~/miniconda3/uninstall.sh
-```
+We use [`mamba`](https://github.com/mamba-org/mamba) for fast and reliable environment management. Choose the option that matches your current setup.
 
-Download and install `miniforge` from their [GitHub page](https://github.com/conda-forge/miniforge) using:
+#### Option A — Fresh install (recommended)
+
+If you **do not already use `conda`**, install **miniforge** (comes with `mamba` preinstalled):
 
 ```bash
 cd ~
@@ -189,10 +156,31 @@ bash Miniforge3-$(uname)-$(uname -m).sh
 source ~/.bashrc
 ```
 
-Install `mamba`:
+Get current `conda` version: `conda --version`.
+
+Get the latest version: `conda search conda -c defaults | tail`.
+
+Update to the latest version: `conda install conda=26.1.1`.
+
+#### Option B — Existing `miniconda` / `anaconda`
+
+Starting with version `23.10`, the default solver is `conda-libmamba-solver`, a plugin which uses `libmamba`, the same `libsolv`-powered solver used by `mamba`:
+
+Get current `conda` version: `conda --version`.
+
+Get the latest version: `conda search conda -c defaults | tail`.
+
+Update to the latest version: `conda install conda=26.1.1`.
+
+Now, the solver should be `libmamba`: `conda config --show solver`.
+
+Now we install `mamba`: `conda install -n base -c conda-forge mamba`.
+
+#### Install base `pip` packages
 
 ```bash
-conda install conda-forge::mamba
+pip install --upgrade pip
+pip install conda-merge zstandard
 ```
 
 ## Other prerequisites
@@ -236,54 +224,18 @@ pip install -e .
 
 ### Create a `mamba` environment
 
-Update `conda` and install in base `mamba` (a faster reimplementation of the `conda` package manager) and `conda-merge` (a tool for merging `conda` environment files into one file).
-
-```bash
-conda update -n base -c defaults conda
-pip install --upgrade pip
-
-conda install conda-forge::mamba
-pip install conda-merge zstandard
-```
-
-#### CUDA Toolkit
-
-CUDA Toolkit version is dependent on the major GCC version:
-
-| CUDA Toolkit Version | Max Supported GCC Version | Min Supported GCC Version |
-| -------------------- | ------------------------- | ------------------------- |
-| **13.0, 13.1**       | **15**                    | 7.x                       |
-| **12.8, 12.9**       | **14**                    | 6.x                       |
-| **12.4, 12.5, 12.6** | **13.2**                  | 6.x                       |
-| **12.1, 12.2, 12.3** | **12.2**                  | 6.x                       |
-| **12**               | **12.1**                  | 6.x                       |
-| **11.4.1 * 11.8**    | **11**                    | 6.x                       |
-| **11.1 * 11.4.0**    | **10**                    | 6.x                       |
-| **11**               | **9**                     | 6.x                       |
-| **10.1, 10.2**       | **8**                     | 4.8.5                     |
-| **9.2, 10.0**        | **7**                     | 4.8.5                     |
-| **9.0, 9.1**         | **6**                     | 4.8.5                     |
-| **8**                | **5.3**                   | 4.7                       |
-
-#### Generating the right development environment `.yaml` file
-
 The development environment is a combination of `.yaml` files from `envs/`:
 
-* `envs/robo_py312.yaml` (mandatory)
+* `envs/robo_py312.yaml` (bioinformatics tools).
 
-* `envs/cuda*.yaml` with the correct CUDA Toolkit/compiler version pair.
+* `envs/cuda*.yaml` that pairs CUDA Toolkit and GCC versions. These `.yaml` files were generated using ``tools/generate_cuda_envs.py` based on [this](https://gist.github.com/ax3l/9489132). To get the supported CUDA version, run `nvidia-smi`.
 
 * `envs/util.yaml` for non-essential, but useful packages.
 
-We combine into an environment that contains all tools needed to configure and build the project. The name of the combined environment is the name of the last `.yaml` file in sequence (in our case, `robo_py312.yaml`):
+Combine these files into a `.yaml` that contains all tools needed to configure and build the project and install:
 
 ```bash
-conda-merge envs/cuda12.8.yaml envs/util.yaml envs/robo_py312.yaml > robo_py312.yaml
-```
-
-Now we create the environment:
-
-```bash
+conda-merge envs/cuda12.8.yaml envs/robo_py312.yaml > robo_py312.yaml
 mamba env create -f robo_py312.yaml
 conda activate robo_py312
 ```
@@ -367,7 +319,7 @@ cd simulation/
 python3 ../python/robosample/roborun.py ala-dipeptide ../examples/ala-dipeptide.prmtop ../examples/ala-dipeptide.rst7 6000 0 1 1
 ```
 
-### GitHub linguist
+### GitHub Linguist
 
 Too see coding language stats, run:
 
