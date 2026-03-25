@@ -34,7 +34,7 @@ if(CMAKE_EXPORT_COMPILE_COMMANDS)
         COMMAND ${CMAKE_COMMAND} -E create_symlink 
             ${CMAKE_BINARY_DIR} 
             ${CMAKE_SOURCE_DIR}/build/latest
-        COMMENT "Updating clangd symlink to ${CMAKE_BINARY_DIR}"
+        COMMENT "Updating `latest` symlink to ${CMAKE_BINARY_DIR}"
     )
 endif()
 
@@ -209,8 +209,8 @@ endif()
 
 # Set configuration-specific compile options
 target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
-    -march=x86-64-v3
-    -mtune=generic
+    -march=native #x86-64-v3
+    -mtune=native #generic
     -Wno-c++17-extensions
 
     # Debug
@@ -301,6 +301,7 @@ if(USE_CUDA)
         PRIVATE
         CUDA::cuda_driver 
         CUDA::cufft
+        CUDA::nvrtc
     )
 elseif(USE_OPENCL)
     find_package(OpenCL REQUIRED)

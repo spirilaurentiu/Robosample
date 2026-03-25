@@ -201,11 +201,14 @@ git clone --recurse-submodules https://github.com/spirilaurentiu/Robosample.git
 cd Robosample
 
 cd openmm
-git checkout master
+git checkout update
+
 cd ../Simbody01
 git checkout master
+
 cd ../Molmodel
 git checkout refactor
+
 cd ../
 git checkout refactor
 ```
@@ -220,6 +223,20 @@ Finally, perform a local install of the package. This doesn't install anything, 
 
 ```bash
 pip install -e .
+```
+
+### Updating OpenMM from upstream
+
+We have a special branch named `update` which holds the original OpenMM code:
+
+```bash
+cd openm//
+git checkout update
+git remote add upstream https://github.com/openmm/openmm.git
+git fetch upstream
+git reset --hard upstream/master
+git clean -fd
+git push origin update --force
 ```
 
 ### Create a `mamba` environment

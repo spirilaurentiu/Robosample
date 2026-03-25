@@ -1,13 +1,12 @@
-# Add this near the top of the file, before the IF block
 SET(OPENMM_GENERATED_CXX_FILES)
 
-# get openmm source directories
+# Get openmm source directories
 SET(OPENMM_INCLUDE_DIRS)
-SET(OPENMM_DIRS
-    # ${CMAKE_SOURCE_DIR}/openmm/
+SET(OPENMM_SOURCE_SUBDIRS
+    ${CMAKE_SOURCE_DIR}/openmm/
     ${CMAKE_SOURCE_DIR}/openmm/openmmapi
     ${CMAKE_SOURCE_DIR}/openmm/olla
-    ${CMAKE_SOURCE_DIR}/openmm/libraries/asmjit
+
     ${CMAKE_SOURCE_DIR}/openmm/libraries/jama
     ${CMAKE_SOURCE_DIR}/openmm/libraries/quern
     ${CMAKE_SOURCE_DIR}/openmm/libraries/lepton
@@ -15,15 +14,19 @@ SET(OPENMM_DIRS
     ${CMAKE_SOURCE_DIR}/openmm/libraries/lbfgs
     ${CMAKE_SOURCE_DIR}/openmm/libraries/hilbert
     ${CMAKE_SOURCE_DIR}/openmm/libraries/csha1
+    ${CMAKE_SOURCE_DIR}/openmm/libraries/pocketfft
+    ${CMAKE_SOURCE_DIR}/openmm/libraries/vkfft
     ${CMAKE_SOURCE_DIR}/openmm/libraries/irrxml
     ${CMAKE_SOURCE_DIR}/openmm/libraries/vecmath
-    # ${CMAKE_SOURCE_DIR}/openmm/libraries/pthreads
+
+    # Needed by custom kernels and forces
     ${CMAKE_SOURCE_DIR}/openmm/platforms/reference
+    
     ${CMAKE_SOURCE_DIR}/openmm/serialization
 )
 
 IF(USE_CPU)
-    SET(OPENMM_DIRS ${OPENMM_DIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/cpu)
+    SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/cpu)
 
 ELSEIF(USE_CUDA OR USE_OPENCL)
     SET(COMMON_KERNEL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/common/src")
@@ -38,16 +41,16 @@ ELSEIF(USE_CUDA OR USE_OPENCL)
         COMMENT "Generating common kernel sources for OpenMM..."
     )
 
-    # this command is executed when building, not when running CMakeLists.txt
+    # This command is executed when building, not when running CMakeLists.txt
     ADD_CUSTOM_TARGET(CommonKernels DEPENDS ${COMMON_KERNELS_CPP} ${COMMON_KERNELS_H})
     SET(OPENMM_GENERATED_CXX_FILES ${OPENMM_GENERATED_CXX_FILES} ${COMMON_KERNELS_CPP})
     SET(OPENMM_DEPENDENCIES CommonKernels)
 
-    SET(OPENMM_DIRS ${OPENMM_DIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/common)
+    SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/common)
     SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/common/src)
 
     IF(USE_CUDA)
-        # compile all cuda kernels into one single file
+        # Compile all CUDA kernels into one single file
         SET(CUDA_KERNEL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/cuda/src")
         SET(CUDA_KERNEL_SOURCE_CLASS CudaKernelSources)
         SET(CUDA_KERNELS_CPP ${CUDA_KERNEL_SOURCE_DIR}/${CUDA_KERNEL_SOURCE_CLASS}.cpp)
@@ -60,22 +63,19 @@ ELSEIF(USE_CUDA OR USE_OPENCL)
             COMMENT "Generating CUDA kernel sources for OpenMM..."
         )
 
-        # this command is executed when building, not when running CMakeLists.txt
         ADD_CUSTOM_TARGET(CudaKernels DEPENDS ${CUDA_KERNELS_CPP} ${CUDA_KERNELS_H})
         SET(OPENMM_GENERATED_CXX_FILES ${OPENMM_GENERATED_CXX_FILES} ${CUDA_KERNELS_CPP})
         SET(OPENMM_DEPENDENCIES ${OPENMM_DEPENDENCIES} CudaKernels)
 
-        SET(OPENMM_DIRS ${OPENMM_DIRS}
+        SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS}
             ${CMAKE_SOURCE_DIR}/openmm/platforms/cuda
-            # ${CMAKE_SOURCE_DIR}/openmm/plugins/cudacompiler
         )
         SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS}
             ${CUDAToolkit_INCLUDE_DIRS}
             ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/cuda/src
-            # ${CMAKE_CURRENT_SOURCE_DIR}/openmm/plugins/cudacompiler/src
         )
     ELSEIF(USE_OPENCL)
-        # compile all opencl kernels into one single file
+        # Compile all OpenCL kernels into one single file
         SET(OPENCL_KERNEL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/opencl/src")
         SET(OPENCL_KERNEL_SOURCE_CLASS OpenCLKernelSources)
         SET(OPENCL_KERNELS_CPP ${OPENCL_KERNEL_SOURCE_DIR}/${OPENCL_KERNEL_SOURCE_CLASS}.cpp)
@@ -88,22 +88,21 @@ ELSEIF(USE_CUDA OR USE_OPENCL)
             COMMENT "Generating OpenCL kernel sources for OpenMM..."
         )
         
-        # this command is executed when building, not when running CMakeLists.txt
         ADD_CUSTOM_TARGET(OpenCLKernels DEPENDS ${OPENCL_KERNELS_CPP} ${OPENCL_KERNELS_H})
         SET(OPENMM_GENERATED_CXX_FILES ${OPENMM_GENERATED_CXX_FILES} ${OPENCL_KERNELS_CPP})
         SET(OPENMM_DEPENDENCIES ${OPENMM_DEPENDENCIES} OpenCLKernels)
 
-        SET(OPENMM_DIRS ${OPENMM_DIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/opencl)
+        SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/opencl)
         SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/opencl/src)
     ENDIF()
     
 ENDIF()
 
-# set generated files as generated to avoid warnings about missing headers
+# Set generated files as generated to avoid warnings about missing headers
 set_source_files_properties(${OPENMM_GENERATED_CXX_FILES} PROPERTIES GENERATED TRUE)
 
-# get openmm include directories
-FOREACH(subdir ${OPENMM_DIRS})
+# Get openmm include directories
+FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS}
         ${subdir}
         ${subdir}/include
@@ -112,42 +111,43 @@ FOREACH(subdir ${OPENMM_DIRS})
         ${subdir}/include/openmm/common)
 ENDFOREACH(subdir)
 
-# find source and header files
+SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/openmm/libraries/asmjit)
+
+# Find source and header files
 SET(OPENMM_SOURCE_C_FILES)
 SET(OPENMM_SOURCE_CXX_FILES ${OPENMM_SOURCE_CXX_FILES} ${OPENMM_GENERATED_CXX_FILES})
 SET(OPENMM_SOURCE_INCLUDE_FILES)
 
-FOREACH(subdir ${OPENMM_DIRS})
+FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     FILE(GLOB src_c_files ${subdir}/src/*.c ${subdir}/src/*/*.c)
     SET(OPENMM_SOURCE_C_FILES ${OPENMM_SOURCE_C_FILES} ${src_c_files})
 
     FILE(GLOB src_cxx_files ${subdir}/src/*.cpp ${subdir}/src/*/*.cpp ${subdir}/base/*.cpp ${subdir}/x86/*.cpp)
     SET(OPENMM_SOURCE_CXX_FILES ${OPENMM_SOURCE_CXX_FILES} ${src_cxx_files})
 
-    # pimpl pattern is used and headers are stored in the src directory
     FILE(GLOB incl_files ${subdir}/src/*.h ${subdir}/src/*/*.h)
     SET(OPENMM_SOURCE_INCLUDE_FILES ${OPENMM_SOURCE_INCLUDE_FILES} ${incl_files})
 ENDFOREACH(subdir)
 
-# set_source_files_properties(${OPENMM_LIB_SHARED_NAME} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+FILE(GLOB src_files ${CMAKE_SOURCE_DIR}/openmm/libraries/asmjit/asmjit/*/*.cpp)
+SET(OPENMM_SOURCE_CXX_FILES ${OPENMM_SOURCE_CXX_FILES} ${src_files})
 
-# set compile definitions for each library
+FILE(GLOB incl_files ${CMAKE_SOURCE_DIR}/openmm/libraries/asmjit/*.h)
+SET(OPENMM_SOURCE_INCLUDE_FILES ${OPENMM_SOURCE_INCLUDE_FILES} ${incl_files})
+
+# Set compile definitions for each library
 set(OPENMM_COMPILE_DEFINITIONS
     OPENMM_LIBRARY_NAME="OpenMM"
-    OPENMM_MAJOR_VERSION=7
+    OPENMM_MAJOR_VERSION=8
     OPENMM_MINOR_VERSION=5
     OPENMM_BUILD_VERSION=0
     HAVE_SSE2=1
-    OPENMM_BUILD_STATIC_LIB=0
+    HAVE_EMMINTRIN_H=1
     IEEE_8087=1
     LEPTON_USE_JIT=1
-    OPENMM_USE_STATIC_LIBRARIES=0
-    LEPTON_USE_STATIC_LIBRARIES=0
-    PTW32_STATIC_LIB=0
     OPENMM_BUILDING_STATIC_LIBRARY=0
     LEPTON_BUILDING_STATIC_LIBRARY=0
     OPENMM_COMMON_BUILDING_STATIC_LIBRARY=0
-    # PLATFORM_CPU_NOSNAODIWEAD=1
 )
 
 foreach(compile_definition ${OPENMM_COMPILE_DEFINITIONS})
