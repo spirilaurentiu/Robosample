@@ -5,35 +5,39 @@ import pytest
 
 # Robosample will put the original conformation in the frame of the trajectory
 # This happens before integration starts, so we are testing topology and world creation, coordinate transfer and DCD writing
+@pytest.fixture(scope="module")
+def simulation_results():
+    name = '1APQ.test.rigid'
+    seed = 42
+    prmtop = 'examples/1APQ.prmtop'
+    xyz = 'examples/1APQ.rst7'
+    write_freq = 0
+    equil_steps = 0
+    prod_steps = 0
 
-name = '1APQ.test.rigid'
-seed = 42
-prmtop = 'examples/1APQ.prmtop'
-xyz = 'examples/1APQ.rst7'
-write_freq = 0
-equil_steps = 0
-prod_steps = 0
+    context = robosample.Context(name=name, seed=seed, prmtop=prmtop, inpcrd=xyz, write_freq=write_freq, testing=True)
 
-context = robosample.Context(name=name, seed=seed, prmtop=prmtop, inpcrd=xyz, write_freq=write_freq, testing=True)
+    # Put torsions on middle bonds in standard dihedrals and integrate with 10 fs time step for 1 ps
+    # Torsions are protein phi, psi and chi1
+    sele = context.getDefaultBonds('standard')
+    context.addTorsionalWorld(sele).addSampler(timeStep=0.01, mdSteps=0, boostMDSteps=0)
 
-# Put torsions on middle bonds in standard dihedrals and integrate with 10 fs time step for 1 ps
-# Torsions are protein phi, psi and chi1
-sele = context.getDefaultBonds('standard')
-context.addTorsionalWorld(sele).addSampler(timeStep=0.01, mdSteps=0, boostMDSteps=0)
+    # Add one replica at 300 K
+    context.initialize([300.0])
 
-# Add one replica at 300 K
-context.initialize([300.0])
+    # Run the simulation for no equilibration steps and 100 production steps totaling 100 ps of simulation time
+    context.RunREX(equil_steps, prod_steps)
 
-# Run the simulation for no equilibration steps and 100 production steps totaling 100 ps of simulation time
-context.RunREX(equil_steps, prod_steps)
+    # Load the trajectory
+    traj = md.load('1APQ.test.rigid_42.repl0.dcd', top=prmtop)
 
-# Load the trajectory
-traj = md.load('1APQ.test.rigid_42.repl0.dcd', top=prmtop)
+    # Load the reference structure for comparison
+    reference = md.load(xyz, top=prmtop)
 
-# Load the reference structure for comparison
-reference = md.load(xyz, top=prmtop)
+    return context, traj, reference
 
-def _assert_bond_constancy(bond_indices, tolerance=1e-5):
+def _assert_bond_constancy(simulation_results, bond_indices, tolerance=1e-5):
+    context, traj, reference = simulation_results
     if len(bond_indices) == 0:
         return
 
@@ -62,7 +66,8 @@ def _assert_bond_constancy(bond_indices, tolerance=1e-5):
         header = f"Bond constraints violated (Tol: {tolerance}nm):"
         pytest.fail(f"{header}\n" + "\n".join(violations))
 
-def _assert_angle_constancy(angle_indices, tolerance=1e-5):
+def _assert_angle_constancy(simulation_results, angle_indices, tolerance=1e-5):
+    context, traj, reference = simulation_results
     if len(angle_indices) == 0:
         return
 
@@ -91,7 +96,8 @@ def _assert_angle_constancy(angle_indices, tolerance=1e-5):
         header = f"Angle constraints violated (Tol: {tolerance}rad):"
         pytest.fail(f"{header}\n" + "\n".join(violations))
 
-def _assert_torsion_constancy(torsion_indices, tolerance=1e-5):
+def _assert_torsion_constancy(simulation_results, torsion_indices, tolerance=1e-5):
+    context, traj, reference = simulation_results
     if len(torsion_indices) == 0:
         return
 
@@ -122,10 +128,12 @@ def _assert_torsion_constancy(torsion_indices, tolerance=1e-5):
         header = f"Torsion behavior check failed:"
         pytest.fail(f"{header}\n" + "\n".join(violations))
 
-def test_num_frames():
+def test_num_frames(simulation_results):
+    context, traj, reference = simulation_results
     assert traj.n_frames == 1, f"Expected 1 frames, but got {traj.n_frames}"
 
-def test_transfer_coordinates():
+def test_transfer_coordinates(simulation_results):
+    context, traj, reference = simulation_results
     for error in context.getWorld(0).get_coordinate_transfer_errors():
         for residual in error.matchResiduals:
             assert residual < 1e-5, f"Coordinate transfer residual too high: {residual:.2e} nm"
@@ -140,16 +148,19 @@ def test_transfer_coordinates():
         assert error.improperDihedrals < 1e-5, f"Improper dihedral transfer error too high: {error.improperDihedrals:.2e} rad"
         assert error.improperDihedralsMax < 1e-5, f"Max improper dihedral transfer error too high: {error.improperDihedralsMax:.2e} rad"
 
-def test_rigid_bonds():
+def test_rigid_bonds(simulation_results):
+    context, traj, reference = simulation_results
     bonds = [[bond.prmtop_indices[0], bond.prmtop_indices[1]] for bond in context.bond_stretches]
-    _assert_bond_constancy(bonds)
+    _assert_bond_constancy(simulation_results, bonds)
 
-def test_rigid_angles():
+def test_rigid_angles(simulation_results):
+    context, traj, reference = simulation_results
     angles = [[angle.prmtop_indices[0], angle.prmtop_indices[1], angle.prmtop_indices[2]] for angle in context.bond_bends]
-    _assert_angle_constancy(angles)
+    _assert_angle_constancy(simulation_results, angles)
 
-def test_torsions():
+def test_torsions(simulation_results):
+    context, traj, reference = simulation_results
     periodic_torsions = [[torsion.prmtop_indices[0], torsion.prmtop_indices[1], torsion.prmtop_indices[2], torsion.prmtop_indices[3]] for torsion in context.periodic_torsions]
     improper_harmonic_torsions = [[torsion.prmtop_indices[0], torsion.prmtop_indices[1], torsion.prmtop_indices[2], torsion.prmtop_indices[3]] for torsion in context.improper_harmonic_torsions]
     torsions = periodic_torsions + improper_harmonic_torsions
-    _assert_torsion_constancy(torsions)
+    _assert_torsion_constancy(simulation_results, torsions)
