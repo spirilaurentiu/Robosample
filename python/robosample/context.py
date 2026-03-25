@@ -832,7 +832,7 @@ class Context(rb.Context):
             super().addWorld(world.fixmanTorque, world.samplesPerRound, world.rootMobility, world.flexibilities, world.useOpenMM, world.visual, world.visualizerFrequency)
 
         # OpenMM must be initialized before adding samplers since they want to calculate energies when initializing
-        super().initialize_openmm(
+        ok = super().initialize_openmm(
             self.atoms,
             self.bond_stretches,
             self.bond_bends,
@@ -848,6 +848,8 @@ class Context(rb.Context):
             self.exclusions,
             self.scaling14s
         )
+        if not ok:
+            raise ValueError("Failed to initialize OpenMM system in Robosample.")
 
         # Add samplers
         for i, w in enumerate(self.worlds):

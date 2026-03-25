@@ -285,7 +285,7 @@ class Context:
         ...
     def getWorlds(self) -> list[World]:
         ...
-    def initialize_openmm(self, arg0: collections.abc.Sequence[RoboAtom], arg1: collections.abc.Sequence[RoboBond], arg2: collections.abc.Sequence[RoboAngle], arg3: collections.abc.Sequence[RoboPeriodicTorsion], arg4: collections.abc.Sequence[RoboHarmonicImproperTorsion], arg5: collections.abc.Sequence[CMAPGrid], arg6: collections.abc.Sequence[CMAPTorsion], arg7: collections.abc.Sequence[UreyBradley], arg8: bool, arg9: typing.SupportsInt | typing.SupportsIndex, arg10: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], arg11: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], arg12: collections.abc.Sequence[Exclusion], arg13: collections.abc.Sequence[Scaling14]) -> None:
+    def initialize_openmm(self, arg0: collections.abc.Sequence[RoboAtom], arg1: collections.abc.Sequence[RoboBond], arg2: collections.abc.Sequence[RoboAngle], arg3: collections.abc.Sequence[RoboPeriodicTorsion], arg4: collections.abc.Sequence[RoboHarmonicImproperTorsion], arg5: collections.abc.Sequence[CMAPGrid], arg6: collections.abc.Sequence[CMAPTorsion], arg7: collections.abc.Sequence[UreyBradley], arg8: bool, arg9: typing.SupportsInt | typing.SupportsIndex, arg10: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], arg11: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], arg12: collections.abc.Sequence[Exclusion], arg13: collections.abc.Sequence[Scaling14]) -> bool:
         """
         Load an OpenMM system from components.
         """

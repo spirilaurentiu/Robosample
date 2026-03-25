@@ -1,6 +1,20 @@
 import nox
 import subprocess
+import os
 from pathlib import Path
+
+BUILD_DIR = Path("build")
+PROFILE_DIR = Path("profile-data")
+SO_DIR = Path("python/robosample")
+PYBIND_SO_PATTERN = "robo_bindings*.so"
+BOLT_SO = "robo_bindings.bolt.so"
+TARGET = "1APQ"
+PRMTOP = f"examples/{TARGET}.prmtop"
+RST7 = f"examples/{TARGET}.rst7"
+SEED = 6000
+EQUIL_STEPS = 0
+PROD_STEPS = 1000
+WRITE_FREQ = 1
 
 @nox.session
 def tests(session):
@@ -38,61 +52,47 @@ def tests(session):
         "--overwrite 50=red 75=orange 90=yellow 102=green"
     )
 
-BUILD_DIR = Path("build")
-PROFILE_DIR = Path("profile-data")
-SO_DIR = Path("python/robosample")
-PYBIND_SO_PATTERN = "robo_bindings*.so"
-BOLT_SO = "robo_bindings.bolt.so"
-TARGET = "2ala"
-PRMTOP = f"examples/{TARGET}.prmtop"
-RST7 = f"examples/{TARGET}.rst7"
-STEPS = 6000
-SEED = 0
-REPS = 100
-THREADS = 1
-
 @nox.session
-def clean(session):
-    """Clean old build and profile data."""
+def build_optimized(session):
+    # Set up environment
+    conda_prefix = os.environ.get("CONDA_PREFIX")
+
+    # Profile data
+    PROFILE_DIR.mkdir(exist_ok=True)
+    so_path = next(SO_DIR.glob(PYBIND_SO_PATTERN))
+    perf_data = PROFILE_DIR / "perf.data"
+    fdata = PROFILE_DIR / "perf.fdata"
+
+    # Local installation of our package
+    session.run("pip", "install", "-e", ".", external=True)
+    
+    # Clean previous builds and profiles
     for path in BUILD_DIR.glob("cuda-pgo-*"):
         session.run("rm", "-rf", str(path))
     session.run("rm", "-rf", str(PROFILE_DIR))
 
-@nox.session
-def build_pgo_train(session):
-    """CMake build with PGO training preset."""
-    session.run("cmake", "--preset", "cuda-pgo-train")
+    # Build with PGO instrumentation
+    session.run("cmake", "--preset", "cuda-pgo-train", env={"CONDA_PREFIX": conda_prefix})
     session.run("cmake", "--build", "--preset", "cuda-pgo-train")
 
-@nox.session
-def train_pgo(session):
-    """Run Python workload to collect PGO data."""
+    # Run PGO
     session.run(
         "python3",
         "python/robosample/roborun.py",
         TARGET,
         PRMTOP,
         RST7,
-        str(STEPS),
         str(SEED),
-        str(REPS),
-        str(THREADS),
+        str(EQUIL_STEPS),
+        str(PROD_STEPS),
+        str(WRITE_FREQ)
     )
 
-@nox.session
-def build_pgo_use(session):
-    """CMake build using collected PGO data."""
-    session.run("cmake", "--preset", "cuda-pgo-use")
+    # Build optimized
+    session.run("cmake", "--preset", "cuda-pgo-use", env={"CONDA_PREFIX": conda_prefix})
     session.run("cmake", "--build", "--preset", "cuda-pgo-use")
 
-@nox.session
-def profile_perf(session):
-    """Profile Python workload and generate perf data."""
-    PROFILE_DIR.mkdir(exist_ok=True)
-    so_path = next(SO_DIR.glob(PYBIND_SO_PATTERN))
-    perf_data = PROFILE_DIR / "perf.data"
-    fdata = PROFILE_DIR / "perf.fdata"
-
+    # Profile
     session.run(
         "perf",
         "record",
@@ -104,10 +104,10 @@ def profile_perf(session):
         TARGET,
         PRMTOP,
         RST7,
-        str(STEPS),
         str(SEED),
-        str(REPS),
-        str(THREADS),
+        str(EQUIL_STEPS),
+        str(PROD_STEPS),
+        str(WRITE_FREQ)
     )
 
     # Convert perf data to BOLT-friendly format
@@ -118,12 +118,7 @@ def profile_perf(session):
         "-o", str(fdata),
     )
 
-@nox.session
-def run_bolt(session):
-    """Run LLVM BOLT to optimize the pybind11 module."""
-    so_path = next(SO_DIR.glob(PYBIND_SO_PATTERN))
-    fdata = PROFILE_DIR / "perf.fdata"
-
+    # Optimize with BOLT
     session.run(
         "llvm-bolt",
         str(so_path),
@@ -134,15 +129,6 @@ def run_bolt(session):
         "-dyno-stats",
     )
 
-    # Replace original SO atomically
-    session.run("mv", "-f", BOLT_SO, str(so_path))
-
-@nox.session
-def full_pipeline(session):
-    """Run the full workflow end-to-end."""
-    session.notify("clean")
-    session.notify("build_pgo_train")
-    session.notify("train_pgo")
-    session.notify("build_pgo_use")
-    session.notify("profile_perf")
-    session.notify("run_bolt")
+    # Replace original SO
+    session.run("mv", "-f", BOLT_SO, str(so_path), external=True)
+    

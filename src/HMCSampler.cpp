@@ -145,7 +145,7 @@ void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOut
 	perturbVelocities(state, VelocitiesPerturbMethod::TO_T);
 
 	// This computes the potential energy, kinetic energy and ridid body forces using OpenMM, regardless of the integrator type
-	currentEnergy.potential = forces->getMultibodySystem().calcPotentialEnergy(state);
+	currentEnergy.potential = OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
 
 	// Kinetic energy is handled independently
 	if (integratorType == IntegratorType::OMMVV){
@@ -2677,7 +2677,10 @@ ThermostatName HMCSampler::getThermostat(void) const{
 // Get the potential energy from an external source as far as the sampler
 // is concerned - OPENMM has to be inserted here
 SimTK::Real HMCSampler::getPEFromEvaluator(const SimTK::State& someState) const{
-		return forces->getMultibodySystem().calcPotentialEnergy(someState);
+	throw std::runtime_error("Not implemented: HMCSampler::getPEFromEvaluator");
+
+	return forces->getMultibodySystem().calcPotentialEnergy(someState);
+
 	// Eliza's potential energy's calculations including rigid bodies
 	// internal energy
 	//return dumm->CalcFullPotEnergyIncludingRigidBodies(someState);// DOESN'T WORK WITH OPENMM
@@ -3897,7 +3900,7 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 		
 		// This computes the potential energy, kinetic energy and ridid body forces using OpenMM, regardless of the integrator type
 		compoundSystem->realize(state, SimTK::Stage::Position);
-		proposedEnergy.potential = forces->getMultibodySystem().calcPotentialEnergy(state);
+		proposedEnergy.potential = OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
 
 		// Kinetic energy is handled independently
 		if (integratorType == IntegratorType::OMMVV){

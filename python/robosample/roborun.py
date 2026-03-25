@@ -30,7 +30,8 @@ import numpy as np
 # python3 roborun.py 1APQ_TEST ./data-raw/1APQ.prmtop ./data-raw/1APQ_min.inpcrd 6000 0 10 1
 # python3 roborun.py 1A5E_TEST ./data-raw/1A5E.prmtop ./data-raw/1A5E_min.inpcrd 6000 0 10 1
 
-# python3 python/robosample/roborun.py ffar1 examples/ffar1.prmtop examples/ffar1.rst7 6000 0 1 1
+# python3 python/robosample/roborun.py ffar1 examples/ffar1.prmtop examples/ffar1.rst7 6000 0 20 1
+# python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
 
 # Create the parser
 parser = argparse.ArgumentParser(description='Process PDB code and seed.')
@@ -59,16 +60,16 @@ R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 # 10 kcal/mol - nanoseconds or longer (high barrier , ~16KbT)
 # 2 ps of MD is enough to explore shallow wells, but not to cross deep barriers without enhanced sampling (e.g., HMC, replica exchange)
 TIMESTEP_TD = 0.005 # Torsional dymaics time step is 10 fs
-MDSTEPS_TD = 1000 # Torsional dynamics block trajectory length 1 ps
+MDSTEPS_TD = 64 # Torsional dynamics block trajectory length 1 ps
 
 TIMESTEP_CARTESIAN = 0.001
-MDSTEPS_CARTESIAN = 1000
+MDSTEPS_CARTESIAN = 512
 
 # create robosample context
 context = robosample.Context(name=args.name, seed=args.seed, prmtop=args.prmtop, inpcrd=args.inpcrd, write_freq=args.write_freq, testing=True)
 
-# Add cartesian world (will integrate with OpenMM)
-context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
+# # Add cartesian world (will integrate with OpenMM)
+# context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
 
 # Add torsional world with non-redundant dihedrals
 # sele = [
@@ -99,7 +100,18 @@ context.initialize(temperatures)
 # 	raise RuntimeError(message)
 
 # Run the simulation
+
+
+import time
+
+start_time = time.perf_counter()
+
 context.RunREX(args.equil_steps, args.prod_steps)
+
+end_time = time.perf_counter()
+duration = end_time - start_time
+
+print(f"RunREX took {duration:.4f} seconds")
 
 """
 source leaprc.protein.ff19SB

@@ -568,13 +568,19 @@ bool OPENMM::initialize(
 #endif
 
     try {
+		// "single" - nearly all calculations are done in single precision. This is the fastest option but also the least accurate.
+		// "mixed" - forces are computed in single precision but integration is done in double precision. This gives much better energy conservation with only a slight decrease in speed.
+		// "double" - all calculations are done in double precision. This is the most accurate option, but is usually much slower than the others.
+		platform->setPropertyDefaultValue("Precision", "mixed");
+
         omm.context = std::make_unique<OpenMM::Context>(*omm.system, *omm.integrator, *platform);
 
         const double speed = omm.context->getPlatform().getSpeed();
         std::cout << "Created OpenMM context with " << PLATFORM_NAME << " platform with relative speed " << speed << std::endl;
 
     } catch (const std::exception& e) {
-        std::cout << "ERROR: OpenMM error during initialization: " << e.what() << std::endl;
+        std::cerr << "[ERROR]: Failed to create OpenMM Context." << std::endl;
+		std::cerr << "[ERROR]: " << e.what() << std::endl;
         return false;
     }
 
@@ -676,56 +682,28 @@ bool OPENMM::integrateTrajectory(const SimTK::Vector_<SimTK::Vec3>& includedAtom
 	return success;
 }
 
-void OPENMM::getEnergyAndForces(
-	bool positionsAlreadySet,
+void OPENMM::updatePositionsCache(const std::vector<NonBondedMapping>& nonBondedMappings, const SimTK::Vector_<SimTK::Vec3>& inclAtomPos_G) {
+	for (const auto& mapping : nonBondedMappings) {
+		const std::size_t dAIx = mapping.dummAtomIndex;
+		const std::size_t iax = mapping.includedAtomIndex;
+		const SimTK::Vec3& pos_G = inclAtomPos_G[iax];
+
+		ommAtomsPositionsCache[dAIx] = OpenMM::Vec3(pos_G[0], pos_G[1], pos_G[2]);
+	}
+
+	context->setPositions(ommAtomsPositionsCache);
+}
+
+void OPENMM::evaluateForces(
     const std::vector<NonBondedMapping>& nonBondedMappings,
-    const SimTK::Vector_<SimTK::Vec3>& includedAtomStation_G,
-    const SimTK::Vector_<SimTK::Vec3>& includedAtomPos_G,
-    SimTK::Vector_<SimTK::SpatialVec>& includedBodyForces_G,
-    SimTK::Real &energy)
+    const SimTK::Vector_<SimTK::Vec3>& inclAtomStation_G,
+    SimTK::Vector_<SimTK::SpatialVec>& inclBodyForces_G) const
 {
 	ensureInitialized();
 
-	// Set positions in OpenMM context only when requested
-	// This is to prevent setting the positions again after we integrated with OpenMM which would be wasteful
-	if (!positionsAlreadySet) {
-		for (const auto& mapping : nonBondedMappings) {
-			const std::size_t dAIx = mapping.dummAtomIndex;
-			const std::size_t iax = mapping.includedAtomIndex;
-			const SimTK::Vec3& pos_G = includedAtomPos_G[iax];
-
-			ommAtomsPositionsCache[dAIx] = OpenMM::Vec3(pos_G[0], pos_G[1], pos_G[2]);
-		}
-		context->setPositions(ommAtomsPositionsCache);
-	}
-
-	// Get state with energy and forces
 	// Intentional value capture: relies on C++17 guaranteed copy elision
-	// OpenMM already evaluates the potential energy internally in most kernels (the energy reduction is cheap once forces are computed)
-	// In that case retrieving the energy is essentially free.
-	// , 1 << activeForceGroupIndex
-	const auto state = context->getState(OpenMM::State::Energy | OpenMM::State::Forces, enforcePeriodicBox);
-
-	// auto start = std::chrono::high_resolution_clock::now();
-
-	// const auto state = context->getState(
-	// 	OpenMM::State::Energy | OpenMM::State::Forces,
-	// 	enforcePeriodicBox,
-	// 	1 << activeForceGroupIndex
-	// );
-
-	// auto end = std::chrono::high_resolution_clock::now();
-	// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-	// std::cout << "\tgetState(" << activeForceGroupIndex << ") took " << duration << " us" << std::endl;
-
-	potentialEnergy = state.getPotentialEnergy();
-	kineticEnergy = state.getKineticEnergy();
+	const auto state = context->getState(OpenMM::State::Forces, enforcePeriodicBox); // , 1 << activeForceGroupIndex
 	const auto& forces = state.getForces();
-
-	// std::cout << "\tForce group " << activeForceGroupIndex << " energy: " << potentialEnergy << " kJ/mol" << std::endl;
-
-	// Return only the potential energy for now
-	energy += potentialEnergy;
 	
 	// Map forces from atoms to bodies
     for (const auto& mapping : nonBondedMappings)
@@ -735,8 +713,14 @@ void OPENMM::getEnergyAndForces(
 		const std::size_t ibx = mapping.bodyIndex;
 
     	const SimTK::Vec3 simForce(forces[dAIx][0], forces[dAIx][1], forces[dAIx][2]);
-    	includedBodyForces_G[ibx] += SimTK::SpatialVec(includedAtomStation_G[iax] % simForce, simForce);
+    	inclBodyForces_G[ibx] += SimTK::SpatialVec(inclAtomStation_G[iax] % simForce, simForce);
     }
+}
+
+SimTK::Real OPENMM::evaluatePotentialEnergyFromPositionsCache() const {
+	ensureInitialized();
+	const auto state = context->getState(OpenMM::State::Energy, enforcePeriodicBox);
+	return state.getPotentialEnergy();
 }
 
 std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> OPENMM::computePeriodicBoxVectors_Context(

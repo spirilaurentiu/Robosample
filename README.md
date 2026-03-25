@@ -250,6 +250,17 @@ mamba clean --all
 
 ### Building Robosample
 
+#### Full optimization
+
+We have a custom `nox` configuration that does uses Program Guided Optimization (PGO), `perf` and `LLVM-BOLT` to build a fully optimized binary inside `python/robosample`:
+
+```bash
+sudo sysctl -w kernel.perf_event_paranoid=-1
+nox -s build_optimized
+```
+
+#### Custom builds
+
 If using CUDA, the default architecture is `native` which is not portable. If you build for distribution, go to `CMakePresets.json` and replace `CMAKE_CUDA_ARCHITECTURES` to `70;75;80;86` (Volta, Turing, Ampere (DC) and Ampere (Consumer)).
 
 The build system is organized into a matrix of Platforms and Build Types. You can combine them using the format `--preset <platform>-<type>`.
@@ -271,8 +282,6 @@ cmake --build --preset cuda-release
 ```bash
 python -m robosample.test_installation
 ```
-
-This will automatically install the Python bindings (`.so` file) into `robosample/build/robosample`.
 
 ### Visual Studio Code support
 

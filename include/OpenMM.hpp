@@ -217,13 +217,14 @@ public:
         kineticEnergy = state.getKineticEnergy();
     }
 
-    void getEnergyAndForces(
-        bool positionsAlreadySet,
+    void updatePositionsCache(const std::vector<NonBondedMapping>& nonBondedMappings, const SimTK::Vector_<SimTK::Vec3>& inclAtomPos_G);
+
+    void evaluateForces(
         const std::vector<NonBondedMapping>& nonBondedMappings,
-        const SimTK::Vector_<SimTK::Vec3>& includedAtomStation_G,
-        const SimTK::Vector_<SimTK::Vec3>& includedAtomPos_G,
-        SimTK::Vector_<SimTK::SpatialVec>& includedBodyForces_G,
-        SimTK::Real &energy);
+        const SimTK::Vector_<SimTK::Vec3>& inclAtomStation_G,
+        SimTK::Vector_<SimTK::SpatialVec>& inclBodyForces_G) const;
+
+    SimTK::Real evaluatePotentialEnergyFromPositionsCache() const;
 
     std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> computePeriodicBoxVectors_Context(
         double a_length, double b_length, double c_length,

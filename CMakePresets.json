@@ -15,7 +15,8 @@
       "cacheVariables": {
         "CMAKE_PREFIX_PATH": "$env{CONDA_PREFIX}",
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/python/robosample",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "Python3_ROOT_DIR": "$env{CONDA_PREFIX}"
       }
     },
     {
@@ -50,8 +51,7 @@
         "USE_CUDA": "ON",
         "CMAKE_CUDA_ARCHITECTURES": "native",
         "CUDAToolkit_ROOT": "$env{CONDA_PREFIX}",
-        "CMAKE_CUDA_COMPILER": "$env{CONDA_PREFIX}/bin/nvcc",
-        "CMAKE_CUDA_HOST_COMPILER": "$env{CONDA_PREFIX}/bin/x86_64-conda-linux-gnu-g++"
+        "CMAKE_CUDA_COMPILER": "$env{CONDA_PREFIX}/bin/nvcc"
       }
     },
 

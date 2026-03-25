@@ -108,7 +108,7 @@ public:
 		const ZMatrix& _zMatrix
 	);
 
-	void initializeOpenMM(
+	bool initializeOpenMM(
 		const std::vector<RoboAtom>& atoms,
 		const std::vector<RoboBond>& bonds,
 		const std::vector<RoboAngle>& angles,
