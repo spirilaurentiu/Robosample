@@ -230,7 +230,7 @@ pip install -e .
 We have a special branch named `update` which holds the original OpenMM code:
 
 ```bash
-cd openm//
+cd openm/
 git checkout update
 git remote add upstream https://github.com/openmm/openmm.git
 git fetch upstream
@@ -252,7 +252,7 @@ The development environment is a combination of `.yaml` files from `envs/`:
 Combine these files into a `.yaml` that contains all tools needed to configure and build the project and install:
 
 ```bash
-conda-merge envs/cuda12.8.yaml envs/robo_py312.yaml > robo_py312.yaml
+conda-merge envs/cuda13.0.yaml envs/robo_py312.yaml > robo_py312.yaml
 mamba env create -f robo_py312.yaml
 conda activate robo_py312
 ```

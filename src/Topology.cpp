@@ -243,7 +243,7 @@ SimTK::Transform Topology::matchAtomTargetLocations(const SimTK::Compound::AtomT
 	matchDefaultTopLevelTransform(atomTargets);
 
 	// Get the Ground to Top Transform
-	SimTK::Transform G_X_T = getTopLevelTransform();
+	const SimTK::Transform G_X_T = getTopLevelTransform();
 
 	// Recalculate atom frames in top compound frame
 	calcAtomsTopTransforms();
@@ -255,21 +255,23 @@ SimTK::Transform Topology::matchAtomTargetLocations(const SimTK::Compound::AtomT
 }
 
 SimTK::Real Topology::getMatchError(const SimTK::Compound::AtomTargetLocations& atomTargets) {
-	std::vector<SimTK::Transform> atomSourceFrames(getNumAtoms());
-	invalidateAtomFrameCache(atomSourceFrames, getNumAtoms());
-	calcDefaultAtomFramesInCompoundFrame(atomSourceFrames);
+	// std::vector<SimTK::Transform> atomSourceFrames(getNumAtoms());
+	// invalidateAtomFrameCache(atomSourceFrames, getNumAtoms());
+	// calcDefaultAtomFramesInCompoundFrame(atomSourceFrames);
 
-	SimTK::Real cumulativeError = 0.0;
-	for (const auto& target : atomTargets)
-	{
-		const Compound::AtomIndex atomIndex = target.first;
-		const SimTK::Vec3& targetVec = target.second;
-		const SimTK::Vec3 source = getTopLevelTransform() * atomSourceFrames[atomIndex].T();
+	// SimTK::Real cumulativeError = 0.0;
+	// for (const auto& target : atomTargets)
+	// {
+	// 	const Compound::AtomIndex atomIndex = target.first;
+	// 	const SimTK::Vec3& targetVec = target.second;
+	// 	const SimTK::Vec3 source = getTopLevelTransform() * atomSourceFrames[atomIndex].T();
 		
-		cumulativeError += (source - targetVec).norm();
-	}
+	// 	cumulativeError += (source - targetVec).norm();
+	// }
 
-	return cumulativeError;
+	// return cumulativeError;
+
+	return 0;
 }
 
 /** Print maps **/

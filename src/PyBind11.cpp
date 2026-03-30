@@ -1,14 +1,77 @@
 #include <Python.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
 #include <pybind11/stl.h>
+#include "BondCenter.hpp"
 #include "Context.hpp"
 #include "TopologyElements.hpp"
 #include "World.hpp"
 
+#include "molmodel/internal/Compound.h"
+
 namespace py = pybind11;
+
+namespace pybind11 { namespace detail {
+    template <> struct type_caster<SimTK::UnitVec3> {
+    public:
+        // Note: UnitVec3 is a typedef for UnitVec<Real, 1>
+        PYBIND11_TYPE_CASTER(SimTK::UnitVec3, _("UnitVec3"));
+
+        // Python -> C++
+        bool load(handle src, bool) {
+            auto buf = py::cast<py::iterable>(src);
+            SimTK::Vec3 temp; // Use a mutable Vec3 first
+            int i = 0;
+            for (auto item : buf) {
+                if (i < 3) temp[i++] = item.cast<SimTK::Real>();
+            }
+
+            if (i != 3) return false;
+
+            // Construct the UnitVec3 from the Vec3. 
+            // This handles the normalization internally.
+            value = SimTK::UnitVec3(temp);
+            return true;
+        }
+
+        // C++ -> Python
+        static handle cast(SimTK::UnitVec3 src, return_value_policy /* policy */, handle /* parent */) {
+            py::list l;
+            l.append(src[0]);
+            l.append(src[1]);
+            l.append(src[2]);
+            return l.release();
+        }
+    };
+}}
 
 PYBIND11_MODULE(MODULE_NAME, m) {
     m.doc() = "Robosample bindings";
+
+    py::class_<SimTK::ReferenceIndices>(m, "ReferenceIndices")
+        .def(py::init<int, int, int>(),
+            py::arg("zero"),
+            py::arg("one"),
+            py::arg("two")
+        )
+        .def_readwrite("zero", &SimTK::ReferenceIndices::zero)
+        .def_readwrite("one", &SimTK::ReferenceIndices::one)
+        .def_readwrite("two", &SimTK::ReferenceIndices::two);
+
+    py::enum_<SimTK::BondCenter::Chirality>(m, "BondCenterChirality")
+        .value("RightHanded", SimTK::BondCenter::Chirality::RightHanded)
+        .value("LeftHanded", SimTK::BondCenter::Chirality::LeftHanded)
+        .value("Planar", SimTK::BondCenter::Chirality::Planar);
+
+    m.def("triple_product", &SimTK::tripleProduct, "");
+    m.def("plane_normal", &SimTK::planeNormal, "");
+    m.def("is_chirality_mismatch", &SimTK::isChiralityMismatch, "");
+    m.def("signed_plane_deviation", &SimTK::signedPlaneDeviation, "");
+    m.def("exceeds_planarity_threshold", &SimTK::exceedsPlanarityThreshold, "");
+    m.def("chirality_from_plane_deviation", &SimTK::chiralityFromPlaneDeviation, "");
+    m.def("flipped_chirality", &SimTK::flippedChirality, "");
+    m.def("resolve_reference_indices", &SimTK::resolveReferenceIndices, "");
+    m.def("is_bond_chirality_mismatch", &SimTK::isBondChiralityMismatch, "");
 
     py::class_<SimTK::DuMM::AtomClassIndex>(m, "AtomClassIndex")
         .def(py::init<int>())

@@ -4,13 +4,13 @@
         {
             "label": "Run tests and coverage",
             "type": "shell",
-            "command": "nox -s tests",
+            "command": "nox -s tests --no-venv",
             "group": "test"
         },
         {
             "label": "Run full PGO/BOLT pipeline",
             "type": "shell",
-            "command": "nox -s full_pipeline",
+            "command": "nox -s build_optimized --no-venv",
             "group": "test"
         }
     ]

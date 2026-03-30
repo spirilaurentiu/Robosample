@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Robo.hpp"
+#include "bgeneral.hpp"
 
 using Random32 = pcg32_k1024;
 using Random64 = pcg64_k1024;

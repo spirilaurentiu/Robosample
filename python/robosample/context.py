@@ -372,31 +372,54 @@ class Context(rb.Context):
                     if 'ring' in dihedral_type:
                         continue
 
-                    atom_types = [self.parm.atoms[atom1_prmtop].type, self.parm.atoms[atom2_prmtop].type]
-                    if all(t in atomtypes.AMBER_FF19SB_ATOM_TYPES for t in atom_types):
-                        rigidity_map = {
-                            'protein-phi': rigid_protein_phi,
-                            'protein-psi': rigid_protein_psi,
-                            'protein-omega': rigid_protein_omega,
-                            'protein-chi1': rigid_protein_chi1,
-                            'protein-chi2': rigid_protein_chi2,
-                            'protein-chi3': rigid_protein_chi3,
-                            'protein-chi4': rigid_protein_chi4,
-                            'protein-chi5': rigid_protein_chi5,
-                        }
+                
+                    rigidity_map = {
+                        'phi': rigid_protein_phi,
+                        'psi': rigid_protein_psi,
+                        'omega': rigid_protein_omega,
+                        'chi1': rigid_protein_chi1,
+                        'chi2': rigid_protein_chi2,
+                        'chi3': rigid_protein_chi3,
+                        'chi4': rigid_protein_chi4,
+                        'chi5': rigid_protein_chi5,
+                    }
 
-                        match dihedral_type:
-                            case type_name if type_name in rigidity_map and not rigidity_map[type_name]:
-                                self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
-                            case _:
-                                continue
-                    elif all(t in atomtypes.AMBER_LIPID_21_ATOM_TYPES for t in atom_types):
-                        if len(self.parm.atoms[atom1_prmtop].bond_partners) == 1:
+                    match dihedral_type:
+                        case type_name if type_name in rigidity_map and not rigidity_map[type_name]:
+                            self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                        case _:
                             continue
-                        if len(self.parm.atoms[atom2_prmtop].bond_partners) == 1:
-                            continue
+                    
+                    print (f"Found standard dihedral bond between {self.parm.atoms[atom1_prmtop].name} and {self.parm.atoms[atom2_prmtop].name} in residue {resid} with dihedral type {dihedral_type}")
 
-                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+
+                    # atom_types = [self.parm.atoms[atom1_prmtop].type, self.parm.atoms[atom2_prmtop].type]
+                    # if all(t in atomtypes.AMBER_FF19SB_ATOM_TYPES for t in atom_types):
+                    #     rigidity_map = {
+                    #         'protein-phi': rigid_protein_phi,
+                    #         'protein-psi': rigid_protein_psi,
+                    #         'protein-omega': rigid_protein_omega,
+                    #         'protein-chi1': rigid_protein_chi1,
+                    #         'protein-chi2': rigid_protein_chi2,
+                    #         'protein-chi3': rigid_protein_chi3,
+                    #         'protein-chi4': rigid_protein_chi4,
+                    #         'protein-chi5': rigid_protein_chi5,
+                    #     }
+
+                    #     # print(f"Found standard dihedral bond between atoms {atom1_prmtop} and {atom2_prmtop} of types {atom_types} and dihedral type {dihedral_type} in residue {resid}")
+
+                    #     match dihedral_type:
+                    #         case type_name if type_name in rigidity_map and not rigidity_map[type_name]:
+                    #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                    #         case _:
+                    #             continue
+                    # elif all(t in atomtypes.AMBER_LIPID_21_ATOM_TYPES for t in atom_types):
+                    #     if len(self.parm.atoms[atom1_prmtop].bond_partners) == 1:
+                    #         continue
+                    #     if len(self.parm.atoms[atom2_prmtop].bond_partners) == 1:
+                    #         continue
+
+                    #     self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
 
                 # Add angles
                 for angle in molecule_prototypes[prototype_index].angle_params:
@@ -695,6 +718,26 @@ class Context(rb.Context):
 
         return flexibilities
     
+    def create_torsional_bonds(self, bond_indices: list[tuple[int, int]]) -> list[rb.BondFlexibility]:
+        flexibilities = []
+        for bond in bond_indices:
+            flex = rb.BondFlexibility()
+
+            atom1 = self.parm.atoms[bond[0]]
+            atom2 = self.parm.atoms[bond[1]]
+
+            flex.globalIndex1 = self.prmtop_to_global_index[atom1.idx]
+            flex.globalIndex2 = self.prmtop_to_global_index[atom2.idx]
+
+            flex.uniqueAtomName1 = atom1.residue.name + str(atom1.residue.idx+1) + '_' + atom1.name + '_' + str(atom1.idx+1)
+            flex.uniqueAtomName2 = atom2.residue.name + str(atom2.residue.idx+1) + '_' + atom2.name + '_' + str(atom2.idx+1)
+
+            flex.mobility = rb.BondMobility.Torsion
+
+            flexibilities.append(flex)
+
+        return [flexibilities]
+    
     def selectBonds(self, query: str, excludeTerminal: bool = True) -> list[rb.BondFlexibility]:
 
         # Load files and run query
@@ -863,6 +906,20 @@ class Context(rb.Context):
 
         # if not super().validate_context():
         #     raise ValueError("Invalid context.")
+
+        print("Context initialized successfully with the following parameters: ",
+              f"\n\tNumber of atoms: {len(self.atoms)}, ",
+              f"\n\tNumber of bond stretches: {len(self.bond_stretches)}, ",
+              f"\n\tNumber of bond bends: {len(self.bond_bends)}, ",
+              f"\n\tNumber of periodic torsions: {len(self.periodic_torsions)}, ",
+              f"\n\tNumber of improper harmonic torsions: {len(self.improper_harmonic_torsions)}, ",
+              f"\n\tNumber of CMAP torsions: {len(self.cmap_torsions)}, ",
+              f"\n\tNumber of Urey-Bradley terms: {len(self.urey_bradleys)}, ",
+              f"\n\tNumber of exclusions: {len(self.exclusions)}, ",
+              f"\n\tNumber of 1-4 scalings: {len(self.scaling14s)}, ",
+              f"\n\tNumber of worlds: {len(self.worlds)}, ",
+              f"\n\tNumber of replicas: {len(replicaTemperatures)}, ",
+              f"\n\tNumber of thermodynamic states: {len(replicaTemperatures)}")
 
     def generate_synthetic_atom_classes(self):
         # Signatures store the "parameter environment" of each atom

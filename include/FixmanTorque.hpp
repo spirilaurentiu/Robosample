@@ -12,6 +12,8 @@
 /**
  **/
 
+#include "bgeneral.hpp"
+
 class FixmanTorque : public SimTK::Force::Custom::Implementation {
 public:
     FixmanTorque(SimTK::SimbodyMatterSubsystem* argMatter);

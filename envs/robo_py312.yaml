@@ -1,6 +1,7 @@
 name: robo_py312
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   # Build tools
   - cmake
@@ -19,6 +20,10 @@ dependencies:
   - opencl-headers
   - clinfo
   - rocm-core
+
+  # OpenMP support for GNU and LLVM compilers
+  - libgomp
+  # - llvm-openmp
 
   # Bioinformatics
   - openmm

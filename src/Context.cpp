@@ -288,7 +288,7 @@ void Context::loadAmberSystem(
 		// Get coordinates
 		SimTK::Compound::AtomTargetLocations atomTargets;
 		for (const auto& a : topology.getAtoms()) {
-			atomTargets.insert(std::make_pair(a.identity.compoundAtomIndex, a.position));
+			atomTargets.push_back(a.position);
 		}
 		atomTargetLocationsCache.emplace_back(atomTargets);
 
@@ -2002,7 +2002,6 @@ void Context::setReplicasWorldsParameters(int thisReplica, bool alwaysAccept, bo
 
 		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(timestep, adaptiveTimestep);
 		if (worlds[replicaWorldIxs[i]].updSampler(0)->integratorType == IntegratorType::OMMVV) {
-			worlds[replicaWorldIxs[i]].updSampler(0)->dumm->setOpenMMTimestep(timestep / 10);
 		}
 	}
 
@@ -2846,22 +2845,22 @@ void Context::RunREX(int equilRounds, int prodRounds)
 	std::cout << rexOutput.str() << std::endl;
 	// ------------------------------------------------------------------------
 
-	// // First frame of DCD is the initial coordinates
-	// for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++) {
-	// 	std::vector<SimTK::Real> x (replicas[replicaIx].getX().size(), 0.0);
-	// 	std::vector<SimTK::Real> y (replicas[replicaIx].getY().size(), 0.0);
-	// 	std::vector<SimTK::Real> z (replicas[replicaIx].getZ().size(), 0.0);
+	// First frame of DCD is the initial coordinates
+	for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++) {
+		std::vector<SimTK::Real> x (replicas[replicaIx].getX().size(), 0.0);
+		std::vector<SimTK::Real> y (replicas[replicaIx].getY().size(), 0.0);
+		std::vector<SimTK::Real> z (replicas[replicaIx].getZ().size(), 0.0);
 				
-	// 	for (const auto& atom : atoms) {
-	// 		const std::size_t prmtopIndex = atom.identity.prmtopIndex;
-	// 		x[prmtopIndex] = replicas[replicaIx].getX()[atom.identity.globalIndex] * 10;
-	// 		y[prmtopIndex] = replicas[replicaIx].getY()[atom.identity.globalIndex] * 10;
-	// 		z[prmtopIndex] = replicas[replicaIx].getZ()[atom.identity.globalIndex] * 10;
-	// 	}
+		for (const auto& atom : atoms) {
+			const std::size_t prmtopIndex = atom.identity.prmtopIndex;
+			x[prmtopIndex] = replicas[replicaIx].getX()[atom.identity.globalIndex] * 10;
+			y[prmtopIndex] = replicas[replicaIx].getY()[atom.identity.globalIndex] * 10;
+			z[prmtopIndex] = replicas[replicaIx].getZ()[atom.identity.globalIndex] * 10;
+		}
 				
-	// 	const int whichDCD = replica2ThermoIxs[replicaIx];
-	// 	thermodynamicStates[whichDCD].writeDCD(x, y, z);
-	// }
+		const int whichDCD = replica2ThermoIxs[replicaIx];
+		thermodynamicStates[whichDCD].writeDCD(x, y, z);
+	}
 
 	// REPLICA EXCHANGE MAIN LOOP -------------------------------------------->
 	std::size_t mixIndex = 0;
@@ -3009,36 +3008,36 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 		// } // _end_ loop through replicas (NON-EQUILIBRIUM) RUN B
 
-		// mixReplicas(mixIndex, 0);
-		// mixIndex++;
-    	// // PrintNofAcceptedSwapsMatrix();
+		mixReplicas(mixIndex, 0);
+		mixIndex++;
+    	// PrintNofAcceptedSwapsMatrix();
 
-		// if ((mixIndex + 1) % printFreq == 0) {
-		// 	for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++) {
-		// 		writeLog(mixIndex, replicaIx);
-		// 		REXLog(mixIndex, replicaIx);
-		// 	}
-		// 	std::cout << std::flush;
+		if ((mixIndex + 1) % printFreq == 0) {
+			for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++) {
+				writeLog(mixIndex, replicaIx);
+				REXLog(mixIndex, replicaIx);
+			}
+			std::cout << std::flush;
 
-		// 	// Write DCDs
-		// 	for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++) {
+			// Write DCDs
+			for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++) {
 				
-		// 		// TODO cache these
-		// 		std::vector<SimTK::Real> x (replicas[replicaIx].getX().size(), 0.0);
-		// 		std::vector<SimTK::Real> y (replicas[replicaIx].getY().size(), 0.0);
-		// 		std::vector<SimTK::Real> z (replicas[replicaIx].getZ().size(), 0.0);
+				// TODO cache these
+				std::vector<SimTK::Real> x (replicas[replicaIx].getX().size(), 0.0);
+				std::vector<SimTK::Real> y (replicas[replicaIx].getY().size(), 0.0);
+				std::vector<SimTK::Real> z (replicas[replicaIx].getZ().size(), 0.0);
 				
-		// 		for (const auto& atom : atoms) {
-		// 			const std::size_t prmtopIndex = atom.identity.prmtopIndex;
-		// 			x[prmtopIndex] = replicas[replicaIx].getX()[atom.identity.globalIndex] * 10;
-		// 			y[prmtopIndex] = replicas[replicaIx].getY()[atom.identity.globalIndex] * 10;
-		// 			z[prmtopIndex] = replicas[replicaIx].getZ()[atom.identity.globalIndex] * 10;
-		// 		}
+				for (const auto& atom : atoms) {
+					const std::size_t prmtopIndex = atom.identity.prmtopIndex;
+					x[prmtopIndex] = replicas[replicaIx].getX()[atom.identity.globalIndex] * 10;
+					y[prmtopIndex] = replicas[replicaIx].getY()[atom.identity.globalIndex] * 10;
+					z[prmtopIndex] = replicas[replicaIx].getZ()[atom.identity.globalIndex] * 10;
+				}
 				
-		// 		const int whichDCD = replica2ThermoIxs[replicaIx];
-		// 		thermodynamicStates[whichDCD].writeDCD(x, y, z);
-		// 	}
-		// }
+				const int whichDCD = replica2ThermoIxs[replicaIx];
+				thermodynamicStates[whichDCD].writeDCD(x, y, z);
+			}
+		}
 
 		this->nofRounds++; 
 	}

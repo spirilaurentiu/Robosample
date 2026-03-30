@@ -1,7 +1,6 @@
 #pragma once
 
 #include "bgeneral.hpp"
-#include "Robo.hpp"
 #include "Simbody.h"
 #include "Molmodel.h"
 #include <array>

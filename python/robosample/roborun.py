@@ -30,6 +30,9 @@ import numpy as np
 # python3 roborun.py 1APQ_TEST ./data-raw/1APQ.prmtop ./data-raw/1APQ_min.inpcrd 6000 0 10 1
 # python3 roborun.py 1A5E_TEST ./data-raw/1A5E.prmtop ./data-raw/1A5E_min.inpcrd 6000 0 10 1
 
+# python3 python/robosample/roborun.py ala-dipeptide examples/ala-dipeptide.prmtop examples/ala-dipeptide.rst7 6000 0 10 1
+# python3 python/robosample/roborun.py ala-dipeptide examples/ala-dipeptide.prmtop examples/ala-dipeptide.rst7 6000 0 500 1
+
 # python3 python/robosample/roborun.py ffar1 examples/ffar1.prmtop examples/ffar1.rst7 6000 0 20 1
 # python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
 
@@ -68,8 +71,8 @@ MDSTEPS_CARTESIAN = 512
 # create robosample context
 context = robosample.Context(name=args.name, seed=args.seed, prmtop=args.prmtop, inpcrd=args.inpcrd, write_freq=args.write_freq, testing=True)
 
-# # Add cartesian world (will integrate with OpenMM)
-# context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
+# Add cartesian world (will integrate with OpenMM)
+context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
 
 # Add torsional world with non-redundant dihedrals
 # sele = [

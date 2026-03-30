@@ -1,8 +1,8 @@
 #ifndef __MONTECARLOSAMPLER_HPP__
 #define __MONTECARLOSAMPLER_HPP__
 
-#include "Robo.hpp"
 #include "Sampler.hpp"
+#include "bgeneral.hpp"
 
 class Topology;
 class IState;

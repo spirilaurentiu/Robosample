@@ -503,10 +503,8 @@ class MoleculePrototype:
         """
         candidates = [
             pmd.Dihedral(grandparent, parent_atom, child_atom, nephew)
-            for grandparent in parent_atom.bond_partners
-            if grandparent != child_atom
-            for nephew in child_atom.bond_partners
-            if nephew != parent_atom
+            for grandparent in parent_atom.bond_partners if grandparent != child_atom
+            for nephew in child_atom.bond_partners if nephew != parent_atom
         ]
 
         for dihedral in candidates:

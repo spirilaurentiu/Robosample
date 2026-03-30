@@ -1,7 +1,7 @@
 #ifndef __MONTECARLOSAMPLER_HPP__
 #define __MONTECARLOSAMPLER_HPP__
 
-#include "Robo.hpp"
+#include "bgeneral.hpp"
 #include "Sampler.hpp"
 
 // Just to remove the long syntax requirement

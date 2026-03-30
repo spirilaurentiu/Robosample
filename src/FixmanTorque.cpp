@@ -1,4 +1,3 @@
-#include "Robo.hpp"
 #include "FixmanTorque.hpp"
 
 

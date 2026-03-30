@@ -16,15 +16,20 @@ EQUIL_STEPS = 0
 PROD_STEPS = 1000
 WRITE_FREQ = 1
 
-@nox.session
+@nox.session(reuse_venv=True)
 def tests(session):
-    session.install("pytest", "pytest-cov", "gcovr", "anybadge", "jq")
+    # Compile for Release with Debug Info
+    session.run("cmake", "--preset", "cuda-release")
+    session.run("cmake", "--build", "--preset", "cuda-release")
 
+    session.run("bash", "rm", "build/*-release")
     session.run("bash", "-c", "find . -name '*.gcd*' -delete")
     session.run("bash", "-c", "rm -rf coverage")
 
+    session.env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
     session.run(
         "pytest",
+        "-p", "pytest_cov",
         "--cov=python/robosample/",
         "--cov-report=xml:coverage/python_coverage.xml",
     )
@@ -52,7 +57,7 @@ def tests(session):
         "--overwrite 50=red 75=orange 90=yellow 102=green"
     )
 
-@nox.session
+@nox.session(reuse_venv=True)
 def build_optimized(session):
     # Set up environment
     conda_prefix = os.environ.get("CONDA_PREFIX")

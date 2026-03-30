@@ -41,6 +41,7 @@ endif()
 # Link prerequisites
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
+find_package(OpenMP REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 
@@ -62,7 +63,6 @@ include(${CMAKE_SOURCE_DIR}/cmake_modules/Molmodel.cmake)
 # Build the robosample library
 FILE(GLOB src_c_files ${CMAKE_SOURCE_DIR}/format/src/*.c)
 SET(ROBOSAMPLE_C_SOURCE_FILES ${src_c_files})
-set_source_files_properties(${ROBOSAMPLE_C_SOURCE_FILES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
 FILE(GLOB src_cxx_files ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/format/src/*.cpp)
 SET(ROBOSAMPLE_CXX_SOURCE_FILES ${src_cxx_files})
@@ -190,9 +190,12 @@ set_property(TARGET ${ROBOSAMPLE_LIB_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION
 set_property(TARGET ${ROBOSAMPLE_LIB_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_PGO_USE TRUE)
 
 # Set properties for the library target
+# C++17 is the maximum we can safely request because offer support for CUDA 10.0 which requires GCC 7, and GCC 7 only supports up to C++17
 set_target_properties(${ROBOSAMPLE_LIB_NAME} PROPERTIES
     POSITION_INDEPENDENT_CODE ON
-    CXX_STANDARD 14
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
     CXX_VISIBILITY_PRESET default
     VISIBILITY_INLINES_HIDDEN OFF
 )
@@ -211,7 +214,6 @@ endif()
 target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
     -march=native #x86-64-v3
     -mtune=native #generic
-    -Wno-c++17-extensions
 
     # Debug
     $<$<CONFIG:Debug>:
@@ -288,10 +290,10 @@ target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
 # endif()
 
 # Link with external libraries
-target_link_libraries(${ROBOSAMPLE_LIB_NAME}
-    PRIVATE
+target_link_libraries(${ROBOSAMPLE_LIB_NAME} PRIVATE
     BLAS::BLAS
     LAPACK::LAPACK
+    OpenMP::OpenMP_CXX
     Threads::Threads
 )
 

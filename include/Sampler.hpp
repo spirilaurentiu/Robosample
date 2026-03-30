@@ -1,7 +1,7 @@
 #ifndef __SAMPLER_HPP__
 #define __SAMPLER_HPP__
 
-#include "Robo.hpp"
+#include "bgeneral.hpp"
 #include "Random.hpp"
 
 #ifndef PRINT_BUFFER_SIZE

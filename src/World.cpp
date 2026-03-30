@@ -47,7 +47,7 @@ void World::setAtomTargetLocationsToState(const std::vector<SimTK::Compound::Ato
 				const SimTK::Transform& T_X_root = topology.getTopTransform(mobodRootAIx);
 				SimTK::Transform G_X_root = G_X_T * T_X_root;
 
-				const SimTK::Vec3& G_vchild = atomTargets[topoIx].at(aIx);
+				const SimTK::Vec3& G_vchild = atomTargets[topoIx][aIx];
 				SimTK::Transform root_X_child = alignFlipAndTranslateFrameAlongXAxis(G_X_root, G_vchild);
 
 				topology.bsetFrameInMobilizedBodyFrame(aIx, root_X_child);
@@ -132,7 +132,7 @@ CoordinateTransferError World::checkCoordinateTransfer(const std::vector<SimTK::
 		// Check per-atom cartesian displacements
 		for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topologies[topoIx].getNumAtoms(); ++cAIx) {
 			const auto& computedLoc = newAtomtargets[topoIx][cAIx];
-			const auto& targetLoc = atomTargets[topoIx].at(cAIx);
+			const auto& targetLoc = atomTargets[topoIx][cAIx];
 
 			const SimTK::Real diffNorm = (targetLoc - computedLoc).norm();
 			error.cartesian += diffNorm;
@@ -149,8 +149,8 @@ CoordinateTransferError World::checkCoordinateTransfer(const std::vector<SimTK::
 			const auto& computedParent = newAtomtargets[topoIx][parentAIx];
 			const auto& computedChild = newAtomtargets[topoIx][childAIx];
 
-			const auto& targetParent = atomTargets[topoIx].at(parentAIx);
-			const auto& targetChild = atomTargets[topoIx].at(childAIx);
+			const auto& targetParent = atomTargets[topoIx][parentAIx];
+			const auto& targetChild = atomTargets[topoIx][childAIx];
 
 			const SimTK::Real computedBondLength = (computedChild - computedParent).norm();
 			const SimTK::Real targetBondLength = (targetChild - targetParent).norm();
@@ -172,9 +172,9 @@ CoordinateTransferError World::checkCoordinateTransfer(const std::vector<SimTK::
 			const auto& computedPos2 = newAtomtargets[topoIx][aIx2];
 			const auto& computedPos3 = newAtomtargets[topoIx][aIx3];
 
-			const auto& targetPos1 = atomTargets[topoIx].at(aIx1);
-			const auto& targetPos2 = atomTargets[topoIx].at(aIx2);
-			const auto& targetPos3 = atomTargets[topoIx].at(aIx3);
+			const auto& targetPos1 = atomTargets[topoIx][aIx1];
+			const auto& targetPos2 = atomTargets[topoIx][aIx2];
+			const auto& targetPos3 = atomTargets[topoIx][aIx3];
 
 			SimTK::Real computedAngle = bAngle(computedPos1, computedPos2, computedPos3);
 			SimTK::Real targetAngle = bAngle(targetPos1, targetPos2, targetPos3);
@@ -200,10 +200,10 @@ CoordinateTransferError World::checkCoordinateTransfer(const std::vector<SimTK::
 
 			// Calculate target dihedral
 			SimTK::Real targetDihedral = bDihedral(
-				atomTargets[topoIx].at(ids[0]), 
-				atomTargets[topoIx].at(ids[1]), 
-				atomTargets[topoIx].at(ids[2]), 
-				atomTargets[topoIx].at(ids[3])
+				atomTargets[topoIx][ids[0]], 
+				atomTargets[topoIx][ids[1]], 
+				atomTargets[topoIx][ids[2]], 
+				atomTargets[topoIx][ids[3]]
 			);
 
 			const SimTK::Real diffDihedral = std::abs(wrapAngle(targetDihedral - computedDihedral));
@@ -231,10 +231,10 @@ CoordinateTransferError World::checkCoordinateTransfer(const std::vector<SimTK::
 
 			// Calculate target dihedral
 			SimTK::Real targetDihedral = bDihedral(
-				atomTargets[topoIx].at(ids[0]), 
-				atomTargets[topoIx].at(ids[1]), 
-				atomTargets[topoIx].at(ids[2]), 
-				atomTargets[topoIx].at(ids[3])
+				atomTargets[topoIx][ids[0]], 
+				atomTargets[topoIx][ids[1]], 
+				atomTargets[topoIx][ids[2]], 
+				atomTargets[topoIx][ids[3]]
 			);
 
 			const SimTK::Real diffDihedral = std::abs(wrapAngle(targetDihedral - computedDihedral));
@@ -383,77 +383,6 @@ void World::updateFramesFromTopologies()
 			childAtomMobod.setDefaultOutboardFrame(SimTK::Transform());				
 		}
 	}
-}
-
-// TODO write a pdb writer for all the Compounds
-// TODO move this in Topology since they work only for one Compound
-void writePdb(const SimTK::Compound& c, SimTK::State& advanced,
-		 const char *dirname, const char *prefix, int midlength, const char *sufix)
-{
-  SimTK::Real mult = 10000*advanced.getTime(); // pico to femto
-  SimTK::PdbStructure  pdb(advanced, c);
-  std::stringstream sstream;
-  sstream<<dirname<<"/"<<prefix<<decimal_prefix(mult, std::pow(10, midlength))<<int(mult)<<sufix<<".pdb";
-  std::string ofilename = sstream.str();
-  std::filebuf fb;
-  fb.open(ofilename.c_str(), std::ios::out);
-  std::ostream os(&fb);
-  pdb.write(os); // automatically multiplies by ten (nm to A)
-  fb.close();
-}
-
-void writePdb(SimTK::Compound& c, SimTK::State& advanced,
-		 const char *dirname, const char *prefix, int midlength, const char *sufix)
-{
-  SimTK::Real mult = 10000*advanced.getTime(); // pico to femto
-  SimTK::PdbStructure  pdb(advanced, c);
-  std::stringstream sstream;
-  sstream<<dirname<<"/"<<prefix<<decimal_prefix(mult, std::pow(10, midlength))<<int(mult)<<sufix<<".pdb";
-  std::string ofilename = sstream.str();
-  std::filebuf fb;
-  fb.open(ofilename.c_str(), std::ios::out);
-  std::ostream os(&fb);
-  pdb.write(os); // automatically multiplies by ten (nm to A)
-  fb.close();
-}
-
-void writePdb(const SimTK::Compound& c, SimTK::State& advanced,
-		 const char *dirname, const char *prefix, int midlength, const char *sufix, SimTK::Real aTime)
-{
-  SimTK::Real mult = 10000*aTime; // pico to femto
-  SimTK::PdbStructure  pdb(advanced, c);
-  std::stringstream sstream;
-  sstream<<dirname<<"/"<<prefix<<decimal_prefix(mult, std::pow(10, midlength))<<int(mult)<<sufix<<".pdb";
-  std::string ofilename = sstream.str();
-  std::filebuf fb;
-  fb.open(ofilename.c_str(), std::ios::out);
-  std::ostream os(&fb);
-  pdb.write(os); // automatically multiplies by ten (nm to A)
-  fb.close();
-}
-
-void writePdb(SimTK::Compound& c, SimTK::State& advanced,
-		 const char *dirname, const char *prefix, int midlength, const char *sufix, SimTK::Real aTime)
-{
-  SimTK::Real mult = 10000*aTime; // pico to femto
-  SimTK::PdbStructure  pdb(advanced, c);
-  std::stringstream sstream;
-  sstream<<dirname<<"/"<<prefix<<decimal_prefix(mult, std::pow(10, midlength))<<int(mult)<<sufix<<".pdb";
-  std::string ofilename = sstream.str();
-  std::filebuf fb;
-  fb.open(ofilename.c_str(), std::ios::out);
-  std::ostream os(&fb);
-  pdb.write(os); // automatically multiplies by ten (nm to A)
-  fb.close();
-}
-
-void writePdb(SimTK::PdbStructure pdb, const char *FN)
-{
-  std::filebuf fb;
-  fb.open(FN, std::ios::out);
-  std::ostream os(&fb);
-  pdb.write(os); //automatically multiplies by ten (nm to A)
-  fb.close();
 }
 
 void World::generateDummParams(
@@ -1107,8 +1036,8 @@ bool World::hasRigidBodyViolations(SimTK::Real timeStep, int numSteps) {
 	int numAtoms = 0;
 	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
 		for (SimTK::Compound::AtomIndex cAIx = SimTK::Compound::AtomIndex(0); cAIx < topologies[topoIx].getAtoms().size(); cAIx++) {
-			const SimTK::Vec3& newLocation = atomTargetLocaltionsCache[topoIx].at(cAIx);
-			const SimTK::Vec3& oldLocation = atomTargetLocaltionsCacheOld[topoIx].at(cAIx);
+			const SimTK::Vec3& newLocation = atomTargetLocaltionsCache[topoIx][cAIx];
+			const SimTK::Vec3& oldLocation = atomTargetLocaltionsCacheOld[topoIx][cAIx];
 			sumSquaredDist += (newLocation - oldLocation).normSqr();
 			numAtoms++;
 		}
@@ -1123,12 +1052,12 @@ bool World::hasRigidBodyViolations(SimTK::Real timeStep, int numSteps) {
 	for (const auto& rigidBond : rigidBonds) {
 		const auto topoIx = rigidBond.topologyIndex;
 
-		const SimTK::Vec3& childOld = atomTargetLocaltionsCacheOld[topoIx].at(rigidBond.childCAIx);
-		const SimTK::Vec3& parentOld = atomTargetLocaltionsCacheOld[topoIx].at(rigidBond.parentCAIx);
+		const SimTK::Vec3& childOld = atomTargetLocaltionsCacheOld[topoIx][rigidBond.childCAIx];
+		const SimTK::Vec3& parentOld = atomTargetLocaltionsCacheOld[topoIx][rigidBond.parentCAIx];
 		const SimTK::Real oldDistance = (childOld - parentOld).norm();
 
-		const SimTK::Vec3& childNew = atomTargetLocaltionsCache[topoIx].at(rigidBond.childCAIx);
-		const SimTK::Vec3& parentNew = atomTargetLocaltionsCache[topoIx].at(rigidBond.parentCAIx);
+		const SimTK::Vec3& childNew = atomTargetLocaltionsCache[topoIx][rigidBond.childCAIx];
+		const SimTK::Vec3& parentNew = atomTargetLocaltionsCache[topoIx][rigidBond.parentCAIx];
 		const SimTK::Real newDistance = (childNew - parentNew).norm();
 
 		const SimTK::Real diff = std::abs(newDistance - oldDistance);
@@ -1160,14 +1089,14 @@ bool World::hasRigidBodyViolations(SimTK::Real timeStep, int numSteps) {
 	for (const auto& rigidAngle : rigidAngles) {
 		const auto topoIx = rigidAngle.topologyIndex;
 
-		const SimTK::Vec3& atom1Old = atomTargetLocaltionsCacheOld[topoIx].at(rigidAngle.cAIx1);
-		const SimTK::Vec3& atom2Old = atomTargetLocaltionsCacheOld[topoIx].at(rigidAngle.cAIx2);
-		const SimTK::Vec3& atom3Old = atomTargetLocaltionsCacheOld[topoIx].at(rigidAngle.cAIx3);
+		const SimTK::Vec3& atom1Old = atomTargetLocaltionsCacheOld[topoIx][rigidAngle.cAIx1];
+		const SimTK::Vec3& atom2Old = atomTargetLocaltionsCacheOld[topoIx][rigidAngle.cAIx2];
+		const SimTK::Vec3& atom3Old = atomTargetLocaltionsCacheOld[topoIx][rigidAngle.cAIx3];
 		const SimTK::Real oldAngle = bAngle(atom1Old, atom2Old, atom3Old);
 
-		const SimTK::Vec3& atom1New = atomTargetLocaltionsCache[topoIx].at(rigidAngle.cAIx1);
-		const SimTK::Vec3& atom2New = atomTargetLocaltionsCache[topoIx].at(rigidAngle.cAIx2);
-		const SimTK::Vec3& atom3New = atomTargetLocaltionsCache[topoIx].at(rigidAngle.cAIx3);
+		const SimTK::Vec3& atom1New = atomTargetLocaltionsCache[topoIx][rigidAngle.cAIx1];
+		const SimTK::Vec3& atom2New = atomTargetLocaltionsCache[topoIx][rigidAngle.cAIx2];
+		const SimTK::Vec3& atom3New = atomTargetLocaltionsCache[topoIx][rigidAngle.cAIx3];
 		const SimTK::Real newAngle = bAngle(atom1New, atom2New, atom3New);
 
 		const SimTK::Real diff = std::abs(wrapAngle(newAngle - oldAngle)) * SimTK_RADIAN_TO_DEGREE;
@@ -1195,16 +1124,16 @@ bool World::hasRigidBodyViolations(SimTK::Real timeStep, int numSteps) {
 	for (const auto& rigidProperTorsion : rigidProperTorsions) {
 		const auto topoIx = rigidProperTorsion.topologyIndex;
 
-		const SimTK::Vec3& atom1Old = atomTargetLocaltionsCacheOld[topoIx].at(rigidProperTorsion.cAIx1);
-		const SimTK::Vec3& atom2Old = atomTargetLocaltionsCacheOld[topoIx].at(rigidProperTorsion.cAIx2);
-		const SimTK::Vec3& atom3Old = atomTargetLocaltionsCacheOld[topoIx].at(rigidProperTorsion.cAIx3);
-		const SimTK::Vec3& atom4Old = atomTargetLocaltionsCacheOld[topoIx].at(rigidProperTorsion.cAIx4);
+		const SimTK::Vec3& atom1Old = atomTargetLocaltionsCacheOld[topoIx][rigidProperTorsion.cAIx1];
+		const SimTK::Vec3& atom2Old = atomTargetLocaltionsCacheOld[topoIx][rigidProperTorsion.cAIx2];
+		const SimTK::Vec3& atom3Old = atomTargetLocaltionsCacheOld[topoIx][rigidProperTorsion.cAIx3];
+		const SimTK::Vec3& atom4Old = atomTargetLocaltionsCacheOld[topoIx][rigidProperTorsion.cAIx4];
 		const SimTK::Real oldDihedral = bDihedral(atom1Old, atom2Old, atom3Old, atom4Old);
 
-		const SimTK::Vec3& atom1New = atomTargetLocaltionsCache[topoIx].at(rigidProperTorsion.cAIx1);
-		const SimTK::Vec3& atom2New = atomTargetLocaltionsCache[topoIx].at(rigidProperTorsion.cAIx2);
-		const SimTK::Vec3& atom3New = atomTargetLocaltionsCache[topoIx].at(rigidProperTorsion.cAIx3);
-		const SimTK::Vec3& atom4New = atomTargetLocaltionsCache[topoIx].at(rigidProperTorsion.cAIx4);
+		const SimTK::Vec3& atom1New = atomTargetLocaltionsCache[topoIx][rigidProperTorsion.cAIx1];
+		const SimTK::Vec3& atom2New = atomTargetLocaltionsCache[topoIx][rigidProperTorsion.cAIx2];
+		const SimTK::Vec3& atom3New = atomTargetLocaltionsCache[topoIx][rigidProperTorsion.cAIx3];
+		const SimTK::Vec3& atom4New = atomTargetLocaltionsCache[topoIx][rigidProperTorsion.cAIx4];
 		const SimTK::Real newDihedral = bDihedral(atom1New, atom2New, atom3New, atom4New);
 
 		const SimTK::Real diff = std::abs(wrapAngle(newDihedral - oldDihedral)) * SimTK_RADIAN_TO_DEGREE;
@@ -1232,16 +1161,16 @@ bool World::hasRigidBodyViolations(SimTK::Real timeStep, int numSteps) {
 	for (const auto& rigidImproperTorsion : rigidImproperTorsions) {
 		const auto topoIx = rigidImproperTorsion.topologyIndex;
 
-		const SimTK::Vec3& atom1Old = atomTargetLocaltionsCacheOld[topoIx].at(rigidImproperTorsion.cAIx1);
-		const SimTK::Vec3& atom2Old = atomTargetLocaltionsCacheOld[topoIx].at(rigidImproperTorsion.cAIx2);
-		const SimTK::Vec3& atom3Old = atomTargetLocaltionsCacheOld[topoIx].at(rigidImproperTorsion.cAIx3);
-		const SimTK::Vec3& atom4Old = atomTargetLocaltionsCacheOld[topoIx].at(rigidImproperTorsion.cAIx4);
+		const SimTK::Vec3& atom1Old = atomTargetLocaltionsCacheOld[topoIx][rigidImproperTorsion.cAIx1];
+		const SimTK::Vec3& atom2Old = atomTargetLocaltionsCacheOld[topoIx][rigidImproperTorsion.cAIx2];
+		const SimTK::Vec3& atom3Old = atomTargetLocaltionsCacheOld[topoIx][rigidImproperTorsion.cAIx3];
+		const SimTK::Vec3& atom4Old = atomTargetLocaltionsCacheOld[topoIx][rigidImproperTorsion.cAIx4];
 		const SimTK::Real oldDihedral = bDihedral(atom1Old, atom2Old, atom3Old, atom4Old);
 
-		const SimTK::Vec3& atom1New = atomTargetLocaltionsCache[topoIx].at(rigidImproperTorsion.cAIx1);
-		const SimTK::Vec3& atom2New = atomTargetLocaltionsCache[topoIx].at(rigidImproperTorsion.cAIx2);
-		const SimTK::Vec3& atom3New = atomTargetLocaltionsCache[topoIx].at(rigidImproperTorsion.cAIx3);
-		const SimTK::Vec3& atom4New = atomTargetLocaltionsCache[topoIx].at(rigidImproperTorsion.cAIx4);
+		const SimTK::Vec3& atom1New = atomTargetLocaltionsCache[topoIx][rigidImproperTorsion.cAIx1];
+		const SimTK::Vec3& atom2New = atomTargetLocaltionsCache[topoIx][rigidImproperTorsion.cAIx2];
+		const SimTK::Vec3& atom3New = atomTargetLocaltionsCache[topoIx][rigidImproperTorsion.cAIx3];
+		const SimTK::Vec3& atom4New = atomTargetLocaltionsCache[topoIx][rigidImproperTorsion.cAIx4];
 		const SimTK::Real newDihedral = bDihedral(atom1New, atom2New, atom3New, atom4New);
 
 		const SimTK::Real diff = std::abs(wrapAngle(newDihedral - oldDihedral)) * SimTK_RADIAN_TO_DEGREE;
@@ -1365,7 +1294,7 @@ World::World(int worldIndex, Span<Topology> topo, bool testing, const ZMatrix& _
 		atomTargetLocaltionsCache.emplace_back();
 		numMolecules++;
 		for (const auto& a : t.getAtoms()) {
-			atomTargetLocaltionsCache.back().emplace(std::make_pair(a.identity.compoundAtomIndex, a.position));
+			atomTargetLocaltionsCache.back().push_back(a.position);
 			numAtoms++;
 		}
 	}
@@ -2368,14 +2297,14 @@ void World::updateTransformsMeans(SimTK::State& someState)
 		int i = -1;
 		for(auto &xpf : acosX_PF00_means ){
 			i += 1;
-			xpf = (N_1overN * xpf) + (NInv * acosX_PF00.at(i)); 
+			xpf = (N_1overN * xpf) + (NInv * acosX_PF00[i]); 
 		}
 		
 		// Update normX_BMp means
 		i = -1;
 		for(auto &xbm : normX_BMp_means ){
 			i += 1;
-			xbm = (N_1overN * xbm) + (NInv * normX_BMp.at(i));
+			xbm = (N_1overN * xbm) + (NInv * normX_BMp[i]);
 			//std::cout << "World " << ownWorldIndex << " bondUpdMean " << i << " " << xbm << std::endl;
 		}
 	}
@@ -4138,7 +4067,6 @@ void World::useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep) {
 		forceField->setUseOpenMMIntegration(true);
 		forceField->setUseOpenMMCalcOnlyNonBonded(false);
 		forceField->setDuMMTemperature(boostTemp);
-		forceField->setDuMMTimestep(timestep);
 	} else {
 		forceField->setUseOpenMMCalcOnlyNonBonded(false);
 	}
@@ -4586,47 +4514,6 @@ void World::setRootMobility(ROOT_MOBILITY rootMobility) {
 const SimTK::String& World::getRootMobility() const {
 	return rootMobilizer;
 }
-
-/*!
- * <!-- Drill -->
-*/
-const std::vector<std::vector<SimTK::Real>>& World::getEnergies_drl_bon(){return forceField->getEnergies_drl_bon();}
-/*!
- * <!-- Drill -->
-*/
-const std::vector<std::vector<SimTK::Real>>& World::getEnergies_drl_ang(){return forceField->getEnergies_drl_ang();}
-/*!
- * <!-- Drill -->
-*/
-const std::vector<std::vector<SimTK::Real>>& World::getEnergies_drl_tor(){return forceField->getEnergies_drl_tor();}
-/*!
- * <!-- Drill -->
-*/
-const std::vector<std::vector<SimTK::Real>>& World::getEnergies_drl_n14(){return forceField->getEnergies_drl_n14();}
-/*!
- * <!-- Drill -->
-*/
-const std::vector<std::vector<SimTK::Real>>& World::getEnergies_drl_vdw(){return forceField->getEnergies_drl_vdw();}
-/*!
- * <!-- Drill -->
-*/
-const std::vector<std::vector<SimTK::Real>>& World::getEnergies_drl_cou(){return forceField->getEnergies_drl_cou();}
-/*!
- * <!-- Drill -->
-*/
-const std::vector<OpenMM::Vec3>& World::getForces_drl_bon(){return forceField->getForces_drl_bon();}
-/*!
- * <!-- Drill -->
-*/
-const std::vector<OpenMM::Vec3>& World::getForces_drl_ang(){return forceField->getForces_drl_ang();}
-/*!
- * <!-- Drill -->
-*/
-const std::vector<OpenMM::Vec3>& World::getForces_drl_tor(){return forceField->getForces_drl_tor();}
-/*!
- * <!-- Drill -->
-*/
-const std::vector<OpenMM::Vec3>& World::getForces_drl_n14(){return forceField->getForces_drl_n14();}
 
 /*!
  * <!--  -->

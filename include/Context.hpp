@@ -1,12 +1,11 @@
 #pragma once
 
-#include "Robo.hpp"
+#include "bgeneral.hpp"
 #include "Sampler.hpp"
 #include "TopologyElements.hpp"
 #include "World.hpp"
 #include "ThermodynamicState.hpp"
 #include "Replica.hpp"
-#include "TrajectoryObject.hpp"
 #include "OpenMM.hpp"
 
 class Sampler;

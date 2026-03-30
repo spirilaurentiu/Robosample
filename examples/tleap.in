@@ -1,0 +1,5 @@
+source leaprc.gaff
+loadamberparams c4bond3.frcmod
+c4bond3 = loadmol2 c4bond3.mol2
+saveamberparm c4bond3 c4bond3.prmtop c4bond3.rst7
+quit

@@ -1,4 +1,5 @@
 #include "Replica.hpp"
+#include "Compound.h"
 
 // Get coordinates from this replica
 const std::vector<SimTK::Compound::AtomTargetLocations>& Replica::getAtomsLocationsInGround() const
@@ -30,10 +31,10 @@ void Replica::setAtomsLocationsInGround(const std::vector<SimTK::Compound::AtomT
 	// Update coordinate buffers
 	int numAtomsInMols = 0;
 	for (const auto& topology : atomsLocations) {
-		for (const auto& locations : topology) {
-			x[locations.first + numAtomsInMols] = locations.second[0];
-			y[locations.first + numAtomsInMols] = locations.second[1];
-			z[locations.first + numAtomsInMols] = locations.second[2];
+		for (SimTK::Compound::AtomIndex atomIndex(0); atomIndex < topology.size(); ++atomIndex) {
+			x[atomIndex + numAtomsInMols] = topology[atomIndex][0];
+			y[atomIndex + numAtomsInMols] = topology[atomIndex][1];
+			z[atomIndex + numAtomsInMols] = topology[atomIndex][2];
 		}
 		numAtomsInMols += topology.size();
 	}
@@ -62,10 +63,10 @@ void Replica::updAtomsLocationsInGround_FromWORK() {
 	// Update coordinate buffers
 	int numAtomsInMols = 0;
 	for (const auto& topology : atomsLocations) {
-		for (const auto& locations : topology) {
-			x[locations.first + numAtomsInMols] = locations.second[0];
-			y[locations.first + numAtomsInMols] = locations.second[1];
-			z[locations.first + numAtomsInMols] = locations.second[2];
+		for (SimTK::Compound::AtomIndex atomIndex(0); atomIndex < topology.size(); ++atomIndex) {
+			x[atomIndex + numAtomsInMols] = topology[atomIndex][0];
+			y[atomIndex + numAtomsInMols] = topology[atomIndex][1];
+			z[atomIndex + numAtomsInMols] = topology[atomIndex][2];
 		}
 		numAtomsInMols += topology.size();
 	}

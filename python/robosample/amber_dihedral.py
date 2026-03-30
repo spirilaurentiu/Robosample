@@ -373,9 +373,11 @@ class DihedralClassifier:
         # We check both the forward and reverse order of the atoms to account for different orientations
         atoms = [dihedral.atom1, dihedral.atom2, dihedral.atom3, dihedral.atom4]
         label = self.protein_dihedral_definitions.get(_extract_atom_names(atoms))
+        print(f"Classifying dihedral with atoms {[atom.name for atom in atoms]}: initial label = {label}")
         if not label:
             atoms = list(reversed(atoms))
             label = self.protein_dihedral_definitions.get(_extract_atom_names(atoms))
+            print(f"Reversed atom order: {[atom.name for atom in atoms]}, label = {label}")
 
         resids = _extract_residue_indices(atoms)
         i = resids[1]
@@ -678,20 +680,22 @@ class DihedralClassifier:
 
     def classify(self, dihedral: pmd.topologyobjects.Dihedral) -> str | None:
 
-        # Extract atom types (not atom names) to dispatch to the appropriate classifier
-        atom_types = [dihedral.atom1.type, dihedral.atom2.type, dihedral.atom3.type, dihedral.atom4.type]
+        return self._classify_protein(dihedral)
 
-        # Handle protein backbone and side chains
-        if all(t in atomtypes.AMBER_FF19SB_ATOM_TYPES for t in atom_types):
-            label = self._classify_protein(dihedral)
-            if label:
-                return 'protein-' + label
-            else:
-                return 'protein-other'
+        # # Extract atom types (not atom names) to dispatch to the appropriate classifier
+        # atom_types = [dihedral.atom1.type, dihedral.atom2.type, dihedral.atom3.type, dihedral.atom4.type]
+
+        # # Handle protein backbone and side chains
+        # if all(t in atomtypes.AMBER_FF19SB_ATOM_TYPES for t in atom_types):
+        #     label = self._classify_protein(dihedral)
+        #     if label:
+        #         return 'protein-' + label
+        #     else:
+        #         return 'protein-other'
             
-        # Handle lipids
-        if all(t in atomtypes.AMBER_LIPID_21_ATOM_TYPES for t in atom_types):
-            return 'lipid'
+        # # Handle lipids
+        # if all(t in atomtypes.AMBER_LIPID_21_ATOM_TYPES for t in atom_types):
+        #     return 'lipid'
 
         # # Try to classify as nucleic acid first
         # # Some glycosidic dihedrals may superficially resemble nucleic acid torsions, so we check for nucleic acid residues first to avoid misclassification.

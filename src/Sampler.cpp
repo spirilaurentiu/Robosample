@@ -483,7 +483,7 @@ SimTK::Real Sampler::generateVonMisesSample(SimTK::Real Mean, SimTK::Real K){
 	}
 
 	// Translate to the mean
-	if( isnan(theta) ){
+	if(std::isnan(theta)) {
 		std::cout << "Sampler::vonMises warning did not draw after 1000 tries.\n";
 		return theta;
 	}else{

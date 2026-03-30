@@ -17,9 +17,11 @@ FOREACH(subdir ${MOLMODEL_DIRS})
     # pimpl pattern is used and headers are stored in the src directory
     FILE(GLOB incl_files ${subdir}/src/*.h ${subdir}/src/*/*.h)
     SET(MOLMODEL_SOURCE_INCLUDE_FILES ${MOLMODEL_SOURCE_INCLUDE_FILES} ${incl_files})
-ENDFOREACH(subdir)
 
-# set_source_files_properties(${MOLMODEL_C_SOURCE_FILES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+    # pimpl pattern is used and headers are stored in the src directory
+    FILE(GLOB incl_files ${subdir}/src/*.hpp ${subdir}/src/*/*.hpp)
+    SET(MOLMODEL_SOURCE_INCLUDE_FILES ${MOLMODEL_SOURCE_INCLUDE_FILES} ${incl_files})
+ENDFOREACH(subdir)
 
 set(MOLMODEL_COMPILE_DEFINITIONS
     MOLMODEL_COPYRIGHT_YEARS="2006-12"

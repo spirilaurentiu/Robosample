@@ -23,7 +23,6 @@
 
 #include "Simbody.h"
 #include "Molmodel.h"
-#include "ParaMolecularDecorator.hpp"
 #include "FixmanTorque.hpp"
 
 #ifndef BaseSampler
@@ -33,23 +32,6 @@
 #include "Topology.hpp"
 #include "HMCSampler.hpp"
 #include "ConformationalSearch.hpp"
-
-// TODO write a pdb writer for all the Compounds
-// TODO move this in Topology since they work only for one Compound
-// The following use PdbStructure for a Compound's Default Configuration
-void writePdb(const SimTK::Compound& c, SimTK::State& advanced,
-		 const char *dirname, const char *prefix, int midlength, const char *sufix);
-
-void writePdb(	  SimTK::Compound& c, SimTK::State& advanced,
-		 const char *dirname, const char *prefix, int midlength, const char *sufix);
-
-void writePdb(const SimTK::Compound& c, SimTK::State& advanced,
-		 const char *dirname, const char *prefix, int midlength, const char *sufix, double aTime);
-
-void writePdb(	  SimTK::Compound& c, SimTK::State& advanced,
-		 const char *dirname, const char *prefix, int midlength, const char *sufix, double aTime);
-
-void writePdb(SimTK::PdbStructure pdb, const char *FN);
 
 class Context;
 
@@ -1000,71 +982,6 @@ public:
 
 	// BAT --------------------------------------------------------------------
 
-	//...........................
-	// --- Drilling functions ---
-	//...........................
-	
-	/**	
-	* @brief Drill
-	* @param
-	*/
-	const std::vector<std::vector<double>>& getEnergies_drl_bon();
-	
-	/**	
-	* @brief Drill
-	* @param
-	*/
-	const std::vector<std::vector<double>>& getEnergies_drl_ang();
-	
-	/**	
-	* @brief Drill
-	* @param
-	*/
-	const std::vector<std::vector<double>>& getEnergies_drl_tor();
-	
-	/**	
-	* @brief Drill
-	* @param
-	*/
-	const std::vector<std::vector<double>>& getEnergies_drl_n14();
-	
-	/**	
-	* @brief Drill
-	* @param
-	*/
-	const std::vector<std::vector<double>>& getEnergies_drl_vdw();
-	
-	/**	
-	* @brief Drill
-	* @param
-	*/
-	const std::vector<std::vector<double>>& getEnergies_drl_cou();
-	
-	/**	
-	* @brief Drill
-	* @param
-	*/
-	const std::vector<OpenMM::Vec3>& getForces_drl_bon();
-	
-	/**	
-	* @brief Drill
-	* @param
-	*/
-	const std::vector<OpenMM::Vec3>& getForces_drl_ang();
-	
-	/**	
-	* @brief Drill
-	* @param
-	*/
-	const std::vector<OpenMM::Vec3>& getForces_drl_tor();
-	
-	/**	
-	* @brief Drill
-	* @param
-	*/
-	const std::vector<OpenMM::Vec3>& getForces_drl_n14();
-
-	
 	/**	
 	* @brief Drill
 	* @param
