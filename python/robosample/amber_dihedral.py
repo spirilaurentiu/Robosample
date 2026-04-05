@@ -367,17 +367,15 @@ class DihedralClassifier:
 
         return label
 
-    def _classify_protein(self, dihedral: pmd.topologyobjects.Dihedral) -> str | None:
+    def _classify_protein(self, gparent: pmd.Atom, parent: pmd.Atom, child: pmd.Atom, gchild: pmd.Atom) -> str | None:
 
         # Check if the dihedral matches any of the defined protein dihedrals (backbone or side chain)
         # We check both the forward and reverse order of the atoms to account for different orientations
-        atoms = [dihedral.atom1, dihedral.atom2, dihedral.atom3, dihedral.atom4]
+        atoms = (gparent, parent, child, gchild)
         label = self.protein_dihedral_definitions.get(_extract_atom_names(atoms))
-        print(f"Classifying dihedral with atoms {[atom.name for atom in atoms]}: initial label = {label}")
         if not label:
-            atoms = list(reversed(atoms))
+            atoms = atoms[::-1]
             label = self.protein_dihedral_definitions.get(_extract_atom_names(atoms))
-            print(f"Reversed atom order: {[atom.name for atom in atoms]}, label = {label}")
 
         resids = _extract_residue_indices(atoms)
         i = resids[1]
@@ -678,9 +676,9 @@ class DihedralClassifier:
         if res: return res
         return check_substituent(list(reversed(atoms)), list(reversed(names)))
 
-    def classify(self, dihedral: pmd.topologyobjects.Dihedral) -> str | None:
+    def classify(self, gparent: pmd.Atom, parent: pmd.Atom, child: pmd.Atom, gchild: pmd.Atom) -> str | None:
 
-        return self._classify_protein(dihedral)
+        return self._classify_protein(gparent, parent, child, gchild)
 
         # # Extract atom types (not atom names) to dispatch to the appropriate classifier
         # atom_types = [dihedral.atom1.type, dihedral.atom2.type, dihedral.atom3.type, dihedral.atom4.type]

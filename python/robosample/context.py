@@ -183,6 +183,10 @@ class Context(rb.Context):
         unique_atom_classes = sorted(unique_atom_classes)
         self.atom_class_indices = {key: i+1 for i, key in enumerate(unique_atom_classes)}
 
+        # TODO
+        self.dihedral_atom_groups: list[tuple[int, int, int, int]] = []
+        # TODO
+
         # DuMM charged atom types are AMBER atom types plus their partial charge
         # DuMMForceFieldSubsystemRep::setBiotypeChargedAtomType - there is 1:1 correspondence between biotype and charged atom type
         charged_atom_types = set([atom_classes[a] + ':' + str(a.charge) for a in self.parm.atoms])
@@ -323,7 +327,7 @@ class Context(rb.Context):
 
                 # Add bonds
                 for bond in molecule_prototypes[prototype_index].bond_params:
-                    prmtop_indices = [l+self.num_atom_offset for l in bond.local_indices]
+                    prmtop_indices = [bond.parent_local_index + self.num_atom_offset, bond.child_local_index + self.num_atom_offset]
                     for prmtop_index in prmtop_indices:
                         atom = self.parm.atoms[prmtop_index]
                         if atom.idx != prmtop_index:
@@ -333,7 +337,7 @@ class Context(rb.Context):
                         rb.RoboBond(
                             global_indices=tuple(self.prmtop_to_global_index[p] for p in prmtop_indices),
                             prmtop_indices=tuple(prmtop_indices),
-                            compound_atom_indices=bond.compound_atom_indices,
+                            compound_atom_indices=(bond.parent_compound_atom_index, bond.child_compound_atom_index),
                             stiffness_in_kj_per_nm_sq=bond.stiffness_in_kj_per_nm_sq,
                             nominal_length_in_nm=bond.nominal_length_in_nm,
                             molecule_index=instance_index,
@@ -387,10 +391,11 @@ class Context(rb.Context):
                     match dihedral_type:
                         case type_name if type_name in rigidity_map and not rigidity_map[type_name]:
                             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                            self.dihedral_atom_groups.append()
                         case _:
                             continue
                     
-                    print (f"Found standard dihedral bond between {self.parm.atoms[atom1_prmtop].name} and {self.parm.atoms[atom2_prmtop].name} in residue {resid} with dihedral type {dihedral_type}")
+                    # print (f"Found standard dihedral bond between {self.parm.atoms[atom1_prmtop].name} and {self.parm.atoms[atom2_prmtop].name} in residue {resid} with dihedral type {dihedral_type}")
 
 
                     # atom_types = [self.parm.atoms[atom1_prmtop].type, self.parm.atoms[atom2_prmtop].type]

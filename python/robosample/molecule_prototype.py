@@ -37,12 +37,16 @@ class AtomParams:
 
 @dataclass(slots=True)
 class BondParams:
-    local_indices: Tuple[int, int]
-    compound_atom_indices: Tuple[int, int]
+    parent_local_index: int
+    child_local_index: int
+    parent_compound_atom_index: int
+    child_compound_atom_index: int
     stiffness_in_kj_per_nm_sq: float
     nominal_length_in_nm: float
     is_ring_closing: bool
     dihedral_type: str
+    gparent_local_index: Optional[int] = field(default=None)
+    nephew_local_index: Optional[int] = field(default=None)
 
 @dataclass(slots=True)
 class AngleParams:
@@ -146,7 +150,7 @@ class MoleculePrototype:
         # We begin by creating a lookup table
         bond_lookup = {frozenset((b.atom1.idx, b.atom2.idx)): b for b in self.molecule.bonds}
 
-        # Build bond parameters
+        # Build bond parametersBondParams
         self.bond_params: List[BondParams] = []
         for parent_local_index, child_local_index, dihedral_type, resid in self.bonds:
             bond = bond_lookup.get(frozenset((parent_local_index, child_local_index)))
@@ -155,14 +159,10 @@ class MoleculePrototype:
                 raise RuntimeError(f"Internal Error: Bond between atoms {parent_local_index} and {child_local_index} not found in bond lookup.")
             
             self.bond_params.append(BondParams(
-                local_indices=(
-                    parent_local_index,
-                    child_local_index
-                ),
-                compound_atom_indices=(
-                    self._local_to_compound_atom_index(parent_local_index),
-                    self._local_to_compound_atom_index(child_local_index)
-                ),
+                parent_local_index=parent_local_index,
+                child_local_index=child_local_index,
+                parent_compound_atom_index=self._local_to_compound_atom_index(parent_local_index),
+                child_compound_atom_index=self._local_to_compound_atom_index(child_local_index),
                 stiffness_in_kj_per_nm_sq=bond.type.uk.value_in_unit(pmd.unit.kilojoule_per_mole / pmd.unit.nanometer**2),
                 nominal_length_in_nm=bond.type.ureq.value_in_unit(pmd.unit.nanometer),
                 is_ring_closing=('ring' in dihedral_type),
@@ -502,15 +502,16 @@ class MoleculePrototype:
             The standardized dihedral type.
         """
         candidates = [
-            pmd.Dihedral(grandparent, parent_atom, child_atom, nephew)
+            pmd.Dihedral(grandparent, parent_atom, child_atom, gchild)
             for grandparent in parent_atom.bond_partners if grandparent != child_atom
-            for nephew in child_atom.bond_partners if nephew != parent_atom
+            for gchild in child_atom.bond_partners if gchild != parent_atom
         ]
 
-        for dihedral in candidates:
-            dihedral_type = self.dihedral_classifier.classify(dihedral)
-            if dihedral_type is not None:
-                return dihedral_type
+        for gparent in parent_atom.bond_partners:
+            for gchild in child_atom.bond_partners:
+                if gparent == child_atom or gchild == parent_atom:
+                    continue
+                dihedral_type = self.dihedral_classifier.classify(gparent, parent_atom, child_atom, gchild)
 
         return 'non-standard'
     

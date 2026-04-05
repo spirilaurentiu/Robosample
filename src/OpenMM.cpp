@@ -559,20 +559,17 @@ bool OPENMM::initialize(
 #elif USE_OPENCL
     OpenMM::Platform* platform = new OpenMM::OpenCLPlatform();
     OpenMM::Platform::registerPlatform(platform);
+	platform->setPropertyDefaultValue("Precision", "mixed");
     constexpr auto PLATFORM_NAME = "OpenCL";
 
 #elif USE_CUDA
     OpenMM::Platform* platform = new OpenMM::CudaPlatform();
     OpenMM::Platform::registerPlatform(platform);
+	platform->setPropertyDefaultValue("Precision", "mixed");
     constexpr auto PLATFORM_NAME = "CUDA";
 #endif
 
     try {
-		// "single" - nearly all calculations are done in single precision. This is the fastest option but also the least accurate.
-		// "mixed" - forces are computed in single precision but integration is done in double precision. This gives much better energy conservation with only a slight decrease in speed.
-		// "double" - all calculations are done in double precision. This is the most accurate option, but is usually much slower than the others.
-		platform->setPropertyDefaultValue("Precision", "mixed");
-
         omm.context = std::make_unique<OpenMM::Context>(*omm.system, *omm.integrator, *platform);
 
         const double speed = omm.context->getPlatform().getSpeed();

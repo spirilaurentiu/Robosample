@@ -49,3 +49,4 @@ dependencies:
     - nox
     - pre-commit
     - scikit-build-core
+    - python-louvain
