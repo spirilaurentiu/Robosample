@@ -1,864 +1,285 @@
 #pragma once
 
 // Standard Input/Output
-#include <iostream>
-#include <iomanip>
 #include <cstdio>
+#include <iomanip>
+#include <iostream>
 
 // Containers
-#include <vector>
-#include <deque>
-#include <list>
-#include <forward_list>
-#include <stack>
-#include <queue>
-#include <set>
-#include <map>
-#include <unordered_set>
-#include <unordered_map>
 #include <array>
 #include <bitset>
+#include <deque>
+#include <forward_list>
+#include <list>
+#include <map>
+#include <queue>
+#include <set>
+#include <stack>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 // Algorithms & Numerics
 #include <algorithm>
-#include <numeric>
 #include <cmath>
 #include <complex>
+#include <numeric>
 #include <random>
 #include <valarray>
 
 // Strings & Text
-#include <string>
-#include <string_view> 
-#include <sstream>
 #include <cctype>
-#include <cstring> // For size_t, memcmp, etc.
+#include <cstring>
 #include <regex>
+#include <sstream>
+#include <string>
+#include <string_view>
 
 // Utilities & Modern C++ Features
-#include <utility>
-#include <tuple>
-#include <optional>    
-#include <variant>     
-#include <any>         
-#include <memory>
-#include <functional>
+#include <any>
 #include <chrono>
-#include <iterator>
-#include <type_traits>
+#include <execution>
+#include <functional>
 #include <initializer_list>
+#include <iterator>
+#include <memory>
+#include <optional>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <variant>
 
 // System, Filesystem & Resources
+#include <filesystem>
 #include <fstream>
-#include <filesystem>  
+#include <sys/resource.h>
 #include <system_error>
-#include <sys/resource.h> // POSIX: For getrusage, setrlimit, etc.
 
 // Multithreading
-#include <thread>
-#include <mutex>
+#include <atomic>
 #include <condition_variable>
 #include <future>
-#include <atomic>
+#include <mutex>
+#include <thread>
 
 // Debugging & Limits
 #include <cassert>
-#include <climits>
-#include <cfloat>
 #include <cerrno>
+#include <cfloat>
+#include <climits>
 #include <stdexcept>
-
-
-#ifndef TRACE
-#define TRACE(STR) std::cout<<__FILE__<<":"<<__LINE__<<":"<<STR<<std::endl<<std::flush;
-#endif
 
 // #ifndef __DRILLING__
 // #define __DRILLING__
 // #endif
 
-#include "pcg_random.hpp"
 #include "Molmodel.h"
 #include "SimTKcommon.h"
 #include "Simbody.h"
-#include "Molmodel.h"
+#include "pcg_random.hpp"
 
-#ifndef TARGET_TYPE
-#define TARGET_TYPE double
-#endif
-
-#ifndef MEMDEBUG
-#define MEMDEBUG 0
-#endif
-
-// Smart trace
-template <typename T>
-void trace_impl(std::ostream &os, T &&t)
-{
-    os << t;
-}
-
-template <typename T, typename... Args>
-void trace_impl(std::ostream &os, T &&t, Args &&... args)
-{
-    os << t << ' ';
-    trace_impl(os, std::forward<Args>(args)...);
-}
-
-template <typename... Args>
-void trace(Args &&... args)
-{
-    std::cout << "[TRACE "<< __FILE__<<":"<<__LINE__ << "] ";
-    trace_impl(std::cout, std::forward<Args>(args)...);
-    std::cout << std::endl;
-}
-
-template <typename... Args>
-void warn(Args &&... args)
-{
-    std::cout << "[WARNING "<< __FILE__<<":"<<__LINE__ << "] ";
-    trace_impl(std::cout, std::forward<Args>(args)...);
-    std::cout << std::endl;
-}
-
-template <typename... Args>
-void warnflush(Args &&... args)
-{
-    std::cout << "[WARNING "<< __FILE__<<":"<<__LINE__ << "] ";
-    trace_impl(std::cout, std::forward<Args>(args)...);
-    std::cout << std::endl << std::flush;
-}
-
-template <typename... Args>
-void coutspaced(Args &&... args)
-{
-    trace_impl(std::cout, std::forward<Args>(args)...);
-}
-
-template <typename... Args>
-void spacedcout(Args &&... args)
-{
-    trace_impl(std::cout, std::forward<Args>(args)...);
-}
-
-#ifndef spacecout
-#define spacecout spacedcout
-#endif
-
-// Less smart trace and print
-
-#ifndef eolf
-#define eolf std::endl<<std::flush 
-# endif
-
-#ifndef eol
-#define eol std::endl 
-# endif
-
-#ifndef scout
-#define scout(x) std::cout<<x
-#endif
-
-#ifndef scoutf
-#define scoutf(x) std::cout<<x<<std::endl<<std::flush
-#endif
-
-#ifndef ceol
-#define ceol std::cout<<std::endl
-#endif
-
-#ifndef ceolf
-#define ceolf std::cout<<std::endl<<std::flush
-#endif
-
-
-// // Concatenate strings with spaces
-// std::string join_with_spaces() {
-//     return "";  // Base case for no arguments
-// }
-
-// template <typename T, typename... Args>
-// std::string join_with_spaces(T first, Args... args) {
-//     return first + (sizeof...(args) > 0 ? " " + join_with_spaces(args...) : ""); // Recursive concatenation with spaces
-// }
-
-// // Macro to concatenate strings with spaces
-// #define SPACED(...) join_with_spaces(__VA_ARGS__)
-
-// ----------
-
-/**************************************
- * 		Sub-Array   
- **************************************/
-
-template <typename Iterator>
-class array_view {
-
-private:
-	// Begin and end iterators to some vector
-    Iterator begin_;
-    Iterator end_;
-
-	size_t offset = 0;
-
-public:
-
-    // Constructor based on specific limits
-    void set_view(Iterator begin, Iterator end){
-		begin_ = begin;
-		end_ = end;
-	}
-
-	// Array limits
-    Iterator begin() const { return this->begin_; }
-    Iterator end() const   { return this->end_; }
-
-	// 
-	typename std::iterator_traits<Iterator>::reference
-	operator[](std::size_t index) {
-		return this->begin_[index];
-	}
-
-    // Const operator[]
-    typename std::iterator_traits<Iterator>::reference operator[](std::size_t index) const {
-        return begin_[index];
-    }
-
-	size_t size(void) const {
-		return std::distance(begin_, end_);
-	}
-
-	void set_offset(size_t argOffset){
-		offset = argOffset;
-	}
-
-	const size_t& get_offset(void) const{
-		return offset;
-	}
-
+enum class ReplicaMixingScheme : std::uint8_t {
+    All = 0,
+    Neighboring = 1
 };
 
-// int example_usage_array_view (void) {
-
-//     std::vector<int> data = {1, 2, 3, 4, 5};
-//     array_view<std::vector<int>::iterator> view(data.begin(), data.end());
-
-//     for (auto& elem : view) {
-//         std::cout << elem << " ";
-//     }
-//     std::cout << std::endl;
-
-//     return 0;
-// }
-
-//
-
-#define sq(x)		((x)*(x))
-
-//#ifndef sqr
-//#define sqr(x) ((x)*(x))
-//#endif
-
-#ifndef ANG_360_TO_m180_180
-#define ANG_360_TO_m180_180(x) (((x)>180.0) ? ((x)-360.0) : (x))
-#endif
-
-#ifndef ANG_360_TO_180
-#define ANG_360_TO_180(x) std::abs(((x)>180.0) ? ((x)-360.0) : (x))
-#endif
-
-// Check versus Velocity Verlet in cart coords
-enum struct VELOCITY_VERLET : int {
-  SERV_QX, SERV_QY, SERV_QZ,
-  SERV_VX, SERV_VY, SERV_VZ,
-  SERV_AX, SERV_AY, SERV_AZ,
-  VASS_QX, VASS_QY, VASS_QZ,
-  VASS_VX, VASS_VY, VASS_VZ,
-  VASS_AX, VASS_AY, VASS_AZ,
-  SAYS_QX, SAYS_QY, SAYS_QZ,
-  SAYS_VX, SAYS_VY, SAYS_VZ,
-  SAYS_AX, SAYS_AY, SAYS_AZ
+enum class RUN_TYPE : std::uint8_t {
+    Default = 0,
+    REMC,      // Replica Exchange Monte Carlo
+    RENEMC,    // Replica Exchange Non-Equilibrium Monte Carlo
+    RENE,      // Replica Exchange Non-Equilibrium
+    REBASONTOP // Replica
 };
 
-/**************************************
- * 		Debugging Functions   *
- **************************************/
-bool fileExists(const std::string& filename);
-
-std::string exec(const char* cmd);
-std::size_t getLinuxMemoryUsageFromProc();
-long getResourceUsage();
-
-void stdcout_memdebug(std::string header__);
-
-/**************************************
- * 		General Functions             *
- **************************************/
-
-inline int RandomIntRange(int min, int max)
-{
-  assert(max > min);
-  return rand()%(max-min+1) + min;
-}
-
-inline float RandomRealRange(float min, float max)
-{
-  assert(max > min);
-  return min + (((float)rand()) / (float)RAND_MAX) * (max-min);
-}
-
-inline double RandomRealRange(double min, double max)
-{
-  assert(max > min);
-  return min + (((double)rand()) / (double)RAND_MAX) * (max-min);
-}
-
-inline long double RandomRealRange(long double min, long double max)
-{
-  assert(max > min);
-  return min + (((long double)rand()) / (long double)RAND_MAX) * (max-min);
-}
-
-
-//double round(double r);
-
-// Log-sum-exp function
-double LSE2(double, double);
-
-/*
- *  Aminoacids 3 letter notation to 1 letter notation
- */
-char aa321 (const char *aa);
-
-/*
- * aa321 inverse
- * ?????????????????????????
- * ?????????????????????????
- */
-char aa123 (char *dest, char aa);
-char aa123 (std::string& dest, char aa);
-
-/*
- *  If not, puts '/' at the end of RESULT
- */
-void bCheck_path (char *result, const char *path);
-
-/*
- * Puts START-STOP SRC substring into DEST
- * Character is counted from 0
- * Pointers have to be allocated
- */
-int bExtractStr (char *dest, const char *src, int start, int stop);
-
-/*
- * Tolower bExtractStr
- */
-int bExtractTolowerStr ( char *dest, const char *src, int start, int stop );
-
-/*
- * Modifies all characters in a string to NULL
- * Returns how many characters has modified
- */
-int bZeroStr(char *dest);
-
-/*
- * Modifies NO_ELEM elements in an array to NULL
- * Returns how many elements has modified
- */int bZeroCharArray(char *array, int no_elem);
-
-
-/*
- * Awk Substr
- */
-int bSubstr (char *dest, const char *src, int start, int no_chars);
-
-std::string to_lower(std::string str);
-std::string to_upper(std::string str);
-
-/*
- * Left trim
- */
-static inline std::string &ltrim(std::string &s) {
-		s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int c) {return !std::isspace(c);}));
-		return s;
-}
-
-/*
- * Right trim
- */
-static inline std::string &rtrim(std::string &s) {
-		s.erase(std::find_if(s.rbegin(), s.rend(), [](int c) {return !std::isspace(c);}).base(), s.end());
-		return s;
-}
-
-/*
- * Trim from both ends
- */
-static inline std::string &trim(std::string &s) {
-		return ltrim(rtrim(s));
-}
-
-/*
- * Decimal prefix of zeros to limit
- */
-std::string decimal_prefix(double inp_no, long int limit);
-
-/*
- * Floating point numbers are aprox the same
- */
-bool AreSame(double a, double b, double EPSILON);
-
-/*
- * Check if pair, triple or quadruple is the same irrespective of order
- * from the chemical point of view (ex.: a-b-c-d != a-c-b-d)
- */
-bool IsTheSameBond(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref);
-bool IsTheSameAngle(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref);
-bool IsTheSameTorsion(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref);
-
-/*
- * Given a frame F1 expressed in another frame G and a station v1 expressed 
- * in G return another frame F2 with origin in v1, aligne along F1 v1 vector
- * with the X axis and pointing towards F1
- */
-SimTK::Transform alignFlipAndTranslateFrameAlongXAxis(SimTK::Transform G_X_F1, SimTK::Vec3 G_v1);
-
-
-/*
- * Convert spatial maatrix (Mat< 2, 2, Mat33 >) to 6x6 matrix (Mat<6,6>)
- * Replaces inf and nan with zeros
- */
-bool SpatialMat2Mat66(SimTK::SpatialMat SM, SimTK::Mat<6,6>& destination);
-
-/*
- * Compute numerical matrix inverse with Eigen if possible
- */
-bool NumericalInverse(SimTK::Matrix M, SimTK::Matrix& MInv, int nrows, int ncols);
-bool NumericalLeftInverse(SimTK::Matrix M, SimTK::Matrix& MLeftInv, int nrows, int ncols);
-bool NumericalRightInverse(SimTK::Matrix M, SimTK::Matrix& MRightInv, int nrows, int ncols);
-
-/**
- * Compute determinant
-*/
-double cstyle_det(double *cstyle_matrix, int dim);
-
-/**
- * Print C++ vector
-*/
-template <typename S>
-void PrintCppVector(const std::vector<S>& vec,
-	std::string sep = " ",
-	std::string ending = "\n") 
-{
-    // Iterating over all elements of vector
-    for (const auto &elem : vec) {
-        std::cout << sep << elem;
-    }
-	std::cout << ending;
-
-}
-
-// template <typename S>
-// void PrintCppVector(const vector < vector <S>>& vec,
-// 	std::string sep = " ",
-// 	std::string ending = "\n") 
-// {
-//     // Iterating over all elements of vector
-//     for (const auto &v : vec) {
-// 		for(const auto &elem : v){
-// 			std::cout << sep << elem;
-// 		}
-// 		std::cout << std::endl;
-        
-//     }
-// 	std::cout << ending;
-// }
-
-
-template <typename S>
-void PrintCppVector(const std::vector<std::vector<S>>& vec,
-                    int decimal_places = 6,
-                    std::string header = "unknown",
-                    std::string rowPrefix = "")
-{
-    // Print header
-    //std::cout << header << std::endl;
-
-    // Set output format for fixed precision
-    std::cout << std::fixed << std::setprecision(decimal_places);
-
-    // Iterate over all elements
-    for (const auto& row : vec) {
-        std::cout << rowPrefix;
-        for (const auto& elem : row) {
-            std::cout << " " << elem;
-        }
-        std::cout << std::endl;
-    }
-
-    // Reset formatting if needed (optional)
-    std::cout.unsetf(std::ios::fixed);
-    //std::cout << std::setprecision(6);  // Reset to default precision
-}
-
-
-
-
-
-/*
- * Get the block corresponding to a body from an H-like matrix
- * Body index "which" starts from 0, 0 being the Ground body.
- */
-SimTK::Matrix& SOA_GetHLikeElement(SimTK::Matrix inMatrix, int which, SimTK::Matrix& outMatrix);
-SimTK::Matrix& SOA_GetHstarLikeElement(SimTK::Matrix inMatrix, int which, SimTK::Matrix& outMatrix);
-
-/*
- * Convert spatial vector to 6-dim vector
- */
-SimTK::Vector& SOA_SpatialVec2Vector(SimTK::SpatialVec in, SimTK::Vector& out);
-
-/*
- * Convert spatial matrix to Mat66
- */
-void SOA_SpatialMat2Mat66(const SimTK::SpatialMat& in, SimTK::Mat66& out);
-
-
-void PrintSimbodyVec(const SimTK::Vector& V, int decimal_places = 3, std::string header = "unknown");
-void PrintSimbodyVec(const SimTK::Vec3& V, int decimal_places = 3, std::string header = "unknown");
-
-/*
- * Print Big Matrices separated by spaces
- */
-void PrintBigMat(const SimTK::Matrix& M,
-	int nrows, int ncols,
-	int decimal_places = 3,
-	std::string header = "unknown");
-	
-void PrintBigMat(SimTK::Mat33 M, int nrows, int ncols, int decimal_places = 3, std::string header = "unknown");
-void PrintBigMat(SimTK::Mat44 M, int nrows, int ncols, int decimal_places = 3, std::string header = "unknown");
-void PrintBigMat(SimTK::Mat55 M, int nrows, int ncols, int decimal_places = 3, std::string header = "unknown");
-void PrintBigMat(SimTK::Mat66 M, int nrows, int ncols, int decimal_places = 3, std::string header = "unknown");
-void PrintBigMat(
-	const SimTK::Vector& M, int nrows,
-	int decimal_places = 3, std::string header = "unknown matrix");
-void PrintMat33(SimTK::Mat33 M, int decimal_places = 3,
-	std::string header = "unknown");
-/*
- * Print Spatial Matrix
- */
-void PrintSpatialVec(SimTK::SpatialVec V, int decimal_places, std::string header = "unknown");
-void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header = "unknown");
-
-/**  @brief Print Transform
- */
-//void PrintTransform(SimTK::Transform T, int decimal_places, std::string header = "unknown", std::string rowPrefix = "");
-
-/*
- * Angle
- */
-SimTK::Real bAngle(const SimTK::Vec3& pos0, const SimTK::Vec3& pos1, const SimTK::Vec3& pos2);
-
-/*
- * Dihedral angle
- */
-SimTK::Real bDihedral(const SimTK::Vec3& pos0, const SimTK::Vec3& pos1, const SimTK::Vec3& pos2, const SimTK::Vec3& pos3);
-
-/** Magnitude (norm) of a vector of reals **/
-SimTK::Real magnitude(std::vector<SimTK::Real>& V);
-SimTK::Real magSq(std::vector<SimTK::Real>& V);
-
-/** Normalize a std vector of double.
- * The result is stored in the input vector.
- * If the magnitude is 0, the vector is left untouched.
-**/
-void normalize(std::vector<SimTK::Real>& V);
+enum class TopologyRangeType : std::uint8_t {
+    Atom = 0,
+    Bond,
+    Angle,
+    PeriodicTorsion,
+    ImproperHarmonicTorsion,
+    NofTopologyRangeTypes
+};
 
 /*
  * Sampling
  */
-enum class AcceptRejectMode : int {
-	AlwaysAccept = 0, // MD
-	MetropolisHastings, // MCMC
+enum class AcceptRejectMode : std::uint8_t {
+    AlwaysAccept = 0,   // MD
+    MetropolisHastings, // MCMC
 };
 
-// TODO: remove this
-// enum class SamplingMethod : int {
-//     EMPTY = 0,  // Molecular Dynamics (MD)
-//     MC          // Markov Chain Monte Carlo (MCMC)
-// };
-
-/*
- * Thermodynamics
- */
-
-enum struct ThermostatName : int { // Thermostats
-	NONE = 0,
-	ANDERSEN,
-	BERENDSEN,
-	LANGEVIN,
-	NOSE_HOOVER
+enum struct ThermostatName : std::uint8_t { // Thermostats
+    None = 0,
+    Andersen,
+    Berendsen,
+    Langevin,
+    NoseHoover
 };
 
 /*
  * Simulation
  */
+enum struct IntegratorType : std::uint8_t { // Integrators
+    Empty = 0,
+    Verlet,
+    Euler,
+    Euler2,
+    CPodes,
+    RungeKutta,
+    RungeKutta2,
+    RungeKutta3,
+    RungeKuttaFeldberg,
+    BendStretch,
+    OpenMMVelocityVerlet,
+    BoundWalk,
+    BoundHMC,
+    StationsTask,
+    NofIntegrators
+};
 
-enum struct IntegratorType : int { // Integrators
-	EMPTY = 0,
-	VERLET,
-	EULER,
-	EULER2,
-	CPODES,
-	RUNGEKUTTA,
-	RUNGEKUTTA2,
-	RUNGEKUTTA3,
-	RUNGEKUTTAFELDBERG,
-	BENDSTRETCH,
-	OMMVV,
-	BOUND_WALK,
-	BOUND_HMC,
-	STATIONS_TASK,
-	NOF_INTEGRATORS
+enum struct PositionsPerturbMethod : std::uint8_t {
+    Empty = 0,
+    BendStretch1,
+    BendStretch2,
+    BendStretch3,
+    BendStretch4,
+    BendStretch5,
+    BendStretch6,
+    NofPositionsPerturbMethod
+};
+
+enum struct VelocitiesPerturbMethod : std::uint8_t {
+    ToTemperature = 0,
+    ToZero,
+    NofVelocitiesPerturbMethod
+};
+
+enum struct ForcesPerturbMethod : std::uint8_t {
+    Empty = 0,
+    NotImplemented,
+    NofForcesPerturbMethod
 };
 
 
-const std::unordered_map<std::string, IntegratorType>
-IntegratorNameS{
-	{"EMPTY", IntegratorType::EMPTY},
-	{"VERLET", IntegratorType::VERLET},
-	{"EULER", IntegratorType::EULER},
-	{"EULER2", IntegratorType::EULER2},
-	{"CPODES", IntegratorType::CPODES},
-	{"RUNGEKUTTA", IntegratorType::RUNGEKUTTA},
-	{"RUNGEKUTTA2", IntegratorType::RUNGEKUTTA2},
-	{"RUNGEKUTTA3", IntegratorType::RUNGEKUTTA3},
-	{"RUNGEKUTTAFELDBERG", IntegratorType::RUNGEKUTTAFELDBERG},
-	{"OMMVV", IntegratorType::OMMVV},
-	{"RANDOM_WALK", IntegratorType::BOUND_WALK},
-	{"RANDOM_KICK", IntegratorType::BOUND_HMC},
-	{"STATIONS_TASK", IntegratorType::STATIONS_TASK}
-};
-
-enum struct PositionsPerturbMethod : int {
-	EMPTY = 0,
-	BENDSTRETCH_1,
-	BENDSTRETCH_2,
-	BENDSTRETCH_3,
-	BENDSTRETCH_4,
-	BENDSTRETCH_5,
-	BENDSTRETCH_6,
-	NOF_
-};
-
-const std::unordered_map<PositionsPerturbMethod, std::string>
-PositionsPerturbMethodS{
-	{PositionsPerturbMethod::EMPTY, "EMPTY"},
-	{PositionsPerturbMethod::BENDSTRETCH_1, "BENDSTRETCH_1"},
-	{PositionsPerturbMethod::BENDSTRETCH_2, "BENDSTRETCH_2"},
-	{PositionsPerturbMethod::BENDSTRETCH_3, "BENDSTRETCH_3"},
-	{PositionsPerturbMethod::BENDSTRETCH_4, "BENDSTRETCH_4"},
-	{PositionsPerturbMethod::BENDSTRETCH_5, "BENDSTRETCH_5"},
-	{PositionsPerturbMethod::BENDSTRETCH_6, "BENDSTRETCH_6"},
-	{PositionsPerturbMethod::NOF_, "NOF_"}
-
-};
-
-enum struct VelocitiesPerturbMethod : int {
-	TO_T = 0,
-	TO_ZERO,
-	NOF_
-};
-
-enum struct ForcesPerturbMethod : int {
-	EMPTY = 0,
-	NOT_IMPLEMENTED,
-	NOF_
-};
-
-
-enum struct NMAOptions : int {
-	EMPTY = 0,
-	NMA_ALT_SIGN,
-	NMA_BERNOULLI,
-	NMA_GAUSS,
-	NMA_GAUSS_SCALE,
-	NMA_LENPERT,
-	NMA_FINAL,
-	NOF_
+enum struct NMAOptions : std::uint8_t {
+    Empty = 0,
+    NMAAltSign,
+    NMABernoulli,
+    NMAGauss,
+    NMAGaussScale,
+    NMALenpert,
+    NMAFinal,
+    NofNMAOptions
 };
 
 /*
- * Statistics
+ * The type of distribution to draw a random number from.
  */
-/** The type of distribution to draw a random number from **/
-enum struct GmolRandDistributionType : int {
-	UNIFORM = 0,
-	NORMAL
+enum struct GmolRandDistributionType : std::uint8_t {
+    Uniform = 0,
+    Normal
 };
 
 // Samplers
-enum struct SamplerName : int {
-	EMPTY = 0,
-	MC,
-	HMC,
-	LAHMC
+enum struct SamplerName : std::uint8_t {
+    Empty = 0,
+    MC,
+    HMC,
+    LAHMC
 };
 
-enum struct JointType : int {
-	LINEAR = 0,
-	ANGULAR180,
-	ANGULAR360,
-	QUATERNION_a,
-	QUATERNION_b,
-	QUATERNION_c,
-	QUATERNION_d
+enum struct JointType : std::uint8_t {
+    Linear = 0,
+    Angular180,
+    Angular360,
+    QuaternionA,
+    QuaternionB,
+    QuaternionC,
+    QuaternionD
 };
-
-/*
- * k-means clustering
- * http://www.goldsborough.me/c++/python/cuda/2017/09/10/20-32-46-exploring_k-means_in_python,_c++_and_cuda/
- */
-struct Point {
-  double x{0}, y{0};
-};
-
-using DataFrame = std::vector<Point>;
-
-SimTK::Real normalPdf(SimTK::Real x, SimTK::Real mean, SimTK::Real stddev);
-
-// Gmolmodel version of mean
-SimTK::Real bMean(std::vector<SimTK::Real> v);
-SimTK::Real bVariance(std::vector<SimTK::Real> v);
-SimTK::Real bStdev(std::vector<SimTK::Real> v);
-
-/** Gmolmodel version of correlation coefficient */
-SimTK::Real bCorr(std::vector<SimTK::Real> V, std::vector<SimTK::Real> W);
-
-/** Circular mean as in 2014 Fenwick **/
-SimTK::Real circMean(std::vector<SimTK::Real> phi);
-
-/** Circular correlation coefficient as in 2014 Fenwick **/
-SimTK::Real circCorr(std::vector<SimTK::Real> phi, std::vector<SimTK::Real> psi);
-
-/** 1 - circCorr **/
-SimTK::Real circDist(std::vector<SimTK::Real> phi, std::vector<SimTK::Real> psi);
-
-double squared_l2_distance(Point first, Point second);
-
-DataFrame k_means(const DataFrame& data,
-				  size_t k,
-				  size_t number_of_iterations);
-
-double update_variance(double current_value, 
-	double last_variance, 
-	double last_average,
-	int n);
-
-
-// STD linear algebra
-
-
-
-// Print
-
-
-void bPrintVec(std::vector<double> &src);
-
-// Assign
-std::vector<double>& bCopyVec(std::vector<double> &src,
-			     std::vector<double> &dest);
-
-// Magnitude
-double bNorm(std::vector<double>& V);
-
-// Normalize U and put it in V
-std::vector<double>& bNormalize(std::vector<double> &U, std::vector<double> &V);
-std::vector<double>& bNormalizeInPlace(std::vector<double> &U);
-
-// Dot product
-double bDot(std::vector<double> &u, std::vector<double> &v);
-
-// Multiply by scalar in place
-std::vector<double>& bMulByScalar(std::vector<double>& V, double scalar);
-
-// Multiply by scalar and put in W
-void bMulByScalar(std::vector<double>& V, double scalar, std::vector<double>& W);
-
-// Porject U on V and put in in p_UV
-std::vector<double>& proj(std::vector<double>& u, std::vector<double>& v, std::vector<double>& p_uv);
-
-std::vector<double>& bAddScalar(std::vector<double>& V, double scalar);
-
-std::vector<double>& bAddVector(std::vector<double>& V, std::vector<double>& W);
-
-// Substract V from W and put it in W
-std::vector<double>& bSubstractVector(std::vector<double>& V, std::vector<double>& W);
-// Matrix
-typedef std::vector<std::vector<double>> bMatrix;
-bMatrix& bCopyMat(bMatrix& src, bMatrix& dest);
-
-// Print
-void bPrintMat(bMatrix src);
-
-// Transpose
-void bTransposeInPlace(bMatrix&);
-
-// Multiply U by M and put it in V
-void bMulVecByMatrix(std::vector<double> &U,
-				     bMatrix& M,
-				     std::vector<double> &V);
-// Gram–Schmidt
-bMatrix& gram_schmidt(bMatrix& M, bMatrix& es);
-
-SimTK::Quaternion multiplyQuaternions(SimTK::Quaternion& Q1, SimTK::Quaternion& Q2);
-
-
-#ifndef MONTECARLOSAMPLER
-#define MONTECARLOSAMPLER MC
-#endif
-
-#ifndef HAMILTONIANMONTECARLOSAMPLER
-#define HAMILTONIANMONTECARLOSAMPLER HMC
-#endif
-
-#ifndef LOOKAHEADHMCSAMPLER
-#define LOOKAHEADHMCSAMPLER LAHMC
-#endif
-
-// Replacement for std::clamp (C++14 and earlier)
-template <typename T>
-inline constexpr const T& clamp(const T& v, const T& lo, const T& hi)
-{
-    // Assumes that operator< is well-defined for T.
-    return (v < lo) ? lo : (hi < v ? hi : v);
-}
-
-/// @brief Numerically stable computation of log(sin^2(pitch))
-/// using a Taylor expansion near pitch = 0 for smoothness.
-///
-/// This avoids log(0) and ensures continuous derivatives,
-/// useful for energy/gradient computations (e.g., orientation penalties).
-inline constexpr SimTK::Real safeLogSineSqr(SimTK::Real pitch)
-{
-    constexpr SimTK::Real delta = 1e-6; // threshold for small angles
-
-    if (std::abs(pitch) < delta) {
-        // Use series expansion: log(sin^2(x)) ≈ 2log|x| - x^2/3.
-        // Here we replace |x| by δ to ensure continuity at ±δ,
-        // and subtract a quadratic correction for smooth derivative.
-        return 2.0 * std::log(delta) - (pitch * pitch - delta * delta) / (3.0 * delta * delta);
-    } else {
-        const SimTK::Real s = std::sin(pitch);
-        return 2.0 * std::log(std::abs(s));
-    }
-}
 
 struct BondFlexibility {
-	BondFlexibility() = default;
-		
-	int globalIndex1 = -1;
-	int globalIndex2 = -1;
-	std::string uniqueAtomName1;
-	std::string uniqueAtomName2;
-	SimTK::BondMobility::Mobility mobility = SimTK::BondMobility::Default;
+    BondFlexibility() = default;
+
+    int globalIndex1 = -1;
+    int globalIndex2 = -1;
+    std::string uniqueAtomName1;
+    std::string uniqueAtomName2;
+    SimTK::BondMobility::Mobility mobility = SimTK::BondMobility::Default;
 };
+
+/**
+ * @brief Computes the Log-Sum-Exp (LSE) of two values.
+ * This is a numerically stable way to calculate log(exp(left) + exp(right)).
+ * Fixes: Implicit bool conversion and variable naming requirements.
+ */
+[[nodiscard]] auto calculateLogSumExp2(SimTK::Real leftValue, SimTK::Real rightValue) -> SimTK::Real;
+
+/**
+ * @brief Constructs a new frame F_out with:
+ *        1) Origin translated to G_v1
+ *        2) X-axis aligned with the vector from F1 origin to G_v1 (expressed in G)
+ *        3) Orientation constrained so that F1’s local direction toward v1 is aligned with +X
+ *        4) Secondary rotation about X to align Y-axis using a dihedral constraint
+ *
+ * @param gTransform_F1 Transform from frame F1 to global frame G (G_X_F1)
+ * @param gPoint_v1     Point v1 expressed in frame G
+ * @return              Transform from F1 to the new frame F_out
+ *
+ * @details
+ * The function constructs a local frame F_out attached at G_v1 such that:
+ *  - Its X-axis points from F1 origin toward v1 (in G space)
+ *  - Its orientation is fully defined by resolving the remaining rotational
+ *    degree of freedom using a dihedral constraint involving the Y-axis
+ *
+ * This is a rigid-body alignment operation combining translation + rotation.
+ */
+[[nodiscard]] auto alignFlipAndTranslateFrameAlongXAxis(const SimTK::Transform& gTransform_F1,
+                                                        const SimTK::Vec3& gPoint_v1) -> SimTK::Transform;
+
+void PrintMat33(const SimTK::Mat33& matrix, int decimalPlaces, const std::string& header = "unknown");
+
+/**
+ * @brief Calculates the angle in radians between vectors (pos1-pos0) and (pos2-pos0).
+ * Uses std::clamp to prevent NaN results from floating-point drift.
+ */
+[[nodiscard]] auto
+calculateAngleInRad(const SimTK::Vec3& pos0, const SimTK::Vec3& pos1, const SimTK::Vec3& pos2) -> SimTK::Real;
+
+/**
+ * @brief Calculates the dihedral angle in radians between four positions.
+ * * Uses the Praxeolitic formula for high numerical stability.
+ * Formula: atan2( |b1| * b0 · (b1 × b2), (b0 × b1) · (b1 × b2) )
+ */
+[[nodiscard]] auto calculateDihedralInRad(const SimTK::Vec3& pos0,
+                                          const SimTK::Vec3& pos1,
+                                          const SimTK::Vec3& pos2,
+                                          const SimTK::Vec3& pos3) -> SimTK::Real;
+
+/** * @brief Squared magnitude of a vector.
+ * Uses std::transform_reduce for better compiler optimization/vectorization.
+ */
+[[nodiscard]] auto calculateMagSq(const std::vector<SimTK::Real>& vec) -> SimTK::Real;
+
+/**
+ * @brief Normalizes a vector in-place.
+ * @return A reference to the modified vector.
+ */
+void normalizeInPlace(std::vector<SimTK::Real>& inputVector);
+
+/**
+ * @brief Multiplies a source vector by a scalar and stores the result in the destination.
+ * Clang-Tidy: Avoids swapping by clearly distinguishing 'source' and 'destination'.
+ */
+void multiplyByScalar(const std::vector<SimTK::Real>& sourceVector,
+                      SimTK::Real scalarValue,
+                      std::vector<SimTK::Real>& destinationVector);
+
+/**
+ * @brief Numerically stable computation of log(sin^2(pitch))
+ * using a Taylor expansion near pitch = 0 for smoothness.
+ *
+ * This avoids log(0) and ensures continuous derivatives,
+ * useful for energy/gradient computations.
+ */
+[[nodiscard]] auto safeLogSineSqr(SimTK::Real pitch) -> SimTK::Real;

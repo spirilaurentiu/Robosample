@@ -1,8 +1,62 @@
 repos:
-  - repo: local
+#   - repo: local
+#     hooks:
+#       - id: tests
+#         name: Run tests and coverage
+#         entry: nox -s tests
+#         language: system
+#         pass_filenames: false
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
     hooks:
-      - id: tests
-        name: Run tests and coverage
-        entry: nox -s tests
-        language: system
-        pass_filenames: false
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-xml
+      - id: check-json
+      - id: pretty-format-json
+        args: [
+          --autofix, 
+          --indent=4, 
+          --no-ensure-ascii, 
+          --sort-keys
+        ]
+      - id: debug-statements
+      - id: name-tests-test
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: https://github.com/cheshirekow/cmake-format-precommit
+    rev: v0.6.13
+    hooks:
+      - id: cmake-format
+      - id: cmake-lint
+  
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.40.0
+    hooks:
+      - id: markdownlint
+        args: ["--config", ".markdownlint.json"]
+
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.20.0
+    hooks:
+      - id: typos
+        args: ["--color", "always"]
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v18.1.0
+    hooks:
+      - id: clang-format
+        args: [--style=file]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.0
+    hooks:
+      - id: ruff
+        args: [ --fix ] # Replaces Flake8 + auto-fixes errors
+      - id: ruff-format # Replaces Black (identical output)

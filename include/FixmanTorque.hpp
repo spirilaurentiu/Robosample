@@ -15,24 +15,26 @@
 #include "bgeneral.hpp"
 
 class FixmanTorque : public SimTK::Force::Custom::Implementation {
-public:
+    public:
     FixmanTorque(SimTK::SimbodyMatterSubsystem* argMatter);
     ~FixmanTorque();
 
-    void calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::SpatialVec>& bodyForces,
-        SimTK::Vector_<SimTK::Vec3>& particleForces, SimTK::Vector& mobilityForces) const override;
+    void calcForce(const SimTK::State& state,
+                   SimTK::Vector_<SimTK::SpatialVec>& bodyForces,
+                   SimTK::Vector_<SimTK::Vec3>& particleForces,
+                   SimTK::Vector& mobilityForces) const override;
 
     SimTK::Real calcPotentialEnergy(const SimTK::State& state) const override;
 
     bool dependsOnlyOnPositions() const override;
 
-    SimTK::Real getScaleFactor(void);
+    SimTK::Real getScaleFactor();
     void setScaleFactor(SimTK::Real);
 
-    SimTK::Real getTemperature(void);
+    SimTK::Real getTemperature();
     void setTemperature(SimTK::Real);
 
-private:
+    private:
     // std::shared_ptr<SimTK::SimbodyMatterSubsystem> matter;
     SimTK::SimbodyMatterSubsystem* matter = nullptr;
     SimTK::Real temperature;
@@ -47,24 +49,26 @@ private:
  **/
 
 class FixmanTorqueExt : public SimTK::Force::Custom::Implementation {
-public:
+    public:
     FixmanTorqueExt(SimTK::SimbodyMatterSubsystem* argMatter);
     ~FixmanTorqueExt();
 
-    void calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::SpatialVec>& bodyForces,
-        SimTK::Vector_<SimTK::Vec3>& particleForces, SimTK::Vector& mobilityForces) const override;
+    void calcForce(const SimTK::State& state,
+                   SimTK::Vector_<SimTK::SpatialVec>& bodyForces,
+                   SimTK::Vector_<SimTK::Vec3>& particleForces,
+                   SimTK::Vector& mobilityForces) const override;
 
     SimTK::Real calcPotentialEnergy(const SimTK::State& state) const override;
 
     bool dependsOnlyOnPositions() const override;
 
-    SimTK::Real getScaleFactor(void);
+    SimTK::Real getScaleFactor();
     void setScaleFactor(SimTK::Real);
 
-    SimTK::Real getTemperature(void);
+    SimTK::Real getTemperature();
     void setTemperature(SimTK::Real);
 
-private:
+    private:
     // std::shared_ptr<SimTK::SimbodyMatterSubsystem> matter;
     SimTK::SimbodyMatterSubsystem* matter = nullptr;
     SimTK::Real temperature;

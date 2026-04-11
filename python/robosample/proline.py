@@ -1,6 +1,6 @@
+import matplotlib.pyplot as plt
 import MDAnalysis as mda
 import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from MDAnalysis.lib.distances import calc_dihedrals
@@ -10,6 +10,7 @@ topology = "/home/victor/AllFrames/ensembleCluster1All.pdb"
 # ==============================
 
 u = mda.Universe(topology)
+
 
 def cremer_pople_5ring(coords):
     """
@@ -27,12 +28,8 @@ def cremer_pople_5ring(coords):
     z = np.dot(coords, normal)
 
     N = 5
-    q2 = np.sqrt(2/5) * np.sum(
-        z[k] * np.cos(4*np.pi*k/N) for k in range(N)
-    )
-    q3 = np.sqrt(2/5) * np.sum(
-        z[k] * np.sin(4*np.pi*k/N) for k in range(N)
-    )
+    q2 = np.sqrt(2 / 5) * np.sum(z[k] * np.cos(4 * np.pi * k / N) for k in range(N))
+    q3 = np.sqrt(2 / 5) * np.sum(z[k] * np.sin(4 * np.pi * k / N) for k in range(N))
 
     return q2, q3
 
@@ -52,12 +49,11 @@ for res in prolines:
     try:
         prev_res = res.universe.residues[res.ix - 1]
         omega_atoms = u.select_atoms(
-            f"resid {prev_res.resid} and name C or "
-            f"(resid {res.resid} and name N CA C)"
+            f"resid {prev_res.resid} and name C or (resid {res.resid} and name N CA C)"
         )
         if len(omega_atoms) != 4:
             continue
-    except:
+    except Exception:
         continue
 
     for ts in u.trajectory:
@@ -79,8 +75,10 @@ for res in prolines:
 
 # ===== Plotting =====
 
+
 def wrap_angle_deg(angle):
     return (angle + 180) % 360 - 180
+
 
 for resid, data in results.items():
     omega = wrap_angle_deg(np.array(data["omega"]))
@@ -130,7 +128,7 @@ for resid, data in results.items():
     legend_elements = [
         Patch(facecolor="red", alpha=0.15, label="Cis"),
         Patch(facecolor="blue", alpha=0.15, label="Trans"),
-        Patch(facecolor="none", edgecolor="none", label="Transition")
+        Patch(facecolor="none", edgecolor="none", label="Transition"),
     ]
 
     ax0.legend(handles=legend_elements, loc="upper right", frameon=True)
@@ -145,7 +143,7 @@ for resid, data in results.items():
     # Shaded bands
     ax1.axhspan(0, 0.05, color="gray", alpha=0.15)
     ax1.axhspan(0.05, 0.15, color="green", alpha=0.15)
-    ax1.axhspan(0.15, max(Q)*1.05, color="orange", alpha=0.15)
+    ax1.axhspan(0.15, max(Q) * 1.05, color="orange", alpha=0.15)
 
     ax1.set_ylabel("Å")
     ax1.set_title("Puckering amplitude Q")
@@ -154,7 +152,7 @@ for resid, data in results.items():
     legend_elements = [
         Line2D([0], [0], color="orange", lw=4, alpha=0.5, label="Strong puckering"),
         Line2D([0], [0], color="green", lw=4, alpha=0.5, label="Moderate puckering"),
-        Line2D([0], [0], color="gray", lw=4, alpha=0.5, label="Planar")
+        Line2D([0], [0], color="gray", lw=4, alpha=0.5, label="Planar"),
     ]
     ax1.legend(handles=legend_elements, loc="upper right", frameon=True)
 
@@ -179,7 +177,7 @@ for resid, data in results.items():
     # Add legend for interpretation
     legend_elements = [
         Patch(facecolor="purple", alpha=0.15, label="Cγ-endo region"),
-        Patch(facecolor="orange", alpha=0.15, label="Cγ-exo region")
+        Patch(facecolor="orange", alpha=0.15, label="Cγ-exo region"),
     ]
     ax2.legend(handles=legend_elements, loc="upper right", frameon=True)
 
@@ -189,9 +187,9 @@ for resid, data in results.items():
     ax3 = fig.add_subplot(gs[3], projection="polar")
 
     # Map omega to colors
-    colors = np.full_like(omega, fill_value='gray', dtype=object)
-    colors[np.abs(omega) < 30] = 'red'        # cis
-    colors[np.abs(np.abs(omega) - 180) < 30] = 'blue'  # trans
+    colors = np.full_like(omega, fill_value="gray", dtype=object)
+    colors[np.abs(omega) < 30] = "red"  # cis
+    colors[np.abs(np.abs(omega) - 180) < 30] = "blue"  # trans
     # transition (gray) is default
 
     # Scatter in polar coordinates: φ = angle, Q = radius
@@ -199,26 +197,37 @@ for resid, data in results.items():
 
     # Optional: highlight Cremer–Pople regions
     # Cγ-endo ~ φ -90° → 0°, Cγ-exo ~ φ 90° → 180° / -180° → -90° (shaded sectors)
-    ax3.fill_between(np.radians(np.linspace(-90, 0, 100)), 0, max(Q)*1.1, color='purple', alpha=0.1)
-    ax3.fill_between(np.radians(np.concatenate([np.linspace(90, 180, 100), np.linspace(-180, -90, 100)])),
-                    0, max(Q)*1.1, color='orange', alpha=0.1)
+    ax3.fill_between(
+        np.radians(np.linspace(-90, 0, 100)), 0, max(Q) * 1.1, color="purple", alpha=0.1
+    )
+    ax3.fill_between(
+        np.radians(
+            np.concatenate([np.linspace(90, 180, 100), np.linspace(-180, -90, 100)])
+        ),
+        0,
+        max(Q) * 1.1,
+        color="orange",
+        alpha=0.1,
+    )
 
-    ax3.set_title("Polar view: φ = pseudorotation angle, Q = puckering amplitude\nColor = ω (cis/trans)")
+    ax3.set_title(
+        "Polar view: φ = pseudorotation angle, Q = puckering amplitude\nColor = ω (cis/trans)"
+    )
 
     # Build legend
     legend_elements = [
-        Patch(facecolor='red', label='Cis ω (<30°)', alpha=0.5),
-        Patch(facecolor='blue', label='Trans ω (~180°)', alpha=0.5),
-        Patch(facecolor='gray', label='Transition ω', alpha=0.5),
-        Patch(facecolor='purple', alpha=0.1, label='Cγ-endo φ region'),
-        Patch(facecolor='orange', alpha=0.1, label='Cγ-exo φ region')
+        Patch(facecolor="red", label="Cis ω (<30°)", alpha=0.5),
+        Patch(facecolor="blue", label="Trans ω (~180°)", alpha=0.5),
+        Patch(facecolor="gray", label="Transition ω", alpha=0.5),
+        Patch(facecolor="purple", alpha=0.1, label="Cγ-endo φ region"),
+        Patch(facecolor="orange", alpha=0.1, label="Cγ-exo φ region"),
     ]
     ax3.legend(
         handles=legend_elements,
-        loc='upper left',             # location is relative to bbox
-        bbox_to_anchor=(1.1, 1.1),    # just outside axes on the right
-        borderaxespad=0.0,           # minimal padding
-        frameon=True
+        loc="upper left",  # location is relative to bbox
+        bbox_to_anchor=(1.1, 1.1),  # just outside axes on the right
+        borderaxespad=0.0,  # minimal padding
+        frameon=True,
     )
 
     fig.suptitle(f"Proline {resid}")

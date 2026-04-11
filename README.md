@@ -1,6 +1,14 @@
 # Robosample: Generalized Coordinates Molecular Simulation Coupled with Gibbs Sampling (GCHMC)
 
-![codecov](coverage.svg)
+## Code Quality
+
+| Hook | Status |
+| :--- | :--- |
+| **General** | ![codecov](coverage.svg) ![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit) ![Typos](https://img.shields.io/badge/typos-passing-2ea44f) |
+| **C++** | ![Clang-Tidy](https://img.shields.io/badge/clang--tidy-checked-blue?logo=llvm) ![Clang-Format](https://img.shields.io/badge/clang--format-enabled-blue?logo=llvm) |
+| **Python** | ![Python Version](https://img.shields.io/badge/python-3.12-blue?logo=python&logoColor=white) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) |
+| **CUDA** | ![CUDA Support](https://img.shields.io/badge/cuda-10.0--13.1-76B900?logo=nvidia&logoColor=white) |
+| **Config & Docs** | ![CMake](https://img.shields.io/badge/cmake-formatted-064F8C?logo=cmake&logoColor=white) ![Markdown](https://img.shields.io/badge/markdown-linted-000000?logo=markdown&logoColor=white) ![JSON](https://img.shields.io/badge/json-validated-000000?logo=json&logoColor=white) |
 
 Robosample uses Simbody and Molmodel to perform efficient GCHMC sampling on macromolecules via reduced-coordinate robotics algorithms, featuring OpenMM GPU support and a dedicated Python/Conda ecosystem for seamless research integration.
 
@@ -185,11 +193,9 @@ pip install conda-merge zstandard
 
 ## Other prerequisites
 
-Install `github-linguist`:
-
 ```bash
 sudo apt update
-sudo apt install ruby-github-linguist
+sudo apt install ruby-github-linguist clang-tidy clang-tools
 ```
 
 ## Installing Robosample
@@ -199,24 +205,8 @@ sudo apt install ruby-github-linguist
 ```bash
 git clone --recurse-submodules https://github.com/spirilaurentiu/Robosample.git
 cd Robosample
-
-cd openmm
-git checkout update
-
-cd ../Simbody01
-git checkout master
-
-cd ../Molmodel
-git checkout refactor
-
-cd ../
-git checkout refactor
-```
-
-Install the `pre-commit` hook that will run tests before pushing to remote:
-
-```bash
-pre-commit install
+bash tools/dev-sync.sh
+bash tools/setup-dev.sh
 ```
 
 Finally, perform a local install of the package. This doesn't install anything, it just creates an editable between the virtual environment and the source code, so changes are reflected immediately:

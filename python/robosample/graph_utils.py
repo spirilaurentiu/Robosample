@@ -1,10 +1,16 @@
-from typing import Iterable, Tuple, Set, FrozenSet, Dict, Optional, Hashable
 from collections import deque
+from typing import Dict, FrozenSet, Hashable, Iterable, Optional, Set, Tuple
+
 import networkx as nx
+
 
 class GraphTraversalUtils:
     @staticmethod
-    def validate_bfs_parent_child_edges(graph: nx.Graph, root: Hashable, bfs_edges: Iterable[Tuple[Hashable, Hashable, Hashable]]) -> None:
+    def validate_bfs_parent_child_edges(
+        graph: nx.Graph,
+        root: Hashable,
+        bfs_edges: Iterable[Tuple[Hashable, Hashable, Hashable]],
+    ) -> None:
         """
         Validate that a sequence of edges corresponds to a valid BFS tree
         traversal starting from a given root.
@@ -29,7 +35,7 @@ class GraphTraversalUtils:
         ValueError
             If any edge violates BFS parent-child semantics.
         """
-        visited = {root}
+        # visited = {root}
 
         # for step, (u, v, _) in enumerate(bfs_edges):
         #     if u not in visited:
@@ -41,7 +47,9 @@ class GraphTraversalUtils:
         #     visited.add(v)
 
     @staticmethod
-    def nodes_to_distances(graph: nx.Graph, source_nodes: Iterable[int]) -> Dict[int, Optional[int]]:
+    def nodes_to_distances(
+        graph: nx.Graph, source_nodes: Iterable[int]
+    ) -> Dict[int, Optional[int]]:
         """Compute shortest path distance from each node to nearest source node."""
         dist = {node: None for node in graph.nodes}
         q = deque()

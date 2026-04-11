@@ -1,9 +1,10 @@
 #pragma once
 
-#include "bgeneral.hpp"
-#include "Simbody.h"
-#include "Molmodel.h"
 #include <array>
+
+#include "Molmodel.h"
+#include "Simbody.h"
+#include "bgeneral.hpp"
 
 struct RoboAtomPhysics {
     SimTK::Real chargeInE = SimTK::NaN;
@@ -15,23 +16,21 @@ struct RoboAtomPhysics {
     SimTK::Real screen = SimTK::NaN;
 
     RoboAtomPhysics() = default;
-    RoboAtomPhysics(
-        SimTK::Real chargeInE_,
-        SimTK::Real massInDaltons_,
-        SimTK::Real vdwRadiusInNm_,
-        SimTK::Real vdwWellDepthInKJ_,
-        SimTK::Real sigmaInNm_,
-        SimTK::Real solventRadiusInNm_,
-        SimTK::Real screen_
-    )
-        : chargeInE(chargeInE_),
-          massInDaltons(massInDaltons_),
-          vdwRadiusInNm(vdwRadiusInNm_),
-          vdwWellDepthInKJ(vdwWellDepthInKJ_),
-          sigmaInNm(sigmaInNm_),
-          solventRadiusInNm(solventRadiusInNm_),
-          screen(screen_)
-    {}
+    RoboAtomPhysics(SimTK::Real chargeInE_,
+                    SimTK::Real massInDaltons_,
+                    SimTK::Real vdwRadiusInNm_,
+                    SimTK::Real vdwWellDepthInKJ_,
+                    SimTK::Real sigmaInNm_,
+                    SimTK::Real solventRadiusInNm_,
+                    SimTK::Real screen_)
+        : chargeInE(chargeInE_)
+        , massInDaltons(massInDaltons_)
+        , vdwRadiusInNm(vdwRadiusInNm_)
+        , vdwWellDepthInKJ(vdwWellDepthInKJ_)
+        , sigmaInNm(sigmaInNm_)
+        , solventRadiusInNm(solventRadiusInNm_)
+        , screen(screen_) {
+    }
 };
 
 struct RoboAtomIdentity {
@@ -52,33 +51,31 @@ struct RoboAtomIdentity {
     SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
 
     RoboAtomIdentity() = default;
-    RoboAtomIdentity(
-        std::string uniqueAtomName_,
-        std::string residueName_,
-        std::string atomClassName_,
-        std::string chargedAtomTypeName_,
-        int globalIndex_,
-        int prmtopIndex_,
-        int moleculeIndex_,
-        int residueIndex_,
-        int nonbondedIndex_,
-        int compoundAtomIndex_,
-        int atomClassIndex_,
-        int chargedAtomTypeIndex_
-    )
-        : uniqueAtomName(uniqueAtomName_),
-          residueName(residueName_),
-          atomClassName(atomClassName_),
-          chargedAtomTypeName(chargedAtomTypeName_),
-          globalIndex(globalIndex_),
-          prmtopIndex(prmtopIndex_),
-          moleculeIndex(moleculeIndex_),
-          residueIndex(residueIndex_),
-          nonbondedIndex(nonbondedIndex_),
-          compoundAtomIndex(SimTK::Compound::AtomIndex(compoundAtomIndex_)),
-          atomClassIndex(SimTK::DuMM::AtomClassIndex(atomClassIndex_)),
-          chargedAtomTypeIndex(SimTK::DuMM::ChargedAtomTypeIndex(chargedAtomTypeIndex_))
-    {}
+    RoboAtomIdentity(std::string uniqueAtomName_,
+                     std::string residueName_,
+                     std::string atomClassName_,
+                     std::string chargedAtomTypeName_,
+                     int globalIndex_,
+                     int prmtopIndex_,
+                     int moleculeIndex_,
+                     int residueIndex_,
+                     int nonbondedIndex_,
+                     int compoundAtomIndex_,
+                     int atomClassIndex_,
+                     int chargedAtomTypeIndex_)
+        : uniqueAtomName(uniqueAtomName_)
+        , residueName(residueName_)
+        , atomClassName(atomClassName_)
+        , chargedAtomTypeName(chargedAtomTypeName_)
+        , globalIndex(globalIndex_)
+        , prmtopIndex(prmtopIndex_)
+        , moleculeIndex(moleculeIndex_)
+        , residueIndex(residueIndex_)
+        , nonbondedIndex(nonbondedIndex_)
+        , compoundAtomIndex(SimTK::Compound::AtomIndex(compoundAtomIndex_))
+        , atomClassIndex(SimTK::DuMM::AtomClassIndex(atomClassIndex_))
+        , chargedAtomTypeIndex(SimTK::DuMM::ChargedAtomTypeIndex(chargedAtomTypeIndex_)) {
+    }
 };
 
 struct RoboAtomElement {
@@ -88,15 +85,11 @@ struct RoboAtomElement {
     int atomicNumber = std::numeric_limits<int>::min();
 
     RoboAtomElement() = default;
-    RoboAtomElement(
-        std::string elementName_,
-        std::string elementSymbol_,
-        int atomicNumber_
-    )
-        : elementName(elementName_),
-          elementSymbol(elementSymbol_),
-          atomicNumber(atomicNumber_)
-    {}
+    RoboAtomElement(std::string elementName_, std::string elementSymbol_, int atomicNumber_)
+        : elementName(elementName_)
+        , elementSymbol(elementSymbol_)
+        , atomicNumber(atomicNumber_) {
+    }
 };
 
 struct RoboAtomConnectivity {
@@ -106,13 +99,10 @@ struct RoboAtomConnectivity {
     bool root = false;
 
     RoboAtomConnectivity() = default;
-    RoboAtomConnectivity(
-        std::vector<int> neighborsGlobalIndices_,
-        bool root_
-    )
-        : neighborsGlobalIndices(neighborsGlobalIndices_),
-          root(root_)
-    {}
+    RoboAtomConnectivity(std::vector<int> neighborsGlobalIndices_, bool root_)
+        : neighborsGlobalIndices(neighborsGlobalIndices_)
+        , root(root_) {
+    }
 };
 
 struct RoboAtom {
@@ -120,9 +110,9 @@ struct RoboAtom {
     RoboAtomElement elementInfo;
     RoboAtomPhysics physics;
     RoboAtomConnectivity connectivity;
-    
-    SimTK::Vec3 position { SimTK::NaN };
-    
+
+    SimTK::Vec3 position{SimTK::NaN};
+
     SimTK::BiotypeIndex biotypeIndex;
     SimTK::Compound::SingleAtom* compoundSingleAtom = nullptr;
 
@@ -132,14 +122,16 @@ struct RoboAtom {
              RoboAtomPhysics physics_,
              RoboAtomConnectivity connectivity_,
              std::array<SimTK::Real, 3> position_)
-        : identity(identity_),
-          elementInfo(elementInfo_),
-          physics(physics_),
-          connectivity(connectivity_)
-    {
+        : identity(identity_)
+        , elementInfo(elementInfo_)
+        , physics(physics_)
+        , connectivity(connectivity_) {
         connectivity.numAvailableBonds = connectivity.neighborsGlobalIndices.size();
         connectivity.numBondsInvolved = connectivity.neighborsGlobalIndices.size();
-        elementInfo.element = SimTK::Element(elementInfo.atomicNumber, elementInfo.elementName, elementInfo.elementSymbol, physics.massInDaltons);
+        elementInfo.element = SimTK::Element(elementInfo.atomicNumber,
+                                             elementInfo.elementName,
+                                             elementInfo.elementSymbol,
+                                             physics.massInDaltons);
         position = SimTK::Vec3(position_[0], position_[1], position_[2]);
     }
 
@@ -151,69 +143,69 @@ struct RoboBond {
     std::array<SimTK::Compound::AtomIndex, 2> compoundAtomIndices;
     std::string dihedralType;
 
-    std::array<int, 2> globalIndices = { -1, -1 };
-    std::array<int, 2> prmtopIndices = { -1, -1 };
+    std::array<int, 2> globalIndices = {-1, -1};
+    std::array<int, 2> prmtopIndices = {-1, -1};
     SimTK::Real stiffnessInKJPerNmSq = 0.0;
     SimTK::Real nominalLengthInNm = 0.0;
     int moleculeIndex = 0;
     bool ringClosing = false;
 
     RoboBond() = default;
-    RoboBond(
-        std::array<int, 2> globalIndices_,
-        std::array<int, 2> prmtopIndices_,
-        std::array<int, 2> compoundAtomIndices_,
-        SimTK::Real stiffnessInKJPerNmSq_,
-        SimTK::Real nominalLengthInNm_,
-        int moleculeIndex_,
-        bool ringClosing_,
-        const std::string& dihedralType_
-    )
-        : globalIndices(globalIndices_),
-          prmtopIndices(prmtopIndices_),
-          stiffnessInKJPerNmSq(stiffnessInKJPerNmSq_),
-          nominalLengthInNm(nominalLengthInNm_),
-          moleculeIndex(moleculeIndex_),
-          ringClosing(ringClosing_),
-          dihedralType(dihedralType_)
-    {
+    RoboBond(std::array<int, 2> globalIndices_,
+             std::array<int, 2> prmtopIndices_,
+             std::array<int, 2> compoundAtomIndices_,
+             SimTK::Real stiffnessInKJPerNmSq_,
+             SimTK::Real nominalLengthInNm_,
+             int moleculeIndex_,
+             bool ringClosing_,
+             const std::string& dihedralType_)
+        : globalIndices(globalIndices_)
+        , prmtopIndices(prmtopIndices_)
+        , stiffnessInKJPerNmSq(stiffnessInKJPerNmSq_)
+        , nominalLengthInNm(nominalLengthInNm_)
+        , moleculeIndex(moleculeIndex_)
+        , ringClosing(ringClosing_)
+        , dihedralType(dihedralType_) {
         compoundAtomIndices[0] = SimTK::Compound::AtomIndex(compoundAtomIndices_[0]);
         compoundAtomIndices[1] = SimTK::Compound::AtomIndex(compoundAtomIndices_[1]);
     }
 
-    void addBondMobility(SimTK::BondMobility::Mobility someMobility) { mobilities.push_back(someMobility); }
-    void setBondMobility(SimTK::BondMobility::Mobility someMobility, int world) { mobilities[world] = someMobility; }
-    SimTK::BondMobility::Mobility getBondMobility(int world) const { return mobilities[world]; }
+    void addBondMobility(SimTK::BondMobility::Mobility someMobility) {
+        mobilities.push_back(someMobility);
+    }
+    void setBondMobility(SimTK::BondMobility::Mobility someMobility, int world) {
+        mobilities[world] = someMobility;
+    }
+    SimTK::BondMobility::Mobility getBondMobility(int world) const {
+        return mobilities[world];
+    }
 };
 
 struct RoboAngle {
     std::array<SimTK::Compound::AtomIndex, 3> compoundAtomIndices;
 
-    std::array<int, 3> globalIndices { -1, -1, -1 };
-    std::array<int, 3> prmtopIndices { -1, -1, -1 };
+    std::array<int, 3> globalIndices{-1, -1, -1};
+    std::array<int, 3> prmtopIndices{-1, -1, -1};
     int moleculeIndex = 0;
     SimTK::Real stiffnessInKJPerRadSq = 0.0;
     SimTK::Real nominalAngleInDeg = 0.0;
 
     RoboAngle() = default;
-    RoboAngle(
-        std::array<int, 3> globalIndices_,
-        std::array<int, 3> prmtopIndices_,
-        std::array<int, 3> compoundAtomIndices_,
-        int moleculeIndex_,
-        SimTK::Real stiffnessInKJPerRadSq_,
-        SimTK::Real nominalAngleInDeg_
-    ) : compoundAtomIndices{
-            SimTK::Compound::AtomIndex(compoundAtomIndices_[0]),
-            SimTK::Compound::AtomIndex(compoundAtomIndices_[1]),
-            SimTK::Compound::AtomIndex(compoundAtomIndices_[2])
-        },
-        globalIndices(globalIndices_),
-        prmtopIndices(prmtopIndices_),
-        moleculeIndex(moleculeIndex_),
-        stiffnessInKJPerRadSq(stiffnessInKJPerRadSq_),
-        nominalAngleInDeg(nominalAngleInDeg_)
-    {}
+    RoboAngle(std::array<int, 3> globalIndices_,
+              std::array<int, 3> prmtopIndices_,
+              std::array<int, 3> compoundAtomIndices_,
+              int moleculeIndex_,
+              SimTK::Real stiffnessInKJPerRadSq_,
+              SimTK::Real nominalAngleInDeg_)
+        : compoundAtomIndices{SimTK::Compound::AtomIndex(compoundAtomIndices_[0]),
+                              SimTK::Compound::AtomIndex(compoundAtomIndices_[1]),
+                              SimTK::Compound::AtomIndex(compoundAtomIndices_[2])}
+        , globalIndices(globalIndices_)
+        , prmtopIndices(prmtopIndices_)
+        , moleculeIndex(moleculeIndex_)
+        , stiffnessInKJPerRadSq(stiffnessInKJPerRadSq_)
+        , nominalAngleInDeg(nominalAngleInDeg_) {
+    }
 };
 
 struct RoboPeriodicTorsionTerm {
@@ -223,30 +215,31 @@ struct RoboPeriodicTorsionTerm {
 
     RoboPeriodicTorsionTerm() = default;
     RoboPeriodicTorsionTerm(SimTK::Real amplitudeKJ_, SimTK::Real phaseDeg_, int periodicity_)
-        : amplitudeKJ(amplitudeKJ_), phaseDeg(phaseDeg_), periodicity(periodicity_) {}
+        : amplitudeKJ(amplitudeKJ_)
+        , phaseDeg(phaseDeg_)
+        , periodicity(periodicity_) {
+    }
 };
 
 struct RoboPeriodicTorsion {
     std::array<RoboPeriodicTorsionTerm, 5> terms;
-    std::array<int, 4> globalIndices { -1, -1, -1, -1 };
-    std::array<int, 4> prmtopIndices { -1, -1, -1, -1 };
+    std::array<int, 4> globalIndices{-1, -1, -1, -1};
+    std::array<int, 4> prmtopIndices{-1, -1, -1, -1};
     std::array<SimTK::Compound::AtomIndex, 4> compoundAtomIndices;
     int moleculeIndex = -1;
     int numTerms = 0;
     bool improper = false;
 
-    RoboPeriodicTorsion(
-        std::array<int, 4> globalIndices_,
-        std::array<int, 4> prmtopIndices_,
-        std::array<int, 4> compoundAtomIndices_,
-        int moleculeIndex_,
-        bool isImproper,
-        std::vector<RoboPeriodicTorsionTerm> inputTerms
-    ) : globalIndices(globalIndices_),
-        prmtopIndices(prmtopIndices_),
-        moleculeIndex(moleculeIndex_),
-        improper(isImproper)
-    {
+    RoboPeriodicTorsion(std::array<int, 4> globalIndices_,
+                        std::array<int, 4> prmtopIndices_,
+                        std::array<int, 4> compoundAtomIndices_,
+                        int moleculeIndex_,
+                        bool isImproper,
+                        std::vector<RoboPeriodicTorsionTerm> inputTerms)
+        : globalIndices(globalIndices_)
+        , prmtopIndices(prmtopIndices_)
+        , moleculeIndex(moleculeIndex_)
+        , improper(isImproper) {
         if (inputTerms.size() > 5) {
             throw std::runtime_error("Periodic torsion supports at most 5 terms");
         }
@@ -258,34 +251,30 @@ struct RoboPeriodicTorsion {
         }
 
         for (int i = 0; i < 4; ++i) {
-            compoundAtomIndices[i] =
-                SimTK::Compound::AtomIndex(compoundAtomIndices_[i]);
+            compoundAtomIndices[i] = SimTK::Compound::AtomIndex(compoundAtomIndices_[i]);
         }
     }
 };
 
 struct RoboHarmonicImproperTorsion {
-    std::array<int, 4> globalIndices { -1, -1, -1, -1 };
-    std::array<int, 4> prmtopIndices { -1, -1, -1, -1 };
+    std::array<int, 4> globalIndices{-1, -1, -1, -1};
+    std::array<int, 4> prmtopIndices{-1, -1, -1, -1};
     std::array<SimTK::Compound::AtomIndex, 4> compoundAtomIndices;
     int moleculeIndex = -1;
     SimTK::Real stiffnessInKJPerRadSq = 0.0;
     SimTK::Real nominalAngleInRad = 0.0;
 
-    RoboHarmonicImproperTorsion(
-        std::array<int,4> globalIndices_,
-        std::array<int,4> prmtopIndices_,
-        std::array<int,4> compoundAtomIndices_,
-        int moleculeIndex_,
-        SimTK::Real stiffnessInKJPerRadSq_,
-        SimTK::Real nominalAngleInRad_
-    )
-        : globalIndices(globalIndices_),
-          prmtopIndices(prmtopIndices_),
-          moleculeIndex(moleculeIndex_),
-          stiffnessInKJPerRadSq(stiffnessInKJPerRadSq_),
-          nominalAngleInRad(nominalAngleInRad_)
-    {
+    RoboHarmonicImproperTorsion(std::array<int, 4> globalIndices_,
+                                std::array<int, 4> prmtopIndices_,
+                                std::array<int, 4> compoundAtomIndices_,
+                                int moleculeIndex_,
+                                SimTK::Real stiffnessInKJPerRadSq_,
+                                SimTK::Real nominalAngleInRad_)
+        : globalIndices(globalIndices_)
+        , prmtopIndices(prmtopIndices_)
+        , moleculeIndex(moleculeIndex_)
+        , stiffnessInKJPerRadSq(stiffnessInKJPerRadSq_)
+        , nominalAngleInRad(nominalAngleInRad_) {
         for (int i = 0; i < 4; ++i) {
             compoundAtomIndices[i] = SimTK::Compound::AtomIndex(compoundAtomIndices_[i]);
         }
@@ -293,18 +282,13 @@ struct RoboHarmonicImproperTorsion {
 };
 
 struct ZMatrixRow {
-    std::array<int, 4> globalIndices { -1, -1, -1, -1 };
+    std::array<int, 4> globalIndices{-1, -1, -1, -1};
     std::array<SimTK::Compound::AtomIndex, 4> compoundAtomIndices;
     int moleculeIndex = -1;
 
-    ZMatrixRow(
-        std::array<int,4> globalIndices_,
-        std::array<int,4> compoundAtomIndices_,
-        int moleculeIndex_
-    )
-        : globalIndices(globalIndices_),
-          moleculeIndex(moleculeIndex_)
-    {
+    ZMatrixRow(std::array<int, 4> globalIndices_, std::array<int, 4> compoundAtomIndices_, int moleculeIndex_)
+        : globalIndices(globalIndices_)
+        , moleculeIndex(moleculeIndex_) {
         compoundAtomIndices[0] = SimTK::Compound::AtomIndex(compoundAtomIndices_[0]);
 
         if (compoundAtomIndices_[1] != -1) {

@@ -1085,7 +1085,7 @@ void close_file_write(dcdhandle *v) {
 // #include <sys/time.h>
 //
 // /* get the time of day from the system clock, and store it (in seconds) */
-// double time_of_day(void) {
+// double time_of_day() {
 // #if defined(_MSC_VER)
 //   double t;
 //

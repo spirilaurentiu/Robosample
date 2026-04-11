@@ -1,6 +1,8 @@
 {
     "recommendations": [
         "llvm-vs-code-extensions.vscode-clangd",
+        "charliermarsh.ruff",
+        "vscode.json-language-features",
         "vadimcn.vscode-lldb",
         "ms-vscode.cmake-tools",
         "twxs.cmake",
@@ -11,7 +13,8 @@
         "davidanson.vscode-markdownlint",
         "repreng.csv",
         "tamasfe.even-better-toml",
-        "ryanluker.vscode-coverage-gutters"
+        "ryanluker.vscode-coverage-gutters",
+        "tekumara.typos-vscode"
     ],
     "unwantedRecommendations": [
         "ms-vscode.cpptools",

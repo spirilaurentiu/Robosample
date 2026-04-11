@@ -86,6 +86,7 @@ set(ROBOSAMPLE_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/format/inc
     ${CMAKE_SOURCE_DIR}/format/inc/mdtraj
     ${CMAKE_SOURCE_DIR}/pcg-cpp/include
+    ${CMAKE_SOURCE_DIR}/pybind11/include
 )
 
 # Allow custom build types
@@ -111,7 +112,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         -fprofile-use=${PGO_DATA_ROOT}
         -fprofile-prefix-path=${CMAKE_BINARY_DIR}
         -fprofile-correction
-        -fno-reorder-blocks-and-partition
+        # -fno-reorder-blocks-and-partition   # BOLT owns block layout
+        # -fno-profile-reorder-functions      # BOLT owns function layout
     )
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(PGO_TRAIN_FLAGS
@@ -127,8 +129,6 @@ set(CMAKE_STRIP "" CACHE FILEPATH "Strip disabled for PGO" FORCE)
 
 # Create the Python module
 add_subdirectory(pybind11)
-# add_library(${ROBOSAMPLE_LIB_NAME} SHARED ${ROBOSAMPLE_SOURCE_FILES})
-# target_link_libraries(${ROBOSAMPLE_LIB_NAME} PRIVATE pybind11::module)
 pybind11_add_module(${ROBOSAMPLE_LIB_NAME} ${ROBOSAMPLE_SOURCE_FILES})
 
 # Add preprocessor definitions
@@ -186,8 +186,10 @@ if(NOT IPO_SUPPORTED)
     )
 endif()
 
+# Use IPO only for Release and PGO use
+# Note that it's turned off for RelWithDebInfo where we run tests and coverage
 set_property(TARGET ${ROBOSAMPLE_LIB_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
-set_property(TARGET ${ROBOSAMPLE_LIB_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_PGO_USE TRUE)
+# set_property(TARGET ${ROBOSAMPLE_LIB_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_PGO_USE TRUE)
 
 # Set properties for the library target
 # C++17 is the maximum we can safely request because offer support for CUDA 10.0 which requires GCC 7, and GCC 7 only supports up to C++17
@@ -201,25 +203,23 @@ set_target_properties(${ROBOSAMPLE_LIB_NAME} PROPERTIES
 )
 
 # Apply common includes
-target_include_directories(${ROBOSAMPLE_LIB_NAME} PRIVATE ${ROBOSAMPLE_INCLUDE_DIRS})
-
-# Coverage
-if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    set_source_files_properties(${ROBOSAMPLE_HEADER_FILES} PROPERTIES COMPILE_FLAGS "--coverage -fprofile-arcs -ftest-coverage")
-    set_source_files_properties(${ROBOSAMPLE_C_SOURCE_FILES} PROPERTIES COMPILE_FLAGS "--coverage -fprofile-arcs -ftest-coverage")
-    set_source_files_properties(${ROBOSAMPLE_CXX_SOURCE_FILES} PROPERTIES COMPILE_FLAGS "--coverage -fprofile-arcs -ftest-coverage")
-endif()
+target_include_directories(${ROBOSAMPLE_LIB_NAME}
+    PRIVATE
+    ${ROBOSAMPLE_INCLUDE_DIRS}
+    $ENV{CONDA_PREFIX}/targets/x86_64-linux/include
+)
 
 # Set configuration-specific compile options
 target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
-    -march=native #x86-64-v3
-    -mtune=native #generic
+    -march=native # x86-64-v3
+    -mtune=native # generic
+    -Wno-deprecated-declarations # OpenMM double4 which must be either double4_16a or double4_32a
 
     # Debug
     $<$<CONFIG:Debug>:
-        -O0
-        -g
         -fno-omit-frame-pointer
+        -O0
+        -g3
     >
 
     # Release
@@ -232,20 +232,21 @@ target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
         -O3
         -g3
         -fno-omit-frame-pointer
+        --coverage
     >
 
     # PGO Train (GCC)
     $<$<CONFIG:PGO_Train>:
         -O3
-        -g
+        -g3
         -fno-omit-frame-pointer
         ${PGO_TRAIN_FLAGS}
     >
 
-    # PGO Use (GCC) - note that this binary will be optimized via LLVM-BOLT (perf)
+    # PGO Use (GCC)
     $<$<CONFIG:PGO_Use>:
         -O3
-        -g
+        -g3
         -fno-omit-frame-pointer
         ${PGO_USE_FLAGS}
     >
@@ -256,7 +257,7 @@ target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
 
     # Debug
     $<$<CONFIG:Debug>:
-        $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:--coverage>
+        # No extra flags
     >
 
     # Release
@@ -266,7 +267,7 @@ target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
 
     # Release with Debug Info
     $<$<CONFIG:RelWithDebInfo>:
-        $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:--coverage>
+        --coverage
     >
 
     # PGO Train
@@ -281,13 +282,6 @@ target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
         -Wl,--emit-relocs
     >
 )
-
-# # Apply sanitizers (Debug only; ASAN cannot link with Python runtime)
-# if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-#     target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${SANITIZER_FLAGS})
-#     target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${SANITIZER_FLAGS})
-#     target_link_libraries(${ROBOSAMPLE_LIB_NAME} PRIVATE ${ASAN_LIB})
-# endif()
 
 # Link with external libraries
 target_link_libraries(${ROBOSAMPLE_LIB_NAME} PRIVATE

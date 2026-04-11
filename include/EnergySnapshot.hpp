@@ -9,9 +9,9 @@ struct EnergySnapshot {
     SimTK::Real logSineSqrGamma2 = SimTK::NaN;
     SimTK::Real total = SimTK::NaN;
 
-    static constexpr SimTK::Real EXPLOSION_THRESHOLD = 10.0; 
+    static constexpr SimTK::Real EXPLOSION_THRESHOLD = 10.0;
     static constexpr SimTK::Real GEOMETRIC_LIMIT = 1e3;
-	
+
     bool finite() const;
     bool checkTotal(SimTK::Real RT) const;
     bool checkKinetic() const;

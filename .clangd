@@ -1,0 +1,9 @@
+CompileFlags:
+  CompilationDatabase: "build/latest"
+
+Diagnostics:
+  ClangTidy:
+    Add: [bugprone-*, performance-*, readability-*, modernize-*]
+    Remove: [readability-magic-numbers]
+    CheckOptions:
+      readability-identifier-naming.VariableCase: camelCase

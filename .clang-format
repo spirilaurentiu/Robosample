@@ -1,0 +1,384 @@
+# =============================================================================
+# .clang-format - Molecular Simulation C++17
+# =============================================================================
+# Based on LLVM style with modifications for safety, readability, and
+# git-diff stability. Run `clang-format --version` to confirm >= 15.
+# =============================================================================
+
+
+# =============================================================================
+# 1. LANGUAGE & STANDARD
+# =============================================================================
+
+BasedOnStyle: LLVM
+Language:     Cpp
+Standard:     c++17
+
+
+# =============================================================================
+# 2. COLUMN LIMIT & INDENTATION
+# =============================================================================
+
+# Prevents horizontal scrolling on modern monitors.
+# Increase to 120 if the team prefers wider lines.
+ColumnLimit: 110
+
+# Number of spaces per indentation level.
+# Example:
+#   void func() {
+#       int x = 0;   // <- 4 spaces
+#   }
+IndentWidth: 4
+TabWidth:    4
+UseTab:      Never   # Spaces only - ensures cross-platform consistency.
+
+# Keeps 'public:', 'protected:', 'private:' flush with the class keyword.
+# Example:
+#   class MyClass {
+#   public:           // <- offset 0, flush with 'class'
+#       void run();
+#   };
+AccessModifierOffset: 0
+
+# Indents 'case' labels inside a switch, and their contents a further level.
+# Example:
+#   switch (x) {
+#       case 1:        // <- indented once
+#           break;     // <- indented twice
+#       default:
+#           break;
+#   }
+IndentCaseLabels: true
+
+# Indents preprocessor directives after the '#' for nested readability.
+# Example:
+#   #if DEBUG
+#   #    define LOG(x) ...   // <- indented after hash
+#   #endif
+IndentPPDirectives: AfterHash
+
+
+# =============================================================================
+# 3. BRACE STYLE & SHORT-CONSTRUCT SAFETY
+# =============================================================================
+# "Attach" keeps opening braces on the same line as their statement.
+# This is the most common C++ style and minimises diff noise.
+#
+# Example (Attach):
+#   if (condition) {
+#       do_thing();
+#   } else {
+#       other_thing();
+#   }
+#
+# NOTE: BraceWrapping is only consulted when BreakBeforeBraces is set to
+# 'Custom'. With 'Attach' the block below has no effect and is kept here
+# purely as a reference if you ever switch to Custom.
+
+BreakBeforeBraces: Attach
+BraceWrapping:
+    AfterClass:            false
+    AfterControlStatement: Never
+    AfterEnum:             false
+    AfterFunction:         false
+    AfterNamespace:        false
+    AfterStruct:           false
+    AfterUnion:            false
+    BeforeCatch:           false
+    BeforeElse:            false
+    SplitEmptyFunction:    false
+    SplitEmptyRecord:      false
+
+# ---- Safety: ban all short-form constructs --------------------------------
+#
+# Every rule below prevents code that *looks* safe but breaks when a second
+# statement is added - the root cause of the Apple SSL "goto fail" bug
+# (CVE-2014-1266), where an un-braced if meant a critical check was skipped.
+#
+# InsertBraces (below in #9) adds braces automatically during formatting;
+# these settings prevent clang-format from *removing* them for brevity.
+
+# Prevents:  { do_thing(); }  on one line.
+AllowShortBlocksOnASingleLine:   Never
+
+# Prevents:  case 1: break;
+AllowShortCaseLabelsOnASingleLine: false
+
+# Prevents:  enum Color { Red, Green, Blue };
+AllowShortEnumsOnASingleLine: false
+
+# Prevents:  void noop() {}  and  int id(int x) { return x; }
+AllowShortFunctionsOnASingleLine: None
+
+# Prevents:  auto sq = [](int x) { return x * x; };
+AllowShortLambdasOnASingleLine: None
+
+# Prevents:  if (done) return;
+# This is the primary "goto fail" guard.
+AllowShortIfStatementsOnASingleLine: Never
+
+# Prevents:  for (auto& x : v) process(x);
+AllowShortLoopsOnASingleLine: false
+
+
+# =============================================================================
+# 4. SPACING
+# =============================================================================
+
+# Space after 'template' keyword, before '<'.
+# Example:  template <typename T>   not   template<typename T>
+SpaceAfterTemplateKeyword: true
+
+# Spaces before '(' only for control-flow keywords, not function calls.
+# Example:
+#   if (x)          // <- space before '('
+#   func(x)         // <- no space before '('
+SpaceBeforeParens: ControlStatements
+
+# No space padding inside angle brackets.
+# Example:  vector<int>   not   vector< int >
+SpacesInAngles: Never
+
+# Space on both sides of assignment operators.
+# Example:  int x = 5;   not   int x=5;
+SpaceBeforeAssignmentOperators: true
+
+# No space padding inside an empty block.
+# Example:  {}   not   { }
+SpaceInEmptyBlock: false
+
+
+# =============================================================================
+# 5. POINTER & REFERENCE ALIGNMENT
+# =============================================================================
+
+# Binds '*' and '&' to the type, not the variable name.
+# Example:
+#   int* p;       <- Left (type-bound)
+#   int *p;       <- Right (variable-bound, LLVM default)
+PointerAlignment: Left
+
+# References follow whatever PointerAlignment is set to.
+# Example:
+#   int& r = x;   <- consistent with PointerAlignment: Left
+ReferenceAlignment: Pointer
+
+# Prevent clang-format from overriding PointerAlignment by guessing from
+# existing code in the file - ensures the setting above is always respected.
+DerivePointerAlignment: false
+
+# 'const' (and other qualifiers) appear to the left of the type.
+# Example:  const int* p;   not   int const* p;
+QualifierAlignment: Left
+
+
+# =============================================================================
+# 6. ALIGNMENT (VISUAL / COLUMN)
+# =============================================================================
+# NOTE: Consecutive-alignment settings (Assignments, Declarations, BitFields,
+# Macros) are intentionally DISABLED. They cause "diff explosions" where
+# renaming a single variable realigns every line in the block, burying the
+# real change in noise.
+#
+# Example of the problem (AlignConsecutiveAssignments: true):
+#   int   x     = 1;   // adding a longer name here
+#   float value = 2.0; // forces ALL lines to reformat → noisy diff
+
+AlignConsecutiveAssignments: false
+AlignConsecutiveBitFields:   false
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros:      false
+
+# Aligns function arguments / parameters to the opening parenthesis when
+# they wrap onto multiple lines.
+# Example:
+#   computeForce(atom1,
+#                atom2,   // <- aligned under 'atom1'
+#                cutoff);
+AlignAfterOpenBracket: Align
+
+# Aligns operands vertically in multi-line expressions.
+# Example:
+#   double energy = kineticEnergy
+#                 + potentialEnergy   // <- aligned under 'kineticEnergy'
+#                 + bondEnergy;
+AlignOperands: true
+
+# Aligns trailing comments to a common column.
+# Example:
+#   int x = 0;     // position x
+#   double r = 1;  // bond length
+AlignTrailingComments: true
+
+# Aligns backslash line-continuations to the left margin in macros.
+# Example:
+#   #define LOOP(x)  \
+#       for (auto& e : x) \
+#           process(e);
+AlignEscapedNewlines: Left
+
+
+# =============================================================================
+# 7. LINE BREAKING & WRAPPING
+# =============================================================================
+
+# When arguments don't fit on one line, each goes on its own line (no packing).
+# Example:
+#   integrate(positions,    <- fits → stays on one line
+#             velocities,
+#             forces,       <- wrap → one per line, not bin-packed
+#             timestep);
+BinPackArguments:  false
+BinPackParameters: false
+
+# If arguments must wrap, they may not all flow onto the next line as a block;
+# they must be broken one-per-line (consistent with BinPack settings above).
+AllowAllArgumentsOnNextLine:              false
+AllowAllParametersOfDeclarationOnNextLine: false
+
+# Binary operators (except '=') appear at the START of the continuation line.
+# Example:
+#   if (longConditionA
+#       && longConditionB   // <- operator leads the line
+#       && longConditionC) {
+BreakBeforeBinaryOperators: NonAssignment
+
+# Ternary operator branches each get their own line, operator leads.
+# Example:
+#   return condition
+#              ? trueValue
+#              : falseValue;
+BreakBeforeTernaryOperators: true
+
+# 'template <...>' declarations are always on their own line.
+# Example:
+#   template <typename T>
+#   void compute(T& system);
+AlwaysBreakTemplateDeclarations: Yes
+
+
+# =============================================================================
+# 8. CONSTRUCTOR INITIALIZERS & INHERITANCE
+# =============================================================================
+
+# Each initializer on its own line, comma leading (comma-first style).
+# Example:
+#   Integrator(double dt, int steps)
+#       : timestep_(dt)      // <- colon leads first item
+#       , maxSteps_(steps)   // <- comma leads subsequent items
+#       , step_(0)
+#   {}
+BreakConstructorInitializers:   BeforeComma
+PackConstructorInitializers:    Never
+
+# Same comma-first style for base-class lists.
+# Example:
+#   class Langevin
+#       : public Integrator   // <- colon leads
+#       , public Thermostat   // <- comma leads
+#   {};
+BreakInheritanceList: BeforeComma
+
+
+# =============================================================================
+# 9. NAMESPACE FORMATTING
+# =============================================================================
+
+# C++17 nested namespace syntax on one line.
+# Example:
+#   namespace molsim::core { ... }   not   namespace molsim { namespace core { ... } }
+CompactNamespaces: true
+
+# Adds a comment at the closing brace of a namespace.
+# Example:
+#   namespace molsim::core {
+#       ...
+#   } // namespace molsim::core
+FixNamespaceComments: true
+
+
+# =============================================================================
+# 10. MODERN C++ & HYGIENE
+# =============================================================================
+
+# Automatically inserts braces around single-statement bodies.
+# This is the active enforcement of the "goto fail" guard in #3.
+# Example (before):   if (done) return;
+# Example (after):    if (done) { return; }
+# WARNING: first application to an existing codebase will produce a large diff.
+InsertBraces: true
+
+# Sorts 'using' declarations alphabetically within each group.
+# Example:
+#   using std::string;
+#   using std::vector;   // <- alphabetical
+SortUsingDeclarations: true
+
+# Braced initializer lists use C++11 compact style (no extra spaces).
+# Example:
+#   std::array<int, 3> v{1, 2, 3};   not   std::array<int, 3> v{ 1, 2, 3 };
+Cpp11BracedListStyle: true
+
+# Do not add trailing commas to function arguments (a JavaScript-centric
+# feature with no benefit in C++).
+InsertTrailingCommas: None
+
+# Keep the semicolon after a class/struct/enum definition - removing it can
+# confuse some tools and is irreversible without context.
+RemoveSemicolon: false
+
+
+# =============================================================================
+# 11. INCLUDES
+# =============================================================================
+# Includes are sorted alphabetically within each priority group.
+# Groups are separated by a blank line.
+#
+# Priority 1 - C system headers:          <unistd.h>
+# Priority 2 - C++ standard library:      <vector>, <algorithm/sort>
+# Priority 3 - Third-party libraries:     <Eigen/Dense>, <fmt/format.h>
+# Priority 4 - Project public interface:  "molsim/core/System.hpp"
+# Priority 5 - Project internal headers:  "internal_utils.hpp"
+
+SortIncludes: true
+IncludeBlocks: Regroup
+IncludeCategories:
+    # C system headers: <unistd.h>, <cstdint>, <math.h>
+    - Regex:    '^<[a-z_][a-z0-9_]*\.h>$'
+      Priority: 1
+    # C++ standard library: <vector>, <algorithm>, <filesystem>
+    - Regex:    '^<[a-z_][a-z0-9_]*>$'
+      Priority: 2
+    # C++ standard library sub-paths: <experimental/simd>
+    - Regex:    '^<[a-z_][a-z0-9_]*/[a-z_]'
+      Priority: 2
+    # Third-party libraries (may have uppercase): <Eigen/Dense>, <pybind11/pybind11.h>
+    - Regex:    '^<[A-Za-z]'
+      Priority: 3
+    # Project public headers: "molsim/core/System.hpp"
+    - Regex:    '^"[a-z_][a-z0-9_]*/[a-zA-Z_]'
+      Priority: 4
+    # Project internal/private headers: "bond_utils.hpp"
+    - Regex:    '^"[a-zA-Z_]'
+      Priority: 5
+
+
+# =============================================================================
+# 12. MISCELLANEOUS
+# =============================================================================
+
+# Strip blank lines at the start of a block.
+# Example (before):
+#   void func() {
+#
+#       int x = 0;   // <- blank line removed
+# Example (after):
+#   void func() {
+#       int x = 0;
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+# Allow at most 2 consecutive blank lines anywhere in the file.
+MaxEmptyLinesToKeep: 2
+
+# Unix line endings only - prevents Windows CRLF from slipping into source.
+UseCRLF: false

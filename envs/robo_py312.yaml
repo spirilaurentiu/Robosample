@@ -23,7 +23,6 @@ dependencies:
 
   # OpenMP support for GNU and LLVM compilers
   - libgomp
-  # - llvm-openmp
 
   # Bioinformatics
   - openmm
@@ -37,11 +36,13 @@ dependencies:
   - astropy
   - networkx
   - tqdm
+  - hypothesis
 
   # Pip packages
   - pip:
     - pybind11-stubgen
     - pytest
+    - pytest-xdist
     - pytest-cov
     - gcovr
     - coverage

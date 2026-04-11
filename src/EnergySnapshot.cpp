@@ -27,9 +27,10 @@ bool EnergySnapshot::finite() const {
 
 bool EnergySnapshot::checkTotal(SimTK::Real RT) const {
     if (total != potential + kinetic + fixman - (0.5 * RT * logSineSqrGamma2)) {
-        std::cout << "\t[WARNING] Total energy does not match sum of components: " << total << " vs " << (potential + kinetic + fixman - (0.5 * RT * logSineSqrGamma2)) << std::endl;
+        std::cout << "\t[WARNING] Total energy does not match sum of components: " << total << " vs "
+                  << (potential + kinetic + fixman - (0.5 * RT * logSineSqrGamma2)) << std::endl;
         return false;
-    } 
+    }
     return true;
 }
 
@@ -47,15 +48,18 @@ bool EnergySnapshot::termExplosion(const EnergySnapshot& ref) const {
     };
 
     if (is_exploded(potential, ref.potential)) {
-        std::cout << "\t[WARNING] Potential energy exploded: " << potential << " vs ref " << ref.potential << std::endl;
+        std::cout << "\t[WARNING] Potential energy exploded: " << potential << " vs ref " << ref.potential
+                  << std::endl;
         return false;
     }
     if (is_exploded(kinetic, ref.kinetic)) {
-        std::cout << "\t[WARNING] Kinetic energy exploded: " << kinetic << " vs ref " << ref.kinetic << std::endl;
+        std::cout << "\t[WARNING] Kinetic energy exploded: " << kinetic << " vs ref " << ref.kinetic
+                  << std::endl;
         return false;
     }
     if (is_exploded(fixman, ref.fixman)) {
-        std::cout << "\t[WARNING] Fixman energy exploded: " << fixman << " vs ref " << ref.fixman << std::endl;
+        std::cout << "\t[WARNING] Fixman energy exploded: " << fixman << " vs ref " << ref.fixman
+                  << std::endl;
         return false;
     }
     if (is_exploded(total, ref.total)) {
@@ -83,7 +87,8 @@ bool EnergySnapshot::hamiltonianDrift(const EnergySnapshot& ref, SimTK::Real bet
     const SimTK::Real drift_limit = 2.0 * std::sqrt(static_cast<SimTK::Real>(ndofs));
 
     if (drift_kt > drift_limit) {
-        std::cout << "\t[WARNING] Hamiltonian drift too large: " << drift_kt << " kT (limit: " << drift_limit << " kT)" << std::endl;
+        std::cout << "\t[WARNING] Hamiltonian drift too large: " << drift_kt << " kT (limit: " << drift_limit
+                  << " kT)" << std::endl;
         return false;
     }
     return true;

@@ -1,6 +1,7 @@
 import argparse
+import time
+
 import robosample
-import numpy as np
 
 # python3 roborun.py 2but ../examples/2but.prmtop ../examples/2but.rst7 6000 0 10 1
 
@@ -37,16 +38,16 @@ import numpy as np
 # python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
 
 # Create the parser
-parser = argparse.ArgumentParser(description='Process PDB code and seed.')
+parser = argparse.ArgumentParser(description="Process PDB code and seed.")
 
 # Add the arguments
-parser.add_argument('name', type=str, help='Name of the simulation.')
-parser.add_argument('prmtop', type=str, help='Relative path to the .prmtop file.')
-parser.add_argument('inpcrd', type=str, help='Relative path to the .inpcrd file.')
-parser.add_argument('seed', type=int, help='The seed.')
-parser.add_argument('equil_steps', type=int, help='The number of equilibration steps.')
-parser.add_argument('prod_steps', type=int, help='The number of production steps.')
-parser.add_argument('write_freq', type=int, help='CSV and DCD write frequency.')
+parser.add_argument("name", type=str, help="Name of the simulation.")
+parser.add_argument("prmtop", type=str, help="Relative path to the .prmtop file.")
+parser.add_argument("inpcrd", type=str, help="Relative path to the .inpcrd file.")
+parser.add_argument("seed", type=int, help="The seed.")
+parser.add_argument("equil_steps", type=int, help="The number of equilibration steps.")
+parser.add_argument("prod_steps", type=int, help="The number of production steps.")
+parser.add_argument("write_freq", type=int, help="CSV and DCD write frequency.")
 
 # Parse the arguments
 args = parser.parse_args()
@@ -62,25 +63,39 @@ R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 # 6 kcal/mol - tens to hundreds of picoseconds (moderate barrier, ~10KbT)
 # 10 kcal/mol - nanoseconds or longer (high barrier , ~16KbT)
 # 2 ps of MD is enough to explore shallow wells, but not to cross deep barriers without enhanced sampling (e.g., HMC, replica exchange)
-TIMESTEP_TD = 0.005 # Torsional dymaics time step is 10 fs
-MDSTEPS_TD = 64 # Torsional dynamics block trajectory length 1 ps
+TIMESTEP_TD = 0.005  # Torsional dymaics time step is 10 fs
+MDSTEPS_TD = 64  # Torsional dynamics block trajectory length 1 ps
 
-TIMESTEP_CARTESIAN = 0.001
-MDSTEPS_CARTESIAN = 512
+# TIMESTEP_CARTESIAN = 0.001
+# MDSTEPS_CARTESIAN = 512
 
 # create robosample context
-context = robosample.Context(name=args.name, seed=args.seed, prmtop=args.prmtop, inpcrd=args.inpcrd, write_freq=args.write_freq, testing=True)
+context = robosample.Context(
+    name=args.name,
+    seed=args.seed,
+    prmtop=args.prmtop,
+    inpcrd=args.inpcrd,
+    write_freq=args.write_freq,
+    testing=True,
+)
 
-# Add cartesian world (will integrate with OpenMM)
-context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
+# # Add cartesian world (will integrate with OpenMM)
+# context.addCartesianWorld().addSampler(
+#     timeStep=TIMESTEP_CARTESIAN,
+#     mdSteps=MDSTEPS_CARTESIAN,
+#     boostMDSteps=MDSTEPS_CARTESIAN,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
+# )
 
 # Add torsional world with non-redundant dihedrals
 # sele = [
 # 	context.selectBonds('resid 0'),
 # 	# context.selectBonds('resid 1')
 # ]
-sele = context.getDefaultBonds('standard')
-context.addTorsionalWorld(sele).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD)
+sele = context.getDefaultBonds("standard")
+context.addTorsionalWorld(sele).addSampler(
+    timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD
+)
 
 # for flex in context.getDefaultBonds('macrocycle'):
 # 	context.addTorsionalWorld([flex]).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
@@ -88,7 +103,7 @@ context.addTorsionalWorld(sele).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS
 # Add replicas (geometric temperature ladder)
 temperatures = []
 for i in range(NOF_REPLICAS):
-    temperatures.append(T0 * (R ** i))
+    temperatures.append(T0 * (R**i))
 
 context.initialize(temperatures)
 
@@ -103,9 +118,6 @@ context.initialize(temperatures)
 # 	raise RuntimeError(message)
 
 # Run the simulation
-
-
-import time
 
 start_time = time.perf_counter()
 

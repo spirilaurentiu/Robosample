@@ -7,3 +7,6 @@
 # Exclude Jupyter notebooks since they contains images, data, tables etc blowing up the total language fraction unrealistically
 # This is a wont-fix: https://github.com/github-linguist/linguist/issues/3496
 *.ipynb linguist-vendored=true linguist-detectable=false
+
+# Handle line endings automatically for text files and force them to LF on check-in
+* text=auto eol=lf

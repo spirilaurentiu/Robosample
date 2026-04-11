@@ -26,7 +26,13 @@ SET(OPENMM_SOURCE_SUBDIRS
 )
 
 IF(USE_CPU)
-    SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/cpu)
+    SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS}
+        ${CMAKE_SOURCE_DIR}/openmm/platforms/cpu
+    )
+    SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/cpu/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/cpu/src
+    )
 
 ELSEIF(USE_CUDA OR USE_OPENCL)
     SET(COMMON_KERNEL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/common/src")
@@ -46,8 +52,13 @@ ELSEIF(USE_CUDA OR USE_OPENCL)
     SET(OPENMM_GENERATED_CXX_FILES ${OPENMM_GENERATED_CXX_FILES} ${COMMON_KERNELS_CPP})
     SET(OPENMM_DEPENDENCIES CommonKernels)
 
-    SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/common)
-    SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/common/src)
+    SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS}
+        ${CMAKE_SOURCE_DIR}/openmm/platforms/common
+    )
+    SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/common/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/common/src
+    )
 
     IF(USE_CUDA)
         # Compile all CUDA kernels into one single file
@@ -71,7 +82,7 @@ ELSEIF(USE_CUDA OR USE_OPENCL)
             ${CMAKE_SOURCE_DIR}/openmm/platforms/cuda
         )
         SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS}
-            ${CUDAToolkit_INCLUDE_DIRS}
+            ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/cuda/include
             ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/cuda/src
         )
     ELSEIF(USE_OPENCL)
@@ -92,8 +103,13 @@ ELSEIF(USE_CUDA OR USE_OPENCL)
         SET(OPENMM_GENERATED_CXX_FILES ${OPENMM_GENERATED_CXX_FILES} ${OPENCL_KERNELS_CPP})
         SET(OPENMM_DEPENDENCIES ${OPENMM_DEPENDENCIES} OpenCLKernels)
 
-        SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/opencl)
-        SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/opencl/src)
+        SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS}
+            ${CMAKE_SOURCE_DIR}/openmm/platforms/opencl
+        )
+        SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS}
+            ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/opencl/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/opencl/src
+        )
     ENDIF()
     
 ENDIF()
@@ -101,22 +117,27 @@ ENDIF()
 # Set generated files as generated to avoid warnings about missing headers
 set_source_files_properties(${OPENMM_GENERATED_CXX_FILES} PROPERTIES GENERATED TRUE)
 
-# Get openmm include directories
+# Find which include directories actually exist
 FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
-    SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS}
+    SET(potential_paths
         ${subdir}
         ${subdir}/include
         ${subdir}/include/openmm
         ${subdir}/include/openmm/internal
-        ${subdir}/include/openmm/common)
-ENDFOREACH(subdir)
+        ${subdir}/include/openmm/common
+    )
+
+    FOREACH(path ${potential_paths})
+        IF(IS_DIRECTORY ${path})
+            LIST(APPEND OPENMM_INCLUDE_DIRS ${path})
+        ENDIF()
+    ENDFOREACH()
+ENDFOREACH()
 
 SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/openmm/libraries/asmjit)
 
 # Find source and header files
-SET(OPENMM_SOURCE_C_FILES)
 SET(OPENMM_SOURCE_CXX_FILES ${OPENMM_SOURCE_CXX_FILES} ${OPENMM_GENERATED_CXX_FILES})
-SET(OPENMM_SOURCE_INCLUDE_FILES)
 
 FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     FILE(GLOB src_c_files ${subdir}/src/*.c ${subdir}/src/*/*.c)
@@ -125,7 +146,7 @@ FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     FILE(GLOB src_cxx_files ${subdir}/src/*.cpp ${subdir}/src/*/*.cpp ${subdir}/base/*.cpp ${subdir}/x86/*.cpp)
     SET(OPENMM_SOURCE_CXX_FILES ${OPENMM_SOURCE_CXX_FILES} ${src_cxx_files})
 
-    FILE(GLOB incl_files ${subdir}/src/*.h ${subdir}/src/*/*.h)
+    FILE(GLOB incl_files ${subdir}/*.h ${subdir}/src/*.h ${subdir}/src/*/*.h)
     SET(OPENMM_SOURCE_INCLUDE_FILES ${OPENMM_SOURCE_INCLUDE_FILES} ${incl_files})
 ENDFOREACH(subdir)
 
@@ -136,8 +157,7 @@ FILE(GLOB incl_files ${CMAKE_SOURCE_DIR}/openmm/libraries/asmjit/*.h)
 SET(OPENMM_SOURCE_INCLUDE_FILES ${OPENMM_SOURCE_INCLUDE_FILES} ${incl_files})
 
 # Set compile definitions for each library
-set(OPENMM_COMPILE_DEFINITIONS
-    OPENMM_LIBRARY_NAME="OpenMM"
+set(OPENMM_COMMON_DEFS
     OPENMM_MAJOR_VERSION=8
     OPENMM_MINOR_VERSION=5
     OPENMM_BUILD_VERSION=0
@@ -150,7 +170,12 @@ set(OPENMM_COMPILE_DEFINITIONS
     OPENMM_COMMON_BUILDING_STATIC_LIBRARY=0
 )
 
-foreach(compile_definition ${OPENMM_COMPILE_DEFINITIONS})
-    set_property(SOURCE ${OPENMM_SOURCE_CXX_FILES} APPEND_STRING PROPERTY COMPILE_DEFINITIONS ${compile_definition})
-    set_property(SOURCE ${OPENMM_SOURCE_INCLUDE_FILES} APPEND_STRING PROPERTY COMPILE_DEFINITIONS ${compile_definition})
-endforeach(compile_definition)
+set_source_files_properties(${OPENMM_SOURCE_INCLUDE_FILES}
+    PROPERTIES COMPILE_DEFINITIONS "${OPENMM_COMMON_DEFS}"
+)
+set_source_files_properties(${OPENMM_SOURCE_CXX_FILES}
+    PROPERTIES COMPILE_DEFINITIONS "${OPENMM_COMMON_DEFS}"
+)
+set_source_files_properties(${OPENMM_SOURCE_INCLUDE_FILES}
+    PROPERTIES COMPILE_DEFINITIONS "${OPENMM_COMMON_DEFS}"
+)

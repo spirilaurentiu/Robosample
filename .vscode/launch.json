@@ -9,7 +9,7 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/python",
+                "PYTHONPATH": "${workspaceFolder}/python/robosample",
             },
             "args": [
                 "ala-dipeptide.test",
@@ -30,15 +30,15 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/python",
+                "PYTHONPATH": "${workspaceFolder}/python/robosample",
             },
             "args": [
-                "ala-dipeptide.test",
-                "${workspaceFolder}/examples/ala-dipeptide.prmtop",
-                "${workspaceFolder}/examples/ala-dipeptide.rst7",
+                "c4bond3.test",
+                "${workspaceFolder}/examples/c4bond3/c4bond3.prmtop",
+                "${workspaceFolder}/examples/c4bond3/c4bond3.rst7",
                 "6000",
                 "0",
-                "10",
+                "1000",
                 "1",
             ],
             "cwd": "${workspaceFolder}",
@@ -49,7 +49,7 @@
             "request": "launch",
             "program": "${command:python.interpreterPath}",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/python",
+                "PYTHONPATH": "${workspaceFolder}/python/robosample",
             },
             "args": [
                 "${workspaceFolder}/python/robosample/roborun.py",
@@ -62,11 +62,6 @@
                 "1"
             ],
             "cwd": "${workspaceFolder}",
-            // "env": {
-            //     "LD_LIBRARY_PATH": "${workspaceFolder}/build",
-            //     // "ASAN_OPTIONS": "protect_shadow_gap=0:detect_leaks=0:abort_on_error=0:halt_on_error=1"
-            // }
         }
-
     ]
 }

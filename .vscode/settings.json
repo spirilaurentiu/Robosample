@@ -7,19 +7,15 @@
 
     // Clangd configuration
     "clangd.arguments": [
-        "--compile-commands-dir=build",
+        "--compile-commands-dir=build/latest",
         "--background-index",
         "--clang-tidy"
     ],
     "python.autoComplete.extraPaths": [
-        "${workspaceFolder}/python/",
         "${workspaceFolder}/python/robosample",
-        "${workspaceFolder}/python/robosample/stubs",
     ],
     "python.analysis.extraPaths": [
-        "${workspaceFolder}/python/",
         "${workspaceFolder}/python/robosample",
-        "${workspaceFolder}/python/robosample/stubs",
     ],
     "python.testing.pytestArgs": [
         "tests"
@@ -31,5 +27,29 @@
     "coverage-gutters.showLineCoverage": true,
     "coverage-gutters.showGutterCoverage": true,
     "coverage-gutters.showCustomCoverage": true,
-    "coverage-gutters.manualCompile": false
+    "coverage-gutters.manualCompile": false,
+
+    "files.associations": {
+        ".clang-format": "yaml",
+        ".clang-tidy": "yaml",
+        ".clangd": "yaml",
+    },
+
+    // Live formatting
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "always",
+            "source.organizeImports.ruff": "always"
+        }
+    },
+    "[cpp]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+    },
+    "[json]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "vscode.json-language-features"
+    }
 }
