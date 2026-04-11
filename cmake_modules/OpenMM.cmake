@@ -21,7 +21,7 @@ SET(OPENMM_SOURCE_SUBDIRS
 
     # Needed by custom kernels and forces
     ${CMAKE_SOURCE_DIR}/openmm/platforms/reference
-    
+
     ${CMAKE_SOURCE_DIR}/openmm/serialization
 )
 
@@ -98,7 +98,7 @@ ELSEIF(USE_CUDA OR USE_OPENCL)
             DEPENDS ${OPENCL_KERNELS}
             COMMENT "Generating OpenCL kernel sources for OpenMM..."
         )
-        
+
         ADD_CUSTOM_TARGET(OpenCLKernels DEPENDS ${OPENCL_KERNELS_CPP} ${OPENCL_KERNELS_H})
         SET(OPENMM_GENERATED_CXX_FILES ${OPENMM_GENERATED_CXX_FILES} ${OPENCL_KERNELS_CPP})
         SET(OPENMM_DEPENDENCIES ${OPENMM_DEPENDENCIES} OpenCLKernels)
@@ -111,7 +111,7 @@ ELSEIF(USE_CUDA OR USE_OPENCL)
             ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/opencl/src
         )
     ENDIF()
-    
+
 ENDIF()
 
 # Set generated files as generated to avoid warnings about missing headers

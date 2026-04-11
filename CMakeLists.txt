@@ -31,8 +31,8 @@ set(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
 # Create a symlink from build/latest to the current binary directory
 if(CMAKE_EXPORT_COMPILE_COMMANDS)
     add_custom_target(update_compile_commands_symlink ALL
-        COMMAND ${CMAKE_COMMAND} -E create_symlink 
-            ${CMAKE_BINARY_DIR} 
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+            ${CMAKE_BINARY_DIR}
             ${CMAKE_SOURCE_DIR}/build/latest
         COMMENT "Updating `latest` symlink to ${CMAKE_BINARY_DIR}"
     )
@@ -170,7 +170,7 @@ include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT REASON)
 
 if(NOT IPO_SUPPORTED)
-    message(FATAL_ERROR 
+    message(FATAL_ERROR
         "\n"
         "------------------------------------------------------------------\n"
         "FATAL: IPO/LTO (Interprocedural Optimization) is required but not supported.\n"
@@ -295,7 +295,7 @@ if(USE_CUDA)
     find_package(CUDAToolkit REQUIRED)
     target_link_libraries(${ROBOSAMPLE_LIB_NAME}
         PRIVATE
-        CUDA::cuda_driver 
+        CUDA::cuda_driver
         CUDA::cufft
         CUDA::nvrtc
     )

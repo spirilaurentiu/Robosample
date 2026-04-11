@@ -20,9 +20,9 @@ repos:
       - id: check-json
       - id: pretty-format-json
         args: [
-          --autofix, 
-          --indent=4, 
-          --no-ensure-ascii, 
+          --autofix,
+          --indent=4,
+          --no-ensure-ascii,
           --sort-keys
         ]
       - id: debug-statements
@@ -35,7 +35,7 @@ repos:
     hooks:
       - id: cmake-format
       - id: cmake-lint
-  
+
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.40.0
     hooks:

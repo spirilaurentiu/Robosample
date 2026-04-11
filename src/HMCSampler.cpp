@@ -3620,8 +3620,9 @@ void HMCSampler::getMsg_EnergyDetails(std::stringstream& energyDetailsStream,
  * <!--	The main function that generates a sample -->
  TODO get a state from outside, do something with it, add it to advanced state of integrator and return it
 */
-auto HMCSampler::sampleIteration(SimTK::State& state, std::stringstream& samplerOutStream, bool verbose)
-    -> bool {
+auto HMCSampler::sampleIteration(SimTK::State& state,
+                                 std::stringstream& samplerOutStream,
+                                 bool verbose) -> bool {
     // Deep copy the old state with all its properties (q, u, z, qdot, udot, zdot, qdotdot) before integration
     const auto oldState = state;
 
