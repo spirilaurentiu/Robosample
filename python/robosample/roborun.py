@@ -34,8 +34,35 @@ import robosample
 # python3 python/robosample/roborun.py ala-dipeptide examples/ala-dipeptide.prmtop examples/ala-dipeptide.rst7 6000 0 10 1
 # python3 python/robosample/roborun.py ala-dipeptide examples/ala-dipeptide.prmtop examples/ala-dipeptide.rst7 6000 0 500 1
 
-# python3 python/robosample/roborun.py ffar1 examples/ffar1.prmtop examples/ffar1.rst7 6000 0 20 1
+# perf record -e cycles:u -j any,u --call-graph fp --no-bpf-event -o perf.data -- python3 python/robosample/roborun.py 1APQ examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
+# perf inject -j -i perf.data -o perf.lbr.data
+# create_gcov --binary=python/robosample/robo_bindings.cpython-312-x86_64-linux-gnu.so --profile=perf.lbr.data --gcov=autofdo.afdo
+
+
+# perf stat -e cycles,instructions,branches,branch-misses,cache-misses,task-clock,context-switches,cpu-migrations python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
+
+"""
+perf stat -e cycles,instructions,branches,branch-misses \
+-e L1-dcache-loads,L1-dcache-load-misses \
+-e l2_cache_req_stat.all,l2_cache_req_stat.dc_access_in_l2,l2_cache_req_stat.dc_hit_in_l2 \
+-e LLC-loads,LLC-load-misses \
+-e l3_cache_hit*,l3_cache_miss* \
+-e dTLB-loads,dTLB-load-misses \
+-e fp_ret_sse_avx_ops.all,node-load-misses,node-stores \
+-e task-clock,context-switches,page-faults \
+python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
+
+nsys profile --trace=cuda,osrt python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
+nsys stats report1.nsys-rep # or CLI
+"""
+
 # python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
+# python3 python/robosample/roborun.py ffar1 examples/ffar1.prmtop examples/ffar1.rst7 6000 0 20 1
+# python3 python/robosample/roborun.py GfcD examples/GfcDstrippedMin.prmtop examples/GfcDstrippedMin.rst7 6000 0 20 1
+
+
+# /usr/bin/time -v python3 python/robosample/roborun.py GfcD examples/GfcDstrippedMin.prmtop examples/GfcDstrippedMin.rst7 6000 0 1 1
+# nvidia-smi --query-gpu=memory.used --format=csv -lms 100 > vram_usage.csv
 
 # Create the parser
 parser = argparse.ArgumentParser(description="Process PDB code and seed.")

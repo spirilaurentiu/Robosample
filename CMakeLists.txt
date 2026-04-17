@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
 
-# CUDA may be used as a platform for OpenMM
-# Setting it here simplifies the logic even if CUDA is not used as the OpenMM platform
 project(Robosample LANGUAGES C CXX)
 
 # Define mutually exclusive hardware acceleration options
@@ -45,17 +43,6 @@ find_package(OpenMP REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 
-# if(BUILD_VISUALIZER)
-#     set(OpenGL_GL_PREFERENCE LEGACY)
-#     find_package(OpenGL REQUIRED)
-#     find_package(GLUT REQUIRED)
-
-#     SET(VISUALIZER_LIBRARIES
-#         ${OPENGL_LIBRARIES}
-#         ${GLUT_LIBRARIES}
-#     )
-# endif()
-
 include(${CMAKE_SOURCE_DIR}/cmake_modules/OpenMM.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake_modules/Simbody.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake_modules/Molmodel.cmake)
@@ -69,25 +56,7 @@ SET(ROBOSAMPLE_CXX_SOURCE_FILES ${src_cxx_files})
 
 # Include headers (.h and .hpp)
 file(GLOB include_files ${CMAKE_SOURCE_DIR}/include/*.h* ${CMAKE_SOURCE_DIR}/format/inc/*.h* ${CMAKE_SOURCE_DIR}/format/inc/mdtraj/*.h*)
-set(ROBOSAMPLE_HEADER_FILES ${include_files})
-
-set(ROBOSAMPLE_SOURCE_FILES
-    ${OPENMM_SOURCE_C_FILES} ${OPENMM_SOURCE_CXX_FILES} ${OPENMM_SOURCE_INCLUDE_FILES}
-    ${SIMBODY_SOURCE_C_FILES} ${SIMBODY_SOURCE_CXX_FILES} ${SIMBODY_SOURCE_INCLUDE_FILES}
-    ${MOLMODEL_C_SOURCE_FILES} ${MOLMODEL_CXX_SOURCE_FILES} ${MOLMODEL_SOURCE_INCLUDE_FILES}
-    ${ROBOSAMPLE_C_SOURCE_FILES} ${ROBOSAMPLE_CXX_SOURCE_FILES}
-)
-
-set(ROBOSAMPLE_INCLUDE_DIRS
-    ${OPENMM_INCLUDE_DIRS}
-    ${SIMBODY_INCLUDE_DIRS}
-    ${MOLMODEL_INCLUDE_DIRS}
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/format/inc
-    ${CMAKE_SOURCE_DIR}/format/inc/mdtraj
-    ${CMAKE_SOURCE_DIR}/pcg-cpp/include
-    ${CMAKE_SOURCE_DIR}/pybind11/include
-)
+set(ROBOSAMPLE_SOURCE_INCLUDE_FILES ${include_files})
 
 # Allow custom build types
 set(CMAKE_CONFIGURATION_TYPES Debug Release RelWithDebInfo PGO_Train PGO_Use CACHE STRING "" FORCE)
@@ -106,14 +75,16 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(PGO_TRAIN_FLAGS
         -fprofile-generate=${PGO_DATA_ROOT}
         -fprofile-prefix-path=${CMAKE_BINARY_DIR}
+        -fprofile-update=atomic
         -fno-reorder-blocks-and-partition
     )
     set(PGO_USE_FLAGS
         -fprofile-use=${PGO_DATA_ROOT}
         -fprofile-prefix-path=${CMAKE_BINARY_DIR}
         -fprofile-correction
-        # -fno-reorder-blocks-and-partition   # BOLT owns block layout
-        # -fno-profile-reorder-functions      # BOLT owns function layout
+        -fprofile-partial-training
+        -fno-reorder-blocks-and-partition
+        -fno-profile-reorder-functions
     )
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(PGO_TRAIN_FLAGS
@@ -129,7 +100,34 @@ set(CMAKE_STRIP "" CACHE FILEPATH "Strip disabled for PGO" FORCE)
 
 # Create the Python module
 add_subdirectory(pybind11)
-pybind11_add_module(${ROBOSAMPLE_LIB_NAME} ${ROBOSAMPLE_SOURCE_FILES})
+pybind11_add_module(${ROBOSAMPLE_LIB_NAME}
+    ${OPENMM_SOURCE_C_FILES}
+    ${OPENMM_SOURCE_CXX_FILES}
+    ${OPENMM_SOURCE_INCLUDE_FILES}
+    ${SIMBODY_SOURCE_C_FILES}
+    ${SIMBODY_SOURCE_CXX_FILES}
+    ${SIMBODY_SOURCE_INCLUDE_FILES}
+    ${MOLMODEL_C_SOURCE_FILES}
+    ${MOLMODEL_CXX_SOURCE_FILES}
+    ${MOLMODEL_SOURCE_INCLUDE_FILES}
+    ${ROBOSAMPLE_C_SOURCE_FILES}
+    ${ROBOSAMPLE_CXX_SOURCE_FILES}
+    ${ROBOSAMPLE_SOURCE_INCLUDE_FILES}
+)
+
+# Apply common includes
+target_include_directories(${ROBOSAMPLE_LIB_NAME}
+    PRIVATE
+    $ENV{CONDA_PREFIX}/targets/x86_64-linux/include
+    ${OPENMM_INCLUDE_DIRS}
+    ${SIMBODY_DIRS}
+    ${MOLMODEL_INCLUDE_DIRS}
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/format/inc
+    ${CMAKE_SOURCE_DIR}/format/inc/mdtraj
+    ${CMAKE_SOURCE_DIR}/pcg-cpp/include
+    ${CMAKE_SOURCE_DIR}/pybind11/include
+)
 
 # Add preprocessor definitions
 target_compile_definitions(${ROBOSAMPLE_LIB_NAME} PRIVATE MODULE_NAME=${ROBOSAMPLE_LIB_NAME})
@@ -186,10 +184,10 @@ if(NOT IPO_SUPPORTED)
     )
 endif()
 
-# Use IPO only for Release and PGO use
-# Note that it's turned off for RelWithDebInfo where we run tests and coverage
-set_property(TARGET ${ROBOSAMPLE_LIB_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
-# set_property(TARGET ${ROBOSAMPLE_LIB_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_PGO_USE TRUE)
+set_property(TARGET ${ROBOSAMPLE_LIB_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE        TRUE)
+set_property(TARGET ${ROBOSAMPLE_LIB_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE)
+set_property(TARGET ${ROBOSAMPLE_LIB_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_PGO_Train      TRUE)
+set_property(TARGET ${ROBOSAMPLE_LIB_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_PGO_Use        TRUE)
 
 # Set properties for the library target
 # C++17 is the maximum we can safely request because offer support for CUDA 10.0 which requires GCC 7, and GCC 7 only supports up to C++17
@@ -198,15 +196,8 @@ set_target_properties(${ROBOSAMPLE_LIB_NAME} PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF
-    CXX_VISIBILITY_PRESET default
-    VISIBILITY_INLINES_HIDDEN OFF
-)
-
-# Apply common includes
-target_include_directories(${ROBOSAMPLE_LIB_NAME}
-    PRIVATE
-    ${ROBOSAMPLE_INCLUDE_DIRS}
-    $ENV{CONDA_PREFIX}/targets/x86_64-linux/include
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON
 )
 
 # Set configuration-specific compile options
@@ -219,7 +210,7 @@ target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
     $<$<CONFIG:Debug>:
         -fno-omit-frame-pointer
         -O0
-        -g3
+        -g
     >
 
     # Release
@@ -230,7 +221,7 @@ target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
     # Release with Debug Info
     $<$<CONFIG:RelWithDebInfo>:
         -O3
-        -g3
+        -g
         -fno-omit-frame-pointer
         --coverage
     >
@@ -238,23 +229,21 @@ target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
     # PGO Train (GCC)
     $<$<CONFIG:PGO_Train>:
         -O3
-        -g3
+        -g
         -fno-omit-frame-pointer
         ${PGO_TRAIN_FLAGS}
     >
 
-    # PGO Use (GCC)
+    # PGO Use - Prepared for BOLT
     $<$<CONFIG:PGO_Use>:
         -O3
-        -g3
-        -fno-omit-frame-pointer
+        -g
         ${PGO_USE_FLAGS}
     >
 )
 
 # Set configuration-specific link options
 target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
-
     # Debug
     $<$<CONFIG:Debug>:
         # No extra flags
@@ -270,15 +259,14 @@ target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
         --coverage
     >
 
-    # PGO Train
-    $<$<CONFIG:PGO_TRAIN>:
-        ${PGO_TRAIN_FLAGS}
+    # PGO Train 
+    $<$<CONFIG:PGO_Train>:
+        -fprofile-generate=${PGO_DATA_ROOT}
     >
 
-    # PGO Use - emit relocs for BOLT, keep debug info through LTO link
-    $<$<CONFIG:PGO_USE>:
-        ${PGO_USE_FLAGS}
-        -g
+    # PGO Use - Essential BOLT flags
+    $<$<CONFIG:PGO_Use>:
+        -fprofile-use=${PGO_DATA_ROOT}
         -Wl,--emit-relocs
     >
 )

@@ -17,11 +17,11 @@
 #include <sstream>
 #include <unordered_set>
 
-#include "Constraint.h"
+#if BUILD_CONSTRAINTS
+#    include "Constraint.h"
+#endif
+
 #include "FixmanTorque.hpp"
-#include "Molmodel.h"
-#include "OpenMM.hpp"
-#include "Simbody.h"
 #include "TopologyElements.hpp"
 #include "common.h"
 
@@ -352,15 +352,13 @@ class World {
 
     SimTK::Real getRecommendedTimesteps();
 
-    //=========================================================================
-    //                   CONSTRAINTS
-    //=========================================================================
-
+#if BUILD_CONSTRAINTS
     /** Add contact constraints to specific bodies **/
     void addRodConstraint(SimTK::State& someState);
 
     /** Add contact constraints to specific bodies **/
     const SimTK::State& addSpeedConstraint(int prmtopIndex);
+#endif
 
     //=========================================================================
     //                   TaskSpace Functions
@@ -386,59 +384,6 @@ class World {
 
     /** Calc station Jacobian */
     void calcStationJacobian(const SimTK::State& someState, SimTK::Matrix_<SimTK::Vec3>& JS) const;
-
-
-    /** Add contact surfaces to bodies **/
-    const SimTK::State& addContacts(int prmtopIndex);
-
-    //=========================================================================
-    //                   Membrane-Related Functions
-    //=========================================================================
-
-    //-------------------------------------------------------------------------
-    /** @name Contacts - Contacts  **/
-    /**@{**/
-
-    /**	Add contact surfaces to bodies
-        By (my own) convention, the atoms that are in Z>0 are in constant
-        contact	with the half-space with clique1, so set those in Clique 0 to
-        avoid large energies/movements.
-        If a prmtopIndex of (-1) is encountered, that means that
-        particlular topology needs to be skipped.**/
-    void addMembrane(const SimTK::Real halfThickness);
-    /**@}**/
-    //-------------------------------------------------------------------------
-
-    //=========================================================================
-    //                   CONTACTS Functions
-    //=========================================================================
-    /** @name Membrane - Membrane  **/
-    /**@{**/
-
-    /** Add a membrane represented by a contact surface
-    We can approximate a membrane-like environment (mechanically speaking,
-    i.e. no electrostatic interactions (!yet!) ) via an elastic environment.
-    In practice, we realize this by way of 4 overlapping half-spaces.
-    2 of them occupy the Z>0 space and are translated on the Z axis by the
-    value of halfThickness. The other 2 occupy the Z<0 spaceand are translated
-    by the same value.
-    The way this works is we select 4 subsets of atoms:
-        *) 1 that is "below" the membrane, and can't go up on the Z axis:
-            these can be charged atoms that can't cross the hydrophobic core of the membrane
-        *) 1 that is "above" the membrane, and can't go higher on the Z axis:
-            these can be hydrophobic patches that can't "escape" the hydrophobic patch
-            Think of a hydrophobic helix that's lodged in the membrane
-        *) The other 2 are the same, but in reverse ("above" the membrane, but can't cross down
-            and "below" but can't go lower")
-    Each of these subsets are only affected by one half-space. The contact cliques are:
-        0) Z>0, translated by +halfThickness on the Z axis
-        1) Z>0, translated by -halfThickness on the Z axis
-        2) Z<0, translated by +halfThickness on the Z axis
-        3) Z<0, translated by -halfThickness on the Z axis **/
-    void addContacts(const std::vector<int>& prmtopIndex,
-                     const int topologyIx,
-                     const SimTK::ContactCliqueId cliqueId); /**@}**/
-    //-------------------------------------------------------------------------
 
     /** Assign a scale factor for generalized velocities to every mobilized
     body **/
@@ -874,28 +819,11 @@ class World {
 
     // std::vector<SimTK::Real> CppQs;
 
-    //...............
-
     // // --- Graphics ---
     bool visual;
 
-    // // Our decorations
-    // std::unique_ptr<ParaMolecularDecorator> paraMolecularDecorator;
-
-    // Decoration subsystem
-    std::unique_ptr<SimTK::DecorationSubsystem> decorations;
-
-    // Visualizer
-#ifdef BUILD_VISUALIZER
-    std::unique_ptr<SimTK::Visualizer> visualizer;
-
-    // Visualizer reporter
-    std::unique_ptr<SimTK::Visualizer::Reporter> visualizerReporter;
-#endif
-
     // --- Mixing data ---
     int ownWorldIndex;
-    //...............
 
     /** Get writble pointer to Fixman Torque and other forces**/
     // std::unique_ptr<FixmanTorque> FixmanTorqueImpl;
@@ -917,12 +845,14 @@ class World {
     SimTK::Array_<SimTK::Vec3> taskStationPInHost;
     SimTK::Array_<SimTK::Vec3> taskDeltaStationP;
 
+#if BUILD_CONSTRAINTS
     // Constraints
     std::vector<std::pair<SimTK::MobilizedBodyIndex, SimTK::MobilizedBodyIndex>> rodBodies;
     SimTK::Array_<SimTK::Vec3> conStationPInGuest;
     SimTK::Array_<SimTK::Vec3> conStationPInHost;
     SimTK::Array_<SimTK::Vec3> conDeltaStationP;
     SimTK::Array_<SimTK::Constraint::Rod> rodConstraints;
+#endif
 
     // X axis to Z axis switch
     const SimTK::Transform X_to_Z = SimTK::Rotation(-90 * SimTK::Deg2Rad, SimTK::YAxis);

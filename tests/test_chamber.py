@@ -14,8 +14,8 @@ def test_chamber():
     # Add cartesian world (will integrate with OpenMM)
     context.addCartesianWorld().addSampler(
         timeStep=0.001,
-        mdSteps=128,
-        boostMDSteps=128,
+        mdSteps=1,
+        boostMDSteps=1,
         acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
     )
 

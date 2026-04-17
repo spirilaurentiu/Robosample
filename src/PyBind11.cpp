@@ -103,8 +103,8 @@ struct type_caster<SimTK::UnitVec3> {
      * Returns a tuple (more "modern" for fixed-size mathematical vectors
      * as they are immutable, matching the spirit of UnitVec3).
      */
-    static auto
-    cast(const SimTK::UnitVec3& src, return_value_policy /* policy */, handle /* parent */) -> handle {
+    static auto cast(const SimTK::UnitVec3& src, return_value_policy /* policy */, handle /* parent */)
+        -> handle {
         py::tuple vector(3);
         vector[0] = py::cast(src[0]);
         vector[1] = py::cast(src[1]);

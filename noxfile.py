@@ -1,4 +1,6 @@
 import os
+import pathlib
+import shutil
 from pathlib import Path
 
 import nox
@@ -13,14 +15,37 @@ SO_DIR = Path("python/robosample")
 PYBIND_SO_PATTERN = "robo_bindings*.so"
 BOLT_SO = "robo_bindings.bolt.so"
 
-TARGET = "1APQ"
-PRMTOP = f"examples/{TARGET}.prmtop"
-RST7 = f"examples/{TARGET}.rst7"
-
 SEED = 6000
 EQUIL_STEPS = 0
 PROD_STEPS = 1000
 WRITE_FREQ = 1
+
+TEST_SYSTEMS = [
+    (
+        "ala-dipeptide",
+        "examples/ala-dipeptide.prmtop",
+        "examples/ala-dipeptide.rst7",
+        20,
+    ),
+    (
+        "1APQ",
+        "examples/1APQ.prmtop",
+        "examples/1APQ.rst7",
+        20,
+    ),
+    (
+        "ffar1",
+        "examples/ffar1.prmtop",
+        "examples/ffar1.rst7",
+        20,
+    ),
+    (
+        "GfcDstrippedMin",
+        "examples/GfcDstrippedMin.prmtop",
+        "examples/GfcDstrippedMin.rst7",
+        20,
+    ),
+]
 
 
 @nox.session(python=False)
@@ -38,39 +63,35 @@ def tests(session):
     conda_prefix = os.environ["CONDA_PREFIX"]
     gcov_exe = os.path.join(conda_prefix, "bin", "x86_64-conda-linux-gnu-gcov")
 
-    # # 2. Build Process
-    # session.log("Configuring and Building with CMake...")
-    # session.run("cmake", "--preset", TEST_PRESET)
-    # session.run("cmake", "--build", "--preset", TEST_PRESET)
+    # Clean previous coverage data and builds
+    session.log("Cleaning old coverage data...")
+    if os.path.exists("coverage"):
+        shutil.rmtree("coverage")
+    os.makedirs("coverage", exist_ok=True)
+    shutil.rmtree(BUILD_RELWITHDEBINFO)
 
-    # # 3. Cleanup old coverage artifacts
-    # session.log("Cleaning old coverage data...")
-    # # Use python's shutil/os for faster/cleaner cleanup than spawning bash for rm
-    # if os.path.exists("coverage"):
-    #     shutil.rmtree("coverage")
-    # os.makedirs("coverage", exist_ok=True)
+    # Build
+    session.log("Configuring and Building with CMake...")
+    session.run("cmake", "--preset", TEST_PRESET)
+    session.run("cmake", "--build", "--preset", TEST_PRESET)
 
-    # session.run(
-    #     "find", BUILD_RELWITHDEBINFO, "-name", "*.gcda", "-delete", external=True
-    # )
+    # Run pytest in parallel with coverage
+    session.log("Running Python tests in parallel...")
+    session.env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+    session.run(
+        "pytest",
+        "-p",
+        "xdist",
+        "-p",
+        "pytest_cov",
+        "-n",
+        "auto",
+        "--cov=python/robosample/",
+        "--cov-report=xml:coverage/python_coverage.xml",
+        *session.posargs,
+    )
 
-    # # 4. Python Tests with Parallel Execution
-    # session.log("Running Python tests in parallel...")
-    # session.env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
-    # session.run(
-    #     "pytest",
-    #     # "-p",
-    #     # "xdist",
-    #     "-p",
-    #     "pytest_cov",
-    #     # "-n",
-    #     # "auto",
-    #     "--cov=python/robosample/",
-    #     "--cov-report=xml:coverage/python_coverage.xml",
-    #     *session.posargs,  # Allows you to pass extra args to pytest via nox
-    # )
-
-    # 5. C++ / GCOV Coverage
+    # C++ / GCOV Coverage
     session.log("Processing C++ coverage...")
     session.run(
         "gcovr",
@@ -87,7 +108,7 @@ def tests(session):
         BUILD_RELWITHDEBINFO,
     )
 
-    # 6. Merge & Report
+    # Merge and report
     session.log("Merging coverage and generating HTML...")
     session.run(
         "gcovr",
@@ -102,7 +123,7 @@ def tests(session):
         "coverage/summary.json",
     )
 
-    # 7. Badge Generation
+    # Badge generation
     # We use a single bash string here to allow the $(jq ...) subshell to work
     session.log("Generating coverage badge...")
     badge_cmd = (
@@ -113,49 +134,99 @@ def tests(session):
     session.run("bash", "-c", badge_cmd, external=True)
 
 
+def is_perf_unrestricted():
+    """Checks if kernel.perf_event_paranoid is set to -1."""
+    path = pathlib.Path("/proc/sys/kernel/perf_event_paranoid")
+    try:
+        value = path.read_text().strip()
+        return value == "-1"
+    except FileNotFoundError:
+        return False
+
+
 @nox.session(reuse_venv=True)
 def build_optimized(session):
-    # Set up environment
     conda_prefix = os.environ.get("CONDA_PREFIX")
+    if conda_prefix is None:
+        session.error(
+            "CONDA_PREFIX is not set. Please activate your conda environment "
+            "before running this nox session."
+        )
+
+    if not is_perf_unrestricted():
+        session.error(
+            "\n`perf_event_paranoid` is not -1.\n"
+            "Please run the following command and try again:\n"
+            "    sudo sysctl -w kernel.perf_event_paranoid=-1"
+        )
+
+    # Clean previous builds and profiles
+    for path in BUILD_DIR.glob("cuda-pgo-*"):
+        shutil.rmtree(path)
+    shutil.rmtree(PROFILE_DIR, ignore_errors=True)
 
     # Profile data
     PROFILE_DIR.mkdir(exist_ok=True)
     so_path = next(SO_DIR.glob(PYBIND_SO_PATTERN))
     perf_data = PROFILE_DIR / "perf.data"
+    # perf_lbr_data = PROFILE_DIR / "perf.lbr.data"
     fdata = PROFILE_DIR / "perf.fdata"
-
-    # Clean previous builds and profiles
-    for path in BUILD_DIR.glob("cuda-pgo-*"):
-        session.run("rm", "-rf", str(path), external=True)
-    session.run("rm", "-rf", str(PROFILE_DIR), external=True)
 
     # Build with PGO instrumentation
     session.run(
-        "cmake", "--preset", "cuda-pgo-train", env={"CONDA_PREFIX": conda_prefix}
+        "cmake",
+        "--preset",
+        "cuda-pgo-train",
+        env={"CONDA_PREFIX": conda_prefix},
+        external=True,
     )
-    session.run("cmake", "--build", "--preset", "cuda-pgo-train")
+    session.run(
+        "cmake",
+        "--build",
+        "--preset",
+        "cuda-pgo-train",
+        env={"CONDA_PREFIX": conda_prefix},
+        external=True,
+    )
 
     # Local installation of our package
-    session.run("pip", "install", "-e", ".", external=True)
+    session.run(
+        "pip", "install", "-e", ".", env={"CONDA_PREFIX": conda_prefix}, external=True
+    )
 
-    # Run PGO
+    # Run PGO on the smallest target to generate profile data
     session.run(
         "python3",
         "python/robosample/roborun.py",
-        TARGET,
-        PRMTOP,
-        RST7,
+        "ala-dipeptide",
+        "examples/ala-dipeptide.prmtop",
+        "examples/ala-dipeptide.rst7",
         str(SEED),
         str(EQUIL_STEPS),
         str(PROD_STEPS),
         str(WRITE_FREQ),
+        env={"CONDA_PREFIX": conda_prefix},
+        external=True,
     )
 
     # Build optimized
-    session.run("cmake", "--preset", "cuda-pgo-use", env={"CONDA_PREFIX": conda_prefix})
-    session.run("cmake", "--build", "--preset", "cuda-pgo-use")
+    session.run(
+        "cmake",
+        "--preset",
+        "cuda-pgo-use",
+        env={"CONDA_PREFIX": conda_prefix},
+        external=True,
+    )
+    session.run(
+        "cmake",
+        "--build",
+        "--preset",
+        "cuda-pgo-use",
+        env={"CONDA_PREFIX": conda_prefix},
+        external=True,
+    )
 
-    # Profile
+    # Profile with LBR enabled
     session.run(
         "perf",
         "record",
@@ -165,25 +236,45 @@ def build_optimized(session):
         "cycles:u",
         "-j",
         "any,u",
+        # "--call-graph",
+        # "fp",
         "python3",
         "python/robosample/roborun.py",
-        TARGET,
-        PRMTOP,
-        RST7,
+        "ala-dipeptide",
+        "examples/ala-dipeptide.prmtop",
+        "examples/ala-dipeptide.rst7",
         str(SEED),
         str(EQUIL_STEPS),
         str(PROD_STEPS),
         str(WRITE_FREQ),
+        env={"CONDA_PREFIX": conda_prefix},
+        external=True,
     )
 
-    # Convert perf data to BOLT-friendly format
+    # # Convert to LBR-augmented profile
+    # session.run(
+    #     "perf",
+    #     "inject",
+    #     "-j",
+    #     "-i",
+    #     str(perf_data),
+    #     "-o",
+    #     str(perf_lbr_data),
+    #     env={"CONDA_PREFIX": conda_prefix},
+    #     external=True,
+    # )
+
+    # Generate BOLT profile
     session.run(
         "perf2bolt",
         str(so_path),
         "-p",
-        str(perf_data),
+        str(perf_data),  # perf_lbr_data
         "-o",
         str(fdata),
+        "-nl",
+        env={"CONDA_PREFIX": conda_prefix},
+        external=True,
     )
 
     # Optimize with BOLT
@@ -199,6 +290,8 @@ def build_optimized(session):
         "-split-eh",  # split exception handling code to cold
         "-dyno-stats",
         "-eliminate-unreachable",  # remove dead code BOLT can identify from the profile
+        env={"CONDA_PREFIX": conda_prefix},
+        external=True,
     )
 
     # Replace original SO
