@@ -51,5 +51,17 @@
     "[json]": {
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "[cmake]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "cheshirekow.cmake-format"
+    },
+    "[markdown]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "davidanson.vscode-markdownlint"
+    },
+    "[toml]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "tamasfe.even-better-toml"
     }
 }

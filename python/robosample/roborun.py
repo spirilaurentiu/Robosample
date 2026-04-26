@@ -41,6 +41,10 @@ import robosample
 
 # perf stat -e cycles,instructions,branches,branch-misses,cache-misses,task-clock,context-switches,cpu-migrations python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
 
+
+# perf record -o profile-data/perf.data -e cycles:u -j any,u -- python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
+# hotspot profile-data/perf.data
+
 """
 perf stat -e cycles,instructions,branches,branch-misses \
 -e L1-dcache-loads,L1-dcache-load-misses \

@@ -75,6 +75,16 @@ def tests(session):
     session.run("cmake", "--preset", TEST_PRESET)
     session.run("cmake", "--build", "--preset", TEST_PRESET)
 
+    # Run C++ tests with CTest
+    session.log("Running C++ tests with CTest...")
+    session.run(
+        "ctest",
+        "--test-dir",
+        BUILD_RELWITHDEBINFO,
+        "-j",
+        success_codes=[0, 8],  # 8 = tests failed
+    )
+
     # Run pytest in parallel with coverage
     session.log("Running Python tests in parallel...")
     session.env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
@@ -99,6 +109,8 @@ def tests(session):
         "0",  # Use all cores
         "--gcov-executable",
         gcov_exe,
+        "--exclude",
+        r"tests/",  # Exclude test sources from coverage
         "--xml",
         "coverage/cpp_coverage.xml",
         "--gcov-ignore-parse-errors",
