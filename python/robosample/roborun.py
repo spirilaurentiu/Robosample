@@ -58,7 +58,7 @@ PYTHONPERFSUPPORT=1 \
 python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 500 20
 
 
-
+python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 10 1
 
 
 
@@ -134,7 +134,7 @@ R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 # 6 kcal/mol - tens to hundreds of picoseconds (moderate barrier, ~10KbT)
 # 10 kcal/mol - nanoseconds or longer (high barrier , ~16KbT)
 # 2 ps of MD is enough to explore shallow wells, but not to cross deep barriers without enhanced sampling (e.g., HMC, replica exchange)
-TIMESTEP_TD = 0.001  # Torsional dymaics time step is 10 fs
+TIMESTEP_TD = 0.005  # Torsional dymaics time step is 10 fs
 MDSTEPS_TD = 64  # Torsional dynamics block trajectory length 1 ps
 
 TIMESTEP_CARTESIAN = 0.001
@@ -147,7 +147,15 @@ context = robosample.Context(
     prmtop=args.prmtop,
     inpcrd=args.inpcrd,
     write_freq=args.write_freq,
-    testing=True,
+    testing=False,
+    rigid_protein_phi=False,
+    rigid_protein_psi=False,
+    rigid_protein_omega=True,
+    rigid_protein_chi1=False,
+    rigid_protein_chi2=False,
+    rigid_protein_chi3=False,
+    rigid_protein_chi4=False,
+    rigid_protein_chi5=False,
 )
 
 # Add cartesian world (will integrate with OpenMM)

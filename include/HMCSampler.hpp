@@ -63,6 +63,7 @@ One iteration must include:
 **/
 
 // #include "Context.hpp"
+#include <cstdint>
 #include <thread>
 
 #include "EnergySnapshot.hpp"
@@ -80,12 +81,28 @@ One iteration must include:
 class Topology;
 class Context;
 
-struct Node {
-    SimTK::Vector q_minus, q_plus;
-    SimTK::Vector p_minus, p_plus;
-    SimTK::Vector q_proposal, p_proposal;
+enum class StopReason : uint8_t {
+    MaxDepth,
+    UTurn,
+    SubtreeUTurn
+};
 
-    int n_valid{0};
+enum class NUTSDirection : uint8_t {
+    Backward = 0,
+    Forward = 1
+};
+
+struct PhasePoint {
+    SimTK::Vector q;
+    SimTK::Vector p;
+};
+
+struct NUTSNode {
+    PhasePoint minus;
+    PhasePoint plus;
+    PhasePoint proposal;
+
+    int numValidSlices{0};
     bool stop{false};
 };
 
@@ -264,11 +281,12 @@ class HMCSampler : virtual public Sampler {
     void perturbForces(SimTK::State& someState, ForcesPerturbMethod FPM);
 
     /** Apply the L operator **/
-    virtual void integrateTrajectory(SimTK::State& someState, bool useNUTS);
     void integrateVariableTrajectory(SimTK::State& someState);
 
-    Node buildTree(SimTK::State& state, int depth, int direction);
-    int integrateNUTS(SimTK::State& someState);
+    auto isUTurn(const PhasePoint& minus, const PhasePoint& plus) -> bool;
+    auto buildTree(SimTK::State& state, int depth, NUTSDirection direction, SimTK::Real logU, SimTK::Real H0)
+        -> NUTSNode;
+    auto integrateNUTS(SimTK::State& someState) -> int;
 
     /** Integrate trajectory one step at a time to compute quantities instantly **/
     virtual void integrateTrajectoryOneStepAtATime(SimTK::State& someState);
@@ -681,4 +699,8 @@ class HMCSampler : virtual public Sampler {
     SimTK::Vector sqrtMInvV;
     SimTK::Vector dummyJointForces;
     SimTK::Vector dummyAccelerations;
+
+    SimTK::Vector nutsDeltaQ;
+    std::uniform_real_distribution<SimTK::Real> uniformReal01{0.0, 1.0};
+    std::exponential_distribution<SimTK::Real> expDist{1.0};
 };

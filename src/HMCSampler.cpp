@@ -1634,131 +1634,179 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState) {
     RandomCache.generateGaussianVelocities();
 }
 
-double dot(const SimTK::Vector& a, const SimTK::Vector& b) {
+inline auto dot(const SimTK::Vector& first, const SimTK::Vector& second) -> SimTK::Real {
     // Ensure the vectors have matching dimensions
-    if (a.size() != b.size()) {
-        throw std::invalid_argument("Vectors must be of the same size for dot product.");
+    if (first.size() != second.size()) {
+        const std::string errorMsg = "Vectors must be of the same size for dot product.\nFirst vector size: "
+                                     + std::to_string(first.size())
+                                     + "\nSecond vector size: " + std::to_string(second.size());
+        throw std::invalid_argument(errorMsg);
     }
 
     // &a[0] provides the pointer to the start of the underlying data
-    return std::inner_product(&a[0], &a[0] + a.size(), &b[0], 0.0);
+    return std::inner_product(&first[0], &first[0] + first.size(), &second[0], 0.0);
 }
 
-bool isUTurn(const SimTK::Vector& q_minus,
-             const SimTK::Vector& q_plus,
-             const SimTK::Vector& p_minus,
-             const SimTK::Vector& p_plus) {
-    const SimTK::Vector dq = q_plus - q_minus;
-    return (dot(dq, p_minus) < 0) || (dot(dq, p_plus) < 0);
+inline auto wrapAngle(SimTK::Real angleInRad) -> SimTK::Real {
+    // Wrap to [-pi, pi]
+    angleInRad = std::fmod(angleInRad + M_PI, 2.0 * M_PI);
+    if (angleInRad < 0) {
+        angleInRad += 2.0 * M_PI;
+    }
+    return angleInRad - M_PI;
 }
 
-Node HMCSampler::buildTree(SimTK::State& state, int depth, int direction) {
-    Node node;
+auto HMCSampler::isUTurn(const PhasePoint& minus, const PhasePoint& plus) -> bool {
+    // Allocate memory
+    if (nutsDeltaQ.size() != plus.q.size()) {
+        nutsDeltaQ.resize(plus.q.size());
+    }
+
+    // We are doing torsional dynamics, so all Q's are going to be angles
+    for (int i = 0; i < nutsDeltaQ.size(); ++i) {
+        nutsDeltaQ[i] = wrapAngle(plus.q[i] - minus.q[i]);
+    }
+
+    return (dot(nutsDeltaQ, minus.p) < 0) || (dot(nutsDeltaQ, plus.p) < 0);
+}
+
+auto HMCSampler::buildTree(SimTK::State& state,
+                           int depth,
+                           NUTSDirection direction,
+                           SimTK::Real logU,
+                           SimTK::Real H0) -> NUTSNode {
+    NUTSNode node;
 
     if (depth == 0) {
+        const auto timeBefore = state.getTime();
+
         // To go backward: negate U, step forward, negate U back
-        if (direction == -1) {
+        if (direction == NUTSDirection::Backward) {
             state.updU() *= -1.0;
         }
 
-        // Integrate one step using the chosen integrator
+        // Reset the internal state of the integrator. This is necessary because the integrator's internal
+        // history from the previous leaf would otherwise corrupt the next step
         timeStepper->initialize(state);
-        timeStepper->stepTo(state.getTime() + timestep);
+
+        // Integrator always goes forward in time
+        timeStepper->stepTo(timeBefore + timestep);
+
         state = timeStepper->getIntegrator().getAdvancedState();
-        system->realize(state, SimTK::Stage::Velocity);
 
         // Restore directionality
-        if (direction == -1) {
+        if (direction == NUTSDirection::Backward) {
             state.updU() *= -1.0;
+
+            // Correct the time bookkeeping
+            state.setTime(timeBefore - timestep);
         }
 
-        // Leaf node: both ends are the same point
-        node.q_minus = state.getQ();
-        node.q_plus = state.getQ();
-        node.p_minus = state.getU();
-        node.p_plus = state.getU();
-        node.q_proposal = state.getQ();
-        node.p_proposal = state.getU();
+        // We have to realize after each stepTo() call
+        system->realize(state, SimTK::Stage::Velocity);
 
-        node.n_valid = 1;
-        node.stop = false;
+        // After integration, compute momentum once from the new (q, u)
+        // minus, plus, and proposal are identical at a leaf node by definition
+        const SimTK::Vector q_leaf = state.getQ();
+        SimTK::Vector p_leaf(q_leaf.size());
+        matter->multiplyByM(state, state.getU(), p_leaf);
+
+        node.minus = {q_leaf, p_leaf};
+        node.plus = {q_leaf, p_leaf};
+        node.proposal = {q_leaf, p_leaf};
+
+        // timeStepper->stepTo() computes energies using OpenMM and update the position cache
+        const auto potentialEnergy = OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
+        const auto kineticEnergy = matter->calcKineticEnergy(state) * this->unboostKEFactor;
+        const auto fixmanPotential = calcFixman(state);
+        const auto logSineSqrGamma2 = (rootTopology)->calcLogSineSqrGamma2(state);
+
+        const double H_leaf =
+            potentialEnergy + kineticEnergy + fixmanPotential - (0.5 * RT * logSineSqrGamma2);
+        node.numValidSlices = (H_leaf <= -logU) ? 1 : 0;
+        node.stop = (H_leaf - H0) > 1000;
+
         return node;
     }
 
     // --- Recursive Binary Tree Expansion ---
     // Build first half
-    node = buildTree(state, depth - 1, direction);
+    node = buildTree(state, depth - 1, direction, logU, H0);
     if (node.stop) {
         return node;
     }
 
     // Build second half (state is already at the end of the first half)
-    Node subtree = buildTree(state, depth - 1, direction);
+    NUTSNode subtree = buildTree(state, depth - 1, direction, logU, H0);
 
     // Combine stats
-    int n_total = node.n_valid + subtree.n_valid;
+    const int n_total = node.numValidSlices + subtree.numValidSlices;
 
     // Progressive sampling: Accept the proposal from the new subtree with probability proportional to its
     // size
-    std::uniform_real_distribution<double> dist(0.0, 1.0);
-    if (!subtree.stop && (dist(randomEngine) < (double)subtree.n_valid / n_total)) {
-        node.q_proposal = subtree.q_proposal;
-        node.p_proposal = subtree.p_proposal;
+    if (!subtree.stop
+        && (uniformReal01(randomEngine) < (SimTK::Real)subtree.numValidSlices / (SimTK::Real)n_total)) {
+        node.proposal = subtree.proposal;
     }
 
     // Update boundaries based on expansion direction
-    if (direction == -1) {
-        node.q_minus = subtree.q_minus;
-        node.p_minus = subtree.p_minus;
+    if (direction == NUTSDirection::Backward) {
+        node.minus = subtree.minus;
     } else {
-        node.q_plus = subtree.q_plus;
-        node.p_plus = subtree.p_plus;
+        node.plus = subtree.plus;
     }
 
     // Check No-U-Turn criterion for the merged tree
-    node.stop = subtree.stop || isUTurn(node.q_minus, node.q_plus, node.p_minus, node.p_plus);
-    node.n_valid = n_total;
+    node.stop = subtree.stop || isUTurn(node.minus, node.plus);
+    node.numValidSlices = n_total;
 
     return node;
 }
 
-int HMCSampler::integrateNUTS(SimTK::State& state) {
+auto HMCSampler::integrateNUTS(SimTK::State& state) -> int {
     // This corresponds to running for 2^maxDepth steps
-    const int maxDepth = 8;
+    const int maxDepth = 32;
 
-    std::uniform_real_distribution<double> u01(0.0, 1.0);
+    // Draw slice variable U ~ Uniform(0, exp(-H(q, p)))
+    // A state at Hamiltonian H is slice-valid iff H <= logU
+    const SimTK::Real H0 = previousEnergy.total;
+    const SimTK::Real logU = -H0 - expDist(randomEngine);
 
     // Initial boundary Setup
-    Node tree;
-    tree.q_minus = state.getQ();
-    tree.q_plus = state.getQ();
-    tree.p_minus = state.getU();
-    tree.p_plus = state.getU();
-    tree.q_proposal = state.getQ();
-    tree.p_proposal = state.getU();
-    tree.n_valid = 1;
+    NUTSNode tree;
+    system->realize(state, SimTK::Stage::Velocity);
+
+    // Initialize all three phase points to the current state
+    // minus and plus are the trajectory boundaries; proposal is the current accepted sample
+    // All three start at the same point
+    const SimTK::Vector q0 = state.getQ();
+    SimTK::Vector p0(q0.size());
+    matter->multiplyByM(state, state.getU(), p0);
+
+    tree.minus = {q0, p0};
+    tree.plus = {q0, p0};
+    tree.proposal = {q0, p0};
+
+    tree.numValidSlices = 1;
 
     // We need two states to track the "left-most" and "right-most" edges
     SimTK::State left_edge = state;
     SimTK::State right_edge = state;
 
-    // At top of integrateNUTS, before the loop
-    enum class StopReason {
-        MaxDepth,
-        UTurn,
-        SubtreeUTurn
-    };
     StopReason stopReason = StopReason::MaxDepth;
 
     int lastDepth = 0;
     for (int depth = 0; depth < maxDepth; ++depth) {
         lastDepth = depth;
-        const int direction = (randomEngine() % 2) == 0 ? -1 : 1;
-        // std::cout << "[NUTS] depth=" << depth << " direction=" << (direction == -1 ? "LEFT" : "RIGHT")
+        const NUTSDirection direction =
+            (randomEngine() % 2) == 0 ? NUTSDirection::Backward : NUTSDirection::Forward;
+        // std::cout << "[NUTS] depth=" << depth << " direction=" << (direction == NUTSDirection::Backward ?
+        // "LEFT" : "RIGHT")
         //           << "\n";
 
-        Node subtree = (direction == -1) ? buildTree(left_edge, depth, direction)
-                                         : buildTree(right_edge, depth, direction);
+        NUTSNode subtree = (direction == NUTSDirection::Backward)
+                               ? buildTree(left_edge, depth, direction, logU, H0)
+                               : buildTree(right_edge, depth, direction, logU, H0);
 
         if (subtree.stop) {
             stopReason = StopReason::SubtreeUTurn;
@@ -1766,24 +1814,27 @@ int HMCSampler::integrateNUTS(SimTK::State& state) {
             break;
         }
 
-        if (u01(randomEngine) < (double)subtree.n_valid / (tree.n_valid + subtree.n_valid)) {
-            tree.q_proposal = subtree.q_proposal;
-            tree.p_proposal = subtree.p_proposal;
+        // Accept proposal from subtree with probability proportional to its slice-valid count
+        // The slice variable is what enforces detailed balance
+        const int numValidSlices = tree.numValidSlices + subtree.numValidSlices;
+        const SimTK::Real acceptProb =
+            static_cast<SimTK::Real>(subtree.numValidSlices) / static_cast<SimTK::Real>(numValidSlices);
+
+        if (uniformReal01(randomEngine) < acceptProb) {
+            tree.proposal = subtree.proposal;
             // std::cout << "[NUTS] accepted new proposal at depth=" << depth << "\n";
         }
 
-        if (direction == -1) {
-            tree.q_minus = subtree.q_minus;
-            tree.p_minus = subtree.p_minus;
+        if (direction == NUTSDirection::Backward) {
+            tree.minus = subtree.minus;
         } else {
-            tree.q_plus = subtree.q_plus;
-            tree.p_plus = subtree.p_plus;
+            tree.plus = subtree.plus;
         }
 
-        tree.n_valid += subtree.n_valid;
+        tree.numValidSlices += subtree.numValidSlices;
         // std::cout << "[NUTS] n_valid=" << tree.n_valid << "\n";
 
-        if (isUTurn(tree.q_minus, tree.q_plus, tree.p_minus, tree.p_plus)) {
+        if (isUTurn(tree.minus, tree.plus)) {
             stopReason = StopReason::UTurn;
             // std::cout << "[NUTS] terminated: global U-turn at depth=" << depth << "\n";
             break;
@@ -1795,222 +1846,15 @@ int HMCSampler::integrateNUTS(SimTK::State& state) {
     }
     // std::cout << "[NUTS] final n_valid=" << tree.n_valid << "\n";
 
-    state.updQ() = tree.q_proposal;
-    state.updU() = tree.p_proposal;
+    // Set the proposed configuration and recompute M(q)
+    state.updQ() = tree.proposal.q;
+    system->realize(state, SimTK::Stage::Position);
+
+    // Convert momentum p to generalized velocity u via u = M(q)^-1 * p
+    matter->multiplyByMInv(state, tree.proposal.p, state.updU());
     system->realize(state, SimTK::Stage::Velocity);
 
     return lastDepth;
-}
-
-/*
- * Integrate trajectory
- */
-void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
-    // // // Adapt timestep
-    // // if(shouldAdaptTimestep){
-    // // 	adaptTimestep(someState);
-    // // }
-
-    // if(this->integratorType == IntegratorType::VERLET){
-    // 	if (!useNUTS) {
-    // 		try {
-    // 			const auto status = timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
-    // 			system->realize(someState, SimTK::Stage::Position);
-    // 			return;
-    // 		} catch (const std::exception& e) {
-    // 			std::cerr << e.what() << std::endl;
-
-    // 			proposeExceptionCaught = true;
-    // 			assignConfFromSetTVector(someState);
-    //     	}
-    // 	}
-
-    // 	// try {
-    // 	// 	if (!useNUTS) {
-    // 	// 		timeStepper->->stepTo(someState.getTime() + timestep * MDStepsPerSample);
-    // 	// 		system->realize(someState, SimTK::Stage::Position);
-
-    // 	// 		// return;
-    // 	// 	}
-
-    // 	// 	// // Set up random 0 to 1 generator
-    // 	// 	// std::uniform_real_distribution<double> uniformRealDistribution_0_1(0, 1);
-
-    // 	// 	// // Get initial momenta
-    // 	// 	// SimTK::Vector p;
-    // 	// 	// world->matter->multiplyByM(someState, someState.getU(), p);
-
-    // 	// 	// Node CurrentNode;
-    // 	// 	// CurrentNode.Q = someState.getQ();
-    // 	// 	// CurrentNode.U = someState.getU();
-
-    // 	// 	// int MaxDepth = 10;
-    // 	// 	// std::map<int, Node> Trajectory; // Does not allow reserve
-    // 	// 	// Trajectory[0] = CurrentNode;
-
-    // 	// 	// bool found = false;
-
-    // 	// 	// for (int depth = 0; depth < MaxDepth; depth++) {
-
-    // 	// 	// 	bool Direction = uniformRealDistribution_0_1(randomEngine) < 0.5;
-    // 	// 	// 	int endpoint = 0;
-    // 	// 	// 	SimTK::Vector U, Q;
-
-    // 	// 	// 	if (Direction == 0) {
-    // 	// 	// 		// Forward
-    // 	// 	// 		U = Trajectory.rbegin()->second.U;
-    // 	// 	// 		Q = Trajectory.rbegin()->second.Q;
-
-    // 	// 	// 		endpoint = Trajectory.rbegin()->first + static_cast<int>(std::pow(2, depth));
-    // 	// 	// 		// std::cout << "Depth = " << depth << " Forward to " << endpoint << std::endl;
-    // 	// 	// 	} else {
-    // 	// 	// 		// Backward
-    // 	// 	// 		U = Trajectory.begin()->second.U;
-    // 	// 	// 		Q = Trajectory.begin()->second.Q;
-
-    // 	// 	// 		endpoint = Trajectory.begin()->first - static_cast<int>(std::pow(2, depth));
-    // 	// 	// 		// std::cout << "Depth = " << depth << " Backward to " << endpoint << std::endl;
-
-    // 	// 	// 		if (Trajectory.begin()->first == 0) {
-    // 	// 	// 			for (int i = 0; i < U.size(); i++) {
-    // 	// 	// 				U[i] = -U[i];
-    // 	// 	// 			}
-    // 	// 	// 		}
-    // 	// 	// 	}
-
-    // 	// 	// 	// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
-
-    // 	// 	// 	someState.updQ() = Q;
-    // 	// 	// 	someState.updU() = U;
-    // 	// 	// 	timeStepper->->stepTo(someState.getTime() + timestep * std::pow(2, depth));
-    // 	// 	// 	system->realize(someState, SimTK::Stage::Position);
-
-    // 	// 	// 	// Check U-turn
-    // 	// 	// 	const auto C = CheckUTurn(Trajectory.rbegin()->second.Q, Trajectory.begin()->second.Q, p);
-    // 	// 	// 	if (C < 0) {
-    // 	// 	// 		// std::cout << "U-turn detected" << std::endl;
-    // 	// 	// 		found = true;
-    // 	// 	// 		break;
-    // 	// 	// 	} else {
-    // 	// 	// 		// std::cout << "No U-turn, C = " << C << std::endl;
-
-    // 	// 	// 		Node NextNode;
-    // 	// 	// 		NextNode.Q = someState.getQ();
-    // 	// 	// 		NextNode.U = someState.getU();
-
-    // 	// 	// 		// std::cout << "LenQ state = " << someState.getQ().size() << std::endl;
-    // 	// 	// 		// std::cout << "LenQ next = " << NextNode.Q.size() << std::endl;
-    // 	// 	// 		// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
-
-    // 	// 	// 		Trajectory.insert(std::make_pair(endpoint, NextNode));
-    // 	// 	// 	}
-    // 	// 	// }
-
-    // 	// 	// if (found) {
-    // 	// 	// 	std::cout << "U-turn detected after " << Trajectory.size() << " steps" << std::endl;
-    // 	// 	// } else {
-    // 	// 	// 	std::cout << "No U-turn detected" << std::endl;
-    // 	// 	// }
-
-    // 	// 	// // Chose randomly from the trajectory
-    // 	// 	// std::uniform_int_distribution<int> uniformIntDistribution(0, Trajectory.size() - 1);
-    // 	// 	// int index = uniformIntDistribution(randomEngine);
-    // 	// 	// auto it = Trajectory.begin();
-    // 	// 	// std::advance(it, index);
-
-    // 	// 	// someState.updQ() = it->second.Q;
-    // 	// 	// someState.updU() = it->second.U;
-
-    // 	// 	// system->realize(someState, SimTK::Stage::Position); // Or velocities? who knows
-
-    // 	// }catch(const std::exception&){
-    // 	// 	proposeExceptionCaught = true;
-    // 	// 	assignConfFromSetTVector(someState);
-    // 	// }
-
-    // }else if(this->integratorType == IntegratorType::BOUND_WALK){
-    // 	try {
-
-    // 		// Call Simbody TimeStepper to advance time
-    // 		integrateTrajectory_Bounded(someState);
-
-    // 	}catch(const std::exception&){
-
-    // 		proposeExceptionCaught = true;
-
-    // 		assignConfFromSetTVector(someState);
-
-    // 	}
-
-    // }else if(this->integratorType == IntegratorType::BOUND_HMC){
-    // 	try {
-
-    // 		// Call Simbody TimeStepper to advance time
-    // 		integrateTrajectory_BoundHMC(someState);
-
-    // 	}catch(const std::exception&){
-
-    // 		proposeExceptionCaught = true;
-
-    // 		assignConfFromSetTVector(someState);
-
-    // 	}
-
-    // }else if(this->integratorType == IntegratorType::STATIONS_TASK){
-    // 	try {
-
-    // 		// Call Simbody TimeStepper to advance time
-    // 		integrateTrajectory_TaskSpace(someState);
-
-    // 	}catch(const std::exception&){
-
-    // 		proposeExceptionCaught = true;
-
-    // 		assignConfFromSetTVector(someState);
-
-    // 	}
-
-    // }else if(this->integratorType == IntegratorType::OMMVV){
-
-    // 	// This code works for updating simbody bodies
-    // 	// each body should be an atom
-    // 	assert(matter->getNumBodies() == dumm->getNumAtoms() + 1);
-
-    // 	// Calls OpenMM to integrate the trajectory
-    // 	// If an exception is caught, the OpenMM context is reverted to the state before the call
-    // 	proposeExceptionCaught = dumm->integrateTrajectoryWithOpenMM(someState, MDStepsPerSample);
-    // 	if (!proposeExceptionCaught) {
-    // 		rebuildSimbodyTopologyFromOpenMMPositions(someState);
-    // 	}
-
-    // }else if(this->integratorType == IntegratorType::EMPTY){
-    // 	try {
-
-    // 		// Advance to Position Stage
-    // 		system->realize(someState, SimTK::Stage::Dynamics);
-
-    // 	}catch(const std::exception&){
-
-    // 		proposeExceptionCaught = true;
-
-    // 		assignConfFromSetTVector(someState);
-
-    // 	}
-
-    // }else{ // Anything else is consodered Empty
-    // 	try {
-
-    // 		// Advance to Position Stage
-    // 		system->realize(someState, SimTK::Stage::Dynamics);
-
-    // 	}catch(const std::exception&){
-
-    // 		proposeExceptionCaught = true;
-
-    // 		assignConfFromSetTVector(someState);
-
-    // 	}
-    // }
 }
 
 // Trajectory length has an average of MDStepsPerSample and a given std
