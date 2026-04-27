@@ -42,22 +42,62 @@ import robosample
 # perf stat -e cycles,instructions,branches,branch-misses,cache-misses,task-clock,context-switches,cpu-migrations python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
 
 
-# perf record -o profile-data/perf.data -e cycles:u -j any,u -- python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
+# PYTHONPERFSUPPORT=1 perf record -o profile-data/perf.data -g --symbol-filter='Context::RunREX(int, int)' -e cycles:u -j any,u -- python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
 # hotspot profile-data/perf.data
 
 """
+# actual profiling
+PYTHONPERFSUPPORT=1 \
+  perf record \
+    -F 999 \
+    -e cycles:u \
+    -j any,u \
+    -g \
+    --call-graph fp \
+    -o profile-data/perf.1APQ.cycles.data \
+python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 500 20
+
+
+
+
+
+
+
+
+
+perf record -o profile-data/perf.data -e cycles:u -j any,u -- python3 python/robosample/roborun.py GfcD examples/GfcDstrippedMin.prmtop examples/GfcDstrippedMin.rst7 6000 0 20 1
+
+# this has no file output, it just prints some text to the terminal
+
 perf stat -e cycles,instructions,branches,branch-misses \
 -e L1-dcache-loads,L1-dcache-load-misses \
 -e l2_cache_req_stat.all,l2_cache_req_stat.dc_access_in_l2,l2_cache_req_stat.dc_hit_in_l2 \
 -e LLC-loads,LLC-load-misses \
--e l3_cache_hit*,l3_cache_miss* \
 -e dTLB-loads,dTLB-load-misses \
 -e fp_ret_sse_avx_ops.all,node-load-misses,node-stores \
 -e task-clock,context-switches,page-faults \
 python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
 
+
+
+perf record -o profile-data/perf.1APQ.cache.data \
+  -e cycles:u -j any,u \
+  -e mem_load_retired.l1_miss:upp \
+  -e mem_load_retired.l2_miss:upp \
+  -e mem_load_retired.l3_miss:upp \
+  -j any,u -g \
+python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
+
+
+
+# this generates some sort of file
 nsys profile --trace=cuda,osrt python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
 nsys stats report1.nsys-rep # or CLI
+
+nsys profile -o runrex_trace \
+  --trace=cuda,osrt,nvtx \
+  --sample=cpu \
+python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
 """
 
 # python3 python/robosample/roborun.py 1apq examples/1APQ.prmtop examples/1APQ.rst7 6000 0 100 1
@@ -94,11 +134,11 @@ R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 # 6 kcal/mol - tens to hundreds of picoseconds (moderate barrier, ~10KbT)
 # 10 kcal/mol - nanoseconds or longer (high barrier , ~16KbT)
 # 2 ps of MD is enough to explore shallow wells, but not to cross deep barriers without enhanced sampling (e.g., HMC, replica exchange)
-TIMESTEP_TD = 0.005  # Torsional dymaics time step is 10 fs
+TIMESTEP_TD = 0.001  # Torsional dymaics time step is 10 fs
 MDSTEPS_TD = 64  # Torsional dynamics block trajectory length 1 ps
 
-# TIMESTEP_CARTESIAN = 0.001
-# MDSTEPS_CARTESIAN = 512
+TIMESTEP_CARTESIAN = 0.001
+MDSTEPS_CARTESIAN = 64
 
 # create robosample context
 context = robosample.Context(
@@ -110,13 +150,13 @@ context = robosample.Context(
     testing=True,
 )
 
-# # Add cartesian world (will integrate with OpenMM)
-# context.addCartesianWorld().addSampler(
-#     timeStep=TIMESTEP_CARTESIAN,
-#     mdSteps=MDSTEPS_CARTESIAN,
-#     boostMDSteps=MDSTEPS_CARTESIAN,
-#     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
-# )
+# Add cartesian world (will integrate with OpenMM)
+context.addCartesianWorld().addSampler(
+    timeStep=TIMESTEP_CARTESIAN,
+    mdSteps=MDSTEPS_CARTESIAN,
+    boostMDSteps=MDSTEPS_CARTESIAN,
+    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+)
 
 # Add torsional world with non-redundant dihedrals
 # sele = [
@@ -125,7 +165,10 @@ context = robosample.Context(
 # ]
 sele = context.getDefaultBonds("standard")
 context.addTorsionalWorld(sele).addSampler(
-    timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD
+    timeStep=TIMESTEP_TD,
+    mdSteps=MDSTEPS_TD,
+    boostMDSteps=MDSTEPS_TD,
+    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
 )
 
 # for flex in context.getDefaultBonds('macrocycle'):
@@ -149,10 +192,9 @@ context.initialize(temperatures)
 # 	raise RuntimeError(message)
 
 # Run the simulation
-
 start_time = time.perf_counter()
 
-context.RunREX(args.equil_steps, args.prod_steps)
+context.RunREX(args.equil_steps, args.prod_steps, args.write_freq, True)
 
 end_time = time.perf_counter()
 duration = end_time - start_time

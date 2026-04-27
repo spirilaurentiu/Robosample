@@ -23,7 +23,7 @@ void World::setAtomTargetLocationsToState(
 
         // Get the Ground to Top Transform
         const SimTK::Transform G_X_T = topology.getTopLevelTransform();
-        SimTK::Vec3 locationInMobod = SimTK::Vec3(0);
+        auto locationInMobod = SimTK::Vec3(0);
 
         // Set atoms' stations on body
         for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx) {
@@ -93,14 +93,18 @@ void World::setAtomTargetLocationsToState(
     }
 }
 
-CoordinateTransferError
-World::checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) {
+auto World::checkCoordinateTransfer(
+    const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) const -> CoordinateTransferError {
     auto wrapAngle = [](SimTK::Real x) {
         return std::atan2(std::sin(x), std::cos(x));
     };
 
     CoordinateTransferError error;
-    int numAtoms = 0, numBonds = 0, numAngles = 0, numPropers = 0, numImpropers = 0;
+    int numAtoms = 0;
+    int numBonds = 0;
+    int numAngles = 0;
+    int numPropers = 0;
+    int numImpropers = 0;
 
     // Check topology atom target location matching residuals
     for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
@@ -234,19 +238,19 @@ World::checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLoca
         }
     }
 
-    if (numAtoms) {
+    if (numAtoms != 0) {
         error.cartesian /= numAtoms;
     }
-    if (numBonds) {
+    if (numBonds != 0) {
         error.bonds /= numBonds;
     }
-    if (numAngles) {
+    if (numAngles != 0) {
         error.angles /= numAngles;
     }
-    if (numPropers) {
+    if (numPropers != 0) {
         error.properDihedrals /= numPropers;
     }
-    if (numImpropers) {
+    if (numImpropers != 0) {
         error.improperDihedrals /= numImpropers;
     }
 
@@ -945,7 +949,7 @@ bool World::isOverconstrained() const {
     return true;
 }
 
-bool World::hasRigidBodyViolations(SimTK::Real timeStep, int numSteps) {
+[[nodiscard]] auto World::hasRigidBodyViolations(SimTK::Real timeStep, int numSteps) -> bool {
     if (samplers.empty()) {
         throw std::runtime_error(
             "World::hasRigidBodyViolations() requires at least one sampler to be defined.");
@@ -4310,12 +4314,15 @@ SimTK::Real World::integratedAutocorrelation(const std::vector<SimTK::Real>& x, 
     return tau;
 }
 
-bool World::generateSamples(int howManySamplesPerRound,
+auto World::generateSamples(int howManySamplesPerRound,
                             std::stringstream& worldOutStream,
                             const std::string& header,
-                            bool verbose) {
+                            bool shouldPrint) -> bool {
     SimTK::State& state = integrator->updAdvancedState();
-    updSampler(0)->reinitialize(state, worldOutStream, verbose);
+
+    updSampler(0)->reinitialize(state, worldOutStream, shouldPrint);
+
+    // updateAtomListsFromSimbody(state);
 
     bool validated = true;
 
@@ -4388,7 +4395,7 @@ bool World::generateSamples(int howManySamplesPerRound,
         // OpenMM does cartesian integration, so no locking here
         for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
             // TODO do we reinitialize() here?
-            validated = updSampler(0)->sampleIteration(state, worldOutStream, verbose) && validated;
+            validated = updSampler(0)->sampleIteration(state, worldOutStream, shouldPrint) && validated;
         }
     } else {
         // // Simbody supports locking mobilizers
@@ -4421,27 +4428,21 @@ bool World::generateSamples(int howManySamplesPerRound,
 
         // TODO the above will lock literally everything, so it won't simulate anything
         for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
-            validated &= updSampler(0)->sampleIteration(state, worldOutStream, verbose);
+            validated &= updSampler(0)->sampleIteration(state, worldOutStream, shouldPrint);
             if (!validated) {
                 continue;
             }
         }
     }
 
-    // Update atom target locations cache after sampling
+    // Update atom target locations cache (Cartesian coordinates) after sampling
     for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
-        for (SimTK::Compound::AtomIndex cAIx = SimTK::Compound::AtomIndex(0);
-             cAIx < topologies[topoIx].getAtoms().size();
-             cAIx++) {
-            // Get location in ground frame (Cartesian coordinates)
-            const SimTK::Vec3 location =
+        for (auto cAIx = SimTK::Compound::AtomIndex(0); cAIx < topologies[topoIx].getAtoms().size(); cAIx++) {
+            atomTargetLocationsCache[topoIx][cAIx] =
                 topologies[topoIx].calcAtomLocationInGroundFrameThroughSimbody(cAIx,
                                                                                *forceField,
                                                                                *matter,
                                                                                state);
-
-            // Update cache
-            atomTargetLocationsCache[topoIx][cAIx] = location;
         }
     }
 

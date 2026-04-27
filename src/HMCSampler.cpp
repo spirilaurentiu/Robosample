@@ -17,6 +17,7 @@
 
 #include "HMCSampler.hpp"
 
+#include <iostream>
 #include <stdexcept>
 
 #include "MobilizedBody.h"
@@ -122,7 +123,7 @@ void HMCSampler::initialize() {
  * <!-- Set simulation temperature,
  * velocities to desired temperature, variables that store the configuration
  * and variables that store the energies, both needed for the
- * acception-rejection step. Also realize velocities and initialize
+ * accept-rejection step. Also realize velocities and initialize
  * the timestepper. -->
  */
 void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOutStream, bool verbose) {
@@ -1753,22 +1754,22 @@ int HMCSampler::integrateNUTS(SimTK::State& state) {
     for (int depth = 0; depth < maxDepth; ++depth) {
         lastDepth = depth;
         const int direction = (randomEngine() % 2) == 0 ? -1 : 1;
-        std::cout << "[NUTS] depth=" << depth << " direction=" << (direction == -1 ? "LEFT" : "RIGHT")
-                  << "\n";
+        // std::cout << "[NUTS] depth=" << depth << " direction=" << (direction == -1 ? "LEFT" : "RIGHT")
+        //           << "\n";
 
         Node subtree = (direction == -1) ? buildTree(left_edge, depth, direction)
                                          : buildTree(right_edge, depth, direction);
 
         if (subtree.stop) {
             stopReason = StopReason::SubtreeUTurn;
-            std::cout << "[NUTS] terminated: subtree U-turn at depth=" << depth << "\n";
+            // std::cout << "[NUTS] terminated: subtree U-turn at depth=" << depth << "\n";
             break;
         }
 
         if (u01(randomEngine) < (double)subtree.n_valid / (tree.n_valid + subtree.n_valid)) {
             tree.q_proposal = subtree.q_proposal;
             tree.p_proposal = subtree.p_proposal;
-            std::cout << "[NUTS] accepted new proposal at depth=" << depth << "\n";
+            // std::cout << "[NUTS] accepted new proposal at depth=" << depth << "\n";
         }
 
         if (direction == -1) {
@@ -1780,19 +1781,19 @@ int HMCSampler::integrateNUTS(SimTK::State& state) {
         }
 
         tree.n_valid += subtree.n_valid;
-        std::cout << "[NUTS] n_valid=" << tree.n_valid << "\n";
+        // std::cout << "[NUTS] n_valid=" << tree.n_valid << "\n";
 
         if (isUTurn(tree.q_minus, tree.q_plus, tree.p_minus, tree.p_plus)) {
             stopReason = StopReason::UTurn;
-            std::cout << "[NUTS] terminated: global U-turn at depth=" << depth << "\n";
+            // std::cout << "[NUTS] terminated: global U-turn at depth=" << depth << "\n";
             break;
         }
     }
 
     if (stopReason == StopReason::MaxDepth) {
-        std::cout << "[NUTS] terminated: hit maxDepth=" << maxDepth << "\n";
+        // std::cout << "[NUTS] terminated: hit maxDepth=" << maxDepth << "\n";
     }
-    std::cout << "[NUTS] final n_valid=" << tree.n_valid << "\n";
+    // std::cout << "[NUTS] final n_valid=" << tree.n_valid << "\n";
 
     state.updQ() = tree.q_proposal;
     state.updU() = tree.p_proposal;
@@ -3620,10 +3621,10 @@ void HMCSampler::getMsg_EnergyDetails(std::stringstream& energyDetailsStream,
  * <!--	The main function that generates a sample -->
  TODO get a state from outside, do something with it, add it to advanced state of integrator and return it
 */
-auto HMCSampler::sampleIteration(SimTK::State& state,
-                                 std::stringstream& samplerOutStream,
-                                 bool verbose) -> bool {
-    // Deep copy the old state with all its properties (q, u, z, qdot, udot, zdot, qdotdot) before integration
+auto HMCSampler::sampleIteration(SimTK::State& state, std::stringstream& samplerOutStream, bool shouldPrint)
+    -> bool {
+    // Deep copy the old state with all its properties (time, q, u, z, qdot, udot, zdot, qdotdot) before
+    // integration
     const auto oldState = state;
 
     EnergySnapshot proposedEnergy;
@@ -3644,17 +3645,17 @@ auto HMCSampler::sampleIteration(SimTK::State& state,
                 // On failure, it will revert the OpenMM context to before integration, so we don't have to do
                 // anything here
                 integrationSuccessful =
-                    dumm->integrateTrajectoryWithOpenMM(state, cartesianRandomSteps(randomEngine), 0.002);
+                    dumm->integrateTrajectoryWithOpenMM(state, cartesianRandomSteps(randomEngine), 0.001);
                 break;
             case IntegratorType::Verlet:
-                timeStepper->stepTo(state.getTime() + (timestep * MDStepsPerSample));
-                // depthNUTS = integrateNUTS(state);
+                // timeStepper->stepTo(state.getTime() + (timestep * MDStepsPerSample));
+                depthNUTS = integrateNUTS(state);
                 break;
             case IntegratorType::BoundWalk:
                 integrateTrajectory_Bounded(state);
                 break;
             case IntegratorType::BoundHMC:
-                integrateTrajectory_Bounded(state);
+                integrateTrajectory_BoundHMC(state);
                 break;
             case IntegratorType::StationsTask:
                 integrateTrajectory_TaskSpace(state);
@@ -3663,7 +3664,7 @@ auto HMCSampler::sampleIteration(SimTK::State& state,
                 throw std::runtime_error("Integrator type not implemented!");
         }
     } catch (const std::exception& e) {
-        std::cout << "\t[ERROR] Integration failed: " << e.what() << "\n";
+        std::cerr << "\t[ERROR] Integration failed: " << e.what() << "\n";
         integrationSuccessful = false;
     }
 
@@ -3676,7 +3677,7 @@ auto HMCSampler::sampleIteration(SimTK::State& state,
             perturb_Q_QDot_QDotDot(state);
         }
 
-        // This computes the potential energy, kinetic energy and ridid body forces using OpenMM, regardless
+        // This computes the potential energy, kinetic energy and rigid body forces using OpenMM, regardless
         // of the integrator type
         compoundSystem->realize(state, SimTK::Stage::Position);
         proposedEnergy.potential = OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
@@ -3708,11 +3709,19 @@ auto HMCSampler::sampleIteration(SimTK::State& state,
                                - (0.5 * RT * proposedEnergy.logSineSqrGamma2);
 
         // Print all proposed energy terms for debugging
-        if (true) {
+        if (shouldPrint) {
+            std::cout << "\tCurrent energies: " << "PE=" << currentEnergy.potential << ", "
+                      << "KE=" << currentEnergy.kinetic << ", " << "Fixman=" << currentEnergy.fixman << ", "
+                      << "logSineSqrGamma2=" << currentEnergy.logSineSqrGamma2 << ", "
+                      << "Total=" << currentEnergy.total << "\n";
+            std::cout << "\tPrevious energies: " << "PE=" << previousEnergy.potential << ", "
+                      << "KE=" << previousEnergy.kinetic << ", " << "Fixman=" << previousEnergy.fixman << ", "
+                      << "logSineSqrGamma2=" << previousEnergy.logSineSqrGamma2 << ", "
+                      << "Total=" << previousEnergy.total << "\n";
             std::cout << "\tProposed energies: " << "PE=" << proposedEnergy.potential << ", "
                       << "KE=" << proposedEnergy.kinetic << ", " << "Fixman=" << proposedEnergy.fixman << ", "
                       << "logSineSqrGamma2=" << proposedEnergy.logSineSqrGamma2 << ", "
-                      << "Total=" << proposedEnergy.total << ", " << "NUTS depth=" << depthNUTS << std::endl;
+                      << "Total=" << proposedEnergy.total << ", " << "NUTS depth=" << depthNUTS << "\n";
         }
 
         validProposedEnergy = proposedEnergy.validate(currentEnergy, RT, numDegreesOfFreedom);
@@ -3723,10 +3732,12 @@ auto HMCSampler::sampleIteration(SimTK::State& state,
     if (acc) {
         // Apply Metropolis-Hastings criterion
         acc = acceptSample(proposedEnergy);
-        if (acc) {
-            std::cout << "\tMetropolis-Hastings: accepted." << std::endl;
-        } else {
-            std::cout << "\tMetropolis-Hastings: rejected." << std::endl;
+        if (shouldPrint) {
+            if (acc) {
+                std::cout << "\tMetropolis-Hastings: accepted." << '\n';
+            } else {
+                std::cout << "\tMetropolis-Hastings: rejected." << '\n';
+            }
         }
     }
 
@@ -3757,14 +3768,14 @@ auto HMCSampler::sampleIteration(SimTK::State& state,
 
     storeAdaptiveData(state);
 
-    if (verbose) {
-        getMsg_EnergyDetails(samplerOutStream, state, acc, acc);
-    }
+    // if (shouldPrint) {
+    //     getMsg_EnergyDetails(samplerOutStream, state, acc, acc);
+    // }
 
     // Increase the sample counter and return
     ++nofSamples;
     numSamples_period++;
-    numAccepted_period += getAcc();
+    numAccepted_period += static_cast<int>(getAcc());
 
     return acc;
 }

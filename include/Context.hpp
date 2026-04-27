@@ -29,7 +29,7 @@ class TopologyRange {
         ranges[(int)TopologyRangeType::ImproperHarmonicTorsion].second = endCounts[4];
     }
 
-    const std::pair<int, int>& getRange(TopologyRangeType type) const {
+    [[nodiscard]] auto getRange(TopologyRangeType type) const -> const std::pair<int, int>& {
         return ranges[(int)type];
     }
 };
@@ -54,7 +54,6 @@ class Context {
      */
     Context(const std::string& baseName,
             uint32_t seed,
-            uint32_t threads,
             uint32_t nofRoundsTillReblock,
             RUN_TYPE runType,
             uint32_t swapFreq,
@@ -62,7 +61,6 @@ class Context {
             bool testing);
 
     void setVerbose(bool verbose);
-    void setNumThreads(int threads);
     void setGBSAOptions(bool useGBSAOBC2, SimTK::Real solventDielectric, SimTK::Real soluteDielectric);
     void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
     bool setOutput(const std::string& outDir);
@@ -237,9 +235,6 @@ class Context {
     void setPdbPrefix(const std::string& argPdbPrefix);
     std::string getPdbPrefix();
 
-    int getPrintFreq();
-    void setPrintFreq(int argFreq);
-
     std::string getOutputDir();
     void setOutputDir(std::string arg);
 
@@ -264,11 +259,6 @@ class Context {
     //////////////////////////////////
     //// REPLICA EXCHANGE FUNCTIONS //
     //////////////////////////////////
-
-    void setNofReplicas(const size_t& argNofReplicas);
-    const size_t& getNofReplicas() const;
-    // void setNofThermodynamicStates(const size_t& argNofThermodynamicStates);
-    const size_t& getNofThermodynamicStates() const;
 
     void allocateSwapMatrices();
 
@@ -416,11 +406,8 @@ class Context {
     // Run front world, rotate and transfer. Return worldIxs.front
     int RunFrontWorldAndRotate(std::vector<int>& worldIxs);
 
-    // Print to log and write pdbs
-    void RunLog(int roundi);
-    void REXLog(int mixi, int replicaIx);
-
     void writeLog(int mixi, int replicaIx);
+    void writeDCD(int replicaIx);
 
     void incrementNofSamples();
 
@@ -428,14 +415,18 @@ class Context {
     /**@{**/
 
     // Run a particular world
-    bool RunWorld(int whichWorld, const std::string& header);
-    void RunReplicaWorldRange(int replicaIx, int startWorldCnt, int nofWorldsCounted, bool isNonEquilibrium);
+    auto RunWorld(int whichWorld, const std::string& header, bool shouldPrint) -> bool;
+    void RunReplicaWorldRange(int replicaIx,
+                              int startWorldCnt,
+                              int nofWorldsCounted,
+                              bool isNonEquilibrium,
+                              bool shouldPrint);
     /**
      * @brief Main function
      * @param
      * @return
      */
-    void RunREX(int equilibrationRounds, int productionRounds);
+    void RunREX(int numEquilibrationRounds, int numProductionRounds, int writeFrequency, bool writeToStdio);
 
     void transferCoordsFromWorldToWorld(int sourceWorldIndex, int destinationWorldIndex);
     void transferCoordsFromWorldToReplica(int sourceWorldIndex, int destinationReplicaIndex, bool intoWORK);
@@ -465,18 +456,6 @@ class Context {
                               bool has_acceptance,
                               bool accepted);
 
-    // Function to find and return the value for a given AtomIndex
-    SimTK::Vec3 findAtomTarget(const std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
-                               SimTK::Compound::AtomIndex searchIndex) {
-        auto it = atomTargets.find(searchIndex);
-
-        if (it != atomTargets.end()) {
-            return it->second;
-        } else {
-            return SimTK::Vec3(SimTK::NaN);
-        }
-    }
-
     private:
     // Run in testing mode
     bool testing = false;
@@ -492,13 +471,11 @@ class Context {
 
     // Simulation parameters
     int requiredNofRounds = -1;
-    int nofRounds = -1;
 
     std::size_t nofWorlds = 0;
     bool isWorldsOrderRandom = false;
 
     int pdbRestartFreq = false;
-    int printFreq = -1;
 
     std::string molDir;
     std::string outputDir;
@@ -543,16 +520,15 @@ class Context {
     std::vector<std::vector<int>> nofAttemptedSwapsMatrix;
     std::vector<std::vector<int>> nofAcceptedSwapsMatrix;
 
-    std::size_t nofReplicas = 0;
-    std::size_t nofThermodynamicStates = 0;
+    int nofReplicas = 0;
+    int nofThermodynamicStates = 0;
     ReplicaMixingScheme replicaMixingScheme = ReplicaMixingScheme::Neighboring;
 
     int swapFixman = 1;
+    int swapEvery = 1;
 
     std::uniform_real_distribution<SimTK::Real> uniformRealDistribution =
         std::uniform_real_distribution<SimTK::Real>(SimTK::Zero, SimTK::One);
-
-    int swapEvery = 1;
 
     // Non-equilibrium parameters
     std::vector<SimTK::Real> qScaleFactorsEven;
@@ -581,7 +557,6 @@ class Context {
     std::vector<int> roots;
 
     uint32_t seed = 0;
-    int numThreads = 0;
     NonbondedMethod nonbondedMethod = NonbondedMethod::NoCutoff;
     SimTK::Real nonbondedCutoffInNm = 1.2;  // 1.2 nm, not used by default (no cutoff)
     SimTK::Real vdwGlobalScaleFactor = 1.0; // Default is 1.0
@@ -596,6 +571,10 @@ class Context {
 
     // Random number generator
     Random32 randomEngine;
+
+    std::vector<SimTK::Real> dcdXBuffer;
+    std::vector<SimTK::Real> dcdYBuffer;
+    std::vector<SimTK::Real> dcdZBuffer;
 
     public:
     // /** Implicit membrane mimicked by half-space contacts */

@@ -381,7 +381,7 @@ if(BUILD_TESTING)
               OpenMP::OpenMP_CXX
               Threads::Threads
               GTest::gtest_main
-              $<$<BOOL:${USE_CUDA}>:CUDA::cuda_driver;CUDA::cufft;CUDA::nvrtc>
+              $<$<BOOL:${USE_CUDA}>:CUDA::cudart;CUDA::cublas;CUDA::cufft>
               $<$<BOOL:${USE_OPENCL}>:OpenCL::OpenCL>)
 
     # LTO disabled for tests: faster links, and profile data from tests

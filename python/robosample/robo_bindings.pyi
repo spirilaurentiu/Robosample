@@ -312,11 +312,11 @@ class CompoundAtomIndex:
     def __repr__(self) -> str:
         ...
 class Context:
-    def RunREX(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: typing.SupportsInt | typing.SupportsIndex) -> None:
+    def RunREX(self, num_equilibration_rounds: typing.SupportsInt | typing.SupportsIndex, num_production_rounds: typing.SupportsInt | typing.SupportsIndex, write_frequency: typing.SupportsInt | typing.SupportsIndex, write_to_stdio: bool) -> None:
         """
         Run replica exchange.
         """
-    def __init__(self, arg0: str, arg1: typing.SupportsInt | typing.SupportsIndex, arg2: typing.SupportsInt | typing.SupportsIndex, arg3: typing.SupportsInt | typing.SupportsIndex, arg4: RunType, arg5: typing.SupportsInt | typing.SupportsIndex, arg6: typing.SupportsInt | typing.SupportsIndex, arg7: bool) -> None:
+    def __init__(self, arg0: str, arg1: typing.SupportsInt | typing.SupportsIndex, arg2: typing.SupportsInt | typing.SupportsIndex, arg3: RunType, arg4: typing.SupportsInt | typing.SupportsIndex, arg5: typing.SupportsInt | typing.SupportsIndex, arg6: bool) -> None:
         ...
     def addReplica(self) -> None:
         """
@@ -361,10 +361,6 @@ class Context:
     def setPdbRestartFreq(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         """
         Set the PDB restart frequency.
-        """
-    def setPrintFreq(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
-        """
-        Set the print frequency.
         """
     def setVerbose(self, arg0: bool) -> None:
         """

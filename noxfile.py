@@ -52,16 +52,13 @@ TEST_SYSTEMS = [
 def tests(session):
     """Run CMake builds, pytest with xdist, and generate unified coverage."""
 
-    # 1. Verification: Ensure we are actually in the expected environment
+    # Ensure we are actually in the expected environment
     if "CONDA_PREFIX" not in os.environ:
         session.error(
             "CONDA_PREFIX not found. Please activate your mamba environment first."
         )
     else:
         session.log(f"Using CONDA_PREFIX: {os.environ['CONDA_PREFIX']}")
-
-    conda_prefix = os.environ["CONDA_PREFIX"]
-    gcov_exe = os.path.join(conda_prefix, "bin", "x86_64-conda-linux-gnu-gcov")
 
     # Clean previous coverage data and builds
     session.log("Cleaning old coverage data...")
@@ -107,8 +104,6 @@ def tests(session):
         "gcovr",
         "-j",
         "0",  # Use all cores
-        "--gcov-executable",
-        gcov_exe,
         "--exclude",
         r"tests/",  # Exclude test sources from coverage
         "--xml",

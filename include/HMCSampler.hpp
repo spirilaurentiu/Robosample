@@ -356,7 +356,8 @@ class HMCSampler : virtual public Sampler {
 
     void printDrilling(SimTK::State& someState);
 
-    virtual bool sampleIteration(SimTK::State& state, std::stringstream& samplerOutStream, bool verbose);
+    virtual auto sampleIteration(SimTK::State& state, std::stringstream& samplerOutStream, bool shouldPrint)
+        -> bool;
 
     /**
      *  Add generalized coordinates to a buffer

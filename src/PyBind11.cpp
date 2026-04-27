@@ -103,8 +103,8 @@ struct type_caster<SimTK::UnitVec3> {
      * Returns a tuple (more "modern" for fixed-size mathematical vectors
      * as they are immutable, matching the spirit of UnitVec3).
      */
-    static auto
-    cast(const SimTK::UnitVec3& src, return_value_policy /* policy */, handle /* parent */) -> handle {
+    static auto cast(const SimTK::UnitVec3& src, return_value_policy /* policy */, handle /* parent */)
+        -> handle {
         py::tuple vector(3);
         vector[0] = py::cast(src[0]);
         vector[1] = py::cast(src[1]);
@@ -576,7 +576,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("improperDihedralsMax", &CoordinateTransferError::improperDihedralsMax);
 
     py::class_<Context>(m, "Context")
-        .def(py::init<const std::string&, uint32_t, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t, bool>())
+        .def(py::init<const std::string&, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t, bool>())
         .def("getAtomNameByPrmtopIndex",
              &Context::getAtomNameByPrmtopIndex,
              py::arg("prmtopIndex"),
@@ -588,10 +588,15 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("validate_context",
              &Context::validateContext,
              "Validates all worlds and replicas in the context.")
-        .def("RunREX", &Context::RunREX, "Run replica exchange.")
+        .def("RunREX",
+             &Context::RunREX,
+             py::arg("num_equilibration_rounds"),
+             py::arg("num_production_rounds"),
+             py::arg("write_frequency"),
+             py::arg("write_to_stdio"),
+             "Run replica exchange.")
         .def("setVerbose", &Context::setVerbose, "Control if you want extraneous output to cout.")
         .def("setPdbRestartFreq", &Context::setPdbRestartFreq, "Set the PDB restart frequency.")
-        .def("setPrintFreq", &Context::setPrintFreq, "Set the print frequency.")
         .def("setNonbonded", &Context::setNonbonded, "Set nonbonded method and cutoff.")
         .def("setGBSAOptions", &Context::setGBSAOptions, "Set GBSA-OBC2 options.")
         .def("loadAmberSystem", &Context::loadAmberSystem, "Load an AMBER system.")

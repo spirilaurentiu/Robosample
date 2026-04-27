@@ -575,8 +575,10 @@ class World {
     SimTK::Real calcFixman();
 
     /** Generate a number of samples **/
-    bool
-    generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose);
+    auto generateSamples(int howMany,
+                         std::stringstream& worldOutStream,
+                         const std::string& header,
+                         bool shouldPrint) -> bool;
 
     //...................
     // --- Statistics ---
@@ -936,10 +938,11 @@ class World {
     // setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value);
     // void calcZMatrixBAT(SimTK::State& someState);
 
-    bool isOverconstrained() const;
-    CoordinateTransferError
-    checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
-    bool hasRigidBodyViolations(SimTK::Real timeStep, int numSteps);
+    [[nodiscard]] auto isOverconstrained() const -> bool;
+    [[nodiscard]] auto
+    checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) const
+        -> CoordinateTransferError;
+    [[nodiscard]] auto hasRigidBodyViolations(SimTK::Real timeStep, int numSteps) -> bool;
 
     const std::vector<CoordinateTransferError>& getCoordinateTransferErrors() const {
         return coordinateTransferErrors;

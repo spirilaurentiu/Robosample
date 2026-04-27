@@ -8,7 +8,6 @@
  */
 Context::Context(const std::string& baseName_arg,
                  uint32_t seed,
-                 uint32_t threads,
                  uint32_t nofRoundsTillReblock,
                  RUN_TYPE runType,
                  uint32_t swapFreq,
@@ -18,16 +17,6 @@ Context::Context(const std::string& baseName_arg,
     std::cout << "Context with base name: " << baseName + "_" + std::to_string(seed) << std::endl
               << std::flush;
     this->baseName = baseName_arg + "_" + std::to_string(seed);
-
-    // Alert user of CUDA environment variables
-#if USE_CUDA
-    if (SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT").empty()) {
-        std::cerr << cwar_prefix << "CUDA_ROOT not set." << std::endl;
-    } else {
-        std::cout << cinf_prefix << "CUDA_ROOT set to "
-                  << SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT") << std::endl;
-    }
-#endif
 
     // Use a random seed if none is provided
     if (seed == 0) {
@@ -39,15 +28,6 @@ Context::Context(const std::string& baseName_arg,
 
     // Set the random seed
     randomEngine = buildRandom32(seed);
-
-    // Set the number of threads
-    if (threads < 0) {
-        std::cerr << "Invalid number of threads (negative value). Default number (0) of threads will be used."
-                  << std::endl;
-        numThreads = 0;
-    } else {
-        numThreads = threads;
-    }
 
     this->roundsTillReblock = nofRoundsTillReblock;
     this->runType = runType;
@@ -405,7 +385,7 @@ SimTK::Real Context::calculatePotentialEnergy(int worldIndex) {
 }
 
 /*! <!--  --> */
-bool Context::validateContext() {
+auto Context::validateContext() -> bool {
     constexpr SimTK::Real COORD_TRANSFER_TOL = 1e-6;
     bool valid = true;
 
@@ -938,11 +918,6 @@ void Context::passTopologiesToNewWorld(int newWorldIx) {
 // REX
 ////////////////////////
 
-// Set the number of replicas. This could be dangerous
-void Context::setNofReplicas(const size_t& argNofReplicas) {
-    this->nofReplicas = argNofReplicas;
-}
-
 /*!
  * <!-- Adds a replica to the vector of Replica objects and sets the coordinates
  * of the replica's atomsLocations -->
@@ -1029,11 +1004,6 @@ void Context::addThermodynamicState(SimTK::Real T,
     nofThermodynamicStates++;
 }
 
-// Get the number of replicas
-const size_t& Context::getNofReplicas() const {
-    return this->nofReplicas;
-}
-
 // Set the number of thermodynamic states
 // Also allocates the matrix of attempted and accepted swaps
 void Context::allocateSwapMatrices() {
@@ -1058,11 +1028,6 @@ void Context::allocateSwapMatrices() {
     std::fill(nofAcceptedSwapsMatrix.begin(),
               nofAcceptedSwapsMatrix.end(),
               std::vector<int>(nofThermodynamicStates, 0));
-}
-
-// Get the number of replicas
-const size_t& Context::getNofThermodynamicStates() const {
-    return nofThermodynamicStates;
 }
 
 // Set the initial mapping between replicas and thermoStates
@@ -2069,7 +2034,7 @@ int Context::RunFrontWorldAndRotate(std::vector<int>& worldIxs) {
 
     // == SAMPLE == from the front world
     frontWorldIx = worldIxs.front();
-    validated = RunWorld(frontWorldIx, "");
+    validated = RunWorld(frontWorldIx, "", true);
 
     // Write pdbs every world
     // writePdbs(nofRounds, frontWorldIx);
@@ -2144,24 +2109,6 @@ void Context::updThermostatesQScaleFactors(int mixi) {
     // } // _end_ for thermoIx
 }
 
-// Print to log and write pdbs
-void Context::REXLog(int mixi, int replicaIx) {
-    // Write energy and geometric features to logfile
-    if (printFreq || pdbRestartFreq) {
-        if (!(mixi % printFreq)) {
-            for (auto wIx : worldIndices) {
-                PrintToLog(replicaIx, wIx, 0);
-            }
-        }
-        // Write pdb
-        if (pdbRestartFreq != 0) {
-            if ((mixi % pdbRestartFreq) == 0) {
-                writePdbs(mixi, replica2ThermoIxs[replicaIx]);
-            }
-        }
-    } // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
-}
-
 // rexnewfunc
 void Context::incrementNofSamples() {
     for (size_t rk = 0; rk < nofReplicas; rk++) {
@@ -2193,7 +2140,7 @@ void Context::transferQStatistics(int thermoIx, int srcStatsWIx, int destStatsWI
 /*!
  * <!-- Run a particular world -->
  */
-bool Context::RunWorld(int whichWorld, const std::string& header) {
+bool Context::RunWorld(int whichWorld, const std::string& header, bool shouldPrint) {
     // Prepare output
     std::stringstream worldOutStream;
     worldOutStream.str(""); // empty
@@ -2209,7 +2156,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header) {
         // std::cout << "[EQ] World " << whichWorld
         // 	<< " generating " << numSamples << " samples." << std::endl;
 
-        validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream, header, verbose);
+        validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream, header, shouldPrint);
 
         // std::cout << "[EQ] World " << whichWorld
         // 	<< " generated " << numSamples << " samples." << std::endl;
@@ -2559,7 +2506,8 @@ bool Context::RunWorld(int whichWorld, const std::string& header) {
 void Context::RunReplicaWorldRange(int replicaIx,
                                    int startWorldCnt,
                                    int nofWorldsCounted,
-                                   bool isNonEquilibrium) {
+                                   bool isNonEquilibrium,
+                                   bool shouldPrint) {
     // Get thermodynamic state and its' worlds
     Replica& replica = replicas[replicaIx];
     const int thermoIx = replica2ThermoIxs[replicaIx];
@@ -2598,12 +2546,12 @@ void Context::RunReplicaWorldRange(int replicaIx,
         headerToRunWorld += ", " + std::to_string(worldIndex);
 
         // Run
-        std::cout << "Running world " << worldIndex << " withdistortIx=" << distortIx << " for replica "
-                  << replicaIx << " at thermodynamic state " << thermoIx
-                  << " with temperature=" << thermodynamicStates[thermoIx].getTemperature() << std::endl;
-
-        bool validated = RunWorld(worldIndex, headerToRunWorld);
-        // std::cout << "World " << worldIndex << " validated: " << validated << std::endl;
+        if (shouldPrint) {
+            std::cout << "\tRunning world " << worldIndex << " withdistortIx=" << distortIx << " for replica "
+                      << replicaIx << " at thermodynamic state " << thermoIx
+                      << " with temperature=" << thermodynamicStates[thermoIx].getTemperature() << "\n";
+        }
+        const bool validated = RunWorld(worldIndex, headerToRunWorld, shouldPrint);
 
         // Transfer coordinates
         const bool isEquilibrium = (distortIx == 0);
@@ -2675,14 +2623,35 @@ void Context::writeLog(int mixi, int replicaIx) {
             << std::setprecision(3) << temperature << "," << std::fixed << std::setprecision(0) << wIx << ","
             << NU << "," << acceptedSteps << "," << std::fixed << std::setprecision(2) << pe_o << "," << pe_n
             << "," << ke_o << "," << ke_n << "," << fix_o << "," << fix_n << "," << timestep << "," << mdstep
-            << "," << acc << std::endl;
+            << "," << acc << '\n';
     }
+}
+
+void Context::writeDCD(int replicaIx) {
+    if (dcdXBuffer.empty()) {
+        dcdXBuffer.resize(replicas[replicaIx].getX().size(), 0.0);
+        dcdYBuffer.resize(replicas[replicaIx].getY().size(), 0.0);
+        dcdZBuffer.resize(replicas[replicaIx].getZ().size(), 0.0);
+    }
+
+    for (const auto& atom : atoms) {
+        const std::size_t prmtopIndex = atom.identity.prmtopIndex;
+        dcdXBuffer[prmtopIndex] = replicas[replicaIx].getX()[atom.identity.globalIndex] * 10;
+        dcdYBuffer[prmtopIndex] = replicas[replicaIx].getY()[atom.identity.globalIndex] * 10;
+        dcdZBuffer[prmtopIndex] = replicas[replicaIx].getZ()[atom.identity.globalIndex] * 10;
+    }
+
+    const int whichDCD = replica2ThermoIxs[replicaIx];
+    thermodynamicStates[whichDCD].writeDCD(dcdXBuffer, dcdYBuffer, dcdZBuffer);
 }
 
 /*!
  * <!-- Run replica exchange protocol -->
  */
-void Context::RunREX(int equilibrationRounds, int productionRounds) {
+void Context::RunREX(int numEquilibrationRounds,
+                     int numProductionRounds,
+                     int writeFrequency,
+                     bool writeToStdio) {
     // They all start with replica 0 coordinates
     // TODO does not work in debug
     for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
@@ -2730,35 +2699,27 @@ void Context::RunREX(int equilibrationRounds, int productionRounds) {
     rexOutput.str("");
     rexOutput << "REX, " << "replicaIx" << ", " << "thermoIx" << ", " << "wIx";
     worlds[0].getSampler(0)->getMsg_Header(rexOutput);
-    rexOutput << std::endl;
+    rexOutput << '\n';
     getMsg_RexDetHeader(rexOutput);
-    std::cout << rexOutput.str() << std::endl;
-
-    std::cout << rexOutput.str() << std::endl;
+    std::cout << rexOutput.str() << '\n';
+    std::cout << rexOutput.str() << '\n';
     // ------------------------------------------------------------------------
 
     // First frame of DCD is the initial coordinates
     for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++) {
-        std::vector<SimTK::Real> x(replicas[replicaIx].getX().size(), 0.0);
-        std::vector<SimTK::Real> y(replicas[replicaIx].getY().size(), 0.0);
-        std::vector<SimTK::Real> z(replicas[replicaIx].getZ().size(), 0.0);
-
-        for (const auto& atom : atoms) {
-            const std::size_t prmtopIndex = atom.identity.prmtopIndex;
-            x[prmtopIndex] = replicas[replicaIx].getX()[atom.identity.globalIndex] * 10;
-            y[prmtopIndex] = replicas[replicaIx].getY()[atom.identity.globalIndex] * 10;
-            z[prmtopIndex] = replicas[replicaIx].getZ()[atom.identity.globalIndex] * 10;
-        }
-
-        const int whichDCD = replica2ThermoIxs[replicaIx];
-        thermodynamicStates[whichDCD].writeDCD(x, y, z);
+        writeDCD(replicaIx);
     }
 
     // REPLICA EXCHANGE MAIN LOOP -------------------------------------------->
-    std::size_t mixIndex = 0;
-    for (std::size_t cycleIndex = 0; cycleIndex < equilibrationRounds + productionRounds; cycleIndex++) {
+    const int totalRounds = numEquilibrationRounds + numProductionRounds;
+    int mixIndex = 0;
+
+    for (int cycleIndex = 0; cycleIndex < totalRounds; cycleIndex++) {
+        const bool shouldWrite = ((cycleIndex + 1) % writeFrequency == 0);
+        const bool shouldPrint = shouldWrite && writeToStdio;
+
         // SIMULATE EACH REPLICA --------------------------------------------->
-        for (std::size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++) {
+        for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++) {
             // Get thermodynamic state and its' worlds
             Replica& replica = replicas[replicaIx];
             const int thermoIx = replica2ThermoIxs[replicaIx];
@@ -2779,7 +2740,12 @@ void Context::RunREX(int equilibrationRounds, int productionRounds) {
                                 thermoWorldIxs[wPart.nofEquilibriumWorlds - 1]);
 
             // Simulate this replica
-            RunReplicaWorldRange(replicaIx, 0, wPart.nofEquilibriumWorlds, false);
+            if (shouldPrint) {
+                std::cout << "Cycle [" << cycleIndex + 1 << "/" << totalRounds << "]"
+                          << " Simulating replica " << replicaIx << " at thermodynamic state " << thermoIx
+                          << "\n";
+            }
+            RunReplicaWorldRange(replicaIx, 0, wPart.nofEquilibriumWorlds, false, shouldPrint);
 
             replica.incrementNofSamples(1);
             thermoState.incrementNofSamples(1);
@@ -2906,33 +2872,12 @@ void Context::RunREX(int equilibrationRounds, int productionRounds) {
         mixIndex++;
         // PrintNofAcceptedSwapsMatrix();
 
-        if ((mixIndex + 1) % printFreq == 0) {
-            for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++) {
+        if (shouldWrite) {
+            for (std::size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++) {
                 writeLog(mixIndex, replicaIx);
-                REXLog(mixIndex, replicaIx);
-            }
-            std::cout << std::flush;
-
-            // Write DCDs
-            for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++) {
-                // TODO cache these
-                std::vector<SimTK::Real> x(replicas[replicaIx].getX().size(), 0.0);
-                std::vector<SimTK::Real> y(replicas[replicaIx].getY().size(), 0.0);
-                std::vector<SimTK::Real> z(replicas[replicaIx].getZ().size(), 0.0);
-
-                for (const auto& atom : atoms) {
-                    const std::size_t prmtopIndex = atom.identity.prmtopIndex;
-                    x[prmtopIndex] = replicas[replicaIx].getX()[atom.identity.globalIndex] * 10;
-                    y[prmtopIndex] = replicas[replicaIx].getY()[atom.identity.globalIndex] * 10;
-                    z[prmtopIndex] = replicas[replicaIx].getZ()[atom.identity.globalIndex] * 10;
-                }
-
-                const int whichDCD = replica2ThermoIxs[replicaIx];
-                thermodynamicStates[whichDCD].writeDCD(x, y, z);
+                writeDCD(replicaIx);
             }
         }
-
-        this->nofRounds++;
     }
 
     // PrintNofAttemptedSwapsMatrix();
@@ -3261,25 +3206,6 @@ void Context::passThroughBonds_template(int whichWorld) {
     }
 }
 
-// Print to log and write pdbs
-void Context::RunLog(int round) {
-    // Write energy and geometric features to logfile
-    if (printFreq || pdbRestartFreq) {
-        if (!(round % getPrintFreq())) {
-            for (auto wIx : worldIndices) {
-                PrintToLog(0, wIx, 0);
-            }
-        }
-
-        // Write pdb
-        if (pdbRestartFreq != 0) {
-            if ((round % pdbRestartFreq) == 0) {
-                writePdbs(round);
-            }
-        }
-    }
-}
-
 /** Analysis related functions **/
 void Context::addDistance(std::size_t whichWorld,
                           std::size_t whichCompound,
@@ -3563,16 +3489,6 @@ void Context::setRestartDir(const std::string& argRestartDir) {
     this->restartDir = argRestartDir;
 }
 
-// Get / set printing frequency
-int Context::getPrintFreq() {
-    return this->printFreq;
-}
-
-//
-void Context::setPrintFreq(int argFreq) {
-    this->printFreq = argFreq;
-}
-
 std::string Context::getOutputDir() {
     return this->outputDir;
 }
@@ -3795,16 +3711,6 @@ SimTK::Real Context::Distance(std::size_t whichWorld,
 // 	// TODO: Do we need this here (looks like World's business)
 // 	realizeTopology();
 // }
-
-void Context::setNumThreads(int threads) {
-    if (threads < 0) {
-        std::cerr << "Invalid number of threads (negative value). Default number (0) of threads will be used."
-                  << std::endl;
-        numThreads = 0;
-    } else {
-        numThreads = threads;
-    }
-}
 
 void Context::setNonbonded(NonbondedMethod method, SimTK::Real cutoffInNm) {
     SimTK_ASSERT_ALWAYS(cutoffInNm >= 0, "Context::setNonbonded: Cutoff distance cannot be negative.");

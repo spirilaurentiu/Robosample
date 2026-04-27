@@ -117,7 +117,6 @@ class Context(rb.Context):
         replicaSwapFreq: int = 1,
         fixmanSwapFreq: int = 0,
         pdb_restart_freq: int = 0,
-        threads: int = 0,
         nofRoundsTillReblock: int = 1,
         use_gbsa_obc2: bool = True,
         gbsa_solvent_dielectric: float = 78.5,
@@ -139,7 +138,6 @@ class Context(rb.Context):
         super().__init__(
             name,
             seed,
-            threads,
             nofRoundsTillReblock,
             runType,
             replicaSwapFreq,
@@ -147,7 +145,6 @@ class Context(rb.Context):
             testing,
         )
         self.setPdbRestartFreq(pdb_restart_freq)
-        self.setPrintFreq(write_freq)
         self.setNonbonded(rb.NonbondedMethod.CutoffNonPeriodic, nonbonded_cutoff_in_nm)
         self.setVerbose(verbose)
         self.setGBSAOptions(
@@ -474,7 +471,6 @@ class Context(rb.Context):
                             self.standard_dihedral_bonds.append(
                                 (atom1_prmtop, atom2_prmtop)
                             )
-                            self.dihedral_atom_groups.append()
                         case _:
                             continue
 

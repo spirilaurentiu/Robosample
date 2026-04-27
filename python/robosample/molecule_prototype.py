@@ -594,7 +594,7 @@ class MoleculePrototype:
         str
             The standardized dihedral type.
         """
-        candidates = [  # noqa
+        candidates = [
             pmd.Dihedral(grandparent, parent_atom, child_atom, gchild)
             for grandparent in parent_atom.bond_partners
             if grandparent != child_atom
@@ -602,13 +602,12 @@ class MoleculePrototype:
             if gchild != parent_atom
         ]
 
-        for gparent in parent_atom.bond_partners:
-            for gchild in child_atom.bond_partners:
-                if gparent == child_atom or gchild == parent_atom:
-                    continue
-                dihedral_type = self.dihedral_classifier.classify(  # noqa
-                    gparent, parent_atom, child_atom, gchild
-                )
+        for candidate in candidates:
+            dihedral_type = self.dihedral_classifier.classify(
+                candidate.atom1, candidate.atom2, candidate.atom3, candidate.atom4
+            )
+            if dihedral_type is not None:
+                return dihedral_type
 
         return "non-standard"
 
