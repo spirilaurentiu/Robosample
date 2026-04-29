@@ -134,7 +134,7 @@ R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 # 6 kcal/mol - tens to hundreds of picoseconds (moderate barrier, ~10KbT)
 # 10 kcal/mol - nanoseconds or longer (high barrier , ~16KbT)
 # 2 ps of MD is enough to explore shallow wells, but not to cross deep barriers without enhanced sampling (e.g., HMC, replica exchange)
-TIMESTEP_TD = 0.005  # Torsional dymaics time step is 10 fs
+TIMESTEP_TD = 0.001  # Torsional dymaics time step is 10 fs
 MDSTEPS_TD = 64  # Torsional dynamics block trajectory length 1 ps
 
 TIMESTEP_CARTESIAN = 0.001
@@ -148,31 +148,76 @@ context = robosample.Context(
     inpcrd=args.inpcrd,
     write_freq=args.write_freq,
     testing=False,
-    rigid_protein_phi=False,
-    rigid_protein_psi=False,
-    rigid_protein_omega=True,
-    rigid_protein_chi1=False,
-    rigid_protein_chi2=False,
-    rigid_protein_chi3=False,
-    rigid_protein_chi4=False,
-    rigid_protein_chi5=False,
 )
 
+# [[rb.BondFlexibility(), rb.BondFlexibility(), ...], [...], ...]
+
 # Add cartesian world (will integrate with OpenMM)
-context.addCartesianWorld().addSampler(
+context.addCartesianWorld().add_sampler(
     timeStep=TIMESTEP_CARTESIAN,
     mdSteps=MDSTEPS_CARTESIAN,
     boostMDSteps=MDSTEPS_CARTESIAN,
     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
 )
 
-# Add torsional world with non-redundant dihedrals
-# sele = [
-# 	context.selectBonds('resid 0'),
-# 	# context.selectBonds('resid 1')
+# # Add torsional world with standardized dihedrals
+# sele = context.build_flexibilities(context.standard_dihedral_bonds)
+# context.addTorsionalWorld(sele).add_sampler(
+#     timeStep=TIMESTEP_TD,
+#     mdSteps=MDSTEPS_TD,
+#     boostMDSteps=MDSTEPS_TD,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+# )
+
+num_residues = context.standard_dihedral_bonds["resid"].max() + 1
+for resid in range(num_residues):
+    bonds = context.standard_dihedral_bonds[
+        (context.standard_dihedral_bonds["resid"] == resid)
+        & (
+            (context.standard_dihedral_bonds["dihedral_type"] == "phi")
+            | (context.standard_dihedral_bonds["dihedral_type"] == "psi")
+        )
+    ]
+    if bonds.empty:
+        continue
+
+    sele = context.build_flexibilities(bonds)
+    context.addTorsionalWorld(sele).add_sampler(
+        timeStep=TIMESTEP_TD,
+        mdSteps=MDSTEPS_TD,
+        boostMDSteps=MDSTEPS_TD,
+        acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+    )
+
+# phi = context.standard_dihedral_bonds[
+#     context.standard_dihedral_bonds["dihedral_type"] == "phi"
 # ]
-sele = context.getDefaultBonds("standard")
-context.addTorsionalWorld(sele).addSampler(
+# sele = context.build_flexibilities(phi)
+# context.addTorsionalWorld(sele).add_sampler(
+#     timeStep=TIMESTEP_TD,
+#     mdSteps=MDSTEPS_TD,
+#     boostMDSteps=MDSTEPS_TD,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+# )
+
+# psi = context.standard_dihedral_bonds[
+#     context.standard_dihedral_bonds["dihedral_type"] == "psi"
+# ]
+# sele = context.build_flexibilities(psi)
+# context.addTorsionalWorld(sele).add_sampler(
+#     timeStep=TIMESTEP_TD,
+#     mdSteps=MDSTEPS_TD,
+#     boostMDSteps=MDSTEPS_TD,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+# )
+
+sidechain_bonds = context.standard_dihedral_bonds[
+    (context.standard_dihedral_bonds["dihedral_type"] != "phi")
+    & (context.standard_dihedral_bonds["dihedral_type"] != "psi")
+    & (context.standard_dihedral_bonds["dihedral_type"] != "omega")
+]
+sele = context.build_flexibilities(sidechain_bonds)
+context.addTorsionalWorld(sele).add_sampler(
     timeStep=TIMESTEP_TD,
     mdSteps=MDSTEPS_TD,
     boostMDSteps=MDSTEPS_TD,
@@ -180,7 +225,7 @@ context.addTorsionalWorld(sele).addSampler(
 )
 
 # for flex in context.getDefaultBonds('macrocycle'):
-# 	context.addTorsionalWorld([flex]).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
+# 	context.addTorsionalWorld([flex]).add_sampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
 
 # Add replicas (geometric temperature ladder)
 temperatures = []
@@ -202,12 +247,12 @@ context.initialize(temperatures)
 # Run the simulation
 start_time = time.perf_counter()
 
-context.RunREX(args.equil_steps, args.prod_steps, args.write_freq, True)
+context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, True, True)
 
 end_time = time.perf_counter()
 duration = end_time - start_time
 
-print(f"RunREX took {duration:.4f} seconds")
+print(f"run_rex() took {duration:.4f} seconds")
 
 """
 source leaprc.protein.ff19SB

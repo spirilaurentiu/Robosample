@@ -578,7 +578,8 @@ class World {
     auto generateSamples(int howMany,
                          std::stringstream& worldOutStream,
                          const std::string& header,
-                         bool shouldPrint) -> bool;
+                         bool shouldPrint,
+                         bool useNUTS) -> bool;
 
     //...................
     // --- Statistics ---
@@ -590,10 +591,10 @@ class World {
     std::size_t getNofSamplers() const;
 
     /** Add a sampler to the World **/
-    bool addSampler(SamplerName samplerName,
+    auto addSampler(SamplerName samplerName,
                     IntegratorType integratorType,
                     ThermostatName thermostatName,
-                    bool useFixmanPotential);
+                    bool useFixmanPotential) -> bool;
 
     // TODO Use Sampler polymorphism
     /** Get a sampler based on its position in the samplers vector **/

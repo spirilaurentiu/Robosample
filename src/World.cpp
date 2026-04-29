@@ -1112,13 +1112,11 @@ bool World::isOverconstrained() const {
     }
 
     // Get one sample
-    samplers[0]->sampleIteration(state, nullStream, false);
+    samplers[0]->sampleIteration(state, nullStream, false, false);
 
     // Update atom target locations cache after sampling
     for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
-        for (SimTK::Compound::AtomIndex cAIx = SimTK::Compound::AtomIndex(0);
-             cAIx < topologies[topoIx].getAtoms().size();
-             cAIx++) {
+        for (auto cAIx = SimTK::Compound::AtomIndex(0); cAIx < topologies[topoIx].getAtoms().size(); cAIx++) {
             const SimTK::Vec3 location =
                 topologies[topoIx].calcAtomLocationInGroundFrameThroughSimbody(cAIx,
                                                                                *forceField,
@@ -4048,10 +4046,10 @@ std::size_t World::getNofSamplers() const {
 /*! <!-- Add a sampler to this World using the specialized struct
  * for samplers names. -->
  */
-bool World::addSampler(SamplerName samplerName,
+auto World::addSampler(SamplerName samplerName,
                        IntegratorType integratorType,
                        ThermostatName thermostatName,
-                       bool useFixmanPotential) {
+                       bool useFixmanPotential) -> bool {
     if (samplerName == SamplerName::HMC) {
         // Construct a new sampler
         samplers.emplace_back(std::make_unique<HMCSampler>(*this,
@@ -4075,7 +4073,7 @@ bool World::addSampler(SamplerName samplerName,
             samplers.back()->useFixmanPotential();
         }
     } else {
-        SimTK_ASSERT_ALWAYS(false, "World::addSampler(): sampler name not recognized.");
+        throw std::invalid_argument("World::addSampler(): sampler name not recognized.");
         return false;
     }
 
@@ -4317,7 +4315,8 @@ SimTK::Real World::integratedAutocorrelation(const std::vector<SimTK::Real>& x, 
 auto World::generateSamples(int howManySamplesPerRound,
                             std::stringstream& worldOutStream,
                             const std::string& header,
-                            bool shouldPrint) -> bool {
+                            bool shouldPrint,
+                            bool useNUTS) -> bool {
     SimTK::State& state = integrator->updAdvancedState();
 
     updSampler(0)->reinitialize(state, worldOutStream, shouldPrint);
@@ -4395,7 +4394,8 @@ auto World::generateSamples(int howManySamplesPerRound,
         // OpenMM does cartesian integration, so no locking here
         for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
             // TODO do we reinitialize() here?
-            validated = updSampler(0)->sampleIteration(state, worldOutStream, shouldPrint) && validated;
+            validated =
+                updSampler(0)->sampleIteration(state, worldOutStream, shouldPrint, useNUTS) && validated;
         }
     } else {
         // // Simbody supports locking mobilizers
@@ -4428,7 +4428,7 @@ auto World::generateSamples(int howManySamplesPerRound,
 
         // TODO the above will lock literally everything, so it won't simulate anything
         for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
-            validated &= updSampler(0)->sampleIteration(state, worldOutStream, shouldPrint);
+            validated &= updSampler(0)->sampleIteration(state, worldOutStream, shouldPrint, useNUTS);
             if (!validated) {
                 continue;
             }
@@ -4436,13 +4436,16 @@ auto World::generateSamples(int howManySamplesPerRound,
     }
 
     // Update atom target locations cache (Cartesian coordinates) after sampling
-    for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
-        for (auto cAIx = SimTK::Compound::AtomIndex(0); cAIx < topologies[topoIx].getAtoms().size(); cAIx++) {
-            atomTargetLocationsCache[topoIx][cAIx] =
-                topologies[topoIx].calcAtomLocationInGroundFrameThroughSimbody(cAIx,
-                                                                               *forceField,
-                                                                               *matter,
-                                                                               state);
+    if (validated) {
+        for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
+            for (auto cAIx = SimTK::Compound::AtomIndex(0); cAIx < topologies[topoIx].getAtoms().size();
+                 cAIx++) {
+                atomTargetLocationsCache[topoIx][cAIx] =
+                    topologies[topoIx].calcAtomLocationInGroundFrameThroughSimbody(cAIx,
+                                                                                   *forceField,
+                                                                                   *matter,
+                                                                                   state);
+            }
         }
     }
 

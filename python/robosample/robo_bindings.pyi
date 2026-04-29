@@ -312,10 +312,6 @@ class CompoundAtomIndex:
     def __repr__(self) -> str:
         ...
 class Context:
-    def RunREX(self, num_equilibration_rounds: typing.SupportsInt | typing.SupportsIndex, num_production_rounds: typing.SupportsInt | typing.SupportsIndex, write_frequency: typing.SupportsInt | typing.SupportsIndex, write_to_stdio: bool) -> None:
-        """
-        Run replica exchange.
-        """
     def __init__(self, arg0: str, arg1: typing.SupportsInt | typing.SupportsIndex, arg2: typing.SupportsInt | typing.SupportsIndex, arg3: RunType, arg4: typing.SupportsInt | typing.SupportsIndex, arg5: typing.SupportsInt | typing.SupportsIndex, arg6: bool) -> None:
         ...
     def addReplica(self) -> None:
@@ -349,6 +345,10 @@ class Context:
     def loadAmberSystem(self, arg0: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], arg1: collections.abc.Sequence[RoboAtom], arg2: collections.abc.Sequence[RoboBond], arg3: collections.abc.Sequence[RoboAngle], arg4: collections.abc.Sequence[RoboPeriodicTorsion], arg5: collections.abc.Sequence[RoboHarmonicImproperTorsion], arg6: collections.abc.Sequence[TopologyRange], arg7: collections.abc.Sequence[ZMatrixRow]) -> None:
         """
         Load an AMBER system.
+        """
+    def run_rex(self, num_equilibration_rounds: typing.SupportsInt | typing.SupportsIndex, num_production_rounds: typing.SupportsInt | typing.SupportsIndex, write_frequency: typing.SupportsInt | typing.SupportsIndex, write_to_stdio: bool, use_nuts: bool) -> None:
+        """
+        Run replica exchange.
         """
     def setGBSAOptions(self, arg0: bool, arg1: typing.SupportsFloat | typing.SupportsIndex, arg2: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
@@ -1253,7 +1253,7 @@ class Vec3:
     def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class World:
-    def addSampler(self, arg0: SamplerName, arg1: IntegratorType, arg2: ThermostatName, arg3: bool) -> bool:
+    def add_sampler(self, sampler_name: SamplerName, integrator_type: IntegratorType, thermostat_name: ThermostatName, use_fixman_potential: bool) -> bool:
         """
         Add a sampler to the world.
         """

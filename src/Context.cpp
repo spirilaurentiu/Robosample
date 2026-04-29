@@ -2026,43 +2026,46 @@ void Context::RewindBackWorld(int thisReplica) {
 }
 
 // Run front world, rotate and transfer
-int Context::RunFrontWorldAndRotate(std::vector<int>& worldIxs) {
-    bool validated = false;
+auto Context::RunFrontWorldAndRotate(std::vector<int>& worldIxs) -> int {
+    throw std::runtime_error("RunFrontWorldAndRotate is deprecated and should not be used.");
+    return -1;
 
-    int frontWorldIx = -1;
-    int backWorldIx = -1;
+    //     bool validated = false;
 
-    // == SAMPLE == from the front world
-    frontWorldIx = worldIxs.front();
-    validated = RunWorld(frontWorldIx, "", true);
+    //     int frontWorldIx = -1;
+    //     int backWorldIx = -1;
 
-    // Write pdbs every world
-    // writePdbs(nofRounds, frontWorldIx);
+    //     // == SAMPLE == from the front world
+    //     frontWorldIx = worldIxs.front();
+    //     validated = RunWorld(frontWorldIx, "", true);
 
-    // == ROTATE == worlds indices (translate from right to left)
-    std::rotate(worldIxs.begin(), worldIxs.begin() + 1, worldIxs.end());
+    //     // Write pdbs every world
+    //     // writePdbs(nofRounds, frontWorldIx);
 
-    // == TRANSFER == coordinates from back world to front
-    frontWorldIx = worldIxs.front();
-    backWorldIx = worldIxs.back();
+    //     // == ROTATE == worlds indices (translate from right to left)
+    //     std::rotate(worldIxs.begin(), worldIxs.begin() + 1, worldIxs.end());
 
-    if (worldIxs.size() > 1) {
-        // spacedcout("[YDIRBUG]");
-        // std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
-        // spacedcout("[YDIRBUG]"); ceol;
+    //     // == TRANSFER == coordinates from back world to front
+    //     frontWorldIx = worldIxs.front();
+    //     backWorldIx = worldIxs.back();
 
-        transferCoordsFromWorldToWorld(backWorldIx, frontWorldIx);
+    //     if (worldIxs.size() > 1) {
+    //         // spacedcout("[YDIRBUG]");
+    //         // std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
+    //         // spacedcout("[YDIRBUG]"); ceol;
 
-#ifdef PRINTALOT
-        if (validated) {
-            std::cout << "\n";
-        } else {
-            std::cout << " invalid sample." << std::endl;
-        }
-#endif
-    }
+    //         transferCoordsFromWorldToWorld(backWorldIx, frontWorldIx);
 
-    return worldIxs.front();
+    // #ifdef PRINTALOT
+    //         if (validated) {
+    //             std::cout << "\n";
+    //         } else {
+    //             std::cout << " invalid sample." << std::endl;
+    //         }
+    // #endif
+    //     }
+
+    //     return worldIxs.front();
 }
 
 /**
@@ -2140,7 +2143,7 @@ void Context::transferQStatistics(int thermoIx, int srcStatsWIx, int destStatsWI
 /*!
  * <!-- Run a particular world -->
  */
-bool Context::RunWorld(int whichWorld, const std::string& header, bool shouldPrint) {
+bool Context::RunWorld(int whichWorld, const std::string& header, bool shouldPrint, bool useNUTS) {
     // Prepare output
     std::stringstream worldOutStream;
     worldOutStream.str(""); // empty
@@ -2156,7 +2159,8 @@ bool Context::RunWorld(int whichWorld, const std::string& header, bool shouldPri
         // std::cout << "[EQ] World " << whichWorld
         // 	<< " generating " << numSamples << " samples." << std::endl;
 
-        validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream, header, shouldPrint);
+        validated =
+            worlds[whichWorld].generateSamples(numSamples, worldOutStream, header, shouldPrint, useNUTS);
 
         // std::cout << "[EQ] World " << whichWorld
         // 	<< " generated " << numSamples << " samples." << std::endl;
@@ -2507,7 +2511,8 @@ void Context::RunReplicaWorldRange(int replicaIx,
                                    int startWorldCnt,
                                    int nofWorldsCounted,
                                    bool isNonEquilibrium,
-                                   bool shouldPrint) {
+                                   bool shouldPrint,
+                                   bool useNUTS) {
     // Get thermodynamic state and its' worlds
     Replica& replica = replicas[replicaIx];
     const int thermoIx = replica2ThermoIxs[replicaIx];
@@ -2517,6 +2522,13 @@ void Context::RunReplicaWorldRange(int replicaIx,
 
     replica.updWORK() = 0.0;
     replica.upd_WORK_Jacobian() = 0.0;
+
+    // random world order
+    std::vector<int> shuffledWorldIndices = thermoState.updWorldIndexes();
+    // std::shuffle(shuffledWorldIndices.begin(), shuffledWorldIndices.end(), randomEngine);
+    // if (shuffledWorldIndices.size() != thermoWorldIxs.size()) {
+    //     throw std::runtime_error("Shuffled world indices size does not match thermo world indices size.");
+    // }
 
     // Loop through all worlds within the thermodynamic schedule
     // This is an index into the thermodynamic state’s world list
@@ -2551,7 +2563,7 @@ void Context::RunReplicaWorldRange(int replicaIx,
                       << replicaIx << " at thermodynamic state " << thermoIx
                       << " with temperature=" << thermodynamicStates[thermoIx].getTemperature() << "\n";
         }
-        const bool validated = RunWorld(worldIndex, headerToRunWorld, shouldPrint);
+        const bool validated = RunWorld(worldIndex, headerToRunWorld, shouldPrint, useNUTS);
 
         // Transfer coordinates
         const bool isEquilibrium = (distortIx == 0);
@@ -2651,7 +2663,8 @@ void Context::writeDCD(int replicaIx) {
 void Context::RunREX(int numEquilibrationRounds,
                      int numProductionRounds,
                      int writeFrequency,
-                     bool writeToStdio) {
+                     bool writeToStdio,
+                     bool useNUTS) {
     // They all start with replica 0 coordinates
     // TODO does not work in debug
     for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
@@ -2745,7 +2758,7 @@ void Context::RunREX(int numEquilibrationRounds,
                           << " Simulating replica " << replicaIx << " at thermodynamic state " << thermoIx
                           << "\n";
             }
-            RunReplicaWorldRange(replicaIx, 0, wPart.nofEquilibriumWorlds, false, shouldPrint);
+            RunReplicaWorldRange(replicaIx, 0, wPart.nofEquilibriumWorlds, false, shouldPrint, useNUTS);
 
             replica.incrementNofSamples(1);
             thermoState.incrementNofSamples(1);

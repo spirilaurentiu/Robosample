@@ -81,15 +81,22 @@ One iteration must include:
 class Topology;
 class Context;
 
-enum class StopReason : uint8_t {
+enum class StopReason : std::uint8_t {
+    NotUsingNUTS,
     MaxDepth,
     UTurn,
-    SubtreeUTurn
+    SubtreeUTurn,
+    NoValidProposals
 };
 
-enum class NUTSDirection : uint8_t {
+enum class NUTSDirection : std::uint8_t {
     Backward = 0,
     Forward = 1
+};
+
+enum class NUTSCoordinates : std::uint8_t {
+    Cartesian = 0,
+    Torsional = 1
 };
 
 struct PhasePoint {
@@ -101,9 +108,17 @@ struct NUTSNode {
     PhasePoint minus;
     PhasePoint plus;
     PhasePoint proposal;
+    EnergySnapshot proposedEnergy;
 
     int numValidSlices{0};
     bool stop{false};
+};
+
+struct NUTSResult {
+    PhasePoint proposal;
+    EnergySnapshot energy;
+    StopReason stopReason;
+    int depth;
 };
 
 void writePdb(SimTK::Compound& c,
@@ -283,10 +298,14 @@ class HMCSampler : virtual public Sampler {
     /** Apply the L operator **/
     void integrateVariableTrajectory(SimTK::State& someState);
 
-    auto isUTurn(const PhasePoint& minus, const PhasePoint& plus) -> bool;
-    auto buildTree(SimTK::State& state, int depth, NUTSDirection direction, SimTK::Real logU, SimTK::Real H0)
-        -> NUTSNode;
-    auto integrateNUTS(SimTK::State& someState) -> int;
+    auto isUTurn(const PhasePoint& minus, const PhasePoint& plus, NUTSCoordinates coordinates) -> bool;
+    auto buildTree(SimTK::State& state,
+                   int depth,
+                   NUTSDirection direction,
+                   SimTK::Real logU,
+                   SimTK::Real H0,
+                   NUTSCoordinates coordinates) -> NUTSNode;
+    auto integrateNUTS(SimTK::State& someState, NUTSCoordinates coordinates, int maxDepth) -> NUTSResult;
 
     /** Integrate trajectory one step at a time to compute quantities instantly **/
     virtual void integrateTrajectoryOneStepAtATime(SimTK::State& someState);
@@ -309,21 +328,11 @@ class HMCSampler : virtual public Sampler {
     /** Update new configuration and energiees **/
     virtual void setSetConfigurationAndEnergiesToNew(SimTK::State& someState);
 
-    /** Metropolis-Hastings acceptance probability **/
-    SimTK::Real MetropolisHastings(SimTK::Real argEtot_o, SimTK::Real argEtot_n, SimTK::Real lnJ) const;
-
-    /** Metropolis-Hastings acceptance probability **/
-    SimTK::Real MetropolisHastings(SimTK::Real argEtot_proposed,
-                                   SimTK::Real argEtot_n,
-                                   SimTK::Real transProb,
-                                   SimTK::Real invTransProb,
-                                   SimTK::Real lnJ) const;
-
     /** Accetion rejection step **/
     // virtual bool accRejStep(SimTK::State& someState);
 
     /** Chooses whether to accept a sample or not based on a probability **/
-    bool acceptSample(const EnergySnapshot& previousEnergy);
+    auto acceptSample(const EnergySnapshot& proposedEnergy) -> bool;
 
     /*
      * Get Joint type by examining hinge matrix H_FM
@@ -333,7 +342,7 @@ class HMCSampler : virtual public Sampler {
     /** Set simulation temperature,
     velocities to desired temperature, variables that store the configuration
     and variables that store the energies, both needed for the
-    acception-rejection step. Also realize velocities and initialize
+    accept-rejection step. Also realize velocities and initialize
     the timestepper. **/
     // virtual void initialize(SimTK::State& advanced);
 
@@ -374,7 +383,8 @@ class HMCSampler : virtual public Sampler {
 
     void printDrilling(SimTK::State& someState);
 
-    virtual auto sampleIteration(SimTK::State& state, std::stringstream& samplerOutStream, bool shouldPrint)
+    virtual auto
+    sampleIteration(SimTK::State& state, std::stringstream& samplerOutStream, bool shouldPrint, bool useNUTS)
         -> bool;
 
     /**

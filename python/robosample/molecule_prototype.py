@@ -381,7 +381,7 @@ class MoleculePrototype:
                 # Get the current atom and the next one (using modulo for the wrap-around)
                 atom_a = cycle[i]
                 atom_b = cycle[(i + 1) % len(cycle)]
-                dihedral_type = self._get_standardized_dihedral_type(
+                dihedral_type = self.get_standardized_dihedral_type(
                     self.molecule[atom_a], self.molecule[atom_b]
                 )
 
@@ -429,7 +429,7 @@ class MoleculePrototype:
 
             # Check if this is the middle bond of a standardized dihedral
             # Non-standardized dihedral are None and we treat as non-ring-closing for now
-            dihedral_type = self._get_standardized_dihedral_type(parent, child)
+            dihedral_type = self.get_standardized_dihedral_type(parent, child)
 
             if "ring" in dihedral_type:
                 # Check rigid bond constraints
@@ -525,9 +525,7 @@ class MoleculePrototype:
             (
                 u,
                 v,
-                self._get_standardized_dihedral_type(
-                    self.molecule[u], self.molecule[v]
-                ),
+                self.get_standardized_dihedral_type(self.molecule[u], self.molecule[v]),
                 bond_to_resid.get(frozenset((u, v)), -1),
             )
             for u, v in nx.bfs_edges(acyclic_graph, source=root)
@@ -571,7 +569,7 @@ class MoleculePrototype:
         # Negate mass to sort it descending, keep idx as is for ascending
         return sorted(atoms, key=lambda a: (-a.mass, a.idx))
 
-    def _get_standardized_dihedral_type(
+    def get_standardized_dihedral_type(
         self, parent_atom: pmd.Atom, child_atom: pmd.Atom
     ) -> str:
         """
@@ -610,6 +608,32 @@ class MoleculePrototype:
                 return dihedral_type
 
         return "non-standard"
+
+    def get_standardized_dihedral_type_2(
+        self, parent_atom: pmd.Atom, child_atom: pmd.Atom
+    ):
+        candidates = [
+            pmd.Dihedral(grandparent, parent_atom, child_atom, gchild)
+            for grandparent in parent_atom.bond_partners
+            if grandparent != child_atom
+            for gchild in child_atom.bond_partners
+            if gchild != parent_atom
+        ]
+
+        for candidate in candidates:
+            dihedral_type = self.dihedral_classifier.classify(
+                candidate.atom1, candidate.atom2, candidate.atom3, candidate.atom4
+            )
+            if dihedral_type is not None:
+                return (
+                    candidate.atom1,
+                    candidate.atom2,
+                    candidate.atom3,
+                    candidate.atom4,
+                    dihedral_type,
+                )
+
+        return None
 
     def _find_forbidden_bonds(
         self, atom_type_pairs: Iterable[Tuple[str, str]]
@@ -836,7 +860,7 @@ class MoleculePrototype:
         return [
             a
             for a in atom.bond_partners
-            if "ring" not in self._get_standardized_dihedral_type(atom, a)
+            if "ring" not in self.get_standardized_dihedral_type(atom, a)
         ]
 
     def _find_torsions(

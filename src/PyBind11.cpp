@@ -588,12 +588,13 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("validate_context",
              &Context::validateContext,
              "Validates all worlds and replicas in the context.")
-        .def("RunREX",
+        .def("run_rex",
              &Context::RunREX,
              py::arg("num_equilibration_rounds"),
              py::arg("num_production_rounds"),
              py::arg("write_frequency"),
              py::arg("write_to_stdio"),
+             py::arg("use_nuts"),
              "Run replica exchange.")
         .def("setVerbose", &Context::setVerbose, "Control if you want extraneous output to cout.")
         .def("setPdbRestartFreq", &Context::setPdbRestartFreq, "Set the PDB restart frequency.")
@@ -614,7 +615,13 @@ PYBIND11_MODULE(MODULE_NAME, m) {
              py::return_value_policy::reference);
 
     py::class_<World>(m, "World")
-        .def("addSampler", &World::addSampler, "Add a sampler to the world.")
+        .def("add_sampler",
+             &World::addSampler,
+             py::arg("sampler_name"),
+             py::arg("integrator_type"),
+             py::arg("thermostat_name"),
+             py::arg("use_fixman_potential"),
+             "Add a sampler to the world.")
         .def("get_coordinate_transfer_errors",
              &World::getCoordinateTransferErrors,
              "Get the coordinate transfer errors for all samplers in the world.")

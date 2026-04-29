@@ -20,9 +20,13 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "EnergySnapshot.hpp"
+#include "GrinPointer.h"
 #include "MobilizedBody.h"
 #include "OpenMM.hpp"
 #include "SmallMatrixMixed.h"
+#include "Stage.h"
+#include "State.h"
 #include "Topology.hpp"
 #include "World.hpp"
 #include "bgeneral.hpp"
@@ -1656,15 +1660,23 @@ inline auto wrapAngle(SimTK::Real angleInRad) -> SimTK::Real {
     return angleInRad - M_PI;
 }
 
-auto HMCSampler::isUTurn(const PhasePoint& minus, const PhasePoint& plus) -> bool {
+auto HMCSampler::isUTurn(const PhasePoint& minus, const PhasePoint& plus, NUTSCoordinates coordinates)
+    -> bool {
     // Allocate memory
     if (nutsDeltaQ.size() != plus.q.size()) {
         nutsDeltaQ.resize(plus.q.size());
     }
 
-    // We are doing torsional dynamics, so all Q's are going to be angles
-    for (int i = 0; i < nutsDeltaQ.size(); ++i) {
-        nutsDeltaQ[i] = wrapAngle(plus.q[i] - minus.q[i]);
+    if (coordinates == NUTSCoordinates::Cartesian) {
+        // In Cartesian coordinates, we can directly compute the difference
+        for (int i = 0; i < nutsDeltaQ.size(); ++i) {
+            nutsDeltaQ[i] = plus.q[i] - minus.q[i];
+        }
+    } else if (coordinates == NUTSCoordinates::Torsional) {
+        // In angular coordinates, we need to wrap the difference to [-pi, pi]
+        for (int i = 0; i < nutsDeltaQ.size(); ++i) {
+            nutsDeltaQ[i] = wrapAngle(plus.q[i] - minus.q[i]);
+        }
     }
 
     return (dot(nutsDeltaQ, minus.p) < 0) || (dot(nutsDeltaQ, plus.p) < 0);
@@ -1674,32 +1686,51 @@ auto HMCSampler::buildTree(SimTK::State& state,
                            int depth,
                            NUTSDirection direction,
                            SimTK::Real logU,
-                           SimTK::Real H0) -> NUTSNode {
+                           SimTK::Real H0,
+                           NUTSCoordinates coordinates) -> NUTSNode {
     NUTSNode node;
 
     if (depth == 0) {
-        const auto timeBefore = state.getTime();
+        switch (coordinates) {
+            case NUTSCoordinates::Cartesian:
+                if (direction == NUTSDirection::Backward) {
+                    OPENMM::get().negateVelocities();
+                }
 
-        // To go backward: negate U, step forward, negate U back
-        if (direction == NUTSDirection::Backward) {
-            state.updU() *= -1.0;
-        }
+                system->realize(state, SimTK::Stage::Velocity);
+                dumm->integrateTrajectoryWithOpenMM(state, 1, timestep);
 
-        // Reset the internal state of the integrator. This is necessary because the integrator's internal
-        // history from the previous leaf would otherwise corrupt the next step
-        timeStepper->initialize(state);
+                if (direction == NUTSDirection::Backward) {
+                    OPENMM::get().negateVelocities();
+                }
 
-        // Integrator always goes forward in time
-        timeStepper->stepTo(timeBefore + timestep);
+                system->realize(state, SimTK::Stage::Velocity);
+                rebuildSimbodyTopologyFromOpenMMPositions(state);
 
-        state = timeStepper->getIntegrator().getAdvancedState();
+                break;
 
-        // Restore directionality
-        if (direction == NUTSDirection::Backward) {
-            state.updU() *= -1.0;
+            case NUTSCoordinates::Torsional:
+                if (direction == NUTSDirection::Backward) {
+                    state.updU() *= -1.0;
+                }
 
-            // Correct the time bookkeeping
-            state.setTime(timeBefore - timestep);
+                // Reset the internal state of the integrator. This is necessary because the integrator's
+                // internal history from the previous leaf would otherwise corrupt the next step
+                timeStepper->initialize(state);
+
+                // Integrator always goes forward in time
+                const auto timeBefore = state.getTime();
+                timeStepper->stepTo(timeBefore + timestep);
+
+                // Restore directionality
+                if (direction == NUTSDirection::Backward) {
+                    state.updU() *= -1.0;
+                    state.setTime(timeBefore - timestep);
+                }
+
+                state = timeStepper->getIntegrator().getAdvancedState();
+
+                break;
         }
 
         // We have to realize after each stepTo() call
@@ -1716,37 +1747,48 @@ auto HMCSampler::buildTree(SimTK::State& state,
         node.proposal = {q_leaf, p_leaf};
 
         // timeStepper->stepTo() computes energies using OpenMM and update the position cache
-        const auto potentialEnergy = OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
-        const auto kineticEnergy = matter->calcKineticEnergy(state) * this->unboostKEFactor;
-        const auto fixmanPotential = calcFixman(state);
-        const auto logSineSqrGamma2 = (rootTopology)->calcLogSineSqrGamma2(state);
+        node.proposedEnergy.potential = OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
+        node.proposedEnergy.fixman = 0;
+        node.proposedEnergy.logSineSqrGamma2 = 0;
 
-        const double H_leaf =
-            potentialEnergy + kineticEnergy + fixmanPotential - (0.5 * RT * logSineSqrGamma2);
-        node.numValidSlices = (H_leaf <= -logU) ? 1 : 0;
-        node.stop = (H_leaf - H0) > 1000;
+        if (integratorType == IntegratorType::OpenMMVelocityVerlet) {
+            node.proposedEnergy.kinetic = OPENMM::get().getKineticEnergy();
+        } else {
+            node.proposedEnergy.kinetic = matter->calcKineticEnergy(state);
+            if (useFixman) {
+                node.proposedEnergy.fixman = calcFixman(state);
+                node.proposedEnergy.logSineSqrGamma2 = (rootTopology)->calcLogSineSqrGamma2(state);
+            }
+        }
+
+        node.proposedEnergy.total = node.proposedEnergy.potential + node.proposedEnergy.kinetic
+                                    + node.proposedEnergy.fixman
+                                    - (0.5 * RT * node.proposedEnergy.logSineSqrGamma2);
+        node.numValidSlices = (node.proposedEnergy.total <= -logU) ? 1 : 0;
+        node.stop = (node.proposedEnergy.total - H0) > 1000;
 
         return node;
     }
 
-    // --- Recursive Binary Tree Expansion ---
-    // Build first half
-    node = buildTree(state, depth - 1, direction, logU, H0);
+    // Recursive Binary Tree Expansion: build first half
+    node = buildTree(state, depth - 1, direction, logU, H0, coordinates);
     if (node.stop) {
         return node;
     }
 
     // Build second half (state is already at the end of the first half)
-    NUTSNode subtree = buildTree(state, depth - 1, direction, logU, H0);
+    NUTSNode subtree = buildTree(state, depth - 1, direction, logU, H0, coordinates);
 
     // Combine stats
-    const int n_total = node.numValidSlices + subtree.numValidSlices;
+    const int numValidSlices = node.numValidSlices + subtree.numValidSlices;
 
     // Progressive sampling: Accept the proposal from the new subtree with probability proportional to its
     // size
-    if (!subtree.stop
-        && (uniformReal01(randomEngine) < (SimTK::Real)subtree.numValidSlices / (SimTK::Real)n_total)) {
+    const auto acceptProb =
+        static_cast<SimTK::Real>(subtree.numValidSlices) / static_cast<SimTK::Real>(numValidSlices);
+    if (!subtree.stop && (uniformReal01(randomEngine) < acceptProb)) {
         node.proposal = subtree.proposal;
+        node.proposedEnergy = subtree.proposedEnergy;
     }
 
     // Update boundaries based on expansion direction
@@ -1757,16 +1799,13 @@ auto HMCSampler::buildTree(SimTK::State& state,
     }
 
     // Check No-U-Turn criterion for the merged tree
-    node.stop = subtree.stop || isUTurn(node.minus, node.plus);
-    node.numValidSlices = n_total;
+    node.stop = subtree.stop || isUTurn(node.minus, node.plus, coordinates);
+    node.numValidSlices = numValidSlices;
 
     return node;
 }
 
-auto HMCSampler::integrateNUTS(SimTK::State& state) -> int {
-    // This corresponds to running for 2^maxDepth steps
-    const int maxDepth = 32;
-
+auto HMCSampler::integrateNUTS(SimTK::State& state, NUTSCoordinates coordinates, int maxDepth) -> NUTSResult {
     // Draw slice variable U ~ Uniform(0, exp(-H(q, p)))
     // A state at Hamiltonian H is slice-valid iff H <= logU
     const SimTK::Real H0 = previousEnergy.total;
@@ -1786,7 +1825,7 @@ auto HMCSampler::integrateNUTS(SimTK::State& state) -> int {
     tree.minus = {q0, p0};
     tree.plus = {q0, p0};
     tree.proposal = {q0, p0};
-
+    tree.proposedEnergy = previousEnergy;
     tree.numValidSlices = 1;
 
     // We need two states to track the "left-most" and "right-most" edges
@@ -1794,35 +1833,33 @@ auto HMCSampler::integrateNUTS(SimTK::State& state) -> int {
     SimTK::State right_edge = state;
 
     StopReason stopReason = StopReason::MaxDepth;
+    bool proposalUpdated = false;
 
     int lastDepth = 0;
     for (int depth = 0; depth < maxDepth; ++depth) {
         lastDepth = depth;
         const NUTSDirection direction =
             (randomEngine() % 2) == 0 ? NUTSDirection::Backward : NUTSDirection::Forward;
-        // std::cout << "[NUTS] depth=" << depth << " direction=" << (direction == NUTSDirection::Backward ?
-        // "LEFT" : "RIGHT")
-        //           << "\n";
 
         NUTSNode subtree = (direction == NUTSDirection::Backward)
-                               ? buildTree(left_edge, depth, direction, logU, H0)
-                               : buildTree(right_edge, depth, direction, logU, H0);
+                               ? buildTree(left_edge, depth, direction, logU, H0, coordinates)
+                               : buildTree(right_edge, depth, direction, logU, H0, coordinates);
 
         if (subtree.stop) {
             stopReason = StopReason::SubtreeUTurn;
-            // std::cout << "[NUTS] terminated: subtree U-turn at depth=" << depth << "\n";
             break;
         }
 
         // Accept proposal from subtree with probability proportional to its slice-valid count
         // The slice variable is what enforces detailed balance
         const int numValidSlices = tree.numValidSlices + subtree.numValidSlices;
-        const SimTK::Real acceptProb =
+        const auto acceptProb =
             static_cast<SimTK::Real>(subtree.numValidSlices) / static_cast<SimTK::Real>(numValidSlices);
 
         if (uniformReal01(randomEngine) < acceptProb) {
             tree.proposal = subtree.proposal;
-            // std::cout << "[NUTS] accepted new proposal at depth=" << depth << "\n";
+            tree.proposedEnergy = subtree.proposedEnergy;
+            proposalUpdated = true;
         }
 
         if (direction == NUTSDirection::Backward) {
@@ -1832,29 +1869,33 @@ auto HMCSampler::integrateNUTS(SimTK::State& state) -> int {
         }
 
         tree.numValidSlices += subtree.numValidSlices;
-        // std::cout << "[NUTS] n_valid=" << tree.n_valid << "\n";
 
-        if (isUTurn(tree.minus, tree.plus)) {
+        if (isUTurn(tree.minus, tree.plus, coordinates)) {
             stopReason = StopReason::UTurn;
-            // std::cout << "[NUTS] terminated: global U-turn at depth=" << depth << "\n";
             break;
         }
     }
 
-    if (stopReason == StopReason::MaxDepth) {
-        // std::cout << "[NUTS] terminated: hit maxDepth=" << maxDepth << "\n";
+    switch (stopReason) {
+        case StopReason::MaxDepth:
+            std::cout << "\t - NUTS stopped at depth " << lastDepth << ": StopReason::MaxDepth.\n";
+            break;
+        case StopReason::SubtreeUTurn:
+            std::cout << "\t - NUTS stopped at depth " << lastDepth << " StopReason::SubtreeUTurn.\n";
+            break;
+        case StopReason::UTurn:
+            std::cout << "\t - NUTS stopped at depth " << lastDepth << " StopReason::UTurn.\n";
+            break;
+        case StopReason::NoValidProposals:
+            std::cout << "\t - NUTS stopped at depth " << lastDepth << " StopReason::NoValidProposals.\n";
+            break;
     }
-    // std::cout << "[NUTS] final n_valid=" << tree.n_valid << "\n";
 
-    // Set the proposed configuration and recompute M(q)
-    state.updQ() = tree.proposal.q;
-    system->realize(state, SimTK::Stage::Position);
+    if (!proposalUpdated) {
+        stopReason = StopReason::NoValidProposals;
+    }
 
-    // Convert momentum p to generalized velocity u via u = M(q)^-1 * p
-    matter->multiplyByMInv(state, tree.proposal.p, state.updU());
-    system->realize(state, SimTK::Stage::Velocity);
-
-    return lastDepth;
+    return {tree.proposal, tree.proposedEnergy, stopReason, lastDepth};
 }
 
 // Trajectory length has an average of MDStepsPerSample and a given std
@@ -2387,6 +2428,7 @@ void HMCSampler::integrateTrajectory_TaskSpace(SimTK::State& someState) {
 void HMCSampler::rebuildSimbodyTopologyFromOpenMMPositions(SimTK::State& someState) {
     // Get a reference to OpenMM Cartesian positions (expressed in Ground)
     const auto& positions = OPENMM::get().getPositions();
+    const auto& velocities = OPENMM::get().getVelocities();
 
     // IMPORTANT:
     // Although this may look like "updating positions in the State",
@@ -2450,8 +2492,16 @@ void HMCSampler::rebuildSimbodyTopologyFromOpenMMPositions(SimTK::State& someSta
     // Rebuild the multibody system using the new joint attachment frames.
     // This produces a new internal-coordinate parameterization whose
     // default configuration matches the OpenMM geometry.
+    // This sets Q=0, U=0
     someState = system->realizeTopology();
     system->realize(someState, SimTK::Stage::Position);
+
+    // Set velocities
+    for (int i = 0; i < dumm->getNumAtoms(); i++) {
+        SimTK::MobilizedBody& mobod = matter->updMobilizedBody(dumm->getAtomBody(SimTK::DuMM::AtomIndex(i)));
+        mobod.setUToFitLinearVelocity(someState, velocities[i]);
+    }
+    system->realize(someState, SimTK::Stage::Velocity);
 }
 
 /*
@@ -3351,31 +3401,9 @@ void HMCSampler::printDrilling(SimTK::State& someState) {
 }
 
 /**
- * This is actually the Boltzmann factor not the probability
- * because we don't have the partition function
- */
-SimTK::Real
-HMCSampler::MetropolisHastings(SimTK::Real argEtot_proposed, SimTK::Real argEtot_n, SimTK::Real lnJ) const {
-    SimTK::Real dE = argEtot_n - argEtot_proposed;
-    SimTK::Real beta_dE = this->beta * dE;
-    SimTK::Real beta_dE_mJ = beta_dE - lnJ;
-
-    /* std::cout << "\tdiff=" << argEtot_n - argEtot_proposed
-        << ", argEtot_n=" << argEtot_n
-        << ", argEtot_proposed=" << argEtot_proposed
-        << ", beta=" << beta << std::endl; */
-
-    if (beta_dE_mJ < 0) {
-        return 1;
-    } else {
-        return exp(-1.0 * beta_dE_mJ);
-    }
-}
-
-/**
  * Chooses whether to accept a sample or not based on a probability
  **/
-bool HMCSampler::acceptSample(const EnergySnapshot& proposedEnergy) {
+auto HMCSampler::acceptSample(const EnergySnapshot& proposedEnergy) -> bool {
     // Local vars
     SimTK::Real hereE_o = 0.0;
     SimTK::Real hereE_n = 0.0;
@@ -3385,32 +3413,41 @@ bool HMCSampler::acceptSample(const EnergySnapshot& proposedEnergy) {
     if (alwaysAccept) {
         // Empty sampler
         return true;
-    } else {
-        // Markov-Chain Monte Carlo
-        if (DistortOpt == 0) {
-            hereE_o = proposedEnergy.total;
-            hereE_n = currentEnergy.total;
-            here_lnj = 0.0;
-        } else if (DistortOpt > 0) {
-            if (useFixman) {
-                hereE_o = proposedEnergy.potential + ke_prop_nma6 + proposedEnergy.fixman;
-                hereE_n = currentEnergy.potential + ke_n_nma6 + currentEnergy.fixman;
-                here_lnj = 0.0;
-            } else {
-                hereE_o = proposedEnergy.potential + ke_prop_nma6;
-                hereE_n = currentEnergy.potential + ke_n_nma6;
-                here_lnj = 0.0;
-            }
-        } else if (DistortOpt < 0) {
-            hereE_o = proposedEnergy.potential + proposedEnergy.fixman;
-            hereE_n = currentEnergy.potential + currentEnergy.fixman;
-            here_lnj = getDistortJacobianDetLog();
-        }
-
-        const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
-        const SimTK::Real prob = MetropolisHastings(hereE_o, hereE_n, here_lnj);
-        return rand_no < prob;
     }
+
+    // Markov-Chain Monte Carlo
+    if (DistortOpt == 0) {
+        hereE_o = proposedEnergy.total;
+        hereE_n = currentEnergy.total;
+        here_lnj = 0.0;
+    } else if (DistortOpt > 0) {
+        if (useFixman) {
+            hereE_o = proposedEnergy.potential + ke_prop_nma6 + proposedEnergy.fixman;
+            hereE_n = currentEnergy.potential + ke_n_nma6 + currentEnergy.fixman;
+            here_lnj = 0.0;
+        } else {
+            hereE_o = proposedEnergy.potential + ke_prop_nma6;
+            hereE_n = currentEnergy.potential + ke_n_nma6;
+            here_lnj = 0.0;
+        }
+    } else if (DistortOpt < 0) {
+        hereE_o = proposedEnergy.potential + proposedEnergy.fixman;
+        hereE_n = currentEnergy.potential + currentEnergy.fixman;
+        here_lnj = getDistortJacobianDetLog();
+    }
+
+    // This is actually the Boltzmann factor not the probability because we don't have the partition function
+    const SimTK::Real beta_dE_mJ = (this->beta * (hereE_o - hereE_n)) - here_lnj;
+    SimTK::Real prob = -1;
+    if (beta_dE_mJ < 0) {
+        prob = 1;
+    } else {
+        prob = exp(-1.0 * beta_dE_mJ);
+    }
+
+    // Apply Metropolis-Hastings criterion
+    const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
+    return rand_no < prob;
 }
 
 /*!
@@ -3439,7 +3476,7 @@ void HMCSampler::getMsg_EnergyDetails(std::stringstream& energyDetailsStream,
     }
 
     // Print simulation type
-    if (this->alwaysAccept == true) {
+    if (this->alwaysAccept) {
         // ss << ", (MD)";
         energyDetailsStream << ", 128";
     } else {
@@ -3465,13 +3502,14 @@ void HMCSampler::getMsg_EnergyDetails(std::stringstream& energyDetailsStream,
  * <!--	The main function that generates a sample -->
  TODO get a state from outside, do something with it, add it to advanced state of integrator and return it
 */
-auto HMCSampler::sampleIteration(SimTK::State& state, std::stringstream& samplerOutStream, bool shouldPrint)
-    -> bool {
+auto HMCSampler::sampleIteration(SimTK::State& state,
+                                 std::stringstream& samplerOutStream,
+                                 bool shouldPrint,
+                                 bool useNUTS) -> bool {
     // Deep copy the old state with all its properties (time, q, u, z, qdot, udot, zdot, qdotdot) before
     // integration
     const auto oldState = state;
 
-    EnergySnapshot proposedEnergy;
     bool integrationSuccessful = true;
     bool validProposedEnergy = false;
 
@@ -3481,28 +3519,41 @@ auto HMCSampler::sampleIteration(SimTK::State& state, std::stringstream& sampler
     // calcMobodsMBAT(state); // SCALEQ
 
     // Integrate
-    int depthNUTS = -1;
+    NUTSResult result;
     try {
         switch (integratorType) {
             case IntegratorType::OpenMMVelocityVerlet:
-                // This only integrates, it does not calculate energies or forces
-                // On failure, it will revert the OpenMM context to before integration, so we don't have to do
-                // anything here
-                integrationSuccessful =
-                    dumm->integrateTrajectoryWithOpenMM(state, cartesianRandomSteps(randomEngine), 0.001);
+                if (useNUTS) {
+                    result = integrateNUTS(state, NUTSCoordinates::Cartesian, 8);
+                } else {
+                    // cartesianRandomSteps(randomEngine)
+                    integrationSuccessful =
+                        dumm->integrateTrajectoryWithOpenMM(state, MDStepsPerSample, timestep);
+                    rebuildSimbodyTopologyFromOpenMMPositions(state);
+
+                    result.energy.potential = OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
+                    result.energy.kinetic = this->unboostKEFactor * OPENMM::get().getKineticEnergy();
+                    result.energy.fixman = 0.0;
+                    result.energy.logSineSqrGamma2 = 0.0;
+                    result.energy.total = result.energy.potential + result.energy.kinetic
+                                          + result.energy.fixman
+                                          - (0.5 * RT * result.energy.logSineSqrGamma2);
+
+                    result.proposal.q = state.getQ();
+                    result.proposal.p = state.getU();
+
+                    result.stopReason = StopReason::NotUsingNUTS;
+                    result.depth = -1;
+                }
                 break;
             case IntegratorType::Verlet:
-                // timeStepper->stepTo(state.getTime() + (timestep * MDStepsPerSample));
-                depthNUTS = integrateNUTS(state);
-                break;
-            case IntegratorType::BoundWalk:
-                integrateTrajectory_Bounded(state);
-                break;
-            case IntegratorType::BoundHMC:
-                integrateTrajectory_BoundHMC(state);
-                break;
-            case IntegratorType::StationsTask:
-                integrateTrajectory_TaskSpace(state);
+                if (useNUTS) {
+                    result = integrateNUTS(state, NUTSCoordinates::Cartesian, 8);
+                } else {
+                    throw std::runtime_error("Non-NUTS Verlet integration not implemented yet!");
+                    // integrationSuccessful =
+                    //     timeStepper->stepTo(state.getTime() + (timestep * MDStepsPerSample));
+                }
                 break;
             default:
                 throw std::runtime_error("Integrator type not implemented!");
@@ -3512,99 +3563,66 @@ auto HMCSampler::sampleIteration(SimTK::State& state, std::stringstream& sampler
         integrationSuccessful = false;
     }
 
+    if (result.stopReason == StopReason::NoValidProposals) {
+        integrationSuccessful = false;
+        if (shouldPrint) {
+            std::cout << "\t - Integration stopped: No valid proposals found within max depth.\n";
+        }
+    }
+
     if (integrationSuccessful) {
-        // Perturb Q, QDot and QDotDot
-        // This is part of the proposal distribution and is reversible and symmetric
-        // We will evaluate E(integrated_state + perturbation)
-        if (integratorType != IntegratorType::OpenMMVelocityVerlet) {
-            // TODO you need to call rebuildSimbodyTopologyFromOpenMMPositions(state) here before perturbing
-            perturb_Q_QDot_QDotDot(state);
-        }
-
-        // This computes the potential energy, kinetic energy and rigid body forces using OpenMM, regardless
-        // of the integrator type
-        compoundSystem->realize(state, SimTK::Stage::Position);
-        proposedEnergy.potential = OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
-
-        // Kinetic energy is handled independently
-        if (integratorType == IntegratorType::OpenMMVelocityVerlet) {
-            proposedEnergy.kinetic = OPENMM::get().getKineticEnergy();
-        } else {
-            system->realize(state, SimTK::Stage::Velocity);
-            proposedEnergy.kinetic = matter->calcKineticEnergy(state);
-        }
-        proposedEnergy.kinetic *= this->unboostKEFactor;
-
-        // Calculate Fixman potential if needed
-        if (useFixman) {
-            if (integratorType == IntegratorType::OpenMMVelocityVerlet) {
-                throw std::runtime_error(
-                    "Fixman potential calculation not implemented for Cartesian integrators.");
-            }
-
-            proposedEnergy.fixman = calcFixman(state);
-            proposedEnergy.logSineSqrGamma2 = ((Topology*)rootTopology)->calcLogSineSqrGamma2(state);
-        } else {
-            proposedEnergy.fixman = 0.0;
-            proposedEnergy.logSineSqrGamma2 = 0.0;
-        }
-
-        proposedEnergy.total = proposedEnergy.potential + proposedEnergy.kinetic + proposedEnergy.fixman
-                               - (0.5 * RT * proposedEnergy.logSineSqrGamma2);
-
         // Print all proposed energy terms for debugging
         if (shouldPrint) {
-            std::cout << "\tCurrent energies: " << "PE=" << currentEnergy.potential << ", "
+            std::cout << "\t - Current energies: " << "PE=" << currentEnergy.potential << ", "
                       << "KE=" << currentEnergy.kinetic << ", " << "Fixman=" << currentEnergy.fixman << ", "
                       << "logSineSqrGamma2=" << currentEnergy.logSineSqrGamma2 << ", "
                       << "Total=" << currentEnergy.total << "\n";
-            std::cout << "\tPrevious energies: " << "PE=" << previousEnergy.potential << ", "
+            std::cout << "\t - Previous energies: " << "PE=" << previousEnergy.potential << ", "
                       << "KE=" << previousEnergy.kinetic << ", " << "Fixman=" << previousEnergy.fixman << ", "
                       << "logSineSqrGamma2=" << previousEnergy.logSineSqrGamma2 << ", "
                       << "Total=" << previousEnergy.total << "\n";
-            std::cout << "\tProposed energies: " << "PE=" << proposedEnergy.potential << ", "
-                      << "KE=" << proposedEnergy.kinetic << ", " << "Fixman=" << proposedEnergy.fixman << ", "
-                      << "logSineSqrGamma2=" << proposedEnergy.logSineSqrGamma2 << ", "
-                      << "Total=" << proposedEnergy.total << ", " << "NUTS depth=" << depthNUTS << "\n";
+            std::cout << "\t - Proposed energies: " << "PE=" << result.energy.potential << ", "
+                      << "KE=" << result.energy.kinetic << ", " << "Fixman=" << result.energy.fixman << ", "
+                      << "logSineSqrGamma2=" << result.energy.logSineSqrGamma2 << ", "
+                      << "Total=" << result.energy.total << ", " << "NUTS depth=" << result.depth << "\n";
         }
 
-        validProposedEnergy = proposedEnergy.validate(currentEnergy, RT, numDegreesOfFreedom);
+        validProposedEnergy = result.energy.validate(currentEnergy, RT, numDegreesOfFreedom);
     }
 
     // Check if we are good for Metropolis-Hastings step
     acc = integrationSuccessful && validProposedEnergy;
     if (acc) {
         // Apply Metropolis-Hastings criterion
-        acc = acceptSample(proposedEnergy);
+        acc = acceptSample(result.energy);
         if (shouldPrint) {
             if (acc) {
-                std::cout << "\tMetropolis-Hastings: accepted." << '\n';
+                std::cout << "\t - Metropolis-Hastings: accepted." << '\n';
             } else {
-                std::cout << "\tMetropolis-Hastings: rejected." << '\n';
+                std::cout << "\t - Metropolis-Hastings: rejected." << '\n';
             }
         }
     }
 
     if (acc) {
+        // Set the proposed configuration and recompute M(q)
+        state.updQ() = result.proposal.q;
+        system->realize(state, SimTK::Stage::Position);
+
+        // Convert momentum p to generalized velocity u via u = M(q)^-1 * p
+        matter->multiplyByMInv(state, result.proposal.p, state.updU());
+        system->realize(state, SimTK::Stage::Velocity);
+
         // Advance energies
         previousEnergy = currentEnergy;
-        currentEnergy = proposedEnergy;
-
-        // Update Simbody state to the new OpenMM configuration if accepted
-        if (integratorType == IntegratorType::OpenMMVelocityVerlet) {
-            rebuildSimbodyTopologyFromOpenMMPositions(state);
-        }
+        currentEnergy = result.energy;
 
         acceptedSteps++;
         acceptedStepsBuffer.push_back(1);
         acceptedStepsBuffer.pop_front();
     } else {
-        // Restore Simbody state to before integration
-        // OpenMM handles restoring its own state internally on integration failure, so we don't have to do
-        // anything Energies were not assigned to begin with (sampler state holds current/previous energies,
-        // proposed energies are in a local variable)
         state = oldState;
-        system->realize(state, SimTK::Stage::Acceleration);
+        system->realize(state, SimTK::Stage::Velocity);
 
         acceptedStepsBuffer.push_back(0);
         acceptedStepsBuffer.pop_front();

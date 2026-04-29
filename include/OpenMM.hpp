@@ -135,7 +135,7 @@ class ForceGroup {
 
 class OPENMM {
     public:
-    static bool initialize(uint32_t seed,
+    static auto initialize(uint32_t seed,
                            const std::vector<std::vector<int>>& worlds,
                            const std::vector<RoboAtom>& atoms,
                            const std::vector<RoboBond>& bonds,
@@ -157,16 +157,9 @@ class OPENMM {
                            NonbondedMethod nonbondedMethod,
                            SimTK::Real nonbondedCutoffInNm,
                            SimTK::Real thermostatTemperature,
-                           SimTK::Real collisionFrequency);
+                           SimTK::Real collisionFrequency) -> bool;
 
-    void setActiveForceGroup(int forceGroupIndex) {
-        ensureInitialized();
-        activeForceGroupIndex = forceGroupIndex;
-    }
-
-    void setVelocitiesToTemperature(SimTK::Real temperature, uint32_t seed);
-
-    static OPENMM& get() {
+    static auto get() -> OPENMM& {
         static OPENMM omm;
         return omm;
     }
@@ -180,52 +173,69 @@ class OPENMM {
         omm.initialized = false;
     }
 
-    SimTK::Real getPotentialEnergy() const;
-    SimTK::Real getKineticEnergy() const;
+    void setActiveForceGroup(int forceGroupIndex) {
+        ensureInitialized();
+        activeForceGroupIndex = forceGroupIndex;
+    }
 
-    void setPositions(const std::vector<SimTK::Vec3>& positions);
-    const std::vector<SimTK::Vec3>& getPositions() const;
+    void setVelocitiesToTemperature(SimTK::Real temperature, uint32_t seed) {
+        ensureInitialized();
+        context->setVelocitiesToTemperature(temperature, seed);
+        context->setParameter(OpenMM::AndersenThermostat::Temperature(), temperature);
+    }
 
-    bool integrateTrajectory(const SimTK::Vector_<SimTK::Vec3>& includedAtomPositionsInG,
+    [[nodiscard]] auto getPotentialEnergy() const -> SimTK::Real {
+        ensureInitialized();
+        return potentialEnergy;
+    }
+
+    [[nodiscard]] auto getKineticEnergy() const -> SimTK::Real {
+        ensureInitialized();
+        return kineticEnergy;
+    }
+
+    void setPositions(const std::vector<SimTK::Vec3>& positions) {
+        ensureInitialized();
+
+        // Convert SimTK::Vec3 to OpenMM::Vec3
+        for (std::size_t i = 0; i < positions.size(); ++i) {
+            const SimTK::Vec3& coords = positions[i];
+            ommAtomsPositionsCache[i] = OpenMM::Vec3(coords[0], coords[1], coords[2]);
+        }
+
+        // Set positions in OpenMM context
+        context->setPositions(ommAtomsPositionsCache);
+    }
+
+    [[nodiscard]] auto getPositions() const -> const std::vector<SimTK::Vec3>& {
+        ensureInitialized();
+        return simbodyAtomsPositionsCache;
+    }
+
+    void negateVelocities() {
+        ensureInitialized();
+        const auto state = context->getState(OpenMM::State::Velocities);
+        auto velocities = state.getVelocities();
+        for (auto& v : velocities) {
+            v = -v;
+        }
+        context->setVelocities(velocities);
+    }
+
+    [[nodiscard]] auto getVelocities() const -> const std::vector<SimTK::Vec3>& {
+        ensureInitialized();
+        return simbodyAtomsVelocitiesCache;
+    }
+
+    auto integrateTrajectory(const SimTK::Vector_<SimTK::Vec3>& includedAtomPositionsInG,
                              int steps,
-                             SimTK::Real timeStepInPicoseconds);
+                             SimTK::Real timeStepInPicoseconds) -> bool;
 
     void integrateTrajectory(const std::vector<SimTK::Vec3>& inPositions,
                              std::vector<SimTK::Vec3>& outPositions,
                              bool resetPositions,
                              int steps,
-                             SimTK::Real timeStepInPicoseconds) {
-        ensureInitialized();
-
-        // Convert SimTK::Vec3 to OpenMM::Vec3
-        if (resetPositions) {
-            for (std::size_t i = 0; i < inPositions.size(); ++i) {
-                const SimTK::Vec3& coords = inPositions[i];
-                ommAtomsPositionsCache[i] = OpenMM::Vec3(coords[0], coords[1], coords[2]);
-            }
-
-            // Set positions in OpenMM context
-            context->setPositions(ommAtomsPositionsCache);
-        }
-
-        // Integrate
-        integrator->setIntegrationForceGroups(1 << activeForceGroupIndex);
-        integrator->step(steps);
-
-        // Return new positions
-        const auto state = context->getState(OpenMM::State::Energy | OpenMM::State::Positions,
-                                             enforcePeriodicBox,
-                                             1 << activeForceGroupIndex);
-        const auto& pos = state.getPositions();
-        outPositions.resize(pos.size());
-        for (size_t i = 0, n = pos.size(); i < n; ++i) {
-            const auto& c = pos[i];
-            outPositions[i] = {c[0], c[1], c[2]};
-        }
-
-        potentialEnergy = state.getPotentialEnergy();
-        kineticEnergy = state.getKineticEnergy();
-    }
+                             SimTK::Real timeStepInPicoseconds);
 
     void updatePositionsCache(const std::vector<NonBondedMapping>& nonBondedMappings,
                               const SimTK::Vector_<SimTK::Vec3>& inclAtomPos_G);
@@ -236,12 +246,13 @@ class OPENMM {
 
     SimTK::Real evaluatePotentialEnergyFromPositionsCache() const;
 
-    std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> computePeriodicBoxVectors_Context(double a_length,
-                                                                                           double b_length,
-                                                                                           double c_length,
-                                                                                           double alpha,
-                                                                                           double beta,
-                                                                                           double gamma);
+    auto computePeriodicBoxVectors_Context(SimTK::Real a_length,
+                                           SimTK::Real b_length,
+                                           SimTK::Real c_length,
+                                           SimTK::Real alpha,
+                                           SimTK::Real beta,
+                                           SimTK::Real gamma)
+        -> std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3>;
 
     private:
     OPENMM() = default;
@@ -261,6 +272,7 @@ class OPENMM {
     std::size_t numAtoms = 0;
     std::vector<OpenMM::Vec3> ommAtomsPositionsCache, ommAtomsPositionsCacheOld;
     std::vector<SimTK::Vec3> simbodyAtomsPositionsCache;
+    std::vector<SimTK::Vec3> simbodyAtomsVelocitiesCache;
     SimTK::Real potentialEnergy = 0, kineticEnergy = 0;
 
     bool enforcePeriodicBox = false;
