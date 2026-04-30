@@ -1112,7 +1112,7 @@ bool World::isOverconstrained() const {
     }
 
     // Get one sample
-    samplers[0]->sampleIteration(state, nullStream, false, false);
+    samplers[0]->sampleIteration(state, nullStream, false);
 
     // Update atom target locations cache after sampling
     for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
@@ -4049,7 +4049,8 @@ std::size_t World::getNofSamplers() const {
 auto World::addSampler(SamplerName samplerName,
                        IntegratorType integratorType,
                        ThermostatName thermostatName,
-                       bool useFixmanPotential) -> bool {
+                       bool useFixmanPotential,
+                       bool useNUTS) -> bool {
     if (samplerName == SamplerName::HMC) {
         // Construct a new sampler
         samplers.emplace_back(std::make_unique<HMCSampler>(*this,
@@ -4064,6 +4065,7 @@ auto World::addSampler(SamplerName samplerName,
         samplers.back()->setIntegratorType(integratorType);
         samplers.back()->setThermostat(thermostatName);
         samplers.back()->setSeed(randomEngine);
+        samplers.back()->setUseNUTS(useNUTS);
 
         // Initialize the sampler
         samplers.back()->initialize();
@@ -4315,8 +4317,7 @@ SimTK::Real World::integratedAutocorrelation(const std::vector<SimTK::Real>& x, 
 auto World::generateSamples(int howManySamplesPerRound,
                             std::stringstream& worldOutStream,
                             const std::string& header,
-                            bool shouldPrint,
-                            bool useNUTS) -> bool {
+                            bool shouldPrint) -> bool {
     SimTK::State& state = integrator->updAdvancedState();
 
     updSampler(0)->reinitialize(state, worldOutStream, shouldPrint);
@@ -4394,8 +4395,7 @@ auto World::generateSamples(int howManySamplesPerRound,
         // OpenMM does cartesian integration, so no locking here
         for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
             // TODO do we reinitialize() here?
-            validated =
-                updSampler(0)->sampleIteration(state, worldOutStream, shouldPrint, useNUTS) && validated;
+            validated = updSampler(0)->sampleIteration(state, worldOutStream, shouldPrint) && validated;
         }
     } else {
         // // Simbody supports locking mobilizers
@@ -4428,7 +4428,7 @@ auto World::generateSamples(int howManySamplesPerRound,
 
         // TODO the above will lock literally everything, so it won't simulate anything
         for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
-            validated &= updSampler(0)->sampleIteration(state, worldOutStream, shouldPrint, useNUTS);
+            validated &= updSampler(0)->sampleIteration(state, worldOutStream, shouldPrint);
             if (!validated) {
                 continue;
             }

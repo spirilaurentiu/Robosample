@@ -28,27 +28,27 @@ class Sampler {
 
     // Compute mass matrix determinant (O(n))
     // TODO Move
-    SimTK::Real calcMassDeterminant(const SimTK::State&);
-    SimTK::Real calcMassDeterminant(SimTK::State&);
+    auto calcMassDeterminant(const SimTK::State& state) -> SimTK::Real;
+    auto calcMassDeterminant(SimTK::State& state) -> SimTK::Real;
 
     // Set / reset variables needed at the beginning of a simulation
     void initialize(SimTK::State& someState);
     void reinitialize(SimTK::State& someState);
 
     // Is the sampler always accepting the proposed moves
-    virtual bool getAlwaysAccept() const;
+    [[nodiscard]] virtual auto getAlwaysAccept() const -> bool;
 
     // Is the sampler always accepting the proposed moves
     virtual void setAlwaysAccept(bool);
 
     // Getter / setter for macroscopic temperature and RT
     // virtual void setTemperature(SimTK::Real) = 0; // RE
-    SimTK::Real getTemperature() const;
+    [[nodiscard]] auto getTemperature() const -> SimTK::Real;
     void setTemperature(SimTK::Real temperature); // Also sets RT and beta
 
-    SimTK::Real getRT() const;
+    [[nodiscard]] auto getRT() const -> SimTK::Real;
     void setBeta(SimTK::Real argBeta);
-    SimTK::Real getBeta() const;
+    [[nodiscard]] auto getBeta() const -> SimTK::Real;
 
     // Just for checking
     void checkAtomStationsThroughDumm();
@@ -58,70 +58,61 @@ class Sampler {
     void loadMbx2mobility(int whichWorld);
 
     /** Returns the number of samples extracted so far. **/
-    int getNofSamples();
+    [[nodiscard]] auto getNofSamples() -> int;
 
     // Get set the seed
     void setSeed(Random32& seeder);
 
     // Draws one sample from vonMises distribution with concentration k
     // The algorithm is taken from 1979 Best, page 155
-    SimTK::Real generateVonMisesSample(SimTK::Real miu, SimTK::Real k);
+    [[nodiscard]] auto generateVonMisesSample(SimTK::Real miu, SimTK::Real k) -> SimTK::Real;
 
     // Draws X from von Mises-Fisher distribution with concentration
     // parameter k TODO: reference to the algorithm
     // X vector has the dimensions of the ndofs
-    std::vector<double>& generateVonMisesFisherSample(std::vector<double>& X, double k);
+    [[nodiscard]] auto generateVonMisesFisherSample(std::vector<SimTK::Real>& X, SimTK::Real k)
+        -> std::vector<SimTK::Real>&;
 
     // Draws from chi distribution
-    double generateChiSample();
+    [[nodiscard]] auto generateChiSample() -> SimTK::Real;
 
     /** Generate a random number. **/
-    SimTK::Real generateRandomNumber(GmolRandDistributionType);
+    [[nodiscard]] auto generateRandomNumber(GmolRandDistributionType) -> SimTK::Real;
 
     /** Generate random rotation quaternion */
-    SimTK::Quaternion generateRandomQuaternion();
-
+    [[nodiscard]] auto generateRandomQuaternion() -> SimTK::Quaternion;
 
     /**
      * Take a variable and transforming according to some distribution
      * //TODO revise param1 and param2
      */
-    SimTK::Real convoluteVariable(SimTK::Real& var,
-                                  std::string distrib = "alternateInverse",
-                                  SimTK::Real param1 = 1.0,
-                                  SimTK::Real param2 = 0.0,
-                                  SimTK::Real param3 = 0.0);
-
-    SimTK::Real convoluteVariable(std::vector<SimTK::Real>& vvar,
-                                  std::string distrib = "alternateInverse",
-                                  SimTK::Real param1 = 1.0,
-                                  SimTK::Real param2 = 0.0);
-
-    SimTK::Real calcDeformationPotential(SimTK::Real& var,
+    [[nodiscard]] auto convoluteVariable(SimTK::Real& var,
                                          std::string distrib = "alternateInverse",
                                          SimTK::Real param1 = 1.0,
-                                         SimTK::Real param2 = 0.0);
-
-    virtual SimTK::Real setQToScaleBendStretchStdev(SimTK::State& someState,
-                                                    std::vector<SimTK::Real>& scaleFactors) = 0;
+                                         SimTK::Real param2 = 0.0,
+                                         SimTK::Real param3 = 0.0) -> SimTK::Real;
+    [[nodiscard]] auto convoluteVariable(std::vector<SimTK::Real>& vvar,
+                                         std::string distrib = "alternateInverse",
+                                         SimTK::Real param1 = 1.0,
+                                         SimTK::Real param2 = 0.0) -> SimTK::Real;
+    [[nodiscard]] auto calcDeformationPotential(SimTK::Real& var,
+                                                std::string distrib = "alternateInverse",
+                                                SimTK::Real param1 = 1.0,
+                                                SimTK::Real param2 = 0.0) -> SimTK::Real;
+    [[nodiscard]] virtual auto setQToScaleBendStretchStdev(SimTK::State& someState,
+                                                           std::vector<SimTK::Real>& scaleFactors)
+        -> SimTK::Real = 0;
 
     // virtual void setIntegratorName(IntegratorName) = 0;
     // virtual void setIntegratorName(std::string integratorName) = 0;
 
-    virtual const bool& getAcc() const;
-    virtual bool& updAcc();
+    [[nodiscard]] virtual const bool& getAcc() const;
+    virtual auto updAcc() -> bool&;
     virtual void setAcc(bool);
-
-    /** Propose a move **/
-    // virtual bool propose(SimTK::State& someState, bool useNUTS) = 0;
-    // virtual eval() = 0;
-    // virtual void update(SimTK::State& someState) = 0;
 
     // For debugging purposes
     void PrintSimbodyStateCache(SimTK::State& someState);
 
-
-    public:
     // Classes we need to access
     World* world;
     const SimTK::System* system;
@@ -181,9 +172,9 @@ class Sampler {
     // Gaussian random number distribution
     std::normal_distribution<> gaurand = std::normal_distribution<>(0.0, 1.0);
 
-    std::gamma_distribution<double> gammarand = std::gamma_distribution<double>(1, 2);
+    std::gamma_distribution<SimTK::Real> gammarand = std::gamma_distribution<SimTK::Real>(1, 2);
 
-    std::lognormal_distribution<double> lognormal = std::lognormal_distribution<double>(0.0, 1.0);
+    std::lognormal_distribution<SimTK::Real> lognormal = std::lognormal_distribution<SimTK::Real>(0.0, 1.0);
 };
 
 

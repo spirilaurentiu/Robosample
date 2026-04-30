@@ -1,11 +1,10 @@
+import warnings
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import IntEnum, unique
-from typing import Iterable, Self, Tuple
+from typing import Dict, Iterable, List, Self, Tuple
 
-import astropy.stats.circstats as circstats
 import community as community_louvain
 import MDAnalysis as mda
 import mdtraj as md
@@ -15,6 +14,112 @@ import pandas as pd
 import parmed as pmd
 import scipy.linalg as linalg
 from MDAnalysis.analysis import dihedrals
+
+
+@dataclass
+class TransitionWindowResult:
+    """
+    Complete output of detect_transition_windows.
+
+    Attributes
+    ----------
+    windows : list of (int, int)
+        List of (start_frame, end_frame) pairs, inclusive, identifying the
+        expanded transition windows. Suitable for direct use as frame masks.
+    transition_frames : np.ndarray of int
+        Raw frame indices scored above the boundary threshold, before window
+        expansion. Useful for diagnostic plots.
+    basin_frames : np.ndarray of int
+        Frame indices scored as deep-basin (s < basin_threshold), suitable
+        for computing the baseline correlation matrix.
+    basin_labels : np.ndarray, shape (T,)
+        Per-frame basin assignment (0 … n_basins−1). Unassigned frames
+        (those in the transition region) carry their nearest-basin label —
+        this label should not be trusted for those frames.
+    boundary_scores : np.ndarray, shape (T,)
+        Per-frame boundary score s = d_min / d_2nd ∈ (0, 1].
+    centroids_embedded : np.ndarray, shape (n_basins, 2N)
+        k-means centroids in the sin/cos embedded space.
+    n_transitions : int
+        Number of distinct, merged transition windows detected.
+    """
+
+    windows: List[Tuple[int, int]]
+    transition_frames: np.ndarray
+    basin_frames: np.ndarray
+    basin_labels: np.ndarray
+    boundary_scores: np.ndarray
+    centroids_embedded: np.ndarray
+    n_transitions: int
+
+
+@dataclass
+class BasinSelectionResult:
+    """
+    Complete output of select_n_basins.
+
+    Attributes
+    ----------
+    recommended_k : int
+        Consensus recommended number of basins.
+    confidence : str
+        'high'     — all three metrics agree.
+        'moderate' — two of three metrics agree.
+        'low'      — all three metrics disagree; visual inspection required.
+    silhouette_scores : dict[int, float]
+        Mean silhouette score for each k. Higher = better-separated clusters.
+    silhouette_best_k : int
+        k that maximises the silhouette score.
+    gap_values : dict[int, float]
+        Gap statistic Gap(k) for each k.
+    gap_stds : dict[int, float]
+        Standard error σ_k of the gap statistic for each k.
+    gap_best_k : int
+        k selected by Tibshirani's one-standard-error criterion.
+    bic_scores : dict[int, float]
+        BIC for each k. Lower = better model.
+    bic_best_k : int
+        k that minimises the BIC.
+    k_range : list[int]
+        The range of k values evaluated.
+    embedded : np.ndarray, shape (T, 2N)
+        The torus-embedded dihedral vectors used for all metric computation.
+        Stored here so downstream functions don't need to re-embed.
+    """
+
+    recommended_k: int
+    confidence: str
+    silhouette_scores: Dict[int, float]
+    silhouette_best_k: int
+    gap_values: Dict[int, float]
+    gap_stds: Dict[int, float]
+    gap_best_k: int
+    bic_scores: Dict[int, float]
+    bic_best_k: int
+    k_range: List[int]
+    embedded: np.ndarray
+
+    def summary(self) -> str:
+        lines = [
+            "Basin count selection summary",
+            f"  Silhouette  → k={self.silhouette_best_k}  "
+            f"(score={self.silhouette_scores[self.silhouette_best_k]:.3f})",
+            f"  Gap stat    → k={self.gap_best_k}  "
+            f"(gap={self.gap_values[self.gap_best_k]:.3f} "
+            f"± {self.gap_stds[self.gap_best_k]:.3f})",
+            f"  GMM BIC     → k={self.bic_best_k}  "
+            f"(BIC={self.bic_scores[self.bic_best_k]:.1f})",
+            "  ─────────────────────────────",
+            f"  Consensus   → k={self.recommended_k}  "
+            f"[confidence: {self.confidence.upper()}]",
+        ]
+        if self.confidence == "low":
+            lines.append(
+                "  WARNING: metrics disagree. Inspect the diagnostic plot "
+                "before proceeding."
+            )
+        return "\n".join(lines)
+
 
 from . import robo_bindings as rb
 from .molecule_prototype import MoleculePrototype
@@ -54,6 +159,7 @@ class Sampler:
     integratorType: rb.IntegratorType
     thermostatName: rb.ThermostatName
     useFixmanPotential: bool
+    use_nuts: bool
     timeStep: float
     mdSteps: int
     boostMDSteps: int
@@ -82,6 +188,7 @@ class World:
         thermostatName: rb.ThermostatName = rb.ThermostatName.ANDERSEN,
         acceptRejectMode: rb.AcceptRejectMode = rb.AcceptRejectMode.MetropolisHastings,
         useFixmanPotential: bool = True,
+        use_nuts: bool = False,
         distortOption: int = 0,
         distortArgs: str = "0",
         flow: int = 0,
@@ -99,6 +206,7 @@ class World:
             integratorType=integratorType,
             thermostatName=thermostatName,
             useFixmanPotential=useFixmanPotential,
+            use_nuts=use_nuts,
             timeStep=timeStep,
             mdSteps=mdSteps,
             boostMDSteps=boostMDSteps,
@@ -884,6 +992,11 @@ class Context(rb.Context):
                 + str(atom2.idx + 1)
             )
 
+            # if bond["dihedral_type"] in {"phi", "psi", "omega"}:
+            #     flex.mobility = rb.BondMobility.Translation
+            # else:
+            #     flex.mobility = rb.BondMobility.Torsion
+
             flex.mobility = rb.BondMobility.Torsion
 
             flexibilities.append(flex)
@@ -1098,7 +1211,11 @@ class Context(rb.Context):
         for i, w in enumerate(self.worlds):
             s = w.samplers[0]
             super().getWorld(i).add_sampler(
-                s.samplerName, s.integratorType, s.thermostatName, s.useFixmanPotential
+                s.samplerName,
+                s.integratorType,
+                s.thermostatName,
+                s.useFixmanPotential,
+                s.use_nuts,
             )
 
         # Add replicas and thermodynamic states
@@ -1201,48 +1318,62 @@ class Context(rb.Context):
 
         return atom_to_class_name
 
-    def circcorr(self, dihs, pair, shuffle=False):
-        """Calculates circular correlation coefficient for a single pair of dihedrals.
-        If `shuffle=True`, independently shuffles each dihedral to break temporal correlation (null model).
-        """
+    def _circmean_vectorised(self, angles: np.ndarray, axis: int = 0) -> np.ndarray:
+        return np.arctan2(
+            np.mean(np.sin(angles), axis=axis),
+            np.mean(np.cos(angles), axis=axis),
+        )
+
+    def _circvar_vectorised(self, angles: np.ndarray, axis: int = 0) -> np.ndarray:
+        R_bar = np.sqrt(
+            np.mean(np.cos(angles), axis=axis) ** 2
+            + np.mean(np.sin(angles), axis=axis) ** 2
+        )
+        return 1.0 - R_bar
+
+    def circcorr(
+        self,
+        dihs: np.ndarray,
+        pair: tuple,
+        shuffle: bool = False,
+    ) -> tuple:
         ix, jx = pair
 
-        x = dihs[:, ix]
-        y = dihs[:, jx]
+        # Extract the two time series.
+        # .copy() is mandatory before in-place shuffling to avoid mutating the
+        # shared `dihs` array, which would corrupt concurrent calculations.
+        x = dihs[:, ix].copy() if shuffle else dihs[:, ix]
+        y = dihs[:, jx].copy() if shuffle else dihs[:, jx]
 
-        # Optional shuffling for null model
         if shuffle:
-            x = x.copy()
-            y = y.copy()
-
+            # Independent permutations preserve marginals but destroy all
+            # temporal structure and cross-series coupling simultaneously.
             x = self.rng.permutation(x)
             y = self.rng.permutation(y)
 
-        # Unwrap angles to handle discontinuities
-        x = np.unwrap(x)
-        y = np.unwrap(y)
-
-        # Calculate circular variance for each series
-        x_var = circstats.circvar(x)
-        y_var = circstats.circvar(y)
-
-        # Filter out series with low variance (high noise)
+        x_var = float(self._circvar_vectorised(x))
+        y_var = float(self._circvar_vectorised(y))
         if x_var < self.tol or y_var < self.tol:
             return ix, jx, 0.0
 
-        # Compute circular correlation
-        x_centered = x - circstats.circmean(x)
-        y_centered = y - circstats.circmean(y)
+        mu_x = float(self._circmean_vectorised(x))
+        mu_y = float(self._circmean_vectorised(y))
 
-        numerator = np.sum(np.sin(x_centered) * np.sin(y_centered))
-        denominator = np.sqrt(
-            np.sum(np.sin(x_centered) ** 2) * np.sum(np.sin(y_centered) ** 2)
-        )
-        correlation = numerator / denominator
+        sin_x = np.sin(x - mu_x)
+        sin_y = np.sin(y - mu_y)
+
+        numerator = np.sum(sin_x * sin_y)
+        denom_sq = np.sum(sin_x**2) * np.sum(sin_y**2)
+
+        if denom_sq < np.finfo(np.float64).eps:
+            return ix, jx, 0.0
+
+        correlation = numerator / np.sqrt(denom_sq)
+        correlation = float(np.clip(correlation, -1.0, 1.0))
 
         return ix, jx, correlation
 
-    def compute_dihedral_correlation_matrix(self, dcd_file) -> np.ndarray:
+    def compute_dihedral_correlation_matrix(self, dcd_file: str) -> np.ndarray:
         universe = mda.Universe(self.prmtop, dcd_file)
         num_dihedrals = len(self.standard_dihedral_atom_groups)
 
@@ -1253,52 +1384,130 @@ class Context(rb.Context):
             )
 
         values = dihedrals.Dihedral(atom_groups).run().angles
-        values = np.deg2rad(values)
-        values = values.astype(np.float32)
+        values = np.deg2rad(values).astype(np.float64)  # Shape: (T, N)
+        print(type(values), values.shape)
 
-        # Create argument list (pairs of dihedral indices)
-        arg_list = []
-        for ix in range(num_dihedrals):
-            for jx in range(ix + 1, num_dihedrals):
-                arg_list.append((ix, jx))
+        circ_means = self._circmean_vectorised(values, axis=0)
+        circ_vars = self._circvar_vectorised(values, axis=0)
+        low_var_mask = circ_vars < self.tol  # (N,) boolean
 
-        correlation_matrix = np.ones((num_dihedrals, num_dihedrals))
-
-        with ThreadPoolExecutor() as executor:
-            null = False
-            futures = [
-                executor.submit(self.circcorr, values, pair, null) for pair in arg_list
-            ]
-            for future in as_completed(futures):
-                ix, jx, correlation = future.result()
-                correlation_matrix[ix][jx] = correlation
-                correlation_matrix[jx][ix] = correlation
-
-        if correlation_matrix.shape[0] != correlation_matrix.shape[1]:
-            raise ValueError("Covariance matrix is not square.")
-
-        if not np.allclose(correlation_matrix, correlation_matrix.T, atol=self.tol):
-            raise ValueError("Covariance matrix is not symmetric.")
-
-        if not np.all(np.diag(correlation_matrix) >= self.tol):
-            raise ValueError("Covariance matrix has non-positive diagonal elements.")
-
-        try:
-            _ = np.linalg.eigvalsh(correlation_matrix)
-            linalg.cholesky(correlation_matrix)
-        except linalg.LinAlgError:
-            raise ValueError(
-                "Cholesky decomposition failed: covariance matrix is not positive definite."
+        if low_var_mask.sum() > 0:
+            warnings.warn(
+                f"{low_var_mask.sum()} dihedral(s) have circular variance < {self.tol} "
+                f"and will be treated as uncorrelated (indices: "
+                f"{np.where(low_var_mask)[0].tolist()}). "
+                "These correspond to near-rigid bonds where correlation is undefined.",
+                UserWarning,
+                stacklevel=2,
             )
 
-        # import matplotlib.pyplot as plt
+        # Centred sine matrix: S[t, j] = sin(θ_j(t) − μ_j)
+        # Shape: (T, N)
+        S = np.sin(values - circ_means[np.newaxis, :])
 
-        # plt.imshow(correlation_matrix, cmap="viridis")
-        # plt.colorbar(label="Circular Correlation Coefficient")
-        # plt.title("Circular Correlation Matrix of Dihedral Angles")
-        # plt.xlabel("Dihedral Index")
-        # plt.ylabel("Dihedral Index")
-        # plt.show()
+        # Numerator matrix via single BLAS dgemm: C = Sᵀ S
+        # C[i, j] = Σₜ sin(θᵢ(t)−μᵢ)·sin(θⱼ(t)−μⱼ) — the JS numerator for pair (i,j)
+        # Shape: (N, N)
+        C = S.T @ S
+
+        # Column 2-norms: d_j = √(C[j,j]) = √(Σₜ S[t,j]²)
+        # Shape: (N,)
+        col_norms = np.sqrt(np.diag(C))
+
+        # Denominator matrix: D[i,j] = d_i · d_j (outer product)
+        # Shape: (N, N)
+        D = np.outer(col_norms, col_norms)
+
+        # Elementwise division. D[i,j] = 0 only if dihedral i or j has a
+        # constant sin-centred projection, caught by the variance filter below.
+        # We suppress the divide-by-zero warning here; those entries are zeroed out.
+        with np.errstate(invalid="ignore", divide="ignore"):
+            correlation_matrix = np.where(D > 0.0, C / D, 0.0)
+
+        # --- Apply low-variance mask -------------------------------------------
+        # Zero all correlations involving near-rigid dihedrals (both row and
+        # column). These entries would otherwise be 0/0 = NaN or numerically
+        # large from floating-point noise.
+        correlation_matrix[low_var_mask, :] = 0.0
+        correlation_matrix[:, low_var_mask] = 0.0
+
+        # Force exact unit diagonal: ρ(X,X) = 1 analytically; float64 arithmetic
+        # may yield 0.999...9 or 1.000...1 due to rounding in the C/D division.
+        np.fill_diagonal(correlation_matrix, 1.0)
+
+        # Clamp all entries to [−1, 1] to absorb floating-point noise.
+        np.clip(correlation_matrix, -1.0, 1.0, out=correlation_matrix)
+
+        # --- Validity checks ---------------------------------------------------
+
+        # Check (1): Square
+        if correlation_matrix.shape[0] != correlation_matrix.shape[1]:
+            raise ValueError(
+                f"Correlation matrix is not square: shape is {correlation_matrix.shape}. "
+                "This should be impossible with the vectorised implementation and "
+                "indicates a bug in trajectory loading or atom group construction."
+            )
+
+        # Check (2): Symmetry
+        # The vectorised formula produces a symmetric matrix by construction
+        # (Sᵀ S is symmetric). Asymmetry here implies NaN propagation upstream.
+        max_asymmetry = np.max(np.abs(correlation_matrix - correlation_matrix.T))
+        if not np.allclose(correlation_matrix, correlation_matrix.T, atol=self.tol):
+            raise ValueError(
+                f"Correlation matrix is not symmetric (max |M − Mᵀ| = {max_asymmetry:.3e}). "
+                "Check for NaN or Inf values in the input trajectory angles, which can "
+                "arise from clashing atoms or corrupted DCD frames."
+            )
+
+        # Check (3): Unit diagonal
+        min_diag = np.min(np.diag(correlation_matrix))
+        if min_diag < 1.0 - self.tol:
+            bad_indices = np.where(np.diag(correlation_matrix) < 1.0 - self.tol)[0]
+            raise ValueError(
+                f"Diagonal entries below 1 at dihedral indices: {bad_indices.tolist()}. "
+                f"Minimum diagonal value: {min_diag:.6f}. "
+                "These dihedrals have near-zero sin-centred projections that bypassed "
+                "the circular variance filter. Consider increasing self.tol."
+            )
+
+        # Check (4): Positive definiteness via Cholesky.
+        # A valid circular correlation matrix is PSD. Strict PD is required for
+        # the downstream Gibbs sampler to define a proper conditional distribution.
+        # Near-PSD matrices (all eigenvalues ≥ 0 but some < machine epsilon) arise
+        # from near-collinear dihedral blocks and are handled by Tikhonov
+        # regularisation: M ← M + εI.
+        # Tikhonov regularisation is equivalent to assuming each dihedral carries
+        # an independent isotropic noise floor of amplitude √ε — statistically
+        # defensible and standard practice in covariance estimation.
+        try:
+            linalg.cholesky(correlation_matrix, lower=True)
+        except linalg.LinAlgError:
+            eps = 1e-6
+            regularised = correlation_matrix + eps * np.eye(num_dihedrals)
+            try:
+                linalg.cholesky(regularised, lower=True)
+                warnings.warn(
+                    f"Correlation matrix is not strictly positive definite. "
+                    f"Applied Tikhonov regularisation ε = {eps} (M ← M + εI). "
+                    "This is equivalent to assuming an isotropic noise floor of "
+                    f"√{eps:.0e} ≈ {np.sqrt(eps):.4f} rad on each dihedral. "
+                    "Likely cause: near-collinear dihedral blocks or too few "
+                    "independent frames relative to the number of dihedrals.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                correlation_matrix = regularised
+            except linalg.LinAlgError:
+                eigvals = np.linalg.eigvalsh(correlation_matrix)
+                raise ValueError(
+                    "Cholesky decomposition failed even after Tikhonov regularisation. "
+                    f"Minimum eigenvalue: {eigvals.min():.4e}. "
+                    "Possible causes: "
+                    "(1) Duplicate dihedral atom groups producing rank-deficient rows/columns. "
+                    "(2) Excessive low-variance zeroing creating a rank-deficient submatrix. "
+                    "(3) Severely corrupted trajectory frames with NaN angles. "
+                    "Inspect the matrix eigenspectrum and dihedral variance array."
+                )
 
         return correlation_matrix
 
@@ -1312,6 +1521,7 @@ class Context(rb.Context):
         return G
 
     def block_modularity_contributions(self, G, partition):
+        # Computes the standard Newman–Girvan modularity contribution for community
         m2 = sum(w for _, _, w in G.edges(data="weight", default=1)) * 2
         communities = {}
         for node, comm in partition.items():
@@ -1331,7 +1541,8 @@ class Context(rb.Context):
                 sum(d.get("weight", 1) for _, _, d in G.edges(u, data=True))
                 for u in nodes
             )
-            contributions[comm_id] = (e_c / m2) - (a_c / m2) ** 2 / 2
+            contributions[comm_id] = (e_c / m2) * 2 - (a_c / m2) ** 2
+
         return contributions
 
     def chose_correlated_bonds(self, correlation_matrix, rogue_corr_threshold=0.1):
@@ -1400,10 +1611,16 @@ class Context(rb.Context):
         strong_blocks, weak_blocks, rogue_blocks, modularity = (
             self.chose_correlated_bonds(correlation_matrix)
         )
+        strong_blocks_correlation = [
+            np.mean(correlation_matrix[np.ix_(block, block)]) for block in strong_blocks
+        ]
+        weak_blocks_correlation = [
+            np.mean(correlation_matrix[np.ix_(block, block)]) for block in weak_blocks
+        ]
 
         print("=== Gibbs Blocks (high intra-correlation) ===")
         for i, block in enumerate(strong_blocks):
-            mean_corr = np.mean(correlation_matrix[np.ix_(block, block)])
+            mean_corr = strong_blocks_correlation[i]
             print(
                 f"  Block {i}: {len(block)} dihedrals | "
                 f"mean intra-corr: {mean_corr:.3f} | "
@@ -1412,14 +1629,14 @@ class Context(rb.Context):
 
         print("\n=== Weak Blocks (low intra-correlation, still grouped) ===")
         for i, block in enumerate(weak_blocks):
-            mean_corr = np.mean(correlation_matrix[np.ix_(block, block)])
+            mean_corr = weak_blocks_correlation[i]
             print(
                 f"  Weak block {i}: {len(block)} dihedrals | "
                 f"mean intra-corr: {mean_corr:.3f}"
             )
 
         print("\n=== Rogue Blocks (low correlation, singletons) ===")
-        print(f"  {len(rogue_blocks)} dihedrals → rogue dynamics")
+        print(f"  {len(rogue_blocks)} dihedrals")
         print(
             f"\nTotal: {sum(len(b) for b in strong_blocks)} Gibbs + "
             f"{sum(len(b) for b in weak_blocks)} weak + "
@@ -1427,4 +1644,8 @@ class Context(rb.Context):
             f"{sum(len(b) for b in strong_blocks) + sum(len(b) for b in weak_blocks) + len(rogue_blocks)}"
         )
 
-        return strong_blocks, weak_blocks, rogue_blocks
+        return (
+            (strong_blocks, strong_blocks_correlation),
+            (weak_blocks, weak_blocks_correlation),
+            rogue_blocks,
+        )

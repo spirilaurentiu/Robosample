@@ -1,7 +1,5 @@
 import robosample
-import numpy as np
-import mdtraj as md
-import pytest
+
 
 def test_steady_state():
     # Simbody constructs the multibody system as a spanning tree. Only tree edges
@@ -42,16 +40,23 @@ def test_steady_state():
     # We always run this function upon initialization, albeit with only 1 step to check for gross violations.
     # Also note that this function is being called with 1 step inside `context.initialize()`.
 
-    name = '1APQ.test.rigid'
+    name = "1APQ.test.rigid"
     seed = 42
-    prmtop = 'examples/1APQ.prmtop'
-    xyz = 'examples/1APQ.rst7'
+    prmtop = "examples/1APQ.prmtop"
+    xyz = "examples/1APQ.rst7"
     write_freq = 0
 
-    context = robosample.Context(name=name, seed=seed, prmtop=prmtop, inpcrd=xyz, write_freq=write_freq, testing=True)
+    context = robosample.Context(
+        name=name,
+        seed=seed,
+        prmtop=prmtop,
+        inpcrd=xyz,
+        write_freq=write_freq,
+        testing=True,
+    )
 
-    sele = context.getDefaultBonds('standard')
-    context.addTorsionalWorld(sele).addSampler(timeStep=0, mdSteps=0, boostMDSteps=0)
+    sele = context.getDefaultBonds("standard")
+    context.addTorsionalWorld(sele).add_sampler(timeStep=0, mdSteps=0, boostMDSteps=0)
 
     # context.initialize([300.0])
 

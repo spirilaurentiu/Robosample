@@ -525,24 +525,24 @@ class World {
     /** Set GBSA implicit solvent scale factor **/
     void setGbsaGlobalScaleFactor(SimTK::Real);
 
-    const SimTK::CompoundSystem& getCompoundSystem() const {
+    [[nodiscard]] auto getCompoundSystem() const -> const SimTK::CompoundSystem& {
         return *compoundSystem;
     }
-    SimTK::CompoundSystem& updCompoundSystem() {
+    [[nodiscard]] auto updCompoundSystem() const -> SimTK::CompoundSystem& {
         return *compoundSystem;
     }
 
-    const SimTK::SimbodyMatterSubsystem& getMatterSubsystem() const {
+    [[nodiscard]] auto getMatterSubsystem() const -> const SimTK::SimbodyMatterSubsystem& {
         return *matter;
     }
-    SimTK::SimbodyMatterSubsystem& updMatterSubsystem() {
+    [[nodiscard]] auto updMatterSubsystem() const -> SimTK::SimbodyMatterSubsystem& {
         return *matter;
     }
 
-    const SimTK::GeneralForceSubsystem& getForces() const {
+    [[nodiscard]] auto getForces() const -> const SimTK::GeneralForceSubsystem& {
         return *forces;
     }
-    SimTK::GeneralForceSubsystem& updForces() {
+    [[nodiscard]] auto updForces() const -> SimTK::GeneralForceSubsystem& {
         return *forces;
     }
 
@@ -578,8 +578,7 @@ class World {
     auto generateSamples(int howMany,
                          std::stringstream& worldOutStream,
                          const std::string& header,
-                         bool shouldPrint,
-                         bool useNUTS) -> bool;
+                         bool shouldPrint) -> bool;
 
     //...................
     // --- Statistics ---
@@ -594,7 +593,8 @@ class World {
     auto addSampler(SamplerName samplerName,
                     IntegratorType integratorType,
                     ThermostatName thermostatName,
-                    bool useFixmanPotential) -> bool;
+                    bool useFixmanPotential,
+                    bool useNUTS) -> bool;
 
     // TODO Use Sampler polymorphism
     /** Get a sampler based on its position in the samplers vector **/

@@ -594,7 +594,6 @@ PYBIND11_MODULE(MODULE_NAME, m) {
              py::arg("num_production_rounds"),
              py::arg("write_frequency"),
              py::arg("write_to_stdio"),
-             py::arg("use_nuts"),
              "Run replica exchange.")
         .def("setVerbose", &Context::setVerbose, "Control if you want extraneous output to cout.")
         .def("setPdbRestartFreq", &Context::setPdbRestartFreq, "Set the PDB restart frequency.")
@@ -621,6 +620,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
              py::arg("integrator_type"),
              py::arg("thermostat_name"),
              py::arg("use_fixman_potential"),
+             py::arg("use_nuts"),
              "Add a sampler to the world.")
         .def("get_coordinate_transfer_errors",
              &World::getCoordinateTransferErrors,

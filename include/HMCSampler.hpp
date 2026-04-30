@@ -198,6 +198,10 @@ class HMCSampler : virtual public Sampler {
         return integratorType;
     }
 
+    void setUseNUTS(bool useNUTS) {
+        this->useNUTS = useNUTS;
+    }
+
     /*
      * Compute mathematical, rather than robotic Jacobian.
      * It translates generalized velocities u into Cartesian velocities
@@ -383,8 +387,7 @@ class HMCSampler : virtual public Sampler {
 
     void printDrilling(SimTK::State& someState);
 
-    virtual auto
-    sampleIteration(SimTK::State& state, std::stringstream& samplerOutStream, bool shouldPrint, bool useNUTS)
+    virtual auto sampleIteration(SimTK::State& state, std::stringstream& samplerOutStream, bool shouldPrint)
         -> bool;
 
     /**
@@ -706,6 +709,7 @@ class HMCSampler : virtual public Sampler {
 
     std::uniform_int_distribution<> cartesianRandomSteps{250, 2500};
 
+    bool useNUTS = false;
     SimTK::Vector sqrtMInvV;
     SimTK::Vector dummyJointForces;
     SimTK::Vector dummyAccelerations;

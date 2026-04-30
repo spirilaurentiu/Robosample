@@ -38,7 +38,7 @@
 # #     )
 
 # #     sele = context.create_torsional_bonds([(2, 3)])
-# #     context.addTorsionalWorld(sele).addSampler(
+# #     context.addTorsionalWorld(sele).add_sampler(
 # #         timeStep=TIMESTEP, mdSteps=MD_STEPS, boostMDSteps=MD_STEPS
 # #     )
 
@@ -58,7 +58,7 @@
 
 #     # Spin the middle bond
 #     sele = context.create_torsional_bonds([(1, 2)])
-#     context.addTorsionalWorld(sele).addSampler(
+#     context.addTorsionalWorld(sele).add_sampler(
 #         timeStep=TIMESTEP_PS,
 #         mdSteps=NUM_STEPS_PER_ROUND,
 #         boostMDSteps=NUM_STEPS_PER_ROUND,

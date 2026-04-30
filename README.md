@@ -205,6 +205,7 @@ sudo apt install ruby-github-linguist clang-tidy clang-tools
 ```bash
 git clone --recurse-submodules https://github.com/spirilaurentiu/Robosample.git
 cd Robosample
+git checkout refactor
 bash tools/dev-sync.sh
 bash tools/setup-dev.sh
 ```

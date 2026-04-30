@@ -415,23 +415,18 @@ class Context {
     /**@{**/
 
     // Run a particular world
-    auto RunWorld(int whichWorld, const std::string& header, bool shouldPrint, bool useNUTS) -> bool;
+    auto RunWorld(int whichWorld, const std::string& header, bool shouldPrint) -> bool;
     void RunReplicaWorldRange(int replicaIx,
                               int startWorldCnt,
                               int nofWorldsCounted,
                               bool isNonEquilibrium,
-                              bool shouldPrint,
-                              bool useNUTS);
+                              bool shouldPrint);
     /**
      * @brief Main function
      * @param
      * @return
      */
-    void RunREX(int numEquilibrationRounds,
-                int numProductionRounds,
-                int writeFrequency,
-                bool writeToStdio,
-                bool useNUTS);
+    void RunREX(int numEquilibrationRounds, int numProductionRounds, int writeFrequency, bool writeToStdio);
 
     void transferCoordsFromWorldToWorld(int sourceWorldIndex, int destinationWorldIndex);
     void transferCoordsFromWorldToReplica(int sourceWorldIndex, int destinationReplicaIndex, bool intoWORK);

@@ -69,19 +69,20 @@ bool EnergySnapshot::termExplosion(const EnergySnapshot& ref) const {
     return true;
 }
 
-bool EnergySnapshot::geometryExplosion() const {
-    // if (std::abs(logSineSqrGamma2) > GEOMETRIC_LIMIT) {
-    //     std::cout << "\t[WARNING] logSineSqrGamma2 too large: " << logSineSqrGamma2 << std::endl;
-    //     return false;
-    // }
-    // if (std::abs(fixman) > GEOMETRIC_LIMIT) {
-    //     std::cout << "\t[WARNING] Fixman energy too large: " << fixman << std::endl;
-    //     return false;
-    // }
+auto EnergySnapshot::geometryExplosion() const -> bool {
+    if (std::abs(logSineSqrGamma2) > GEOMETRIC_LIMIT) {
+        std::cout << "\t[WARNING] logSineSqrGamma2 too large: " << logSineSqrGamma2 << std::endl;
+        return false;
+    }
+    if (std::abs(fixman) > GEOMETRIC_LIMIT) {
+        std::cout << "\t[WARNING] Fixman energy too large: " << fixman << std::endl;
+        return false;
+    }
     return true;
 }
 
-bool EnergySnapshot::hamiltonianDrift(const EnergySnapshot& ref, SimTK::Real beta, std::size_t ndofs) const {
+auto EnergySnapshot::hamiltonianDrift(const EnergySnapshot& ref, SimTK::Real beta, std::size_t ndofs) const
+    -> bool {
     const SimTK::Real deltaH = std::abs(total - ref.total);
     const SimTK::Real drift_kt = beta * deltaH;
     const SimTK::Real drift_limit = 2.0 * std::sqrt(static_cast<SimTK::Real>(ndofs));
@@ -94,7 +95,7 @@ bool EnergySnapshot::hamiltonianDrift(const EnergySnapshot& ref, SimTK::Real bet
     return true;
 }
 
-bool EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, std::size_t ndofs) const {
+auto EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, std::size_t ndofs) const -> bool {
     bool ok = true;
     ok &= finite();
     ok &= checkTotal(RT);
@@ -102,5 +103,6 @@ bool EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, std::si
     // ok &= termExplosion(ref);
     // ok &= geometryExplosion();
     // ok &= hamiltonianDrift(ref, 1 / RT, ndofs);
+
     return ok;
 }

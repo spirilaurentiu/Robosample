@@ -163,7 +163,7 @@ void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOut
         }
 
         currentEnergy.fixman = calcFixman(state);
-        currentEnergy.logSineSqrGamma2 = ((Topology*)rootTopology)->calcLogSineSqrGamma2(state);
+        currentEnergy.logSineSqrGamma2 = (rootTopology)->calcLogSineSqrGamma2(state);
     } else {
         currentEnergy.fixman = 0.0;
         currentEnergy.logSineSqrGamma2 = 0.0;
@@ -1693,6 +1693,8 @@ auto HMCSampler::buildTree(SimTK::State& state,
     if (depth == 0) {
         switch (coordinates) {
             case NUTSCoordinates::Cartesian:
+                throw std::runtime_error("Cartesian coordinates are not currently supported for NUTS "
+                                         "integration. Check if impl is ok.");
                 if (direction == NUTSDirection::Backward) {
                     OPENMM::get().negateVelocities();
                 }
@@ -1722,13 +1724,13 @@ auto HMCSampler::buildTree(SimTK::State& state,
                 const auto timeBefore = state.getTime();
                 timeStepper->stepTo(timeBefore + timestep);
 
+                state = timeStepper->getIntegrator().getAdvancedState();
+
                 // Restore directionality
                 if (direction == NUTSDirection::Backward) {
                     state.updU() *= -1.0;
                     state.setTime(timeBefore - timestep);
                 }
-
-                state = timeStepper->getIntegrator().getAdvancedState();
 
                 break;
         }
@@ -1764,8 +1766,10 @@ auto HMCSampler::buildTree(SimTK::State& state,
         node.proposedEnergy.total = node.proposedEnergy.potential + node.proposedEnergy.kinetic
                                     + node.proposedEnergy.fixman
                                     - (0.5 * RT * node.proposedEnergy.logSineSqrGamma2);
-        node.numValidSlices = (node.proposedEnergy.total <= -logU) ? 1 : 0;
-        node.stop = (node.proposedEnergy.total - H0) > 1000;
+
+        const auto H_leaf = node.proposedEnergy.potential + node.proposedEnergy.kinetic;
+        node.numValidSlices = (H_leaf <= -logU) ? 1 : 0;
+        node.stop = (H_leaf - H0) > 1000;
 
         return node;
     }
@@ -1876,6 +1880,14 @@ auto HMCSampler::integrateNUTS(SimTK::State& state, NUTSCoordinates coordinates,
         }
     }
 
+    // if (!proposalUpdated) {
+    //     stopReason = StopReason::NoValidProposals;
+    //     tree.proposal = {q0, p0};
+    //     tree.proposedEnergy = previousEnergy;
+    //     tree.numValidSlices = 0;
+    //     tree.stop = true;
+    // }
+
     switch (stopReason) {
         case StopReason::MaxDepth:
             std::cout << "\t - NUTS stopped at depth " << lastDepth << ": StopReason::MaxDepth.\n";
@@ -1889,10 +1901,8 @@ auto HMCSampler::integrateNUTS(SimTK::State& state, NUTSCoordinates coordinates,
         case StopReason::NoValidProposals:
             std::cout << "\t - NUTS stopped at depth " << lastDepth << " StopReason::NoValidProposals.\n";
             break;
-    }
-
-    if (!proposalUpdated) {
-        stopReason = StopReason::NoValidProposals;
+        default:
+            break;
     }
 
     return {tree.proposal, tree.proposedEnergy, stopReason, lastDepth};
@@ -2629,11 +2639,9 @@ SimTK::Real HMCSampler::getREP() const {
 
 // Set a thermostat
 void HMCSampler::setThermostat(ThermostatName argThermostat) {
-    if (argThermostat == ThermostatName::Andersen) {
-        std::cout << "Adding Andersen thermostat.\n";
-    }
     this->thermostat = argThermostat;
 }
+
 // Set a thermostat
 void HMCSampler::setThermostat(std::string thermoName) {
     thermoName.resize(thermoName.size());
@@ -2984,7 +2992,7 @@ void HMCSampler::setTimestep(SimTK::Real argTimestep, bool adaptive) {
 }
 
 /** Get/Set boost temperature **/
-SimTK::Real HMCSampler::getBoostTemperature() {
+auto HMCSampler::getBoostTemperature() -> SimTK::Real {
     return this->boostT;
 }
 
@@ -3502,10 +3510,8 @@ void HMCSampler::getMsg_EnergyDetails(std::stringstream& energyDetailsStream,
  * <!--	The main function that generates a sample -->
  TODO get a state from outside, do something with it, add it to advanced state of integrator and return it
 */
-auto HMCSampler::sampleIteration(SimTK::State& state,
-                                 std::stringstream& samplerOutStream,
-                                 bool shouldPrint,
-                                 bool useNUTS) -> bool {
+auto HMCSampler::sampleIteration(SimTK::State& state, std::stringstream& samplerOutStream, bool shouldPrint)
+    -> bool {
     // Deep copy the old state with all its properties (time, q, u, z, qdot, udot, zdot, qdotdot) before
     // integration
     const auto oldState = state;
@@ -3548,11 +3554,26 @@ auto HMCSampler::sampleIteration(SimTK::State& state,
                 break;
             case IntegratorType::Verlet:
                 if (useNUTS) {
-                    result = integrateNUTS(state, NUTSCoordinates::Cartesian, 8);
+                    result = integrateNUTS(state, NUTSCoordinates::Torsional, 16);
                 } else {
-                    throw std::runtime_error("Non-NUTS Verlet integration not implemented yet!");
-                    // integrationSuccessful =
-                    //     timeStepper->stepTo(state.getTime() + (timestep * MDStepsPerSample));
+                    integrationSuccessful =
+                        timeStepper->stepTo(state.getTime() + (timestep * MDStepsPerSample));
+
+                    result.energy.potential = OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
+                    result.energy.kinetic = this->unboostKEFactor * matter->calcKineticEnergy(state);
+                    if (useFixman) {
+                        result.energy.fixman = calcFixman(state);
+                        result.energy.logSineSqrGamma2 = (rootTopology)->calcLogSineSqrGamma2(state);
+                    }
+                    result.energy.total = result.energy.potential + result.energy.kinetic
+                                          + result.energy.fixman
+                                          - (0.5 * RT * result.energy.logSineSqrGamma2);
+
+                    result.proposal.q = state.getQ();
+                    result.proposal.p = state.getU();
+
+                    result.stopReason = StopReason::NotUsingNUTS;
+                    result.depth = -1;
                 }
                 break;
             default:
@@ -3563,32 +3584,29 @@ auto HMCSampler::sampleIteration(SimTK::State& state,
         integrationSuccessful = false;
     }
 
-    if (result.stopReason == StopReason::NoValidProposals) {
-        integrationSuccessful = false;
-        if (shouldPrint) {
-            std::cout << "\t - Integration stopped: No valid proposals found within max depth.\n";
-        }
-    }
+    // if (result.stopReason == StopReason::NoValidProposals) {
+    //     integrationSuccessful = false;
+    //     if (shouldPrint) {
+    //         std::cout << "\t - Integration stopped: No valid proposals found within max depth.\n";
+    //     }
+    // }
 
-    if (integrationSuccessful) {
-        // Print all proposed energy terms for debugging
-        if (shouldPrint) {
-            std::cout << "\t - Current energies: " << "PE=" << currentEnergy.potential << ", "
-                      << "KE=" << currentEnergy.kinetic << ", " << "Fixman=" << currentEnergy.fixman << ", "
-                      << "logSineSqrGamma2=" << currentEnergy.logSineSqrGamma2 << ", "
-                      << "Total=" << currentEnergy.total << "\n";
-            std::cout << "\t - Previous energies: " << "PE=" << previousEnergy.potential << ", "
-                      << "KE=" << previousEnergy.kinetic << ", " << "Fixman=" << previousEnergy.fixman << ", "
-                      << "logSineSqrGamma2=" << previousEnergy.logSineSqrGamma2 << ", "
-                      << "Total=" << previousEnergy.total << "\n";
-            std::cout << "\t - Proposed energies: " << "PE=" << result.energy.potential << ", "
-                      << "KE=" << result.energy.kinetic << ", " << "Fixman=" << result.energy.fixman << ", "
-                      << "logSineSqrGamma2=" << result.energy.logSineSqrGamma2 << ", "
-                      << "Total=" << result.energy.total << ", " << "NUTS depth=" << result.depth << "\n";
-        }
-
-        validProposedEnergy = result.energy.validate(currentEnergy, RT, numDegreesOfFreedom);
+    // Print all proposed energy terms for debugging
+    if (shouldPrint) {
+        std::cout << "\t - Current energies: " << "PE=" << currentEnergy.potential << ", "
+                  << "KE=" << currentEnergy.kinetic << ", " << "Fixman=" << currentEnergy.fixman << ", "
+                  << "logSineSqrGamma2=" << currentEnergy.logSineSqrGamma2 << ", "
+                  << "Total=" << currentEnergy.total << "\n";
+        std::cout << "\t - Previous energies: " << "PE=" << previousEnergy.potential << ", "
+                  << "KE=" << previousEnergy.kinetic << ", " << "Fixman=" << previousEnergy.fixman << ", "
+                  << "logSineSqrGamma2=" << previousEnergy.logSineSqrGamma2 << ", "
+                  << "Total=" << previousEnergy.total << "\n";
+        std::cout << "\t - Proposed energies: " << "PE=" << result.energy.potential << ", "
+                  << "KE=" << result.energy.kinetic << ", " << "Fixman=" << result.energy.fixman << ", "
+                  << "logSineSqrGamma2=" << result.energy.logSineSqrGamma2 << ", "
+                  << "Total=" << result.energy.total << ", " << "NUTS depth=" << result.depth << "\n";
     }
+    validProposedEnergy = result.energy.validate(currentEnergy, RT, numDegreesOfFreedom);
 
     // Check if we are good for Metropolis-Hastings step
     acc = integrationSuccessful && validProposedEnergy;
