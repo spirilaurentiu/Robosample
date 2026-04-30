@@ -22,6 +22,7 @@
 
 #include "EnergySnapshot.hpp"
 #include "GrinPointer.h"
+#include "MassProperties.h"
 #include "MobilizedBody.h"
 #include "OpenMM.hpp"
 #include "SmallMatrixMixed.h"
@@ -3582,6 +3583,19 @@ auto HMCSampler::sampleIteration(SimTK::State& state, std::stringstream& sampler
     } catch (const std::exception& e) {
         std::cerr << "\t[ERROR] Integration failed: " << e.what() << "\n";
         integrationSuccessful = false;
+    }
+
+    system->realize(state);
+
+    SimTK::Vector_<SimTK::SpatialVec> forcesAtMInG;
+    matter->calcMobilizerReactionForces(state, forcesAtMInG);
+
+    // print
+    for (std::size_t i = 0; i < forcesAtMInG.size(); ++i) {
+        const auto& force = forcesAtMInG[i];
+        const auto& torque = force[0];
+        const auto& linear = force[1];
+        std::cout << "Force on body " << i << ": torque = " << torque << ", linear = " << linear << '\n';
     }
 
     // if (result.stopReason == StopReason::NoValidProposals) {
