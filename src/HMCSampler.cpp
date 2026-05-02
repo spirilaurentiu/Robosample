@@ -22,6 +22,7 @@
 
 #include "EnergySnapshot.hpp"
 #include "GrinPointer.h"
+#include "MassProperties.h"
 #include "MobilizedBody.h"
 #include "OpenMM.hpp"
 #include "SmallMatrixMixed.h"
@@ -1595,8 +1596,9 @@ inline auto wrapAngle(SimTK::Real angleInRad) -> SimTK::Real {
     return angleInRad - M_PI;
 }
 
-auto HMCSampler::isUTurn(const PhasePoint& minus, const PhasePoint& plus, NUTSCoordinates coordinates)
-    -> bool {
+auto HMCSampler::isUTurn(const PhasePoint& minus,
+                         const PhasePoint& plus,
+                         NUTSCoordinates coordinates) -> bool {
     // Allocate memory
     if (nutsDeltaQ.size() != plus.q.size()) {
         nutsDeltaQ.resize(plus.q.size());
@@ -3330,8 +3332,9 @@ auto HMCSampler::acceptSample(const EnergySnapshot& proposedEnergy, bool shouldP
  * <!--	The main function that generates a sample -->
  TODO get a state from outside, do something with it, add it to advanced state of integrator and return it
 */
-auto HMCSampler::sampleIteration(SimTK::State& state, std::stringstream& samplerOutStream, bool shouldPrint)
-    -> bool {
+auto HMCSampler::sampleIteration(SimTK::State& state,
+                                 std::stringstream& samplerOutStream,
+                                 bool shouldPrint) -> bool {
     // Deep copy the old state with all its properties (time, q, u, z, qdot, udot, zdot, qdotdot) before
     // integration
     const auto oldState = state;
@@ -3402,6 +3405,19 @@ auto HMCSampler::sampleIteration(SimTK::State& state, std::stringstream& sampler
     } catch (const std::exception& e) {
         std::cerr << "\t[ERROR] Integration failed: " << e.what() << "\n";
         integrationSuccessful = false;
+    }
+
+    system->realize(state);
+
+    SimTK::Vector_<SimTK::SpatialVec> forcesAtMInG;
+    matter->calcMobilizerReactionForces(state, forcesAtMInG);
+
+    // print
+    for (std::size_t i = 0; i < forcesAtMInG.size(); ++i) {
+        const auto& force = forcesAtMInG[i];
+        const auto& torque = force[0];
+        const auto& linear = force[1];
+        std::cout << "Force on body " << i << ": torque = " << torque << ", linear = " << linear << '\n';
     }
 
     // if (result.stopReason == StopReason::NoValidProposals) {

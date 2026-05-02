@@ -160,6 +160,7 @@ context = robosample.Context(
 #     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
 #     use_nuts=False,
 # )
+########################### CARTESIAN #####################
 
 mask_phi = context.standard_dihedral_bonds["dihedral_type"] == "phi"
 mask_psi = context.standard_dihedral_bonds["dihedral_type"] == "psi"
@@ -283,6 +284,21 @@ context.addTorsionalWorld(sele).add_sampler(
 #     boostMDSteps=MDSTEPS_TD,
 #     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
 # )
+
+##################### SIDECHAIN DIHEDRALS #####################
+# sidechain_bonds = context.standard_dihedral_bonds[
+#     (context.standard_dihedral_bonds["dihedral_type"] != "phi")
+#     & (context.standard_dihedral_bonds["dihedral_type"] != "psi")
+#     & (context.standard_dihedral_bonds["dihedral_type"] != "omega")
+# ]
+# sele = context.build_flexibilities(sidechain_bonds)
+# context.addTorsionalWorld(sele).add_sampler(
+#     timeStep=TIMESTEP_TD,
+#     mdSteps=MDSTEPS_TD,
+#     boostMDSteps=MDSTEPS_TD,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+# )
+##################### SIDECHAIN DIHEDRALS #####################
 
 # for flex in context.getDefaultBonds('macrocycle'):
 # 	context.addTorsionalWorld([flex]).add_sampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
