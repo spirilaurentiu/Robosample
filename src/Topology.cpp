@@ -238,7 +238,8 @@ SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(SimTK::Compoun
     return p_GB + p_BS_G;
 }
 
-SimTK::Transform Topology::matchAtomTargetLocations(const SimTK::Compound::AtomTargetLocations& atomTargets) {
+auto Topology::matchAtomTargetLocations(const SimTK::Compound::AtomTargetLocations& atomTargets)
+    -> SimTK::Transform {
     matchDefaultBondLengths(atomTargets);
     matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
     matchDefaultBondAngles(atomTargets);
@@ -259,7 +260,7 @@ SimTK::Transform Topology::matchAtomTargetLocations(const SimTK::Compound::AtomT
     return G_X_T;
 }
 
-SimTK::Real Topology::getMatchError(const SimTK::Compound::AtomTargetLocations& atomTargets) {
+auto Topology::getMatchError(const SimTK::Compound::AtomTargetLocations& atomTargets) -> SimTK::Real {
     // std::vector<SimTK::Transform> atomSourceFrames(getNumAtoms());
     // invalidateAtomFrameCache(atomSourceFrames, getNumAtoms());
     // calcDefaultAtomFramesInCompoundFrame(atomSourceFrames);

@@ -134,11 +134,11 @@ R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 # 6 kcal/mol - tens to hundreds of picoseconds (moderate barrier, ~10KbT)
 # 10 kcal/mol - nanoseconds or longer (high barrier , ~16KbT)
 # 2 ps of MD is enough to explore shallow wells, but not to cross deep barriers without enhanced sampling (e.g., HMC, replica exchange)
-TIMESTEP_TD = 0.001  # Torsional dymaics time step is 10 fs
-MDSTEPS_TD = 64  # Torsional dynamics block trajectory length 1 ps
+TIMESTEP_TD = 0.02  # Torsional dymaics time step is 10 fs
+MDSTEPS_TD = 10  # Torsional dynamics block trajectory length 1 ps
 
 TIMESTEP_CARTESIAN = 0.001
-MDSTEPS_CARTESIAN = 64
+MDSTEPS_CARTESIAN = 1000
 
 # create robosample context
 context = robosample.Context(
@@ -152,42 +152,102 @@ context = robosample.Context(
 
 # [[rb.BondFlexibility(), rb.BondFlexibility(), ...], [...], ...]
 
-# Add cartesian world (will integrate with OpenMM)
-context.addCartesianWorld().add_sampler(
-    timeStep=TIMESTEP_CARTESIAN,
-    mdSteps=MDSTEPS_CARTESIAN,
-    boostMDSteps=MDSTEPS_CARTESIAN,
-    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
-)
-
-# # Add torsional world with standardized dihedrals
-# sele = context.build_flexibilities(context.standard_dihedral_bonds)
-# context.addTorsionalWorld(sele).add_sampler(
-#     timeStep=TIMESTEP_TD,
-#     mdSteps=MDSTEPS_TD,
-#     boostMDSteps=MDSTEPS_TD,
+# # Add cartesian world (will integrate with OpenMM)
+# context.addCartesianWorld().add_sampler(
+#     timeStep=TIMESTEP_CARTESIAN,
+#     mdSteps=MDSTEPS_CARTESIAN,
+#     boostMDSteps=MDSTEPS_CARTESIAN,
 #     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+#     use_nuts=False,
 # )
 
-num_residues = context.standard_dihedral_bonds["resid"].max() + 1
-for resid in range(num_residues):
-    bonds = context.standard_dihedral_bonds[
-        (context.standard_dihedral_bonds["resid"] == resid)
-        & (
-            (context.standard_dihedral_bonds["dihedral_type"] == "phi")
-            | (context.standard_dihedral_bonds["dihedral_type"] == "psi")
-        )
-    ]
-    if bonds.empty:
-        continue
+mask_phi = context.standard_dihedral_bonds["dihedral_type"] == "phi"
+mask_psi = context.standard_dihedral_bonds["dihedral_type"] == "psi"
+bonds = context.standard_dihedral_bonds[mask_phi | mask_psi]
+sele = context.build_flexibilities(bonds)
+context.addTorsionalWorld(sele).add_sampler(
+    timeStep=TIMESTEP_TD,
+    mdSteps=MDSTEPS_TD,
+    boostMDSteps=MDSTEPS_TD,
+    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+    use_nuts=False,
+)
 
-    sele = context.build_flexibilities(bonds)
-    context.addTorsionalWorld(sele).add_sampler(
-        timeStep=TIMESTEP_TD,
-        mdSteps=MDSTEPS_TD,
-        boostMDSteps=MDSTEPS_TD,
-        acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
-    )
+# # # # # # # # # # Add torsional world with standardized dihedrals
+# # # # # # # # # sele = context.build_flexibilities(context.standard_dihedral_bonds)
+# # # # # # # # # context.addTorsionalWorld(sele).add_sampler(
+# # # # # # # # #     timeStep=TIMESTEP_TD,
+# # # # # # # # #     mdSteps=MDSTEPS_TD,
+# # # # # # # # #     boostMDSteps=MDSTEPS_TD,
+# # # # # # # # #     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+# # # # # # # # # )
+
+# # # # # # # # mask_phi = context.standard_dihedral_bonds["dihedral_type"] == "phi"
+# # # # # # # # mask_psi = context.standard_dihedral_bonds["dihedral_type"] == "psi"
+# # # # # # # # mask_disorder = context.standard_dihedral_bonds["dss"] == "C"
+# # # # # # # # mask_target_mol_ix = context.standard_dihedral_bonds["molecule_index"] == 0
+# # # # # # # # coil_bonds = context.standard_dihedral_bonds[
+# # # # # # # #     (mask_phi | mask_psi) & mask_disorder & mask_target_mol_ix
+# # # # # # # # ]
+
+# # # # # # # # mask_proline = context.standard_dihedral_bonds["resname"] == "PRO"
+# # # # # # # # proline_bonds = context.standard_dihedral_bonds[
+# # # # # # # #     (mask_phi | mask_psi) & mask_proline & mask_target_mol_ix
+# # # # # # # # ]
+
+# # # # # # # # # mask_glycine = context.standard_dihedral_bonds["resname"] == "GLY"
+# # # # # # # # # glycine_bonds = context.standard_dihedral_bonds[
+# # # # # # # # #     (mask_phi | mask_psi) & mask_glycine & mask_target_mol_ix
+# # # # # # # # # ]
+
+# # # # # # # # mask_alpha = context.standard_dihedral_bonds["dihedral_type"] == "alpha"
+# # # # # # # # headgroup_bonds = context.standard_dihedral_bonds[mask_alpha]
+
+# # # # # # # # mask_sn1 = context.standard_dihedral_bonds["dihedral_type"] == "sn1"
+# # # # # # # # mask_sn2 = context.standard_dihedral_bonds["dihedral_type"] == "sn2"
+# # # # # # # # ester_bonds = context.standard_dihedral_bonds[mask_sn1 | mask_sn2]
+
+# # # # # # # # mask_lipid_chi2 = context.standard_dihedral_bonds["dihedral_type"] == "lipid-chi2"
+# # # # # # # # mask_lipid_chi7 = context.standard_dihedral_bonds["dihedral_type"] == "lipid-chi7"
+# # # # # # # # mask_lipid_chi12 = context.standard_dihedral_bonds["dihedral_type"] == "lipid-chi12"
+# # # # # # # # mask_lipid_chi17 = context.standard_dihedral_bonds["dihedral_type"] == "lipid-chi17"
+# # # # # # # # acyl_chain_bonds = context.standard_dihedral_bonds[
+# # # # # # # #     mask_lipid_chi2 | mask_lipid_chi7 | mask_lipid_chi12 | mask_lipid_chi17
+# # # # # # # # ]
+
+# # # # # # # # combined_selection = pd.concat(
+# # # # # # # #     [coil_bonds, proline_bonds, headgroup_bonds, ester_bonds, acyl_chain_bonds], axis=0
+# # # # # # # # ).drop_duplicates()
+
+# # # # # # # # sele = context.build_flexibilities(combined_selection)
+# # # # # # # # context.addTorsionalWorld(sele).add_sampler(
+# # # # # # # #     timeStep=TIMESTEP_TD,
+# # # # # # # #     mdSteps=MDSTEPS_TD,
+# # # # # # # #     boostMDSteps=MDSTEPS_TD,
+# # # # # # # #     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+# # # # # # # #     use_nuts=False,
+# # # # # # # # )
+
+# num_residues = context.standard_dihedral_bonds["resid"].max() + 1
+# for resid in range(num_residues):
+#     bonds = context.standard_dihedral_bonds[
+#         (context.standard_dihedral_bonds["resid"] == resid)
+#         & (
+#             (context.standard_dihedral_bonds["dihedral_type"] == "phi")
+#             | (context.standard_dihedral_bonds["dihedral_type"] == "psi")
+#         )
+#     ]
+#     if bonds.empty:
+#         continue
+
+#     sele = context.build_flexibilities(bonds)
+#     context.addTorsionalWorld(sele).add_sampler(
+#         timeStep=TIMESTEP_TD,
+#         mdSteps=MDSTEPS_TD,
+#         boostMDSteps=MDSTEPS_TD,
+#         acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+#         use_nuts=False,
+#     )
 
 # phi = context.standard_dihedral_bonds[
 #     context.standard_dihedral_bonds["dihedral_type"] == "phi"
@@ -211,18 +271,18 @@ for resid in range(num_residues):
 #     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
 # )
 
-sidechain_bonds = context.standard_dihedral_bonds[
-    (context.standard_dihedral_bonds["dihedral_type"] != "phi")
-    & (context.standard_dihedral_bonds["dihedral_type"] != "psi")
-    & (context.standard_dihedral_bonds["dihedral_type"] != "omega")
-]
-sele = context.build_flexibilities(sidechain_bonds)
-context.addTorsionalWorld(sele).add_sampler(
-    timeStep=TIMESTEP_TD,
-    mdSteps=MDSTEPS_TD,
-    boostMDSteps=MDSTEPS_TD,
-    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
-)
+# sidechain_bonds = context.standard_dihedral_bonds[
+#     (context.standard_dihedral_bonds["dihedral_type"] != "phi")
+#     & (context.standard_dihedral_bonds["dihedral_type"] != "psi")
+#     & (context.standard_dihedral_bonds["dihedral_type"] != "omega")
+# ]
+# sele = context.build_flexibilities(sidechain_bonds)
+# context.addTorsionalWorld(sele).add_sampler(
+#     timeStep=TIMESTEP_TD,
+#     mdSteps=MDSTEPS_TD,
+#     boostMDSteps=MDSTEPS_TD,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+# )
 
 # for flex in context.getDefaultBonds('macrocycle'):
 # 	context.addTorsionalWorld([flex]).add_sampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
@@ -247,7 +307,7 @@ context.initialize(temperatures)
 # Run the simulation
 start_time = time.perf_counter()
 
-context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, True, True)
+context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, True)
 
 end_time = time.perf_counter()
 duration = end_time - start_time

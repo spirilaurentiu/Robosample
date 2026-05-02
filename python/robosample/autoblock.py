@@ -64,9 +64,9 @@ context = robosample.Context(
 # context.initialize([300])
 # context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, True, False)
 
-TIMESTEP_TD = 0.005
+TIMESTEP_TD = 0.02
 MDSTEPS_TD = 1024
-dcd_file = "1apq_6000.repl0.dcd"
+dcd_file = "1apq_6000.repl0.20ksteps.dcd"
 
 # windows = context.detect_transition_windows(dcd_file=dcd_file)
 # matrix = context.compute_differential_correlation(dcd_file=dcd_file, result=windows)
@@ -657,7 +657,7 @@ for cycle in range(10):
                 mdSteps=MDSTEPS_TD,
                 boostMDSteps=MDSTEPS_TD,
                 acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
-                use_nuts=False,
+                use_nuts=True,
             )
 
             # break

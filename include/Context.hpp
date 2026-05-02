@@ -8,32 +8,6 @@
 #include "World.hpp"
 #include "bgeneral.hpp"
 
-class TopologyRange {
-    // Stores [begin, end) pairs for each type
-    std::array<std::pair<int, int>, (int)TopologyRangeType::NofTopologyRangeTypes> ranges;
-
-    public:
-    TopologyRange(std::vector<int> startCounts) {
-        ranges[(int)TopologyRangeType::Atom] = {startCounts[0], startCounts[0]};
-        ranges[(int)TopologyRangeType::Bond] = {startCounts[1], startCounts[1]};
-        ranges[(int)TopologyRangeType::Angle] = {startCounts[2], startCounts[2]};
-        ranges[(int)TopologyRangeType::PeriodicTorsion] = {startCounts[3], startCounts[3]};
-        ranges[(int)TopologyRangeType::ImproperHarmonicTorsion] = {startCounts[4], startCounts[4]};
-    }
-
-    void close(std::vector<int> endCounts) {
-        ranges[(int)TopologyRangeType::Atom].second = endCounts[0];
-        ranges[(int)TopologyRangeType::Bond].second = endCounts[1];
-        ranges[(int)TopologyRangeType::Angle].second = endCounts[2];
-        ranges[(int)TopologyRangeType::PeriodicTorsion].second = endCounts[3];
-        ranges[(int)TopologyRangeType::ImproperHarmonicTorsion].second = endCounts[4];
-    }
-
-    [[nodiscard]] auto getRange(TopologyRangeType type) const -> const std::pair<int, int>& {
-        return ranges[(int)type];
-    }
-};
-
 class Context {
     std::string baseName;
     bool verbose = false;
@@ -70,33 +44,16 @@ class Context {
 
     void setNonbonded(NonbondedMethod method, SimTK::Real cutoffInNm);
 
-    void loadAmberSystem(const std::vector<int>& roots_,
-                         const std::vector<RoboAtom>& atoms_,
-                         const std::vector<RoboBond>& bonds_,
-                         const std::vector<RoboAngle>& angles_,
-                         const std::vector<RoboPeriodicTorsion>& properPeriodicTorsions_,
-                         const std::vector<RoboHarmonicImproperTorsion>& harmonicImproperTorsions_,
-                         const std::vector<TopologyRange>& topologyRanges,
-                         const ZMatrix& _zMatrix);
+    void loadAmberSystem(const SystemTopology& systemTopology,
+                         const ForceFieldParams& ffParams,
+                         const SimulationSettings& simSettings,
+                         const ZMatrix& zMatrix);
+    auto initializeOpenMM() -> bool;
 
-    bool initializeOpenMM(const std::vector<RoboAtom>& atoms,
-                          const std::vector<RoboBond>& bonds,
-                          const std::vector<RoboAngle>& angles,
-                          const std::vector<RoboPeriodicTorsion>& properPeriodicTorsions,
-                          const std::vector<RoboHarmonicImproperTorsion>& harmonicImproperTorsions,
-                          const std::vector<CMAPGrid>& cmapGrids,
-                          const std::vector<CMAPTorsion>& cmapTorsions,
-                          const std::vector<UreyBradley>& ureyBradleys,
-                          bool hasNBfix,
-                          int numTypes,
-                          const std::vector<SimTK::Real>& acoef,
-                          const std::vector<SimTK::Real>& bcoef,
-                          const std::vector<Exclusion>& exclusions,
-                          const std::vector<Scaling14>& scaling14s);
     SimTK::Real calculatePotentialEnergy(int worldIndex);
 
-    const std::string& getAtomNameByPrmtopIndex(int prmtopIndex) const {
-        for (const auto& atom : atoms) {
+    auto getAtomNameByPrmtopIndex(int prmtopIndex) const -> const std::string& {
+        for (const auto& atom : systemTopology.atoms) {
             if (atom.identity.prmtopIndex == prmtopIndex) {
                 return atom.identity.uniqueAtomName;
             }
@@ -104,7 +61,7 @@ class Context {
         throw std::runtime_error("Atom with specified prmtop index not found.");
     }
 
-    bool validateContext();
+    auto validateContext() -> bool;
 
     void addWorld(bool fixmanTorque,
                   int samplesPerRound,
@@ -141,23 +98,23 @@ class Context {
     void initializeMixingParameters();
     //------------
 
-    std::size_t getNofWorlds() const {
+    auto getNofWorlds() const -> std::size_t {
         return worlds.size();
     }
 
-    World& getWorld(std::size_t which) {
+    auto getWorld(std::size_t which) -> World& {
         return worlds[which];
     }
 
-    const World& getWorld(std::size_t which) const {
+    auto getWorld(std::size_t which) const -> const World& {
         return worlds[which];
     }
 
-    std::vector<World>& getWorlds() {
+    auto getWorlds() -> std::vector<World>& {
         return worlds;
     }
 
-    const std::vector<World>& getWorlds() const {
+    auto getWorlds() const -> const std::vector<World>& {
         return worlds;
     }
 
@@ -173,9 +130,9 @@ class Context {
     // Drilling drl
     void passThroughBonds_template(int whichWorld);
 
-    SimTK::Real Pearson(std::vector<std::vector<SimTK::Real>> someVector,
-                        int QIx1,
-                        int QIx2); // 2D roundsTillReblock; 3D nofQs
+    auto Pearson(std::vector<std::vector<SimTK::Real>> someVector,
+                 int QIx1,
+                 int QIx2) -> SimTK::Real; // 2D roundsTillReblock; 3D nofQs
 
     //------------
 
@@ -226,16 +183,16 @@ class Context {
     void writePdbs(int someIndex, int thermodynamicStateIx = 0);
 
     // Output helpers
-    int getPdbRestartFreq();
+    auto getPdbRestartFreq() -> int;
     void setPdbRestartFreq(int argFreq);
 
-    const std::string& getRestartDir() const;
+    auto getRestartDir() const -> const std::string&;
     void setRestartDir(const std::string& argRestartDir);
 
     void setPdbPrefix(const std::string& argPdbPrefix);
-    std::string getPdbPrefix();
+    auto getPdbPrefix() -> std::string;
 
-    std::string getOutputDir();
+    auto getOutputDir() -> std::string;
     void setOutputDir(std::string arg);
 
     /**@}**/
@@ -475,7 +432,7 @@ class Context {
     std::size_t nofWorlds = 0;
     bool isWorldsOrderRandom = false;
 
-    int pdbRestartFreq = false;
+    int pdbRestartFreq = 0;
 
     std::string molDir;
     std::string outputDir;
@@ -545,16 +502,14 @@ class Context {
     RUN_TYPE runType = RUN_TYPE::Default;
     SimTK::Real tempIni = 0, tempFin = 0;
 
-    std::vector<RoboAtom> atoms;
-    std::vector<RoboBond> bonds;
-    std::vector<RoboAngle> angles;
-    std::vector<RoboPeriodicTorsion> properPeriodicTorsions;
-    std::vector<RoboHarmonicImproperTorsion> harmonicImproperTorsions;
+    SystemTopology systemTopology;
+    ForceFieldParams ffParams;
+    SimulationSettings simSettings;
+    ZMatrix zMatrix;
 
     int numMolecules = 0;
 
     std::vector<Topology> topologies;
-    std::vector<int> roots;
 
     uint32_t seed = 0;
     NonbondedMethod nonbondedMethod = NonbondedMethod::NoCutoff;
@@ -648,8 +603,6 @@ class Context {
 
 
     private:
-    ZMatrix zMatrix;
-
     std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocationsCache;
 
     /** @name Z Matrix and BAT functions

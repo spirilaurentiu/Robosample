@@ -1,9 +1,12 @@
 #include <Python.h>
 
+#include <optional>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
 #include <pybind11/stl.h>
+#include <pybind11/stl_bind.h>
+#include <vector>
 
 #include "molmodel/internal/Compound.h"
 
@@ -15,6 +18,20 @@
 #include "World.hpp"
 
 namespace py = pybind11;
+
+using VectorInt = std::vector<int>;
+PYBIND11_MAKE_OPAQUE(VectorInt);
+PYBIND11_MAKE_OPAQUE(std::vector<RoboAtom>);
+PYBIND11_MAKE_OPAQUE(std::vector<RoboBond>);
+PYBIND11_MAKE_OPAQUE(std::vector<RoboAngle>);
+PYBIND11_MAKE_OPAQUE(std::vector<RoboPeriodicTorsion>);
+PYBIND11_MAKE_OPAQUE(std::vector<RoboHarmonicImproperTorsion>);
+PYBIND11_MAKE_OPAQUE(std::vector<CMAPGrid>);
+PYBIND11_MAKE_OPAQUE(std::vector<CMAPTorsion>);
+PYBIND11_MAKE_OPAQUE(std::vector<UreyBradley>);
+PYBIND11_MAKE_OPAQUE(std::vector<Scaling14>);
+PYBIND11_MAKE_OPAQUE(std::vector<Exclusion>);
+PYBIND11_MAKE_OPAQUE(std::vector<TopologyRange>);
 
 auto transform_to_numpy(const SimTK::Transform& transform) -> py::array_t<SimTK::Real> {
     py::array_t<SimTK::Real> array({3, 4});
@@ -118,6 +135,11 @@ struct type_caster<SimTK::UnitVec3> {
 PYBIND11_MODULE(MODULE_NAME, m) {
     m.doc() = "Robosample bindings";
 
+    py::bind_vector<VectorInt>(m, "VectorInt").def("__repr__", [](const VectorInt&) -> std::string {
+        return "VectorInt()";
+    });
+    py::implicitly_convertible<py::iterable, VectorInt>();
+
     py::class_<SimTK::ReferenceIndices>(m, "ReferenceIndices")
         .def(py::init<int, int, int>(), py::arg("zero"), py::arg("one"), py::arg("two"))
         .def_readwrite("zero", &SimTK::ReferenceIndices::zero)
@@ -129,15 +151,15 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .value("LeftHanded", SimTK::BondCenter::Chirality::LeftHanded)
         .value("Planar", SimTK::BondCenter::Chirality::Planar);
 
-    m.def("triple_product", &SimTK::tripleProduct, "");
-    m.def("plane_normal", &SimTK::planeNormal, "");
-    m.def("is_chirality_mismatch", &SimTK::isChiralityMismatch, "");
-    m.def("signed_plane_deviation", &SimTK::signedPlaneDeviation, "");
-    m.def("exceeds_planarity_threshold", &SimTK::exceedsPlanarityThreshold, "");
-    m.def("chirality_from_plane_deviation", &SimTK::chiralityFromPlaneDeviation, "");
-    m.def("flipped_chirality", &SimTK::flippedChirality, "");
-    m.def("resolve_reference_indices", &SimTK::resolveReferenceIndices, "");
-    m.def("is_bond_chirality_mismatch", &SimTK::isBondChiralityMismatch, "");
+    // m.def("triple_product", &SimTK::tripleProduct, "");
+    // m.def("plane_normal", &SimTK::planeNormal, "");
+    // m.def("is_chirality_mismatch", &SimTK::isChiralityMismatch, "");
+    // m.def("signed_plane_deviation", &SimTK::signedPlaneDeviation, "");
+    // m.def("exceeds_planarity_threshold", &SimTK::exceedsPlanarityThreshold, "");
+    // m.def("chirality_from_plane_deviation", &SimTK::chiralityFromPlaneDeviation, "");
+    // m.def("flipped_chirality", &SimTK::flippedChirality, "");
+    // m.def("resolve_reference_indices", &SimTK::resolveReferenceIndices, "");
+    // m.def("is_bond_chirality_mismatch", &SimTK::isBondChiralityMismatch, "");
 
     m.def("calculate_log_sum_exp2", &calculateLogSumExp2, "");
     m.def("calculate_angle_in_rad",
@@ -235,7 +257,8 @@ PYBIND11_MODULE(MODULE_NAME, m) {
 
     py::enum_<NonbondedMethod>(m, "NonbondedMethod")
         .value("NoCutoff", NonbondedMethod::NoCutoff)
-        .value("CutoffNonPeriodic", NonbondedMethod::CutoffNonPeriodic);
+        .value("CutoffNonPeriodic", NonbondedMethod::CutoffNonPeriodic)
+        .export_values();
 
     py::enum_<ROOT_MOBILITY>(m, "RootMobility")
         .value("FREE", ROOT_MOBILITY::FREE)
@@ -382,7 +405,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("atomicNumber", &RoboAtomElement::atomicNumber);
 
     py::class_<RoboAtomConnectivity>(m, "RoboAtomConnectivity")
-        .def(py::init<std::vector<int>, bool>(), py::arg("neighbors_global_indices"), py::arg("root"))
+        .def(py::init<VectorInt, bool>(), py::arg("neighbors_global_indices"), py::arg("root"))
         .def_readwrite("neighbors_global_indices", &RoboAtomConnectivity::neighborsGlobalIndices)
         .def_readwrite("root", &RoboAtomConnectivity::root);
 
@@ -514,42 +537,242 @@ PYBIND11_MODULE(MODULE_NAME, m) {
 
     py::class_<CMAPTorsion>(m, "CMAPTorsion")
         .def(py::init<>())
+        .def(py::init([](int mapIndex, int a1, int a2, int a3, int a4, int b1, int b2, int b3, int b4)
+                          -> CMAPTorsion {
+                 return CMAPTorsion{mapIndex, a1, a2, a3, a4, b1, b2, b3, b4};
+             }),
+             py::arg("mapIndex"),
+             py::arg("torsion_a_atom_1_global_index"),
+             py::arg("torsion_a_atom_2_global_index"),
+             py::arg("torsion_a_atom_3_global_index"),
+             py::arg("torsion_a_atom_4_global_index"),
+             py::arg("torsion_b_atom_1_global_index"),
+             py::arg("torsion_b_atom_2_global_index"),
+             py::arg("torsion_b_atom_3_global_index"),
+             py::arg("torsion_b_atom_4_global_index"))
         .def_readwrite("mapIndex", &CMAPTorsion::mapIndex)
-        .def_readwrite("a1", &CMAPTorsion::a1)
-        .def_readwrite("a2", &CMAPTorsion::a2)
-        .def_readwrite("a3", &CMAPTorsion::a3)
-        .def_readwrite("a4", &CMAPTorsion::a4)
-        .def_readwrite("b1", &CMAPTorsion::b1)
-        .def_readwrite("b2", &CMAPTorsion::b2)
-        .def_readwrite("b3", &CMAPTorsion::b3)
-        .def_readwrite("b4", &CMAPTorsion::b4);
+        .def_readwrite("torsion_a_atom_1_global_index", &CMAPTorsion::torsionAAtom1GlobalIndex)
+        .def_readwrite("torsion_a_atom_2_global_index", &CMAPTorsion::torsionAAtom2GlobalIndex)
+        .def_readwrite("torsion_a_atom_3_global_index", &CMAPTorsion::torsionAAtom3GlobalIndex)
+        .def_readwrite("torsion_a_atom_4_global_index", &CMAPTorsion::torsionAAtom4GlobalIndex)
+        .def_readwrite("torsion_b_atom_1_global_index", &CMAPTorsion::torsionBAtom1GlobalIndex)
+        .def_readwrite("torsion_b_atom_2_global_index", &CMAPTorsion::torsionBAtom2GlobalIndex)
+        .def_readwrite("torsion_b_atom_3_global_index", &CMAPTorsion::torsionBAtom3GlobalIndex)
+        .def_readwrite("torsion_b_atom_4_global_index", &CMAPTorsion::torsionBAtom4GlobalIndex);
 
     py::class_<UreyBradley>(m, "UreyBradley")
         .def(py::init<>())
-        .def_readwrite("a1", &UreyBradley::a1)
-        .def_readwrite("a3", &UreyBradley::a3)
+        .def(py::init([](int a1, int a3, SimTK::Real k, SimTK::Real r0) -> UreyBradley {
+                 return UreyBradley{a1, a3, k, r0};
+             }),
+             py::arg("atom_1_global_index"),
+             py::arg("atom_3_global_index"),
+             py::arg("stiffness_in_kj_per_nm_sq"),
+             py::arg("nominal_length_in_nm"))
+        .def_readwrite("atom_1_global_index", &UreyBradley::atom1GlobalIndex)
+        .def_readwrite("atom_3_global_index", &UreyBradley::atom3GlobalIndex)
         .def_readwrite("stiffness_in_kj_per_nm_sq", &UreyBradley::stiffnessInKJPerNmSq)
         .def_readwrite("nominal_length_in_nm", &UreyBradley::nominalLengthInNm);
 
     py::class_<Scaling14>(m, "Scaling14")
         .def(py::init<>())
-        .def(py::init<int, int, SimTK::Real, SimTK::Real, SimTK::Real>(),
-             py::arg("a1"),
-             py::arg("a4"),
+        .def(py::init([](int a1, int a4, SimTK::Real chargeProduct, SimTK::Real epsilon, SimTK::Real sigma)
+                          -> Scaling14 {
+                 return Scaling14{a1, a4, chargeProduct, epsilon, sigma};
+             }),
+             py::arg("atom_1_global_index"),
+             py::arg("atom_4_global_index"),
              py::arg("charge_product"),
              py::arg("epsilon"),
              py::arg("sigma"))
-        .def_readwrite("a1", &Scaling14::a1)
-        .def_readwrite("a4", &Scaling14::a4)
+        .def_readwrite("atom_1_global_index", &Scaling14::atom1GlobalIndex)
+        .def_readwrite("atom_4_global_index", &Scaling14::atom4GlobalIndex)
         .def_readwrite("charge_product", &Scaling14::chargeProduct)
         .def_readwrite("epsilon", &Scaling14::epsilon)
         .def_readwrite("sigma", &Scaling14::sigma);
 
     py::class_<Exclusion>(m, "Exclusion")
         .def(py::init<>())
-        .def(py::init<int, int>(), py::arg("a1"), py::arg("a2"))
-        .def_readwrite("a1", &Exclusion::a1)
-        .def_readwrite("a2", &Exclusion::a2);
+        .def(py::init([](int a1, int a2) -> Exclusion {
+                 return Exclusion{a1, a2};
+             }),
+             py::arg("atom_1_global_index"),
+             py::arg("atom_2_global_index"))
+        .def_readwrite("atom_1_global_index", &Exclusion::atom1GlobalIndex)
+        .def_readwrite("atom_2_global_index", &Exclusion::atom2GlobalIndex);
+
+    // System topology contains many vectors, so we bind them all as vector types to get list-like behavior
+    py::bind_vector<std::vector<RoboAtom>>(m, "VectorRoboAtom")
+        .def("__repr__", [](const std::vector<RoboAtom>&) -> std::string {
+            return "VectorRoboAtom()";
+        });
+
+    py::bind_vector<std::vector<RoboBond>>(m, "VectorRoboBond")
+        .def("__repr__", [](const std::vector<RoboBond>&) -> std::string {
+            return "VectorRoboBond()";
+        });
+
+    py::bind_vector<std::vector<RoboAngle>>(m, "VectorRoboAngle")
+        .def("__repr__", [](const std::vector<RoboAngle>&) -> std::string {
+            return "VectorRoboAngle()";
+        });
+
+    py::bind_vector<std::vector<RoboPeriodicTorsion>>(m, "VectorRoboPeriodicTorsion")
+        .def("__repr__", [](const std::vector<RoboPeriodicTorsion>&) -> std::string {
+            return "VectorRoboPeriodicTorsion()";
+        });
+
+    py::bind_vector<std::vector<RoboHarmonicImproperTorsion>>(m, "VectorRoboHarmonicImproperTorsion")
+        .def("__repr__", [](const std::vector<RoboHarmonicImproperTorsion>&) -> std::string {
+            return "VectorRoboHarmonicImproperTorsion()";
+        });
+
+    py::bind_vector<std::vector<CMAPGrid>>(m, "VectorCMAPGrid")
+        .def("__repr__", [](const std::vector<CMAPGrid>&) -> std::string {
+            return "VectorCMAPGrid()";
+        });
+
+    py::bind_vector<std::vector<CMAPTorsion>>(m, "VectorCMAPTorsion")
+        .def("__repr__", [](const std::vector<CMAPTorsion>&) -> std::string {
+            return "VectorCMAPTorsion()";
+        });
+
+    py::bind_vector<std::vector<UreyBradley>>(m, "VectorUreyBradley")
+        .def("__repr__", [](const std::vector<UreyBradley>&) -> std::string {
+            return "VectorUreyBradley()";
+        });
+
+    py::bind_vector<std::vector<Scaling14>>(m, "VectorScaling14")
+        .def("__repr__", [](const std::vector<Scaling14>&) -> std::string {
+            return "VectorScaling14()";
+        });
+
+    py::bind_vector<std::vector<Exclusion>>(m, "VectorExclusion")
+        .def("__repr__", [](const std::vector<Exclusion>&) -> std::string {
+            return "VectorExclusion()";
+        });
+
+    py::bind_vector<std::vector<TopologyRange>>(m, "VectorTopologyRange")
+        .def("__repr__", [](const std::vector<TopologyRange>&) -> std::string {
+            return "VectorTopologyRange()";
+        });
+
+    // Allow construction from plain Python lists
+    py::implicitly_convertible<py::iterable, std::vector<RoboAtom>>();
+    py::implicitly_convertible<py::iterable, std::vector<RoboBond>>();
+    py::implicitly_convertible<py::iterable, std::vector<RoboAngle>>();
+    py::implicitly_convertible<py::iterable, std::vector<RoboPeriodicTorsion>>();
+    py::implicitly_convertible<py::iterable, std::vector<RoboHarmonicImproperTorsion>>();
+    py::implicitly_convertible<py::iterable, std::vector<CMAPGrid>>();
+    py::implicitly_convertible<py::iterable, std::vector<CMAPTorsion>>();
+    py::implicitly_convertible<py::iterable, std::vector<UreyBradley>>();
+    py::implicitly_convertible<py::iterable, std::vector<Scaling14>>();
+    py::implicitly_convertible<py::iterable, std::vector<Exclusion>>();
+    py::implicitly_convertible<py::iterable, std::vector<TopologyRange>>();
+
+    py::class_<SystemTopology>(m, "SystemTopology")
+        .def(py::init<>())
+        .def(py::init([](std::optional<VectorInt> root_indices,
+                         std::optional<std::vector<TopologyRange>> ranges,
+                         std::optional<std::vector<RoboAtom>> atoms,
+                         std::optional<std::vector<RoboBond>> bonds,
+                         std::optional<std::vector<RoboAngle>> angles,
+                         std::optional<std::vector<RoboPeriodicTorsion>> propers,
+                         std::optional<std::vector<RoboHarmonicImproperTorsion>> impropers,
+                         std::optional<std::vector<CMAPGrid>> grids,
+                         std::optional<std::vector<CMAPTorsion>> cmap_torsions,
+                         std::optional<std::vector<UreyBradley>> urey_bradleys,
+                         std::optional<std::vector<Scaling14>> scaling14s,
+                         std::optional<std::vector<Exclusion>> exclusions) -> SystemTopology {
+                 return SystemTopology{root_indices.value_or(VectorInt()),
+                                       ranges.value_or(std::vector<TopologyRange>()),
+                                       atoms.value_or(std::vector<RoboAtom>()),
+                                       bonds.value_or(std::vector<RoboBond>()),
+                                       angles.value_or(std::vector<RoboAngle>()),
+                                       propers.value_or(std::vector<RoboPeriodicTorsion>()),
+                                       impropers.value_or(std::vector<RoboHarmonicImproperTorsion>()),
+                                       grids.value_or(std::vector<CMAPGrid>()),
+                                       cmap_torsions.value_or(std::vector<CMAPTorsion>()),
+                                       urey_bradleys.value_or(std::vector<UreyBradley>()),
+                                       scaling14s.value_or(std::vector<Scaling14>()),
+                                       exclusions.value_or(std::vector<Exclusion>())};
+             }),
+             py::arg("root_atom_global_indices") = py::none(),
+             py::arg("topology_ranges") = py::none(),
+             py::arg("atoms") = py::none(),
+             py::arg("bonds") = py::none(),
+             py::arg("angles") = py::none(),
+             py::arg("periodic_torsions") = py::none(),
+             py::arg("harmonic_improper_torsions") = py::none(),
+             py::arg("cmap_grids") = py::none(),
+             py::arg("cmap_torsions") = py::none(),
+             py::arg("urey_bradleys") = py::none(),
+             py::arg("scaling14s") = py::none(),
+             py::arg("exclusions") = py::none())
+        .def_readwrite("root_atom_global_indices", &SystemTopology::rootAtomGlobalIndices)
+        .def_readwrite("topology_ranges", &SystemTopology::topologyRanges)
+        .def_readwrite("atoms", &SystemTopology::atoms)
+        .def_readwrite("bonds", &SystemTopology::bonds)
+        .def_readwrite("angles", &SystemTopology::angles)
+        .def_readwrite("periodic_torsions", &SystemTopology::periodicTorsions)
+        .def_readwrite("harmonic_improper_torsions", &SystemTopology::harmonicImproperTorsions)
+        .def_readwrite("cmap_grids", &SystemTopology::cmapGrids)
+        .def_readwrite("cmap_torsions", &SystemTopology::cmapTorsions)
+        .def_readwrite("urey_bradleys", &SystemTopology::ureyBradleys)
+        .def_readwrite("scaling14s", &SystemTopology::scaling14s)
+        .def_readwrite("exclusions", &SystemTopology::exclusions);
+
+    py::class_<ForceFieldParams>(m, "ForceFieldParams")
+        .def(py::init<>())
+        .def(py::init([](bool has_nbfix,
+                         int num_types,
+                         std::optional<std::vector<SimTK::Real>> a_coef,
+                         std::optional<std::vector<SimTK::Real>> b_coef,
+                         bool use_gbsaobc2,
+                         SimTK::Real gbsa_solvent_dielectric,
+                         SimTK::Real gbsa_solute_dielectric,
+                         std::optional<NonbondedMethod> nonbonded_method,
+                         SimTK::Real nonbonded_cutoff_in_nm) -> ForceFieldParams {
+                 return ForceFieldParams{has_nbfix,
+                                         num_types,
+                                         a_coef.value_or(std::vector<SimTK::Real>()),
+                                         b_coef.value_or(std::vector<SimTK::Real>()),
+                                         use_gbsaobc2,
+                                         gbsa_solvent_dielectric,
+                                         gbsa_solute_dielectric,
+                                         nonbonded_method.value_or(NonbondedMethod::NoCutoff),
+                                         nonbonded_cutoff_in_nm};
+             }),
+             py::arg("has_nbfix") = false,
+             py::arg("num_types") = 0,
+             py::arg("a_coef") = py::none(),
+             py::arg("b_coef") = py::none(),
+             py::arg("use_gbsaobc2") = true,
+             py::arg("gbsa_solvent_dielectric") = 78.5,
+             py::arg("gbsa_solute_dielectric") = 1.0,
+             py::arg("nonbonded_method") = py::none(),
+             py::arg("nonbonded_cutoff_in_nm") = 1.2)
+        .def_readwrite("has_nbfix", &ForceFieldParams::hasNBfix)
+        .def_readwrite("num_types", &ForceFieldParams::numTypes)
+        .def_readwrite("a_coef", &ForceFieldParams::aCoef)
+        .def_readwrite("b_coef", &ForceFieldParams::bCoef)
+        .def_readwrite("use_gbsaobc2", &ForceFieldParams::useGBSAOBC2)
+        .def_readwrite("gbsa_solvent_dielectric", &ForceFieldParams::gbsaSolventDielectric)
+        .def_readwrite("gbsa_solute_dielectric", &ForceFieldParams::gbsaSoluteDielectric)
+        .def_readwrite("nonbonded_method", &ForceFieldParams::nonbondedMethod)
+        .def_readwrite("nonbonded_cutoff_in_nm", &ForceFieldParams::nonbondedCutoffInNm);
+
+    py::class_<SimulationSettings>(m, "SimulationSettings")
+        .def(py::init<>())
+        .def(py::init([](uint32_t seed, SimTK::Real temp, SimTK::Real freq) -> SimulationSettings {
+                 return SimulationSettings{seed, temp, freq};
+             }),
+             py::arg("seed") = 0,
+             py::arg("thermostat_temperature_in_k") = 300.0,
+             py::arg("collision_frequency") = 1.0)
+        .def_readwrite("seed", &SimulationSettings::seed)
+        .def_readwrite("thermostat_temperature_in_k", &SimulationSettings::thermostatTemperatureInK)
+        .def_readwrite("collision_frequency", &SimulationSettings::collisionFrequency);
 
     py::enum_<TopologyRangeType>(m, "TopologyRangeType")
         .value("EMPTY", TopologyRangeType::Atom)
@@ -559,7 +782,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .value("IMPROPER_HARMONIC_TORSION", TopologyRangeType::ImproperHarmonicTorsion);
 
     py::class_<TopologyRange>(m, "TopologyRange")
-        .def(py::init<std::vector<int>>(), py::arg("startCounts"))
+        .def(py::init<VectorInt>(), py::arg("startCounts"))
         .def("close", &TopologyRange::close, py::arg("endCounts"));
 
     py::class_<CoordinateTransferError>(m, "CoordinateTransferError")

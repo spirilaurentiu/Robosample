@@ -1,5 +1,6 @@
 from typing import Dict, List, Tuple
 
+import atomtypes
 import parmed as pmd
 
 PROTEIN_BACKBONE = {
@@ -247,6 +248,42 @@ NUCLEIC_DIHEDRALS = {
     ("C3'", "C4'", "O4'", "C1'"): "nu4",
 }
 
+LIPID_DIHEDRALS = {
+    # Headgroup: Phosphatidylcholine (PC)
+    "PC": {
+        "alpha": ("N31", "C32", "C31", "O32"),
+        "beta": ("C32", "C31", "O32", "P31"),
+        "gamma": ("C31", "O32", "P31", "O31"),
+        "delta": ("O32", "P31", "O31", "C3"),
+        "epsilon": ("P31", "O31", "C3", "C2"),
+        "zeta": ("O31", "C3", "C2", "O21"),
+        "sn1": ("C2", "C1", "O11", "C11"),
+        "sn2": ("C3", "C2", "O21", "C21"),
+    },
+    # Acyl chains
+    "": {
+        "lipid-chi1": ("O12", "C11", "C12", "C13"),
+        "lipid-chi1_prime": ("O22", "C21", "C12", "C13"),
+        "lipid-chi2": ("C11", "C12", "C13", "C14"),
+        "lipid-chi3": ("C12", "C13", "C14", "C15"),
+        "lipid-chi4": ("C13", "C14", "C15", "C16"),
+        "lipid-chi5": ("C14", "C15", "C16", "C17"),
+        "lipid-chi6": ("C15", "C16", "C17", "C18"),
+        "lipid-chi7": ("C16", "C17", "C18", "C19"),
+        "lipid-chi8": ("C17", "C18", "C19", "C110"),
+        "lipid-chi9": ("C18", "C19", "C110", "C111"),
+        "lipid-chi10": ("C19", "C110", "C111", "C112"),
+        "lipid-chi11": ("C110", "C111", "C112", "C113"),
+        "lipid-chi12": ("C111", "C112", "C113", "C114"),
+        "lipid-chi13": ("C112", "C113", "C114", "C115"),
+        "lipid-chi14": ("C113", "C114", "C115", "C116"),
+        "lipid-chi15": ("C114", "C115", "C116", "C117"),
+        "lipid-chi16": ("C115", "C116", "C117", "C118"),
+        "lipid-chi17": ("C116", "C117", "C118", "C119"),
+        "lipid-chi18": ("C117", "C118", "C119", "C120"),
+    },
+}
+
 
 def _is_dihedral_intraresidue(dihedral: pmd.topologyobjects.Dihedral) -> bool:
     resids = (
@@ -342,6 +379,11 @@ class DihedralClassifier:
             for dihedral_name, atom_types in dihedral_list.items():
                 _safe_insert(self.glycan_linkage_definitions, atom_types, dihedral_name)
 
+        self.lipid_dihedral_definitions: Dict[Tuple[str, str, str, str], str] = {}
+        for residue, dihedral_list in LIPID_DIHEDRALS.items():
+            for dihedral_name, atom_types in dihedral_list.items():
+                _safe_insert(self.lipid_dihedral_definitions, atom_types, dihedral_name)
+
     def _classify_nucleic_acid(
         self, dihedral: pmd.topologyobjects.Dihedral
     ) -> str | None:
@@ -405,6 +447,18 @@ class DihedralClassifier:
                 return label
             else:
                 return None
+
+        return label
+
+    def _classify_lipid(
+        self, gparent: pmd.Atom, parent: pmd.Atom, child: pmd.Atom, gchild: pmd.Atom
+    ) -> str | None:
+        # Check if the dihedral matches any of the defined lipid dihedrals
+        atoms = (gparent, parent, child, gchild)
+        label = self.lipid_dihedral_definitions.get(_extract_atom_names(atoms))
+        if not label:
+            atoms = atoms[::-1]
+            label = self.lipid_dihedral_definitions.get(_extract_atom_names(atoms))
 
         return label
 
@@ -735,20 +789,16 @@ class DihedralClassifier:
 
         return self._classify_protein(gparent, parent, child, gchild)
 
-        # # Extract atom types (not atom names) to dispatch to the appropriate classifier
-        # atom_types = [dihedral.atom1.type, dihedral.atom2.type, dihedral.atom3.type, dihedral.atom4.type]
+        # Extract atom types (not atom names) to dispatch to the appropriate classifier
+        atom_types = [gparent.type, parent.type, child.type, gchild.type]
 
-        # # Handle protein backbone and side chains
-        # if all(t in atomtypes.AMBER_FF19SB_ATOM_TYPES for t in atom_types):
-        #     label = self._classify_protein(dihedral)
-        #     if label:
-        #         return 'protein-' + label
-        #     else:
-        #         return 'protein-other'
+        # Handle protein backbone and side chains
+        if all(t in atomtypes.AMBER_FF19SB_ATOM_TYPES for t in atom_types):
+            return self._classify_protein(gparent, parent, child, gchild)
 
-        # # Handle lipids
-        # if all(t in atomtypes.AMBER_LIPID_21_ATOM_TYPES for t in atom_types):
-        #     return 'lipid'
+        # Handle lipids
+        if all(t in atomtypes.AMBER_LIPID_21_ATOM_TYPES for t in atom_types):
+            return self._classify_lipid(gparent, parent, child, gchild)
 
         # # Try to classify as nucleic acid first
         # # Some glycosidic dihedrals may superficially resemble nucleic acid torsions, so we check for nucleic acid residues first to avoid misclassification.

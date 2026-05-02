@@ -281,6 +281,32 @@ struct RoboHarmonicImproperTorsion {
     }
 };
 
+class TopologyRange {
+    // Stores [begin, end) pairs for each type
+    std::array<std::pair<int, int>, (int)TopologyRangeType::NofTopologyRangeTypes> ranges;
+
+    public:
+    TopologyRange(std::vector<int> startCounts) {
+        ranges[(int)TopologyRangeType::Atom] = {startCounts[0], startCounts[0]};
+        ranges[(int)TopologyRangeType::Bond] = {startCounts[1], startCounts[1]};
+        ranges[(int)TopologyRangeType::Angle] = {startCounts[2], startCounts[2]};
+        ranges[(int)TopologyRangeType::PeriodicTorsion] = {startCounts[3], startCounts[3]};
+        ranges[(int)TopologyRangeType::ImproperHarmonicTorsion] = {startCounts[4], startCounts[4]};
+    }
+
+    void close(std::vector<int> endCounts) {
+        ranges[(int)TopologyRangeType::Atom].second = endCounts[0];
+        ranges[(int)TopologyRangeType::Bond].second = endCounts[1];
+        ranges[(int)TopologyRangeType::Angle].second = endCounts[2];
+        ranges[(int)TopologyRangeType::PeriodicTorsion].second = endCounts[3];
+        ranges[(int)TopologyRangeType::ImproperHarmonicTorsion].second = endCounts[4];
+    }
+
+    [[nodiscard]] auto getRange(TopologyRangeType type) const -> const std::pair<int, int>& {
+        return ranges[(int)type];
+    }
+};
+
 struct ZMatrixRow {
     std::array<int, 4> globalIndices{-1, -1, -1, -1};
     std::array<SimTK::Compound::AtomIndex, 4> compoundAtomIndices;
@@ -304,3 +330,106 @@ struct ZMatrixRow {
 };
 
 using ZMatrix = std::vector<ZMatrixRow>;
+
+enum NonbondedMethod : std::uint8_t {
+    NoCutoff = 0,
+    CutoffNonPeriodic,
+};
+
+struct CMAPGrid {
+    std::vector<SimTK::Real> energy;
+    int size = std::numeric_limits<int>::max();
+};
+
+struct CMAPTorsion {
+    int mapIndex = std::numeric_limits<int>::max();
+
+    // Torsion A atoms
+    int torsionAAtom1GlobalIndex = std::numeric_limits<int>::max();
+    int torsionAAtom2GlobalIndex = std::numeric_limits<int>::max();
+    int torsionAAtom3GlobalIndex = std::numeric_limits<int>::max();
+    int torsionAAtom4GlobalIndex = std::numeric_limits<int>::max();
+
+    // Torsion B atoms
+    int torsionBAtom1GlobalIndex = std::numeric_limits<int>::max();
+    int torsionBAtom2GlobalIndex = std::numeric_limits<int>::max();
+    int torsionBAtom3GlobalIndex = std::numeric_limits<int>::max();
+    int torsionBAtom4GlobalIndex = std::numeric_limits<int>::max();
+};
+
+struct UreyBradley {
+    int atom1GlobalIndex = std::numeric_limits<int>::max();
+    int atom3GlobalIndex = std::numeric_limits<int>::max();
+    SimTK::Real stiffnessInKJPerNmSq = SimTK::NaN;
+    SimTK::Real nominalLengthInNm = SimTK::NaN;
+};
+
+struct Scaling14 {
+    int atom1GlobalIndex = std::numeric_limits<int>::max();
+    int atom4GlobalIndex = std::numeric_limits<int>::max();
+    SimTK::Real chargeProduct = SimTK::NaN;
+    SimTK::Real epsilon = SimTK::NaN;
+    SimTK::Real sigma = SimTK::NaN;
+};
+
+struct Exclusion {
+    int atom1GlobalIndex = std::numeric_limits<int>::max();
+    int atom2GlobalIndex = std::numeric_limits<int>::max();
+};
+
+struct SystemTopology {
+    std::vector<int> rootAtomGlobalIndices;
+    std::vector<TopologyRange> topologyRanges;
+    std::vector<RoboAtom> atoms;
+    std::vector<RoboBond> bonds;
+    std::vector<RoboAngle> angles;
+    std::vector<RoboPeriodicTorsion> periodicTorsions;
+    std::vector<RoboHarmonicImproperTorsion> harmonicImproperTorsions;
+    std::vector<CMAPGrid> cmapGrids;
+    std::vector<CMAPTorsion> cmapTorsions;
+    std::vector<UreyBradley> ureyBradleys;
+    std::vector<Scaling14> scaling14s;
+    std::vector<Exclusion> exclusions;
+};
+
+struct ForceFieldParams {
+    bool hasNBfix = false;
+    int numTypes = 0;
+    std::vector<SimTK::Real> aCoef;
+    std::vector<SimTK::Real> bCoef;
+
+    bool useGBSAOBC2 = true;
+    SimTK::Real gbsaSolventDielectric = 78.5;
+    SimTK::Real gbsaSoluteDielectric = 1.0;
+
+    NonbondedMethod nonbondedMethod = NonbondedMethod::NoCutoff;
+    SimTK::Real nonbondedCutoffInNm = 1.2;
+};
+
+struct SimulationSettings {
+    uint32_t seed = 0;
+    SimTK::Real thermostatTemperatureInK = 300.0;
+    SimTK::Real collisionFrequency = 1.0;
+};
+
+using CanonicalBond = std::pair<std::size_t, std::size_t>;
+using CanonicalAngle = std::array<std::size_t, 3>;
+using CanonicalTorsion = std::array<std::size_t, 4>;
+
+[[nodiscard]] static inline std::pair<std::size_t, std::size_t> canonicalizeBond(std::size_t i,
+                                                                                 std::size_t j) noexcept {
+    return {std::min(i, j), std::max(i, j)};
+}
+
+[[nodiscard]] static inline auto canonicalizeAngle(std::size_t i, std::size_t j, std::size_t k) noexcept
+    -> std::array<std::size_t, 3> {
+    return {std::min(i, k), j, std::max(i, k)};
+}
+
+[[nodiscard]] static inline auto
+canonicalizeTorsion(std::size_t i, std::size_t j, std::size_t k, std::size_t l) noexcept
+    -> std::array<std::size_t, 4> {
+    const std::array<std::size_t, 4> forward{i, j, k, l};
+    const std::array<std::size_t, 4> reverse{l, k, j, i};
+    return (forward < reverse) ? forward : reverse;
+}

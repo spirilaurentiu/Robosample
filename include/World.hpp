@@ -325,7 +325,7 @@ class HarmonicImproperTorsionForce : public SimTK::DuMM::CustomBondTorsion {
 class World {
     public:
     void setAtomTargetLocationsToState(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
-    void updateFramesFromTopologies();
+    void updateInboardAndOutboardFramesFromTopologies();
 
     explicit World(int worldIndex,
                    Span<Topology> topo,
@@ -727,9 +727,18 @@ class World {
     const SimTK::Vector& getPFrs();
 
     // Get Qs
-    int getNQs();
-    int getNUs();
-    const SimTK::Vector& getAdvancedQs();
+    [[nodiscard]] auto getNQsFromAdvancedState() const -> int {
+        return matter->getNQ(worldState);
+    }
+
+    [[nodiscard]] auto getNUsFromAdvancedState() const -> int {
+        return matter->getNU(worldState);
+    }
+
+    [[nodiscard]] auto getAdvancedQs() const -> const SimTK::Vector& {
+        return matter->getQ(worldState);
+    }
+
     const void PrintAdvancedQs() const;
 
     const SimTK::Vector& getAdvancedUs();
@@ -1001,4 +1010,6 @@ class World {
         SimTK::Compound::AtomIndex(SimTK::InvalidIndex)};
 
     std::reference_wrapper<const ZMatrix> zMatrix;
+
+    SimTK::State worldState;
 };

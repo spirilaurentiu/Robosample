@@ -2,8 +2,7 @@ import warnings
 from collections import defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass
-from enum import IntEnum, unique
-from typing import Dict, Iterable, List, Self, Tuple
+from typing import Iterable, Self, Tuple
 
 import community as community_louvain
 import MDAnalysis as mda
@@ -15,142 +14,9 @@ import parmed as pmd
 import scipy.linalg as linalg
 from MDAnalysis.analysis import dihedrals
 
-
-@dataclass
-class TransitionWindowResult:
-    """
-    Complete output of detect_transition_windows.
-
-    Attributes
-    ----------
-    windows : list of (int, int)
-        List of (start_frame, end_frame) pairs, inclusive, identifying the
-        expanded transition windows. Suitable for direct use as frame masks.
-    transition_frames : np.ndarray of int
-        Raw frame indices scored above the boundary threshold, before window
-        expansion. Useful for diagnostic plots.
-    basin_frames : np.ndarray of int
-        Frame indices scored as deep-basin (s < basin_threshold), suitable
-        for computing the baseline correlation matrix.
-    basin_labels : np.ndarray, shape (T,)
-        Per-frame basin assignment (0 … n_basins−1). Unassigned frames
-        (those in the transition region) carry their nearest-basin label —
-        this label should not be trusted for those frames.
-    boundary_scores : np.ndarray, shape (T,)
-        Per-frame boundary score s = d_min / d_2nd ∈ (0, 1].
-    centroids_embedded : np.ndarray, shape (n_basins, 2N)
-        k-means centroids in the sin/cos embedded space.
-    n_transitions : int
-        Number of distinct, merged transition windows detected.
-    """
-
-    windows: List[Tuple[int, int]]
-    transition_frames: np.ndarray
-    basin_frames: np.ndarray
-    basin_labels: np.ndarray
-    boundary_scores: np.ndarray
-    centroids_embedded: np.ndarray
-    n_transitions: int
-
-
-@dataclass
-class BasinSelectionResult:
-    """
-    Complete output of select_n_basins.
-
-    Attributes
-    ----------
-    recommended_k : int
-        Consensus recommended number of basins.
-    confidence : str
-        'high'     — all three metrics agree.
-        'moderate' — two of three metrics agree.
-        'low'      — all three metrics disagree; visual inspection required.
-    silhouette_scores : dict[int, float]
-        Mean silhouette score for each k. Higher = better-separated clusters.
-    silhouette_best_k : int
-        k that maximises the silhouette score.
-    gap_values : dict[int, float]
-        Gap statistic Gap(k) for each k.
-    gap_stds : dict[int, float]
-        Standard error σ_k of the gap statistic for each k.
-    gap_best_k : int
-        k selected by Tibshirani's one-standard-error criterion.
-    bic_scores : dict[int, float]
-        BIC for each k. Lower = better model.
-    bic_best_k : int
-        k that minimises the BIC.
-    k_range : list[int]
-        The range of k values evaluated.
-    embedded : np.ndarray, shape (T, 2N)
-        The torus-embedded dihedral vectors used for all metric computation.
-        Stored here so downstream functions don't need to re-embed.
-    """
-
-    recommended_k: int
-    confidence: str
-    silhouette_scores: Dict[int, float]
-    silhouette_best_k: int
-    gap_values: Dict[int, float]
-    gap_stds: Dict[int, float]
-    gap_best_k: int
-    bic_scores: Dict[int, float]
-    bic_best_k: int
-    k_range: List[int]
-    embedded: np.ndarray
-
-    def summary(self) -> str:
-        lines = [
-            "Basin count selection summary",
-            f"  Silhouette  → k={self.silhouette_best_k}  "
-            f"(score={self.silhouette_scores[self.silhouette_best_k]:.3f})",
-            f"  Gap stat    → k={self.gap_best_k}  "
-            f"(gap={self.gap_values[self.gap_best_k]:.3f} "
-            f"± {self.gap_stds[self.gap_best_k]:.3f})",
-            f"  GMM BIC     → k={self.bic_best_k}  "
-            f"(BIC={self.bic_scores[self.bic_best_k]:.1f})",
-            "  ─────────────────────────────",
-            f"  Consensus   → k={self.recommended_k}  "
-            f"[confidence: {self.confidence.upper()}]",
-        ]
-        if self.confidence == "low":
-            lines.append(
-                "  WARNING: metrics disagree. Inspect the diagnostic plot "
-                "before proceeding."
-            )
-        return "\n".join(lines)
-
-
 from . import robo_bindings as rb
 from .molecule_prototype import MoleculePrototype
 from .prmtop_reader import has_nbfix_fast, parse_prmtop_numpy
-
-
-@unique
-class NonbondedMethod(IntEnum):
-    """
-    Nonbonded interaction treatment for OpenMM NonbondedForce.
-
-    This enum is a high-level, typed, IDE-friendly facade over
-    ``rb.NonbondedMethod`` (pybind11 binding of
-    ``OpenMM::NonbondedForce::NonbondedMethod``).
-
-    Members map 1:1 to the underlying OpenMM values and can be
-    passed transparently to C++ bindings.
-    """
-
-    NoCutoff = rb.NonbondedMethod.NoCutoff
-    """
-    No cutoff is applied to nonbonded interactions.
-    The full set of N^2 interactions is computed exactly.
-    This necessarily means that periodic boundary conditions cannot be used.
-    """
-
-    CutoffNonPeriodic = rb.NonbondedMethod.CutoffNonPeriodic
-    """
-    Interactions beyond the cutoff distance are ignored.
-    Coulomb interactions closer than the cutoff distance are modified using the reaction field method.
-    """
 
 
 @dataclass
@@ -237,7 +103,7 @@ class Context(rb.Context):
         use_gbsa_obc2: bool = True,
         gbsa_solvent_dielectric: float = 78.5,
         gbsa_solute_dielectric: float = 1.0,
-        nonbonded_method: NonbondedMethod = NonbondedMethod.CutoffNonPeriodic,
+        nonbonded_method: rb.NonbondedMethod = rb.NonbondedMethod.CutoffNonPeriodic,
         nonbonded_cutoff_in_nm: float = 1.2,
         verbose: bool = False,
         testing: bool = False,
@@ -273,7 +139,19 @@ class Context(rb.Context):
         self.parm = pmd.load_file(prmtop, xyz=inpcrd)
         self.prmtop = prmtop
         self.inpcrd = inpcrd
-        self.num_types = self.parm.pointers["NTYPES"]
+
+        self.system_topology = rb.SystemTopology()
+
+        self.ff_params = rb.ForceFieldParams()
+        self.ff_params.use_gbsaobc2 = use_gbsa_obc2
+        self.ff_params.gbsa_solvent_dielectric = gbsa_solvent_dielectric
+        self.ff_params.gbsa_solute_dielectric = gbsa_solute_dielectric
+        self.ff_params.nonbonded_method = nonbonded_method
+        self.ff_params.nonbonded_cutoff_in_nm = nonbonded_cutoff_in_nm
+
+        self.sim_settings = rb.SimulationSettings(
+            seed=seed, thermostat_temperature_in_k=300, collision_frequency=1.0
+        )
 
         # parmed does nasty rounding when loading and loses some precision that adds up to a few kj
         # prmtop files hold more decimal places than can be stored via Python float64 (IEEE 754 double) has ~16 decimal digits of precision
@@ -284,9 +162,10 @@ class Context(rb.Context):
         # Nonbonded fix (NBFIX) is a technique that replaces standard Lennard-Jones (LJ) interaction parameters (epsilon and sigma) between specific atom pairs
         # This overrides default combination rules to fix overbinding artifacts, particularly between cations/anions and protein/lipid functional groups
         # It is commonly used in CHARMM force fields to improve hydration and binding accuracy
-        self.has_nbfix = has_nbfix_fast(
+        self.ff_params.num_types = self.parm.pointers["NTYPES"]
+        self.ff_params.has_nbfix = has_nbfix_fast(
             parm_data["NONBONDED_PARM_INDEX"],
-            self.num_types,
+            self.ff_params.num_types,
             parm_data["LENNARD_JONES_ACOEF"],
             parm_data["LENNARD_JONES_BCOEF"],
         )
@@ -298,20 +177,27 @@ class Context(rb.Context):
         afac = np.sqrt(ene_conv) * length_conv**6
         bfac = ene_conv * length_conv**6
 
-        self.acoef = [0 for _ in range(self.num_types * self.num_types)]
-        self.bcoef = [0 for _ in range(self.num_types * self.num_types)]
+        self.ff_params.a_coef = [
+            0 for _ in range(self.ff_params.num_types * self.ff_params.num_types)
+        ]
+        self.ff_params.b_coef = [
+            0 for _ in range(self.ff_params.num_types * self.ff_params.num_types)
+        ]
 
-        for i in range(self.num_types):
-            for j in range(self.num_types):
-                idx = parm_data["NONBONDED_PARM_INDEX"][i * self.num_types + j] - 1
+        for i in range(self.ff_params.num_types):
+            for j in range(self.ff_params.num_types):
+                idx = (
+                    parm_data["NONBONDED_PARM_INDEX"][i * self.ff_params.num_types + j]
+                    - 1
+                )
                 if idx < 0:
                     raise ValueError(
                         f"Invalid nonbonded index for atom types {i} and {j}"
                     )
-                self.acoef[i * self.num_types + j] = (
+                self.ff_params.a_coef[i * self.ff_params.num_types + j] = (
                     np.sqrt(parm_data["LENNARD_JONES_ACOEF"][idx]) * afac
                 )
-                self.bcoef[i * self.num_types + j] = (
+                self.ff_params.b_coef[i * self.ff_params.num_types + j] = (
                     parm_data["LENNARD_JONES_BCOEF"][idx] * bfac
                 )
 
@@ -323,29 +209,19 @@ class Context(rb.Context):
             key: i + 1 for i, key in enumerate(unique_atom_classes)
         }
 
-        # TODO
-        self.dihedral_atom_groups: list[tuple[int, int, int, int]] = []
-        # TODO
-
         # DuMM charged atom types are AMBER atom types plus their partial charge
         # DuMMForceFieldSubsystemRep::setBiotypeChargedAtomType - there is 1:1 correspondence between biotype and charged atom type
         charged_atom_types = set(
             [atom_classes[a] + ":" + str(a.charge) for a in self.parm.atoms]
         )
-        charged_atom_types = sorted(
-            charged_atom_types
-        )  # Sort to ensure consistent ordering, set() does not guarantee order
+
+        # Sort to ensure consistent ordering, set() does not guarantee order
+        charged_atom_types = sorted(charged_atom_types)
+
         self.charged_atom_type_indices = {
             atom_type: i for i, atom_type in enumerate(charged_atom_types)
         }
 
-        self.root_indices = list[int]()
-        self.topology_ranges: list[rb.TopologyRange] = []
-        self.atoms: list[rb.RoboAtom] = []
-        self.bond_stretches: list[rb.RoboBond] = []
-        self.bond_bends: list[rb.RoboAngle] = []
-        self.periodic_torsions: list[rb.RoboPeriodicTorsion] = []
-        self.improper_harmonic_torsions: list[rb.RoboHarmonicImproperTorsion] = []
         self.z_matrix = list[tuple[int, int, int, int]]()
         self.num_atom_offset = 0
         self.num_residues_offset = 0
@@ -354,12 +230,19 @@ class Context(rb.Context):
         # This is the order in which atoms are explored via BFS starting from the root atom of each molecule offset by the number of atoms in previous molecules
         self.prmtop_to_global_index = {}
 
+        # Compute secondary structure for each residue
+        traj = md.load(self.inpcrd, top=self.prmtop)
+        secondary_structure = md.compute_dssp(traj)
+
         # Store bonds that correspond to standardized dihedrals (protein backbone phi, psi, sidechain chi, etc)
         standard_dihedral_bond_columns = [
             "atom1_prmtop_index",
             "atom2_prmtop_index",
             "dihedral_type",
+            "resname",
             "resid",
+            "dss",
+            "molecule_index",
         ]
         self.standard_dihedral_bonds = pd.DataFrame(
             columns=standard_dihedral_bond_columns
@@ -426,11 +309,13 @@ class Context(rb.Context):
                     # First atom is always the root and holds magic properties
                     if atom.root:
                         unique_atom_name += "_ROOT"  # e.g. ALA1_N_4_ROOT
-                        self.root_indices.append(global_index)
+                        self.system_topology.root_atom_global_indices.append(
+                            global_index
+                        )
 
                     # Get Lennard-Jones parameters for this atom
                     # Nonbonded indices are 1-based
-                    idx = (a.nb_idx - 1) * self.num_types + (a.nb_idx - 1)
+                    idx = (a.nb_idx - 1) * self.ff_params.num_types + (a.nb_idx - 1)
                     if idx < 0:
                         raise ValueError(f"Invalid nonbonded index for atom {a.idx}")
                     nb_parm_idx = parm_data["NONBONDED_PARM_INDEX"][idx] - 1
@@ -460,7 +345,7 @@ class Context(rb.Context):
                     epsilon = epsilon * energyConversionFactor
 
                     # Define the atom
-                    self.atoms.append(
+                    self.system_topology.atoms.append(
                         rb.RoboAtom(
                             identity=rb.RoboAtomIdentity(
                                 unique_name=unique_atom_name,
@@ -517,7 +402,7 @@ class Context(rb.Context):
                                 f"Bond atom index mismatch: expected {prmtop_index}, got {atom.idx}"
                             )
 
-                    self.bond_stretches.append(
+                    self.system_topology.bonds.append(
                         rb.RoboBond(
                             global_indices=tuple(
                                 self.prmtop_to_global_index[p] for p in prmtop_indices
@@ -534,17 +419,6 @@ class Context(rb.Context):
                             dihedral_type=bond.dihedral_type,
                         )
                     )
-
-                # import mdtraj as md
-                # traj = md.load(self.inpcrd, top=self.prmtop)
-                # ss = md.compute_dssp(traj)
-
-                # # # # # Convert parmed to mdtraj for DSSP secondary structure assignment to determine which dihedral bonds are rotatable
-                # # # # top = molecule_prototypes[prototype_index].molecule.topology
-                # # # # xyz = molecule_prototypes[prototype_index].molecule.coordinates / 10.0
-
-                # # # # traj = md.Trajectory(xyz=[xyz], topology=top)
-                # # # # ss = md.compute_dssp(traj)
 
                 # Add bonds which are the middle bond of a standard dihedral
                 # We don't convert to global indices and must keep original prmtop ones
@@ -567,23 +441,15 @@ class Context(rb.Context):
                         continue
 
                     # Define standardized dihedral names
-                    rigidity_map = {
-                        "phi",
-                        "psi",
-                        "omega",
-                        "chi1",
-                        "chi2",
-                        "chi3",
-                        "chi4",
-                        "chi5",
-                    }
-
-                    if dihedral_type in rigidity_map:
+                    if dihedral_type != "non-standard":
                         new_dihedral_bond = {
                             "atom1_prmtop_index": atom1_prmtop,
                             "atom2_prmtop_index": atom2_prmtop,
                             "dihedral_type": dihedral_type,
+                            "resname": self.parm.residues[resid].name,
                             "resid": resid,
+                            "dss": secondary_structure[0][resid],
+                            "molecule_index": instance_index,
                         }
                         self.standard_dihedral_bonds = pd.concat(
                             [
@@ -615,7 +481,7 @@ class Context(rb.Context):
                                 f"Bond atom index mismatch: expected {prmtop_index}, got {atom.idx}"
                             )
 
-                    self.bond_bends.append(
+                    self.system_topology.angles.append(
                         rb.RoboAngle(
                             global_indices=tuple(
                                 self.prmtop_to_global_index[
@@ -646,7 +512,7 @@ class Context(rb.Context):
                                 f"Bond atom index mismatch: expected {prmtop_index}, got {atom.idx}"
                             )
 
-                    self.periodic_torsions.append(
+                    self.system_topology.periodic_torsions.append(
                         rb.RoboPeriodicTorsion(
                             global_indices=tuple(
                                 self.prmtop_to_global_index[
@@ -677,7 +543,7 @@ class Context(rb.Context):
                                 f"Bond atom index mismatch: expected {prmtop_index}, got {atom.idx}"
                             )
 
-                    self.improper_harmonic_torsions.append(
+                    self.system_topology.harmonic_improper_torsions.append(
                         rb.RoboHarmonicImproperTorsion(
                             global_indices=tuple(
                                 self.prmtop_to_global_index[
@@ -734,9 +600,7 @@ class Context(rb.Context):
                     )
                     self.z_matrix.append(row)
 
-        self.scaling14s = list[rb.Scaling14]()
         excluded = set()
-
         length_conv = pmd.unit.angstrom.conversion_factor_to(pmd.unit.nanometers)
         ene_conv = pmd.unit.kilocalories_per_mole.conversion_factor_to(
             pmd.unit.kilojoules_per_mole
@@ -761,16 +625,16 @@ class Context(rb.Context):
                 continue
 
             atom1_global_index = self.prmtop_to_global_index[index_i // 3]
-            atom1 = self.atoms[atom1_global_index]
+            atom1 = self.system_topology.atoms[atom1_global_index]
             atom1_charge = parm_data["CHARGE"][index_i // 3]
 
             atom4_global_index = self.prmtop_to_global_index[index_l // 3]
-            atom4 = self.atoms[atom4_global_index]
+            atom4 = self.system_topology.atoms[atom4_global_index]
             atom4_charge = parm_data["CHARGE"][index_l // 3]
 
             idx = (
                 parm_data["NONBONDED_PARM_INDEX"][
-                    atom1.identity.nonbonded_index * self.num_types
+                    atom1.identity.nonbonded_index * self.ff_params.num_types
                     + atom4.identity.nonbonded_index
                 ]
                 - 1
@@ -809,10 +673,10 @@ class Context(rb.Context):
                 continue
 
             excluded.add(key)
-            self.scaling14s.append(
+            self.system_topology.scaling14s.append(
                 rb.Scaling14(
-                    a1=key[0],
-                    a4=key[1],
+                    atom_1_global_index=key[0],
+                    atom_4_global_index=key[1],
                     charge_product=charge_product,
                     epsilon=epsilon,
                     sigma=sigma,
@@ -821,7 +685,6 @@ class Context(rb.Context):
 
         numExcludedAtomsList = self.parm.parm_data["NUMBER_EXCLUDED_ATOMS"]
         excludedAtomsList = self.parm.parm_data["EXCLUDED_ATOMS_LIST"]
-        self.exclusions = list[rb.Exclusion]()
         total = 0
         for iAtom in range(self.parm.ptr("NATOM")):
             index0 = total
@@ -836,22 +699,23 @@ class Context(rb.Context):
                     key = (min(global_i, global_j), max(global_i, global_j))
                     if key not in excluded:
                         excluded.add(key)
-                        self.exclusions.append(rb.Exclusion(a1=key[0], a2=key[1]))
+                        self.system_topology.exclusions.append(
+                            rb.Exclusion(
+                                atom_1_global_index=key[0], atom_2_global_index=key[1]
+                            )
+                        )
 
         # Now that we have mapped all atom indices, we need to update the neighbor indices to this mapping
         mapping = (
             self.prmtop_to_global_index.get
         )  # Use .get for safety, or just the dict
-        for atom in self.atoms:
+        for atom in self.system_topology.atoms:
             conn = atom.connectivity
             conn.neighbors_global_indices = list(
                 map(mapping, conn.neighbors_global_indices)
             )
 
         # Now parse CMAPs
-        self.cmap_torsions: list[rb.CMAPTorsion] = []
-        self.cmap_grids: list[rb.CMAPGrid] = []
-
         cmap_resolution = self.parm.parm_data.get("CMAP_RESOLUTION", [])
         num_cmap_grids = len(cmap_resolution)
         for i in range(num_cmap_grids):
@@ -894,7 +758,7 @@ class Context(rb.Context):
                     new_energy[new_index] = cmap[old_index] * 4.184
 
             grid.energy = new_energy
-            self.cmap_grids.append(grid)
+            self.system_topology.cmap_grids.append(grid)
 
         # Add torsions that need correction from CMAPs
         cmap_index = self.parm.parm_data.get("CMAP_INDEX", [])
@@ -908,34 +772,49 @@ class Context(rb.Context):
             torsion = rb.CMAPTorsion()
             torsion.mapIndex = map_index - 1
 
-            torsion.a1 = self.prmtop_to_global_index[cmap_index[i + 0] - 1]
-            torsion.a2 = self.prmtop_to_global_index[cmap_index[i + 1] - 1]
-            torsion.a3 = self.prmtop_to_global_index[cmap_index[i + 2] - 1]
-            torsion.a4 = self.prmtop_to_global_index[cmap_index[i + 3] - 1]
+            torsion.torsion_a_atom_1_global_index = self.prmtop_to_global_index[
+                cmap_index[i + 0] - 1
+            ]
+            torsion.torsion_a_atom_2_global_index = self.prmtop_to_global_index[
+                cmap_index[i + 1] - 1
+            ]
+            torsion.torsion_a_atom_3_global_index = self.prmtop_to_global_index[
+                cmap_index[i + 2] - 1
+            ]
+            torsion.torsion_a_atom_4_global_index = self.prmtop_to_global_index[
+                cmap_index[i + 3] - 1
+            ]
 
-            torsion.b1 = self.prmtop_to_global_index[cmap_index[i + 1] - 1]
-            torsion.b2 = self.prmtop_to_global_index[cmap_index[i + 2] - 1]
-            torsion.b3 = self.prmtop_to_global_index[cmap_index[i + 3] - 1]
-            torsion.b4 = self.prmtop_to_global_index[cmap_index[i + 4] - 1]
+            torsion.torsion_b_atom_1_global_index = self.prmtop_to_global_index[
+                cmap_index[i + 1] - 1
+            ]
+            torsion.torsion_b_atom_2_global_index = self.prmtop_to_global_index[
+                cmap_index[i + 2] - 1
+            ]
+            torsion.torsion_b_atom_3_global_index = self.prmtop_to_global_index[
+                cmap_index[i + 3] - 1
+            ]
+            torsion.torsion_b_atom_4_global_index = self.prmtop_to_global_index[
+                cmap_index[i + 4] - 1
+            ]
 
-            self.cmap_torsions.append(torsion)
+            self.system_topology.cmap_torsions.append(torsion)
 
         # Add Urey-Bradley terms
         ub_terms = self.parm.parm_data.get("CHARMM_UREY_BRADLEY", [])
         ub_k = self.parm.parm_data.get("CHARMM_UREY_BRADLEY_FORCE_CONSTANT", [])
         ub_eq = self.parm.parm_data.get("CHARMM_UREY_BRADLEY_EQUIL_VALUE", [])
 
-        self.urey_bradleys: list[rb.UreyBradley] = []
         for i in range(0, len(ub_terms), 3):
             ub = rb.UreyBradley()
-            ub.a1 = self.prmtop_to_global_index[ub_terms[i] - 1]
-            ub.a3 = self.prmtop_to_global_index[ub_terms[i + 1] - 1]
+            ub.atom_1_global_index = self.prmtop_to_global_index[ub_terms[i] - 1]
+            ub.atom_3_global_index = self.prmtop_to_global_index[ub_terms[i + 1] - 1]
             ub.stiffness_in_kj_per_nm_sq = ub_k[ub_terms[i + 2] - 1] * 4.184 * 100
             ub.nominal_length_in_nm = ub_eq[ub_terms[i + 2] - 1] / 10
-            self.urey_bradleys.append(ub)
+            self.system_topology.urey_bradleys.append(ub)
 
         print(
-            f"Loaded system with {len(self.atoms)} atoms, {len(self.bond_stretches)} bonds, {len(self.bond_bends)} angles, {len(self.periodic_torsions)} proper torsions, {len(self.improper_harmonic_torsions)} improper torsions, {len(self.cmap_torsions)} CMAP torsions, and {len(self.urey_bradleys)} Urey-Bradley terms."
+            f"Loaded system with {len(self.system_topology.atoms)} atoms, {len(self.system_topology.bonds)} bonds, {len(self.system_topology.angles)} angles, {len(self.system_topology.periodic_torsions)} proper torsions, {len(self.system_topology.harmonic_improper_torsions)} improper torsions, {len(self.system_topology.cmap_torsions)} CMAP torsions, and {len(self.system_topology.urey_bradleys)} Urey-Bradley terms."
         )
 
     @contextmanager
@@ -948,17 +827,17 @@ class Context(rb.Context):
         yield t_range
 
         t_range.close(self._get_current_counts())
-        self.topology_ranges.append(t_range)
+        self.system_topology.topology_ranges.append(t_range)
         self.num_atom_offset += len(molecule.atom_params)
         self.num_residues_offset += molecule.num_residues
 
     def _get_current_counts(self) -> Tuple[int, int, int, int, int]:
         return (
-            len(self.atoms),
-            len(self.bond_stretches),
-            len(self.bond_bends),
-            len(self.periodic_torsions),
-            len(self.improper_harmonic_torsions),
+            len(self.system_topology.atoms),
+            len(self.system_topology.bonds),
+            len(self.system_topology.angles),
+            len(self.system_topology.periodic_torsions),
+            len(self.system_topology.harmonic_improper_torsions),
         )
 
     def build_flexibilities(self, source: pd.DataFrame) -> list[rb.BondFlexibility]:
@@ -975,27 +854,12 @@ class Context(rb.Context):
             flex.globalIndex1 = self.prmtop_to_global_index[atom1.idx]
             flex.globalIndex2 = self.prmtop_to_global_index[atom2.idx]
 
-            flex.uniqueAtomName1 = (
-                atom1.residue.name
-                + str(atom1.residue.idx + 1)
-                + "_"
-                + atom1.name
-                + "_"
-                + str(atom1.idx + 1)
-            )
-            flex.uniqueAtomName2 = (
-                atom2.residue.name
-                + str(atom2.residue.idx + 1)
-                + "_"
-                + atom2.name
-                + "_"
-                + str(atom2.idx + 1)
-            )
-
-            # if bond["dihedral_type"] in {"phi", "psi", "omega"}:
-            #     flex.mobility = rb.BondMobility.Translation
-            # else:
-            #     flex.mobility = rb.BondMobility.Torsion
+            flex.uniqueAtomName1 = self.system_topology.atoms[
+                flex.globalIndex1
+            ].identity.unique_name
+            flex.uniqueAtomName2 = self.system_topology.atoms[
+                flex.globalIndex2
+            ].identity.unique_name
 
             flex.mobility = rb.BondMobility.Torsion
 
@@ -1016,22 +880,12 @@ class Context(rb.Context):
             flex.globalIndex1 = self.prmtop_to_global_index[atom1.idx]
             flex.globalIndex2 = self.prmtop_to_global_index[atom2.idx]
 
-            flex.uniqueAtomName1 = (
-                atom1.residue.name
-                + str(atom1.residue.idx + 1)
-                + "_"
-                + atom1.name
-                + "_"
-                + str(atom1.idx + 1)
-            )
-            flex.uniqueAtomName2 = (
-                atom2.residue.name
-                + str(atom2.residue.idx + 1)
-                + "_"
-                + atom2.name
-                + "_"
-                + str(atom2.idx + 1)
-            )
+            flex.uniqueAtomName1 = self.system_topology.atoms[
+                flex.globalIndex1
+            ].identity.unique_name
+            flex.uniqueAtomName2 = self.system_topology.atoms[
+                flex.globalIndex2
+            ].identity.unique_name
 
             flex.mobility = rb.BondMobility.Torsion
 
@@ -1063,8 +917,12 @@ class Context(rb.Context):
             flex = rb.BondFlexibility()
             flex.globalIndex1 = global_index_1
             flex.globalIndex2 = global_index_2
-            flex.uniqueAtomName1 = self.atoms[global_index_1].identity.unique_name
-            flex.uniqueAtomName2 = self.atoms[global_index_2].identity.unique_name
+            flex.uniqueAtomName1 = self.system_topology.atoms[
+                global_index_1
+            ].identity.unique_name
+            flex.uniqueAtomName2 = self.system_topology.atoms[
+                global_index_2
+            ].identity.unique_name
             flex.mobility = rb.BondMobility.Torsion
 
             flexibilities.append(flex)
@@ -1073,16 +931,16 @@ class Context(rb.Context):
 
     def addCartesianWorld(self, samplesPerRound: int = 1) -> World:
         flexibilities = []
-        for bond in self.bond_stretches:
+        for bond in self.system_topology.bonds:
             if bond.ring_closing:
                 continue
             flex = rb.BondFlexibility()
             flex.globalIndex1 = bond.global_indices[0]
             flex.globalIndex2 = bond.global_indices[1]
-            flex.uniqueAtomName1 = self.atoms[
+            flex.uniqueAtomName1 = self.system_topology.atoms[
                 bond.global_indices[0]
             ].identity.unique_name
-            flex.uniqueAtomName2 = self.atoms[
+            flex.uniqueAtomName2 = self.system_topology.atoms[
                 bond.global_indices[1]
             ].identity.unique_name
             flex.mobility = rb.BondMobility.Translation
@@ -1131,13 +989,9 @@ class Context(rb.Context):
 
         # Load the system into Robosample
         super().loadAmberSystem(
-            self.root_indices,
-            self.atoms,
-            self.bond_stretches,
-            self.bond_bends,
-            self.periodic_torsions,
-            self.improper_harmonic_torsions,
-            self.topology_ranges,
+            self.system_topology,
+            self.ff_params,
+            self.sim_settings,
             self.z_matrix,
         )
 
@@ -1188,22 +1042,7 @@ class Context(rb.Context):
             )
 
         # OpenMM must be initialized before adding samplers since they want to calculate energies when initializing
-        ok = super().initialize_openmm(
-            self.atoms,
-            self.bond_stretches,
-            self.bond_bends,
-            self.periodic_torsions,
-            self.improper_harmonic_torsions,
-            self.cmap_grids,
-            self.cmap_torsions,
-            self.urey_bradleys,
-            self.has_nbfix,
-            self.num_types,
-            self.acoef,
-            self.bcoef,
-            self.exclusions,
-            self.scaling14s,
-        )
+        ok = super().initialize_openmm()
         if not ok:
             raise ValueError("Failed to initialize OpenMM system in Robosample.")
 
@@ -1239,15 +1078,15 @@ class Context(rb.Context):
 
         print(
             "Context initialized successfully with the following parameters: ",
-            f"\n\tNumber of atoms: {len(self.atoms)}, ",
-            f"\n\tNumber of bond stretches: {len(self.bond_stretches)}, ",
-            f"\n\tNumber of bond bends: {len(self.bond_bends)}, ",
-            f"\n\tNumber of periodic torsions: {len(self.periodic_torsions)}, ",
-            f"\n\tNumber of improper harmonic torsions: {len(self.improper_harmonic_torsions)}, ",
-            f"\n\tNumber of CMAP torsions: {len(self.cmap_torsions)}, ",
-            f"\n\tNumber of Urey-Bradley terms: {len(self.urey_bradleys)}, ",
-            f"\n\tNumber of exclusions: {len(self.exclusions)}, ",
-            f"\n\tNumber of 1-4 scalings: {len(self.scaling14s)}, ",
+            f"\n\tNumber of atoms: {len(self.system_topology.atoms)}, ",
+            f"\n\tNumber of bond stretches: {len(self.system_topology.bonds)}, ",
+            f"\n\tNumber of bond bends: {len(self.system_topology.angles)}, ",
+            f"\n\tNumber of periodic torsions: {len(self.system_topology.periodic_torsions)}, ",
+            f"\n\tNumber of improper harmonic torsions: {len(self.system_topology.harmonic_improper_torsions)}, ",
+            f"\n\tNumber of CMAP torsions: {len(self.system_topology.cmap_torsions)}, ",
+            f"\n\tNumber of Urey-Bradley terms: {len(self.system_topology.urey_bradleys)}, ",
+            f"\n\tNumber of exclusions: {len(self.system_topology.exclusions)}, ",
+            f"\n\tNumber of 1-4 scalings: {len(self.system_topology.scaling14s)}, ",
             f"\n\tNumber of worlds: {len(self.worlds)}, ",
             f"\n\tNumber of replicas: {len(replicaTemperatures)}, ",
             f"\n\tNumber of thermodynamic states: {len(replicaTemperatures)}",

@@ -5,9 +5,8 @@ from __future__ import annotations
 import collections.abc
 import numpy
 import numpy.typing
-import pybind11_stubgen.typing_ext
 import typing
-__all__: list[str] = ['AcceptRejectMode', 'AtomClassIndex', 'BondCenterChirality', 'BondFlexibility', 'BondMobility', 'CMAPGrid', 'CMAPTorsion', 'ChargedAtomTypeIndex', 'CompoundAtomIndex', 'Context', 'CoordinateTransferError', 'Exclusion', 'IntegratorType', 'NonbondedMethod', 'ReferenceIndices', 'RoboAngle', 'RoboAtom', 'RoboAtomConnectivity', 'RoboAtomElement', 'RoboAtomIdentity', 'RoboAtomPhysics', 'RoboBond', 'RoboHarmonicImproperTorsion', 'RoboPeriodicTorsion', 'RoboPeriodicTorsionTerm', 'RootMobility', 'RunType', 'SamplerName', 'Scaling14', 'ThermostatName', 'TopologyRange', 'TopologyRangeType', 'UreyBradley', 'Vec3', 'World', 'ZMatrixRow', 'align_flip_and_translate_frame_along_x_axis', 'calculate_angle_in_rad', 'calculate_dihedral_in_rad', 'calculate_log_sum_exp2', 'calculate_mag_sq', 'chirality_from_plane_deviation', 'exceeds_planarity_threshold', 'flipped_chirality', 'is_bond_chirality_mismatch', 'is_chirality_mismatch', 'multiply_by_scalar', 'normalize_in_place', 'plane_normal', 'resolve_reference_indices', 'safe_log_sine_sqr', 'signed_plane_deviation', 'triple_product']
+__all__: list[str] = ['AcceptRejectMode', 'AtomClassIndex', 'BondCenterChirality', 'BondFlexibility', 'BondMobility', 'CMAPGrid', 'CMAPTorsion', 'ChargedAtomTypeIndex', 'CompoundAtomIndex', 'Context', 'CoordinateTransferError', 'CutoffNonPeriodic', 'Exclusion', 'ForceFieldParams', 'IntegratorType', 'NoCutoff', 'NonbondedMethod', 'ReferenceIndices', 'RoboAngle', 'RoboAtom', 'RoboAtomConnectivity', 'RoboAtomElement', 'RoboAtomIdentity', 'RoboAtomPhysics', 'RoboBond', 'RoboHarmonicImproperTorsion', 'RoboPeriodicTorsion', 'RoboPeriodicTorsionTerm', 'RootMobility', 'RunType', 'SamplerName', 'Scaling14', 'SimulationSettings', 'SystemTopology', 'ThermostatName', 'TopologyRange', 'TopologyRangeType', 'UreyBradley', 'Vec3', 'VectorCMAPGrid', 'VectorCMAPTorsion', 'VectorExclusion', 'VectorInt', 'VectorRoboAngle', 'VectorRoboAtom', 'VectorRoboBond', 'VectorRoboHarmonicImproperTorsion', 'VectorRoboPeriodicTorsion', 'VectorScaling14', 'VectorTopologyRange', 'VectorUreyBradley', 'World', 'ZMatrixRow', 'align_flip_and_translate_frame_along_x_axis', 'calculate_angle_in_rad', 'calculate_dihedral_in_rad', 'calculate_log_sum_exp2', 'calculate_mag_sq', 'multiply_by_scalar', 'normalize_in_place', 'safe_log_sine_sqr']
 class AcceptRejectMode:
     """
     Members:
@@ -241,61 +240,65 @@ class CMAPGrid:
     def size(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
 class CMAPTorsion:
+    @typing.overload
     def __init__(self) -> None:
         ...
-    @property
-    def a1(self) -> int:
-        ...
-    @a1.setter
-    def a1(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
-        ...
-    @property
-    def a2(self) -> int:
-        ...
-    @a2.setter
-    def a2(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
-        ...
-    @property
-    def a3(self) -> int:
-        ...
-    @a3.setter
-    def a3(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
-        ...
-    @property
-    def a4(self) -> int:
-        ...
-    @a4.setter
-    def a4(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
-        ...
-    @property
-    def b1(self) -> int:
-        ...
-    @b1.setter
-    def b1(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
-        ...
-    @property
-    def b2(self) -> int:
-        ...
-    @b2.setter
-    def b2(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
-        ...
-    @property
-    def b3(self) -> int:
-        ...
-    @b3.setter
-    def b3(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
-        ...
-    @property
-    def b4(self) -> int:
-        ...
-    @b4.setter
-    def b4(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+    @typing.overload
+    def __init__(self, mapIndex: typing.SupportsInt | typing.SupportsIndex, torsion_a_atom_1_global_index: typing.SupportsInt | typing.SupportsIndex, torsion_a_atom_2_global_index: typing.SupportsInt | typing.SupportsIndex, torsion_a_atom_3_global_index: typing.SupportsInt | typing.SupportsIndex, torsion_a_atom_4_global_index: typing.SupportsInt | typing.SupportsIndex, torsion_b_atom_1_global_index: typing.SupportsInt | typing.SupportsIndex, torsion_b_atom_2_global_index: typing.SupportsInt | typing.SupportsIndex, torsion_b_atom_3_global_index: typing.SupportsInt | typing.SupportsIndex, torsion_b_atom_4_global_index: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def mapIndex(self) -> int:
         ...
     @mapIndex.setter
     def mapIndex(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def torsion_a_atom_1_global_index(self) -> int:
+        ...
+    @torsion_a_atom_1_global_index.setter
+    def torsion_a_atom_1_global_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def torsion_a_atom_2_global_index(self) -> int:
+        ...
+    @torsion_a_atom_2_global_index.setter
+    def torsion_a_atom_2_global_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def torsion_a_atom_3_global_index(self) -> int:
+        ...
+    @torsion_a_atom_3_global_index.setter
+    def torsion_a_atom_3_global_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def torsion_a_atom_4_global_index(self) -> int:
+        ...
+    @torsion_a_atom_4_global_index.setter
+    def torsion_a_atom_4_global_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def torsion_b_atom_1_global_index(self) -> int:
+        ...
+    @torsion_b_atom_1_global_index.setter
+    def torsion_b_atom_1_global_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def torsion_b_atom_2_global_index(self) -> int:
+        ...
+    @torsion_b_atom_2_global_index.setter
+    def torsion_b_atom_2_global_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def torsion_b_atom_3_global_index(self) -> int:
+        ...
+    @torsion_b_atom_3_global_index.setter
+    def torsion_b_atom_3_global_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def torsion_b_atom_4_global_index(self) -> int:
+        ...
+    @torsion_b_atom_4_global_index.setter
+    def torsion_b_atom_4_global_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
 class ChargedAtomTypeIndex:
     def __init__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
@@ -318,7 +321,7 @@ class Context:
         """
         Add an empty replica to the context.
         """
-    def addThermodynamicState(self, arg0: typing.SupportsFloat | typing.SupportsIndex, arg1: collections.abc.Sequence[AcceptRejectMode], arg2: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], arg3: collections.abc.Sequence[str], arg4: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], arg5: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], arg6: collections.abc.Sequence[IntegratorType], arg7: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], arg8: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], arg9: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> None:
+    def addThermodynamicState(self, arg0: typing.SupportsFloat | typing.SupportsIndex, arg1: collections.abc.Sequence[AcceptRejectMode], arg2: VectorInt, arg3: collections.abc.Sequence[str], arg4: VectorInt, arg5: VectorInt, arg6: collections.abc.Sequence[IntegratorType], arg7: VectorInt, arg8: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], arg9: VectorInt) -> None:
         """
         Add an empty themodynamic state to the context.
         """
@@ -338,11 +341,11 @@ class Context:
         ...
     def getWorlds(self) -> list[World]:
         ...
-    def initialize_openmm(self, arg0: collections.abc.Sequence[RoboAtom], arg1: collections.abc.Sequence[RoboBond], arg2: collections.abc.Sequence[RoboAngle], arg3: collections.abc.Sequence[RoboPeriodicTorsion], arg4: collections.abc.Sequence[RoboHarmonicImproperTorsion], arg5: collections.abc.Sequence[CMAPGrid], arg6: collections.abc.Sequence[CMAPTorsion], arg7: collections.abc.Sequence[UreyBradley], arg8: bool, arg9: typing.SupportsInt | typing.SupportsIndex, arg10: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], arg11: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], arg12: collections.abc.Sequence[Exclusion], arg13: collections.abc.Sequence[Scaling14]) -> bool:
+    def initialize_openmm(self) -> bool:
         """
         Load an OpenMM system from components.
         """
-    def loadAmberSystem(self, arg0: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], arg1: collections.abc.Sequence[RoboAtom], arg2: collections.abc.Sequence[RoboBond], arg3: collections.abc.Sequence[RoboAngle], arg4: collections.abc.Sequence[RoboPeriodicTorsion], arg5: collections.abc.Sequence[RoboHarmonicImproperTorsion], arg6: collections.abc.Sequence[TopologyRange], arg7: collections.abc.Sequence[ZMatrixRow]) -> None:
+    def loadAmberSystem(self, arg0: SystemTopology, arg1: ForceFieldParams, arg2: SimulationSettings, arg3: collections.abc.Sequence[ZMatrixRow]) -> None:
         """
         Load an AMBER system.
         """
@@ -442,19 +445,65 @@ class Exclusion:
     def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self, a1: typing.SupportsInt | typing.SupportsIndex, a2: typing.SupportsInt | typing.SupportsIndex) -> None:
+    def __init__(self, atom_1_global_index: typing.SupportsInt | typing.SupportsIndex, atom_2_global_index: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
-    def a1(self) -> int:
+    def atom_1_global_index(self) -> int:
         ...
-    @a1.setter
-    def a1(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+    @atom_1_global_index.setter
+    def atom_1_global_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
-    def a2(self) -> int:
+    def atom_2_global_index(self) -> int:
         ...
-    @a2.setter
-    def a2(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+    @atom_2_global_index.setter
+    def atom_2_global_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+class ForceFieldParams:
+    has_nbfix: bool
+    nonbonded_method: NonbondedMethod
+    use_gbsaobc2: bool
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, has_nbfix: bool = False, num_types: typing.SupportsInt | typing.SupportsIndex = 0, a_coef: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex] | None = None, b_coef: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex] | None = None, use_gbsaobc2: bool = True, gbsa_solvent_dielectric: typing.SupportsFloat | typing.SupportsIndex = 78.5, gbsa_solute_dielectric: typing.SupportsFloat | typing.SupportsIndex = 1.0, nonbonded_method: robo_bindings.NonbondedMethod | None = None, nonbonded_cutoff_in_nm: typing.SupportsFloat | typing.SupportsIndex = 1.2) -> None:
+        ...
+    @property
+    def a_coef(self) -> list[float]:
+        ...
+    @a_coef.setter
+    def a_coef(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def b_coef(self) -> list[float]:
+        ...
+    @b_coef.setter
+    def b_coef(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def gbsa_solute_dielectric(self) -> float:
+        ...
+    @gbsa_solute_dielectric.setter
+    def gbsa_solute_dielectric(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def gbsa_solvent_dielectric(self) -> float:
+        ...
+    @gbsa_solvent_dielectric.setter
+    def gbsa_solvent_dielectric(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def nonbonded_cutoff_in_nm(self) -> float:
+        ...
+    @nonbonded_cutoff_in_nm.setter
+    def nonbonded_cutoff_in_nm(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def num_types(self) -> int:
+        ...
+    @num_types.setter
+    def num_types(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
 class IntegratorType:
     """
@@ -660,14 +709,9 @@ class RoboAtom:
     def __init__(self, identity: RoboAtomIdentity, element_info: RoboAtomElement, physics: RoboAtomPhysics, connectivity: RoboAtomConnectivity, position: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"]) -> None:
         ...
 class RoboAtomConnectivity:
+    neighbors_global_indices: VectorInt
     root: bool
-    def __init__(self, neighbors_global_indices: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], root: bool) -> None:
-        ...
-    @property
-    def neighbors_global_indices(self) -> list[int]:
-        ...
-    @neighbors_global_indices.setter
-    def neighbors_global_indices(self, arg0: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> None:
+    def __init__(self, neighbors_global_indices: VectorInt, root: bool) -> None:
         ...
 class RoboAtomElement:
     elementName: str
@@ -1064,19 +1108,19 @@ class Scaling14:
     def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self, a1: typing.SupportsInt | typing.SupportsIndex, a4: typing.SupportsInt | typing.SupportsIndex, charge_product: typing.SupportsFloat | typing.SupportsIndex, epsilon: typing.SupportsFloat | typing.SupportsIndex, sigma: typing.SupportsFloat | typing.SupportsIndex) -> None:
+    def __init__(self, atom_1_global_index: typing.SupportsInt | typing.SupportsIndex, atom_4_global_index: typing.SupportsInt | typing.SupportsIndex, charge_product: typing.SupportsFloat | typing.SupportsIndex, epsilon: typing.SupportsFloat | typing.SupportsIndex, sigma: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
-    def a1(self) -> int:
+    def atom_1_global_index(self) -> int:
         ...
-    @a1.setter
-    def a1(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+    @atom_1_global_index.setter
+    def atom_1_global_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
-    def a4(self) -> int:
+    def atom_4_global_index(self) -> int:
         ...
-    @a4.setter
-    def a4(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+    @atom_4_global_index.setter
+    def atom_4_global_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def charge_product(self) -> float:
@@ -1095,6 +1139,50 @@ class Scaling14:
         ...
     @sigma.setter
     def sigma(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+class SimulationSettings:
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, seed: typing.SupportsInt | typing.SupportsIndex = 0, thermostat_temperature_in_k: typing.SupportsFloat | typing.SupportsIndex = 300.0, collision_frequency: typing.SupportsFloat | typing.SupportsIndex = 1.0) -> None:
+        ...
+    @property
+    def collision_frequency(self) -> float:
+        ...
+    @collision_frequency.setter
+    def collision_frequency(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def seed(self) -> int:
+        ...
+    @seed.setter
+    def seed(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def thermostat_temperature_in_k(self) -> float:
+        ...
+    @thermostat_temperature_in_k.setter
+    def thermostat_temperature_in_k(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+class SystemTopology:
+    angles: VectorRoboAngle
+    atoms: VectorRoboAtom
+    bonds: VectorRoboBond
+    cmap_grids: VectorCMAPGrid
+    cmap_torsions: VectorCMAPTorsion
+    exclusions: VectorExclusion
+    harmonic_improper_torsions: VectorRoboHarmonicImproperTorsion
+    periodic_torsions: VectorRoboPeriodicTorsion
+    root_atom_global_indices: VectorInt
+    scaling14s: VectorScaling14
+    topology_ranges: VectorTopologyRange
+    urey_bradleys: VectorUreyBradley
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, root_atom_global_indices: robo_bindings.VectorInt | None = None, topology_ranges: robo_bindings.VectorTopologyRange | None = None, atoms: robo_bindings.VectorRoboAtom | None = None, bonds: robo_bindings.VectorRoboBond | None = None, angles: robo_bindings.VectorRoboAngle | None = None, periodic_torsions: robo_bindings.VectorRoboPeriodicTorsion | None = None, harmonic_improper_torsions: robo_bindings.VectorRoboHarmonicImproperTorsion | None = None, cmap_grids: robo_bindings.VectorCMAPGrid | None = None, cmap_torsions: robo_bindings.VectorCMAPTorsion | None = None, urey_bradleys: robo_bindings.VectorUreyBradley | None = None, scaling14s: robo_bindings.VectorScaling14 | None = None, exclusions: robo_bindings.VectorExclusion | None = None) -> None:
         ...
 class ThermostatName:
     """
@@ -1151,9 +1239,9 @@ class ThermostatName:
     def value(self) -> int:
         ...
 class TopologyRange:
-    def __init__(self, startCounts: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> None:
+    def __init__(self, startCounts: VectorInt) -> None:
         ...
-    def close(self, endCounts: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> None:
+    def close(self, endCounts: VectorInt) -> None:
         ...
 class TopologyRangeType:
     """
@@ -1210,19 +1298,23 @@ class TopologyRangeType:
     def value(self) -> int:
         ...
 class UreyBradley:
+    @typing.overload
     def __init__(self) -> None:
         ...
-    @property
-    def a1(self) -> int:
-        ...
-    @a1.setter
-    def a1(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+    @typing.overload
+    def __init__(self, atom_1_global_index: typing.SupportsInt | typing.SupportsIndex, atom_3_global_index: typing.SupportsInt | typing.SupportsIndex, stiffness_in_kj_per_nm_sq: typing.SupportsFloat | typing.SupportsIndex, nominal_length_in_nm: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
-    def a3(self) -> int:
+    def atom_1_global_index(self) -> int:
         ...
-    @a3.setter
-    def a3(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+    @atom_1_global_index.setter
+    def atom_1_global_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def atom_3_global_index(self) -> int:
+        ...
+    @atom_3_global_index.setter
+    def atom_3_global_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def nominal_length_in_nm(self) -> float:
@@ -1252,6 +1344,989 @@ class Vec3:
         ...
     def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
+class VectorCMAPGrid:
+    def __bool__(self) -> bool:
+        """
+        Check whether the list is nonempty
+        """
+    @typing.overload
+    def __delitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Delete the list elements at index ``i``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: slice) -> None:
+        """
+        Delete list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, s: slice) -> VectorCMAPGrid:
+        """
+        Retrieve list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> CMAPGrid:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: VectorCMAPGrid) -> None:
+        """
+        Copy constructor
+        """
+    @typing.overload
+    def __init__(self, arg0: collections.abc.Iterable) -> None:
+        ...
+    def __iter__(self) -> collections.abc.Iterator[CMAPGrid]:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: CMAPGrid) -> None:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: slice, arg1: VectorCMAPGrid) -> None:
+        """
+        Assign list elements using a slice object
+        """
+    def append(self, x: CMAPGrid) -> None:
+        """
+        Add an item to the end of the list
+        """
+    def clear(self) -> None:
+        """
+        Clear the contents
+        """
+    @typing.overload
+    def extend(self, L: VectorCMAPGrid) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    @typing.overload
+    def extend(self, L: collections.abc.Iterable) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    def insert(self, i: typing.SupportsInt | typing.SupportsIndex, x: CMAPGrid) -> None:
+        """
+        Insert an item at a given position.
+        """
+    @typing.overload
+    def pop(self) -> CMAPGrid:
+        """
+        Remove and return the last item
+        """
+    @typing.overload
+    def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> CMAPGrid:
+        """
+        Remove and return the item at index ``i``
+        """
+class VectorCMAPTorsion:
+    def __bool__(self) -> bool:
+        """
+        Check whether the list is nonempty
+        """
+    @typing.overload
+    def __delitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Delete the list elements at index ``i``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: slice) -> None:
+        """
+        Delete list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, s: slice) -> VectorCMAPTorsion:
+        """
+        Retrieve list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> CMAPTorsion:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: VectorCMAPTorsion) -> None:
+        """
+        Copy constructor
+        """
+    @typing.overload
+    def __init__(self, arg0: collections.abc.Iterable) -> None:
+        ...
+    def __iter__(self) -> collections.abc.Iterator[CMAPTorsion]:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: CMAPTorsion) -> None:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: slice, arg1: VectorCMAPTorsion) -> None:
+        """
+        Assign list elements using a slice object
+        """
+    def append(self, x: CMAPTorsion) -> None:
+        """
+        Add an item to the end of the list
+        """
+    def clear(self) -> None:
+        """
+        Clear the contents
+        """
+    @typing.overload
+    def extend(self, L: VectorCMAPTorsion) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    @typing.overload
+    def extend(self, L: collections.abc.Iterable) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    def insert(self, i: typing.SupportsInt | typing.SupportsIndex, x: CMAPTorsion) -> None:
+        """
+        Insert an item at a given position.
+        """
+    @typing.overload
+    def pop(self) -> CMAPTorsion:
+        """
+        Remove and return the last item
+        """
+    @typing.overload
+    def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> CMAPTorsion:
+        """
+        Remove and return the item at index ``i``
+        """
+class VectorExclusion:
+    def __bool__(self) -> bool:
+        """
+        Check whether the list is nonempty
+        """
+    @typing.overload
+    def __delitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Delete the list elements at index ``i``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: slice) -> None:
+        """
+        Delete list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, s: slice) -> VectorExclusion:
+        """
+        Retrieve list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> Exclusion:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: VectorExclusion) -> None:
+        """
+        Copy constructor
+        """
+    @typing.overload
+    def __init__(self, arg0: collections.abc.Iterable) -> None:
+        ...
+    def __iter__(self) -> collections.abc.Iterator[Exclusion]:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: Exclusion) -> None:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: slice, arg1: VectorExclusion) -> None:
+        """
+        Assign list elements using a slice object
+        """
+    def append(self, x: Exclusion) -> None:
+        """
+        Add an item to the end of the list
+        """
+    def clear(self) -> None:
+        """
+        Clear the contents
+        """
+    @typing.overload
+    def extend(self, L: VectorExclusion) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    @typing.overload
+    def extend(self, L: collections.abc.Iterable) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    def insert(self, i: typing.SupportsInt | typing.SupportsIndex, x: Exclusion) -> None:
+        """
+        Insert an item at a given position.
+        """
+    @typing.overload
+    def pop(self) -> Exclusion:
+        """
+        Remove and return the last item
+        """
+    @typing.overload
+    def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> Exclusion:
+        """
+        Remove and return the item at index ``i``
+        """
+class VectorInt:
+    __hash__: typing.ClassVar[None] = None
+    def __bool__(self) -> bool:
+        """
+        Check whether the list is nonempty
+        """
+    def __contains__(self, x: typing.SupportsInt | typing.SupportsIndex) -> bool:
+        """
+        Return true the container contains ``x``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Delete the list elements at index ``i``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: slice) -> None:
+        """
+        Delete list elements using a slice object
+        """
+    def __eq__(self, arg0: VectorInt) -> bool:
+        ...
+    @typing.overload
+    def __getitem__(self, s: slice) -> VectorInt:
+        """
+        Retrieve list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> int:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: VectorInt) -> None:
+        """
+        Copy constructor
+        """
+    @typing.overload
+    def __init__(self, arg0: collections.abc.Iterable) -> None:
+        ...
+    def __iter__(self) -> collections.abc.Iterator[int]:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __ne__(self, arg0: VectorInt) -> bool:
+        ...
+    @typing.overload
+    def __repr__(self) -> str:
+        """
+        Return the canonical string representation of this list.
+        """
+    @typing.overload
+    def __repr__(self) -> str:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: slice, arg1: VectorInt) -> None:
+        """
+        Assign list elements using a slice object
+        """
+    def append(self, x: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Add an item to the end of the list
+        """
+    def clear(self) -> None:
+        """
+        Clear the contents
+        """
+    def count(self, x: typing.SupportsInt | typing.SupportsIndex) -> int:
+        """
+        Return the number of times ``x`` appears in the list
+        """
+    @typing.overload
+    def extend(self, L: VectorInt) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    @typing.overload
+    def extend(self, L: collections.abc.Iterable) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    def insert(self, i: typing.SupportsInt | typing.SupportsIndex, x: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Insert an item at a given position.
+        """
+    @typing.overload
+    def pop(self) -> int:
+        """
+        Remove and return the last item
+        """
+    @typing.overload
+    def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> int:
+        """
+        Remove and return the item at index ``i``
+        """
+    def remove(self, x: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Remove the first item from the list whose value is x. It is an error if there is no such item.
+        """
+class VectorRoboAngle:
+    def __bool__(self) -> bool:
+        """
+        Check whether the list is nonempty
+        """
+    @typing.overload
+    def __delitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Delete the list elements at index ``i``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: slice) -> None:
+        """
+        Delete list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, s: slice) -> VectorRoboAngle:
+        """
+        Retrieve list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> RoboAngle:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: VectorRoboAngle) -> None:
+        """
+        Copy constructor
+        """
+    @typing.overload
+    def __init__(self, arg0: collections.abc.Iterable) -> None:
+        ...
+    def __iter__(self) -> collections.abc.Iterator[RoboAngle]:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: RoboAngle) -> None:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: slice, arg1: VectorRoboAngle) -> None:
+        """
+        Assign list elements using a slice object
+        """
+    def append(self, x: RoboAngle) -> None:
+        """
+        Add an item to the end of the list
+        """
+    def clear(self) -> None:
+        """
+        Clear the contents
+        """
+    @typing.overload
+    def extend(self, L: VectorRoboAngle) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    @typing.overload
+    def extend(self, L: collections.abc.Iterable) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    def insert(self, i: typing.SupportsInt | typing.SupportsIndex, x: RoboAngle) -> None:
+        """
+        Insert an item at a given position.
+        """
+    @typing.overload
+    def pop(self) -> RoboAngle:
+        """
+        Remove and return the last item
+        """
+    @typing.overload
+    def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> RoboAngle:
+        """
+        Remove and return the item at index ``i``
+        """
+class VectorRoboAtom:
+    def __bool__(self) -> bool:
+        """
+        Check whether the list is nonempty
+        """
+    @typing.overload
+    def __delitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Delete the list elements at index ``i``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: slice) -> None:
+        """
+        Delete list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, s: slice) -> VectorRoboAtom:
+        """
+        Retrieve list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> RoboAtom:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: VectorRoboAtom) -> None:
+        """
+        Copy constructor
+        """
+    @typing.overload
+    def __init__(self, arg0: collections.abc.Iterable) -> None:
+        ...
+    def __iter__(self) -> collections.abc.Iterator[RoboAtom]:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: RoboAtom) -> None:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: slice, arg1: VectorRoboAtom) -> None:
+        """
+        Assign list elements using a slice object
+        """
+    def append(self, x: RoboAtom) -> None:
+        """
+        Add an item to the end of the list
+        """
+    def clear(self) -> None:
+        """
+        Clear the contents
+        """
+    @typing.overload
+    def extend(self, L: VectorRoboAtom) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    @typing.overload
+    def extend(self, L: collections.abc.Iterable) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    def insert(self, i: typing.SupportsInt | typing.SupportsIndex, x: RoboAtom) -> None:
+        """
+        Insert an item at a given position.
+        """
+    @typing.overload
+    def pop(self) -> RoboAtom:
+        """
+        Remove and return the last item
+        """
+    @typing.overload
+    def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> RoboAtom:
+        """
+        Remove and return the item at index ``i``
+        """
+class VectorRoboBond:
+    def __bool__(self) -> bool:
+        """
+        Check whether the list is nonempty
+        """
+    @typing.overload
+    def __delitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Delete the list elements at index ``i``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: slice) -> None:
+        """
+        Delete list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, s: slice) -> VectorRoboBond:
+        """
+        Retrieve list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> RoboBond:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: VectorRoboBond) -> None:
+        """
+        Copy constructor
+        """
+    @typing.overload
+    def __init__(self, arg0: collections.abc.Iterable) -> None:
+        ...
+    def __iter__(self) -> collections.abc.Iterator[RoboBond]:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: RoboBond) -> None:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: slice, arg1: VectorRoboBond) -> None:
+        """
+        Assign list elements using a slice object
+        """
+    def append(self, x: RoboBond) -> None:
+        """
+        Add an item to the end of the list
+        """
+    def clear(self) -> None:
+        """
+        Clear the contents
+        """
+    @typing.overload
+    def extend(self, L: VectorRoboBond) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    @typing.overload
+    def extend(self, L: collections.abc.Iterable) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    def insert(self, i: typing.SupportsInt | typing.SupportsIndex, x: RoboBond) -> None:
+        """
+        Insert an item at a given position.
+        """
+    @typing.overload
+    def pop(self) -> RoboBond:
+        """
+        Remove and return the last item
+        """
+    @typing.overload
+    def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> RoboBond:
+        """
+        Remove and return the item at index ``i``
+        """
+class VectorRoboHarmonicImproperTorsion:
+    def __bool__(self) -> bool:
+        """
+        Check whether the list is nonempty
+        """
+    @typing.overload
+    def __delitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Delete the list elements at index ``i``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: slice) -> None:
+        """
+        Delete list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, s: slice) -> VectorRoboHarmonicImproperTorsion:
+        """
+        Retrieve list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> RoboHarmonicImproperTorsion:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: VectorRoboHarmonicImproperTorsion) -> None:
+        """
+        Copy constructor
+        """
+    @typing.overload
+    def __init__(self, arg0: collections.abc.Iterable) -> None:
+        ...
+    def __iter__(self) -> collections.abc.Iterator[RoboHarmonicImproperTorsion]:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: RoboHarmonicImproperTorsion) -> None:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: slice, arg1: VectorRoboHarmonicImproperTorsion) -> None:
+        """
+        Assign list elements using a slice object
+        """
+    def append(self, x: RoboHarmonicImproperTorsion) -> None:
+        """
+        Add an item to the end of the list
+        """
+    def clear(self) -> None:
+        """
+        Clear the contents
+        """
+    @typing.overload
+    def extend(self, L: VectorRoboHarmonicImproperTorsion) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    @typing.overload
+    def extend(self, L: collections.abc.Iterable) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    def insert(self, i: typing.SupportsInt | typing.SupportsIndex, x: RoboHarmonicImproperTorsion) -> None:
+        """
+        Insert an item at a given position.
+        """
+    @typing.overload
+    def pop(self) -> RoboHarmonicImproperTorsion:
+        """
+        Remove and return the last item
+        """
+    @typing.overload
+    def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> RoboHarmonicImproperTorsion:
+        """
+        Remove and return the item at index ``i``
+        """
+class VectorRoboPeriodicTorsion:
+    def __bool__(self) -> bool:
+        """
+        Check whether the list is nonempty
+        """
+    @typing.overload
+    def __delitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Delete the list elements at index ``i``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: slice) -> None:
+        """
+        Delete list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, s: slice) -> VectorRoboPeriodicTorsion:
+        """
+        Retrieve list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> RoboPeriodicTorsion:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: VectorRoboPeriodicTorsion) -> None:
+        """
+        Copy constructor
+        """
+    @typing.overload
+    def __init__(self, arg0: collections.abc.Iterable) -> None:
+        ...
+    def __iter__(self) -> collections.abc.Iterator[RoboPeriodicTorsion]:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: RoboPeriodicTorsion) -> None:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: slice, arg1: VectorRoboPeriodicTorsion) -> None:
+        """
+        Assign list elements using a slice object
+        """
+    def append(self, x: RoboPeriodicTorsion) -> None:
+        """
+        Add an item to the end of the list
+        """
+    def clear(self) -> None:
+        """
+        Clear the contents
+        """
+    @typing.overload
+    def extend(self, L: VectorRoboPeriodicTorsion) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    @typing.overload
+    def extend(self, L: collections.abc.Iterable) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    def insert(self, i: typing.SupportsInt | typing.SupportsIndex, x: RoboPeriodicTorsion) -> None:
+        """
+        Insert an item at a given position.
+        """
+    @typing.overload
+    def pop(self) -> RoboPeriodicTorsion:
+        """
+        Remove and return the last item
+        """
+    @typing.overload
+    def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> RoboPeriodicTorsion:
+        """
+        Remove and return the item at index ``i``
+        """
+class VectorScaling14:
+    def __bool__(self) -> bool:
+        """
+        Check whether the list is nonempty
+        """
+    @typing.overload
+    def __delitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Delete the list elements at index ``i``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: slice) -> None:
+        """
+        Delete list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, s: slice) -> VectorScaling14:
+        """
+        Retrieve list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> Scaling14:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: VectorScaling14) -> None:
+        """
+        Copy constructor
+        """
+    @typing.overload
+    def __init__(self, arg0: collections.abc.Iterable) -> None:
+        ...
+    def __iter__(self) -> collections.abc.Iterator[Scaling14]:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: Scaling14) -> None:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: slice, arg1: VectorScaling14) -> None:
+        """
+        Assign list elements using a slice object
+        """
+    def append(self, x: Scaling14) -> None:
+        """
+        Add an item to the end of the list
+        """
+    def clear(self) -> None:
+        """
+        Clear the contents
+        """
+    @typing.overload
+    def extend(self, L: VectorScaling14) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    @typing.overload
+    def extend(self, L: collections.abc.Iterable) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    def insert(self, i: typing.SupportsInt | typing.SupportsIndex, x: Scaling14) -> None:
+        """
+        Insert an item at a given position.
+        """
+    @typing.overload
+    def pop(self) -> Scaling14:
+        """
+        Remove and return the last item
+        """
+    @typing.overload
+    def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> Scaling14:
+        """
+        Remove and return the item at index ``i``
+        """
+class VectorTopologyRange:
+    def __bool__(self) -> bool:
+        """
+        Check whether the list is nonempty
+        """
+    @typing.overload
+    def __delitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Delete the list elements at index ``i``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: slice) -> None:
+        """
+        Delete list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, s: slice) -> VectorTopologyRange:
+        """
+        Retrieve list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> TopologyRange:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: VectorTopologyRange) -> None:
+        """
+        Copy constructor
+        """
+    @typing.overload
+    def __init__(self, arg0: collections.abc.Iterable) -> None:
+        ...
+    def __iter__(self) -> collections.abc.Iterator[TopologyRange]:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: TopologyRange) -> None:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: slice, arg1: VectorTopologyRange) -> None:
+        """
+        Assign list elements using a slice object
+        """
+    def append(self, x: TopologyRange) -> None:
+        """
+        Add an item to the end of the list
+        """
+    def clear(self) -> None:
+        """
+        Clear the contents
+        """
+    @typing.overload
+    def extend(self, L: VectorTopologyRange) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    @typing.overload
+    def extend(self, L: collections.abc.Iterable) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    def insert(self, i: typing.SupportsInt | typing.SupportsIndex, x: TopologyRange) -> None:
+        """
+        Insert an item at a given position.
+        """
+    @typing.overload
+    def pop(self) -> TopologyRange:
+        """
+        Remove and return the last item
+        """
+    @typing.overload
+    def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> TopologyRange:
+        """
+        Remove and return the item at index ``i``
+        """
+class VectorUreyBradley:
+    def __bool__(self) -> bool:
+        """
+        Check whether the list is nonempty
+        """
+    @typing.overload
+    def __delitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Delete the list elements at index ``i``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: slice) -> None:
+        """
+        Delete list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, s: slice) -> VectorUreyBradley:
+        """
+        Retrieve list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> UreyBradley:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: VectorUreyBradley) -> None:
+        """
+        Copy constructor
+        """
+    @typing.overload
+    def __init__(self, arg0: collections.abc.Iterable) -> None:
+        ...
+    def __iter__(self) -> collections.abc.Iterator[UreyBradley]:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: UreyBradley) -> None:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: slice, arg1: VectorUreyBradley) -> None:
+        """
+        Assign list elements using a slice object
+        """
+    def append(self, x: UreyBradley) -> None:
+        """
+        Add an item to the end of the list
+        """
+    def clear(self) -> None:
+        """
+        Clear the contents
+        """
+    @typing.overload
+    def extend(self, L: VectorUreyBradley) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    @typing.overload
+    def extend(self, L: collections.abc.Iterable) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    def insert(self, i: typing.SupportsInt | typing.SupportsIndex, x: UreyBradley) -> None:
+        """
+        Insert an item at a given position.
+        """
+    @typing.overload
+    def pop(self) -> UreyBradley:
+        """
+        Remove and return the last item
+        """
+    @typing.overload
+    def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> UreyBradley:
+        """
+        Remove and return the item at index ``i``
+        """
 class World:
     def add_sampler(self, sampler_name: SamplerName, integrator_type: IntegratorType, thermostat_name: ThermostatName, use_fixman_potential: bool, use_nuts: bool) -> bool:
         """
@@ -1296,27 +2371,11 @@ def calculate_log_sum_exp2(arg0: typing.SupportsFloat | typing.SupportsIndex, ar
     ...
 def calculate_mag_sq(arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> float:
     ...
-def chirality_from_plane_deviation(arg0: typing.SupportsFloat | typing.SupportsIndex) -> BondCenterChirality:
-    ...
-def exceeds_planarity_threshold(arg0: typing.SupportsFloat | typing.SupportsIndex, arg1: typing.SupportsFloat | typing.SupportsIndex) -> bool:
-    ...
-def flipped_chirality(arg0: BondCenterChirality) -> BondCenterChirality:
-    ...
-def is_bond_chirality_mismatch(arg0: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)], arg1: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)], arg2: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)], arg3: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)], arg4: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)], arg5: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)]) -> bool:
-    ...
-def is_chirality_mismatch(arg0: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)], arg1: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)], arg2: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)], arg3: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)], arg4: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)], arg5: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)]) -> bool:
-    ...
 def multiply_by_scalar(arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], arg1: typing.SupportsFloat | typing.SupportsIndex, arg2: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
     ...
 def normalize_in_place(arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
     ...
-def plane_normal(arg0: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)], arg1: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)]) -> typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)]:
-    ...
-def resolve_reference_indices(arg0: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> ReferenceIndices:
-    ...
 def safe_log_sine_sqr(arg0: typing.SupportsFloat | typing.SupportsIndex) -> float:
     ...
-def signed_plane_deviation(arg0: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)], arg1: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)]) -> float:
-    ...
-def triple_product(arg0: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)], arg1: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)], arg2: typing.Annotated[list[float], pybind11_stubgen.typing_ext.FixedSize(3)]) -> float:
-    ...
+CutoffNonPeriodic: NonbondedMethod  # value = <NonbondedMethod.CutoffNonPeriodic: 1>
+NoCutoff: NonbondedMethod  # value = <NonbondedMethod.NoCutoff: 0>

@@ -69,6 +69,7 @@ One iteration must include:
 #include "EnergySnapshot.hpp"
 #include "OpenMM.hpp"
 #include "Sampler.hpp"
+#include "bgeneral.hpp"
 // #include "TaskSpace.hpp"
 
 // Just to remove the long syntax requirement
@@ -145,11 +146,37 @@ class HMCSampler : virtual public Sampler {
     friend class Context;
 
     public:
-    [[nodiscard]] const EnergySnapshot& getPreviousEnergy() const {
+    [[nodiscard]] auto getPreviousEnergy() const -> const EnergySnapshot& {
         return previousEnergy;
     }
-    [[nodiscard]] const EnergySnapshot& getCurrentEnergy() const {
+
+    [[nodiscard]] auto getCurrentEnergy() const -> const EnergySnapshot& {
         return currentEnergy;
+    }
+
+    [[nodiscard]] auto getNumSamples() const -> int {
+        return numSamples;
+    }
+
+    [[nodiscard]] auto getNumAcceptedSamples() const -> int {
+        return numAcceptedSamples;
+    }
+
+    [[nodiscard]] auto getAcceptance() const -> SimTK::Real {
+        return numSamples > 0 ? static_cast<SimTK::Real>(numAcceptedSamples) / numSamples : SimTK::NaN;
+    }
+
+    void resetAcceptance() {
+        numSamples = 0;
+        numAcceptedSamples = 0;
+    }
+
+    [[nodiscard]] auto getTotalEnrgies() const -> const std::vector<SimTK::Real>& {
+        return totalEnergiesBuffer;
+    }
+
+    [[nodiscard]] auto getNumDegreesOfFreedom() const -> int {
+        return numDegreesOfFreedom;
     }
 
     std::vector<SimTK::Real> UCache, UDotCache, TorqueCache;
@@ -190,12 +217,47 @@ class HMCSampler : virtual public Sampler {
     void setThermostat(ThermostatName);
     void setThermostat(std::string);
     void setThermostat(const char*);
-    virtual ThermostatName getThermostat() const;
+    [[nodiscard]] virtual auto getThermostat() const -> ThermostatName;
 
     void setIntegratorType(IntegratorType type);
-    void setIntegratorType(const std::string type);
-    const IntegratorType getIntegratorType() {
+
+    [[nodiscard]] auto getIntegratorType() const -> IntegratorType {
         return integratorType;
+    }
+
+    [[nodiscard]] auto getIntegratorTypeAsString() const -> std::string {
+        switch (integratorType) {
+            case IntegratorType::Empty:
+                return "Empty";
+            case IntegratorType::Verlet:
+                return "Simbody Velocity Verlet";
+            case IntegratorType::Euler:
+                return "Euler";
+            case IntegratorType::Euler2:
+                return "Euler2";
+            case IntegratorType::CPodes:
+                return "CPodes";
+            case IntegratorType::RungeKutta:
+                return "RungeKutta";
+            case IntegratorType::RungeKutta2:
+                return "RungeKutta2";
+            case IntegratorType::RungeKutta3:
+                return "RungeKutta3";
+            case IntegratorType::RungeKuttaFeldberg:
+                return "RungeKuttaFeldberg";
+            case IntegratorType::BendStretch:
+                return "BendStretch";
+            case IntegratorType::OpenMMVelocityVerlet:
+                return "OpenMM Velocity Verlet";
+            case IntegratorType::BoundWalk:
+                return "BoundWalk";
+            case IntegratorType::BoundHMC:
+                return "BoundHMC";
+            case IntegratorType::StationsTask:
+                return "StationsTask";
+            default:
+                return "UnknownIntegratorType";
+        }
     }
 
     void setUseNUTS(bool useNUTS) {
@@ -323,9 +385,6 @@ class HMCSampler : virtual public Sampler {
     /** Integrate trajectory using task space forces */
     void integrateTrajectory_TaskSpace(SimTK::State& someState);
 
-    /** Use stochastic optimization to adapt timestep **/
-    virtual void adaptTimestep(SimTK::State& someState);
-
     /** Store new configuration and energy terms**/
     virtual void calcNewEnergies(SimTK::State& someState);
 
@@ -336,7 +395,7 @@ class HMCSampler : virtual public Sampler {
     // virtual bool accRejStep(SimTK::State& someState);
 
     /** Chooses whether to accept a sample or not based on a probability **/
-    auto acceptSample(const EnergySnapshot& proposedEnergy) -> bool;
+    auto acceptSample(const EnergySnapshot& proposedEnergy, bool shouldPrint) -> bool;
 
     /*
      * Get Joint type by examining hinge matrix H_FM
@@ -351,12 +410,6 @@ class HMCSampler : virtual public Sampler {
     // virtual void initialize(SimTK::State& advanced);
 
     void PrintInitialParams();
-    void getMsg_Header(std::stringstream& ss);
-    void getMsg_InitialParams(std::stringstream& ss);
-    void getMsg_EnergyDetails(std::stringstream& ss,
-                              const SimTK::State& someState,
-                              bool isTheSampleValid,
-                              bool isTheSampleAccepted);
 
     void rebuildSimbodyTopologyFromOpenMMPositions(SimTK::State& someState);
 
@@ -425,9 +478,6 @@ class HMCSampler : virtual public Sampler {
     int getMDStepsPerSample() const;
 
     void setMDStepsPerSample(int mdStepsPerSample);
-
-    SimTK::Real getMDStepsPerSampleStd() const;
-    void setMDStepsPerSampleStd(SimTK::Real mdstd = 0);
 
     /** Calculate Mean Square Displacement based on stored R vectors **/
     SimTK::Real calculateMSD();
@@ -632,22 +682,17 @@ class HMCSampler : virtual public Sampler {
     SimTK::Real residualEmbeddedPotential = 0.0; // inside rigid bodies if weren't rigid
 
     bool useFixman = false;
-    // bool alwaysAccept = false;
 
-    int acceptedStepsBufferSize = 50;
-    std::deque<int> acceptedStepsBuffer;
-    SimTK::Real learningRate = 10e-6;
-    SimTK::Real idealAcceptance = 0.651;
     SimTK::Real MDStepsPerSampleStd = 0.5;
-    SimTK::Real timestep = SimTK::NaN, prevTimestep = SimTK::NaN;
-    int MDStepsPerSample = SimTK::NaN, prevMDStepsPerSample = SimTK::NaN;
-    bool shouldAdaptTimestep = false;
+    SimTK::Real timestep = SimTK::NaN;
+    int MDStepsPerSample = SimTK::NaN;
+
+    int numSamples = 0;
+    int numAcceptedSamples = 0;
 
     int QsBufferSize = 300;
     // std::list<SimTK::Vector> QsBuffer;
     std::deque<SimTK::Real> QsBuffer;
-
-    SimTK::Real acceptance = SimTK::NaN, prevAcceptance = SimTK::NaN;
 
     // Non-equilibrium options
     int DistortOpt = 0;
@@ -717,4 +762,6 @@ class HMCSampler : virtual public Sampler {
     SimTK::Vector nutsDeltaQ;
     std::uniform_real_distribution<SimTK::Real> uniformReal01{0.0, 1.0};
     std::exponential_distribution<SimTK::Real> expDist{1.0};
+
+    std::vector<SimTK::Real> totalEnergiesBuffer;
 };

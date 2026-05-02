@@ -72,7 +72,7 @@ void World::setAtomTargetLocationsToState(
 
     // Set default child mobod inboard (X_PF) and outboard (X_BM) frames
     // This method only uses internal coordinates per molecule bonds info
-    updateFramesFromTopologies();
+    updateInboardAndOutboardFramesFromTopologies();
 
     // Set every mobod's mass properties
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
@@ -82,11 +82,10 @@ void World::setAtomTargetLocationsToState(
         mobod.setDefaultMassProperties(massProperties);
     }
 
-    // TODO add in the documentation that we advance to Position stage in this function
-    const SimTK::State& state = compoundSystem->realizeTopology();
-    compoundSystem->realize(state, SimTK::Stage::Position);
-
-    integrator->updAdvancedState() = state;
+    // Modifying inboard and outboard frames is a topological change
+    // Thus, we need to make an expensive call to realizeTopology()
+    worldState = compoundSystem->realizeTopology();
+    compoundSystem->realize(worldState, SimTK::Stage::Position);
 
     if (testing) {
         coordinateTransferErrors.push_back(checkCoordinateTransfer(atomTargets));
@@ -257,7 +256,7 @@ auto World::checkCoordinateTransfer(
     return error;
 }
 
-void World::updateFramesFromTopologies() {
+void World::updateInboardAndOutboardFramesFromTopologies() {
     // Iterate molecules
     for (const auto& bond : rigidBodyAtomBonds) {
         const auto& topology = topologies[bond.topologyIndex];
@@ -293,7 +292,6 @@ void World::updateFramesFromTopologies() {
         const SimTK::Transform Proot_X_root = Proot_X_T * T_X_root;
 
         // Create transforms for child default inboard frame (XPF) and default outboard frame (XBM)
-        SimTK::Transform XPF, XBM;
         switch (bond.mobility) {
             case SimTK::BondMobility::Mobility::AnglePin:
             case SimTK::BondMobility::Mobility::Slider:
@@ -301,8 +299,8 @@ void World::updateFramesFromTopologies() {
                 const SimTK::Transform& B_X_M_anglePin = X_parentBC_childBC;
                 const SimTK::Transform P_X_F_anglePin = Proot_X_root * B_X_M_anglePin;
 
-                XPF = P_X_F_anglePin;
-                XBM = B_X_M_anglePin;
+                childAtomMobod.setDefaultInboardFrame(P_X_F_anglePin);  // X_PF
+                childAtomMobod.setDefaultOutboardFrame(B_X_M_anglePin); // X_BM
                 break;
             }
 
@@ -311,8 +309,8 @@ void World::updateFramesFromTopologies() {
                 const SimTK::Transform B_X_M_pin = X_parentBC_childBC * X_to_Z;
                 const SimTK::Transform P_X_F_pin = Proot_X_root * B_X_M_pin;
 
-                XPF = P_X_F_pin;
-                XBM = B_X_M_pin;
+                childAtomMobod.setDefaultInboardFrame(P_X_F_pin);  // X_PF
+                childAtomMobod.setDefaultOutboardFrame(B_X_M_pin); // X_BM
                 break;
             }
 
@@ -323,8 +321,8 @@ void World::updateFramesFromTopologies() {
                                                         // SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis)
                 const SimTK::Transform P_X_F = Proot_X_root * B_X_M;
 
-                XPF = P_X_F;
-                XBM = B_X_M;
+                childAtomMobod.setDefaultInboardFrame(P_X_F);  // X_PF
+                childAtomMobod.setDefaultOutboardFrame(B_X_M); // X_BM
                 break;
             }
 
@@ -335,8 +333,8 @@ void World::updateFramesFromTopologies() {
                     SimTK::Transform() * Z_to_Y * Y_to_X * X_childBC_parentBC;
                 const SimTK::Transform B_X_M_spheric = ~M_X_B_spheric;
 
-                XPF = P_X_F_spheric;
-                XBM = B_X_M_spheric;
+                childAtomMobod.setDefaultInboardFrame(P_X_F_spheric);  // X_PF
+                childAtomMobod.setDefaultOutboardFrame(B_X_M_spheric); // X_BM
                 break;
             }
 
@@ -348,25 +346,21 @@ void World::updateFramesFromTopologies() {
                     topology.calcDefaultBondCenterFrameInChildAtomFrame(bond.parentCAIx, bond.childCAIx);
                 const SimTK::Transform X_BCchi_childAtom = ~X_childAtom_BCchi;
 
-                const SimTK::Transform P_X_F_orthospheric = X_parentAtom_BCpar; // BAT from Compound
+                const SimTK::Transform& P_X_F_orthospheric = X_parentAtom_BCpar; // BAT from Compound
                 const SimTK::Transform M_X_B_orthospheric =
                     X_parentBC_childBC * X_BCchi_childAtom; // BAT from Compound
                 const SimTK::Transform B_X_M_orthospheric =
                     ~M_X_B_orthospheric; // X_childAtom_BC * X_childBC_parentBC;
 
-                XPF = P_X_F_orthospheric;
-                XBM = B_X_M_orthospheric;
+                childAtomMobod.setDefaultInboardFrame(P_X_F_orthospheric);  // X_PF
+                childAtomMobod.setDefaultOutboardFrame(B_X_M_orthospheric); // X_BM
                 break;
             }
 
             default:
-                std::string errorMsg = "Mobility type '" + std::string(getBondMobilityName(bond.mobility))
-                                       + "' not supported in World::setFramesFromTopologies().";
-                throw std::runtime_error(errorMsg);
+                throw std::runtime_error("Mobility type '" + std::string(getBondMobilityName(bond.mobility))
+                                         + "' not supported in World::setFramesFromTopologies().");
         }
-
-        childAtomMobod.setDefaultInboardFrame(XPF);
-        childAtomMobod.setDefaultOutboardFrame(XBM);
     }
 
     // Handle bonds involving root atoms separately
@@ -749,7 +743,7 @@ void World::generateDummParams(const std::vector<RoboAtom>& atoms,
     }
 }
 
-bool World::isOverconstrained() const {
+auto World::isOverconstrained() const -> bool {
     // OpenMM does not support rigid bodies and thus, no overconstraints can be present
     if (samplers[0]->getIntegratorType() == IntegratorType::OpenMMVelocityVerlet) {
         return false;
@@ -761,6 +755,7 @@ bool World::isOverconstrained() const {
     const auto& state = integrator->getAdvancedState();
 
     // Realize will calculate the forces and potential energy using OpenMM
+    throw std::runtime_error("See line below.");
     // OPENMM::get().setActiveForceGroup(world.getOwnIndex());
     compoundSystem->realize(state, SimTK::Stage::Acceleration);
 
@@ -2860,7 +2855,7 @@ void World::calcSimbodyBAT_TODEL(std::vector<std::vector<int>>& ZMatrix,
                                  std::vector<SimTK::Real>& ANGLEBends,
                                  std::vector<SimTK::Real>& TORSIONAngles) {
     /*
-    SimTK::State& advState = integrator->updAdvancedState();
+    SimTK::State& advState = 2;
 
     bool parFlag = false;
     bool parParFlag = false;
@@ -3098,9 +3093,7 @@ void World::PrintXBMps() const {
 }
 
 /*! <!--  --> */
-const SimTK::Vector& World::getBMps() {
-    const SimTK::State& advState = integrator->getAdvancedState();
-
+auto World::getBMps() -> const SimTK::Vector& {
     if (BMps.size() == 0) {
         // BMps.resize(matter->getNQ(advState));
         BMps.resize(matter->getNumBodies());
@@ -3114,7 +3107,7 @@ const SimTK::Vector& World::getBMps() {
         // for(int moQIx = 0; moQIx < mobod.getNumQ(advState); moQIx++){
         bIx++;
 
-        const SimTK::Transform& X_BM = mobod.getOutboardFrame(advState);
+        const SimTK::Transform& X_BM = mobod.getOutboardFrame(worldState);
         BMps[int(mbx)] = X_BM.p()[0];
         //}
     }
@@ -3123,9 +3116,7 @@ const SimTK::Vector& World::getBMps() {
 }
 
 /*! <!--  --> */
-const SimTK::Vector& World::getPFrs() {
-    const SimTK::State& advState = integrator->getAdvancedState();
-
+auto World::getPFrs() -> const SimTK::Vector& {
     if (PFrs.size() == 0) {
         // PFrs.resize(matter->getNQ(advState));
         PFrs.resize(matter->getNumBodies());
@@ -3139,19 +3130,12 @@ const SimTK::Vector& World::getPFrs() {
         // for(int moQIx = 0; moQIx < mobod.getNumQ(advState); moQIx++){
         bIx++;
 
-        const SimTK::Transform& X_PF = mobod.getInboardFrame(advState);
+        const SimTK::Transform& X_PF = mobod.getInboardFrame(worldState);
         PFrs[int(mbx)] = std::acos(X_PF.R()(0)(0));
         //}
     }
 
     return PFrs;
-}
-
-/*!
- * <!--  -->
- */
-const SimTK::Vector& World::getAdvancedQs() {
-    return matter->getQ(integrator->updAdvancedState());
 }
 
 /*!
@@ -3171,20 +3155,6 @@ const void World::PrintAdvancedQs() const {
  */
 const SimTK::Vector& World::getAdvancedUs() {
     return matter->getU(integrator->updAdvancedState());
-}
-
-/*!
- * <!--  -->
- */
-int World::getNQs() {
-    return matter->getNQ(integrator->updAdvancedState());
-}
-
-/*!
- * <!--  -->
- */
-int World::getNUs() {
-    return matter->getNU(integrator->updAdvancedState());
 }
 
 // RANDOM_WALK functions
@@ -3285,7 +3255,7 @@ void World::WriteRst7FromTopology(std::string FN)
 {
     SimTK_ASSERT_ALWAYS(false, "World::WriteRst7FromTopology not implemented yet");
 
-    // updateAtomListsFromSimbody(integrator->updAdvancedState());
+    // updateAtomListsFromSimbody(2);
 
     // FILE *File = fopen(FN.c_str(), "w+");
 
@@ -4117,96 +4087,100 @@ SimTK::Real World::findDecorrelationTime(const SimTK::State& state,
                                          int equilibrationSteps,
                                          int tuneSteps,
                                          SimTK::Real timestep) {
-    std::vector<SimTK::Vec3> initialPositions(numAtoms), positions(numAtoms);
+    throw std::runtime_error("World::findDecorrelationTime not implemented yet");
+    return -1;
 
-    // Set initial positions
-    for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
-        for (const auto& atom : topologies[topoIx].getAtoms()) {
-            const SimTK::Vec3 location = atomTargetLocationsCache[topoIx][atom.identity.compoundAtomIndex];
-            initialPositions[atom.identity.globalIndex] = location;
-        }
-    }
+    // std::vector<SimTK::Vec3> initialPositions(numAtoms), positions(numAtoms);
 
-    // Run some steps to equilibrate and get initial positions
-    if (equilibrationSteps < 1) {
-        throw std::invalid_argument("World::tuneOpenMM(): equilibrationSteps must be at least 1");
-    }
-    OPENMM::get().integrateTrajectory(initialPositions, positions, true, equilibrationSteps, timestep);
+    // // Set initial positions
+    // for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
+    //     for (const auto& atom : topologies[topoIx].getAtoms()) {
+    //         const SimTK::Vec3 location = atomTargetLocationsCache[topoIx][atom.identity.compoundAtomIndex];
+    //         initialPositions[atom.identity.globalIndex] = location;
+    //     }
+    // }
 
-    // Allocate memory
-    const int numRows = zMatrix.get().size() - 1;
-    const int numAngles = zMatrix.get().size() - 2;
-    const int numCoords = numRows + numAngles;
+    // // Run some steps to equilibrate and get initial positions
+    // if (equilibrationSteps < 1) {
+    //     throw std::invalid_argument("World::tuneOpenMM(): equilibrationSteps must be at least 1");
+    // }
+    // OPENMM::get().integrateTrajectory(initialPositions, positions, true, equilibrationSteps, timestep);
 
-    std::vector<std::vector<SimTK::Real>> coordinates(numCoords);
-    coordinates.resize(numCoords);
-    for (auto& ts : coordinates) {
-        ts.reserve(tuneSteps);
-    }
+    // // Allocate memory
+    // const int numRows = zMatrix.get().size() - 1;
+    // const int numAngles = zMatrix.get().size() - 2;
+    // const int numCoords = numRows + numAngles;
 
-    // Run the trajectory and collect coordinate time series
-    for (int i = 0; i < tuneSteps; i++) {
-        OPENMM::get().integrateTrajectory(positions, positions, false, 1, timestep);
+    // std::vector<std::vector<SimTK::Real>> coordinates(numCoords);
+    // coordinates.resize(numCoords);
+    // for (auto& ts : coordinates) {
+    //     ts.reserve(tuneSteps);
+    // }
 
-        int coordinateIndex = 0;
+    // // Run the trajectory and collect coordinate time series
+    // for (int i = 0; i < tuneSteps; i++) {
+    //     OPENMM::get().integrateTrajectory(positions, positions, false, 1, timestep);
 
-        for (const auto& row : zMatrix.get()) {
-            if (row.globalIndices[0] != -1 && row.globalIndices[1] != -1) {
-                const SimTK::Vec3& pos1 = positions[row.globalIndices[0]];
-                const SimTK::Vec3& pos2 = positions[row.globalIndices[1]];
-                SimTK::Real bondLength = (pos1 - pos2).norm();
+    //     int coordinateIndex = 0;
 
-                coordinates[coordinateIndex].push_back(bondLength);
-                coordinateIndex++;
-            }
+    //     for (const auto& row : zMatrix.get()) {
+    //         if (row.globalIndices[0] != -1 && row.globalIndices[1] != -1) {
+    //             const SimTK::Vec3& pos1 = positions[row.globalIndices[0]];
+    //             const SimTK::Vec3& pos2 = positions[row.globalIndices[1]];
+    //             SimTK::Real bondLength = (pos1 - pos2).norm();
 
-            if (row.globalIndices[0] != -1 && row.globalIndices[1] != -1 && row.globalIndices[2] != -1) {
-                const SimTK::Vec3& pos1 = positions[row.globalIndices[0]];
-                const SimTK::Vec3& pos2 = positions[row.globalIndices[1]];
-                const SimTK::Vec3& pos3 = positions[row.globalIndices[2]];
-                SimTK::Real angleInRad = calculateAngleInRad(pos1, pos2, pos3);
+    //             coordinates[coordinateIndex].push_back(bondLength);
+    //             coordinateIndex++;
+    //         }
 
-                coordinates[coordinateIndex].push_back(angleInRad);
-                coordinateIndex++;
-            }
-        }
-    }
+    //         if (row.globalIndices[0] != -1 && row.globalIndices[1] != -1 && row.globalIndices[2] != -1) {
+    //             const SimTK::Vec3& pos1 = positions[row.globalIndices[0]];
+    //             const SimTK::Vec3& pos2 = positions[row.globalIndices[1]];
+    //             const SimTK::Vec3& pos3 = positions[row.globalIndices[2]];
+    //             SimTK::Real angleInRad = calculateAngleInRad(pos1, pos2, pos3);
 
-    // Save scale
-    std::vector<SimTK::Real> scale;
-    scale.reserve(numCoords);
+    //             coordinates[coordinateIndex].push_back(angleInRad);
+    //             coordinateIndex++;
+    //         }
+    //     }
+    // }
 
-    for (const auto& row : zMatrix.get()) {
-        if (row.globalIndices[0] != -1 && row.globalIndices[1] != -1) {
-            const auto& bond =
-                topologies[row.moleculeIndex].getBondByCompoundAtomIndex(row.compoundAtomIndices[0],
-                                                                         row.compoundAtomIndices[1]);
-            scale.push_back(std::sqrt(bond.stiffnessInKJPerNmSq));
-        }
+    // // Save scale
+    // std::vector<SimTK::Real> scale;
+    // scale.reserve(numCoords);
 
-        if (row.globalIndices[0] != -1 && row.globalIndices[1] != -1 && row.globalIndices[2] != -1) {
-            const auto& angle =
-                topologies[row.moleculeIndex].getAngleByCompoundAtomIndex(row.compoundAtomIndices[0],
-                                                                          row.compoundAtomIndices[1],
-                                                                          row.compoundAtomIndices[2]);
-            scale.push_back(std::sqrt(angle.stiffnessInKJPerRadSq));
-        }
-    }
+    // for (const auto& row : zMatrix.get()) {
+    //     if (row.globalIndices[0] != -1 && row.globalIndices[1] != -1) {
+    //         const auto& bond =
+    //             topologies[row.moleculeIndex].getBondByCompoundAtomIndex(row.compoundAtomIndices[0],
+    //                                                                      row.compoundAtomIndices[1]);
+    //         scale.push_back(std::sqrt(bond.stiffnessInKJPerNmSq));
+    //     }
 
-    // Standardize each coordinate time series to have mean 0 and stddev 1 for better numerical stability in
-    // ACF calculation
-    optimizeCoordinates(coordinates, scale);
+    //     if (row.globalIndices[0] != -1 && row.globalIndices[1] != -1 && row.globalIndices[2] != -1) {
+    //         const auto& angle =
+    //             topologies[row.moleculeIndex].getAngleByCompoundAtomIndex(row.compoundAtomIndices[0],
+    //                                                                       row.compoundAtomIndices[1],
+    //                                                                       row.compoundAtomIndices[2]);
+    //         scale.push_back(std::sqrt(angle.stiffnessInKJPerRadSq));
+    //     }
+    // }
 
-    // Find maximum decorrelation time
-    SimTK::Real tauMax = 0.0;
-    for (const auto& ts : coordinates) {
-        SimTK::Real tau = integratedAutocorrelation(ts);
-        if (tau > tauMax) {
-            tauMax = tau;
-        }
-    }
+    // // Standardize each coordinate time series to have mean 0 and stddev 1 for better numerical stability
+    // in
+    // // ACF calculation
+    // optimizeCoordinates(coordinates, scale);
 
-    return tauMax;
+    // // Find maximum decorrelation time
+    // SimTK::Real tauMax = 0.0;
+    // for (const auto& ts : coordinates) {
+    //     SimTK::Real tau = integratedAutocorrelation(ts);
+    //     if (tau > tauMax) {
+    //         tauMax = tau;
+    //     }
+    // }
+
+    // return tauMax;
 }
 
 void World::optimizeCoordinates(std::vector<std::vector<SimTK::Real>>& coordinates,
@@ -4318,11 +4292,9 @@ auto World::generateSamples(int howManySamplesPerRound,
                             std::stringstream& worldOutStream,
                             const std::string& header,
                             bool shouldPrint) -> bool {
-    SimTK::State& state = integrator->updAdvancedState();
+    updSampler(0)->reinitialize(worldState, worldOutStream, shouldPrint);
 
-    updSampler(0)->reinitialize(state, worldOutStream, shouldPrint);
-
-    // updateAtomListsFromSimbody(state);
+    // updateAtomListsFromSimbody(worldState);
 
     bool validated = true;
 
@@ -4331,7 +4303,7 @@ auto World::generateSamples(int howManySamplesPerRound,
         // 	std::cout << "[OpenMM tune]: Estimating decorrelation time across coordinates to set random step
         // parameters for the OMMVV sampler..." << std::endl;
 
-        // 	// const SimTK::Real tau = findDecorrelationTime(state, 10'000, 100'000, 0.002);
+        // 	// const SimTK::Real tau = findDecorrelationTime(worldState, 10'000, 100'000, 0.002);
         // 	// int minSteps = std::round(5 * tau);
         // 	// int maxSteps = std::round(10 * tau);
 
@@ -4395,21 +4367,21 @@ auto World::generateSamples(int howManySamplesPerRound,
         // OpenMM does cartesian integration, so no locking here
         for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
             // TODO do we reinitialize() here?
-            validated = updSampler(0)->sampleIteration(state, worldOutStream, shouldPrint) && validated;
+            validated = updSampler(0)->sampleIteration(worldState, worldOutStream, shouldPrint) && validated;
         }
     } else {
         // // Simbody supports locking mobilizers
         // for (const auto& mobodLock : mobodLocks) {
         // 	for (const auto mbx : mobodLock) {
         // 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        // 		mobod.lock(state);
+        // 		mobod.lock(worldState);
         // 	}
 
-        // 	// compoundSystem->realize(state, SimTK::Stage::Position);
+        // 	// compoundSystem->realize(worldState, SimTK::Stage::Position);
 
         // 	// Sample
         // 	for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
-        // 		validated &= updSampler(0)->sample_iteration(state, worldOutStream, verbose);
+        // 		validated &= updSampler(0)->sample_iteration(worldState, worldOutStream, verbose);
         // 		if (!validated) {
         // 			continue;
         // 		}
@@ -4422,13 +4394,13 @@ auto World::generateSamples(int howManySamplesPerRound,
 
         // 	for (const auto mbx : mobodLock) {
         // 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        // 		mobod.unlock(state);
+        // 		mobod.unlock(worldState);
         // 	}
         // }
 
         // TODO the above will lock literally everything, so it won't simulate anything
         for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
-            validated &= updSampler(0)->sampleIteration(state, worldOutStream, shouldPrint);
+            validated &= updSampler(0)->sampleIteration(worldState, worldOutStream, shouldPrint);
             if (!validated) {
                 continue;
             }
@@ -4437,6 +4409,8 @@ auto World::generateSamples(int howManySamplesPerRound,
 
     // Update atom target locations cache (Cartesian coordinates) after sampling
     if (validated) {
+        const auto& advancedState = integrator->getAdvancedState();
+
         for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
             for (auto cAIx = SimTK::Compound::AtomIndex(0); cAIx < topologies[topoIx].getAtoms().size();
                  cAIx++) {
@@ -4444,7 +4418,7 @@ auto World::generateSamples(int howManySamplesPerRound,
                     topologies[topoIx].calcAtomLocationInGroundFrameThroughSimbody(cAIx,
                                                                                    *forceField,
                                                                                    *matter,
-                                                                                   state);
+                                                                                   advancedState);
             }
         }
     }

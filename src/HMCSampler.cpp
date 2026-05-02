@@ -60,8 +60,6 @@ HMCSampler::HMCSampler(World& argWorld,
         natoms += topology.getNumAtoms();
     }
 
-    acceptedStepsBuffer.resize(acceptedStepsBufferSize, 0);
-
     // BAT statistics initialization
     subZMatrixBATMeans = std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>();
     subZMatrixBATDiffs = std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>();
@@ -80,7 +78,6 @@ acception-rejection step. Also realize velocities and initialize
 the timestepper. **/
 void HMCSampler::initialize() {
     const SimTK::State& state = compoundSystem->getDefaultState();
-    timeStepper->initialize(state);
 
     // Initialize QsBuffer with zeros
     int totSize = QsBufferSize * matter->getNQ(state);
@@ -131,6 +128,9 @@ void HMCSampler::initialize() {
  * the timestepper. -->
  */
 void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOutStream, bool verbose) {
+    // Tell OpenMM what force group to use
+    OPENMM::get().setActiveForceGroup(world->getOwnIndex());
+
     system->realize(state, SimTK::Stage::Position);
 
     // Set the generalized velocities scale factors
@@ -139,31 +139,22 @@ void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOut
     // Transformation Jacobian
     bendStretchJacobianDetLog = 0.0;
 
-    // Initialize new velocities
+    // Initialize new velocities and advance the state to realize them
     perturbVelocities(state, VelocitiesPerturbMethod::ToTemperature);
 
     // This computes the potential energy, kinetic energy and ridid body forces using OpenMM, regardless of
     // the integrator type
-    currentEnergy.potential = OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
+    dumm->evaluateEnergiesFromState(state, currentEnergy.potential, currentEnergy.kinetic);
 
-    // Kinetic energy is handled independently
-    if (integratorType == IntegratorType::OpenMMVelocityVerlet) {
-        currentEnergy.kinetic = OPENMM::get().getKineticEnergy();
-    } else {
-        system->realize(state, SimTK::Stage::Velocity);
+    if (integratorType == IntegratorType::Verlet) {
         currentEnergy.kinetic = matter->calcKineticEnergy(state);
-    }
-    currentEnergy.kinetic *= this->unboostKEFactor;
-
-    // Calculate Fixman potential if needed
-    if (useFixman) {
-        if (integratorType == IntegratorType::OpenMMVelocityVerlet) {
-            throw std::runtime_error(
-                "Fixman potential calculation not implemented for Cartesian integrators.");
+        if (useFixman) {
+            currentEnergy.fixman = calcFixman(state);
+            currentEnergy.logSineSqrGamma2 = (rootTopology)->calcLogSineSqrGamma2(state);
+        } else {
+            currentEnergy.fixman = 0.0;
+            currentEnergy.logSineSqrGamma2 = 0.0;
         }
-
-        currentEnergy.fixman = calcFixman(state);
-        currentEnergy.logSineSqrGamma2 = (rootTopology)->calcLogSineSqrGamma2(state);
     } else {
         currentEnergy.fixman = 0.0;
         currentEnergy.logSineSqrGamma2 = 0.0;
@@ -172,12 +163,15 @@ void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOut
     currentEnergy.total = currentEnergy.potential + currentEnergy.kinetic + currentEnergy.fixman
                           - (0.5 * RT * currentEnergy.logSineSqrGamma2);
 
-    if (!currentEnergy.validate(currentEnergy, RT, numDegreesOfFreedom)) {
-        throw std::runtime_error(
-            "HMCSampler::reinitialize(): Initial energy is not valid. Have you minimized your system?");
-    }
+    // if (!currentEnergy.validate(currentEnergy, RT, DegreesOfFreedom{numDegreesOfFreedom})) {
+    //     throw std::runtime_error(
+    //         "HMCSampler::reinitialize(): Initial energy is not valid. Have you minimized your system?");
+    // }
 
     previousEnergy = currentEnergy;
+
+    // Coordinates and velocities are set, so pass them to the integrator
+    timeStepper->initialize(state);
 }
 
 /** ===============================
@@ -247,42 +241,6 @@ void HMCSampler::PrintInitialParams() {
               << getMDStepsPerSample() << ", " << getDistortOpt();
 }
 
-/*!
- * <!--	Get printing header -->
- */
-void HMCSampler::getMsg_Header(std::stringstream& ss) {
-    // Print a header at the first sample for initial params
-    ss << (", T, boostT, ts, mdsteps, DISTORT_OPTION");
-
-    // Print a header at the first sample for detailed energy terms
-    ss << (", NU");
-    ss << (", nofSamples");
-    ss << (", pe_o, pe_n, pe_set");
-    ss << (", ke_prop, ke_n");
-    ss << (", fix_o, fix_n");
-    ss << (", logSineSqrGamma2_o, logSineSqrGamma2_n ");
-    ss << (", etot_n, etot_proposed");
-    ss << (", JDetLog ");
-    ss << (", acc ");
-    ss << (", MDorMC ");
-}
-
-/*!
- * <!--	Get printing initial parameters -->
- */
-void HMCSampler::getMsg_InitialParams(std::stringstream& ss) {
-    ss << ", " << getTemperature() << ", " << getBoostTemperature() << ", " << getTimestep() << ", "
-       << getMDStepsPerSample() << ", " << getDistortOpt();
-}
-
-SimTK::Real HMCSampler::getMDStepsPerSampleStd() const {
-    return MDStepsPerSampleStd;
-}
-
-void HMCSampler::setMDStepsPerSampleStd(SimTK::Real mdstd) {
-    MDStepsPerSampleStd = mdstd;
-}
-
 // Set the method of integration
 void HMCSampler::setAcceptRejectMode(AcceptRejectMode acceptRejectMode) {
     if (AcceptRejectMode::AlwaysAccept == acceptRejectMode) {
@@ -311,29 +269,6 @@ void HMCSampler::setIntegratorType(IntegratorType type) {
     // }std::cout << eol;
 
     this->integratorType = type;
-}
-
-void HMCSampler::setIntegratorType(const std::string type) {
-    // this->integratorType = IntegratorNameS[type];
-
-    if (type == "OMMVV") {
-        this->integratorType = IntegratorType::OpenMMVelocityVerlet;
-
-    } else if (type == "VERLET" || type == "VERLET") {
-        integratorType = IntegratorType::Verlet;
-
-    } else if (type == "BOUND_WALK") {
-        integratorType = IntegratorType::BoundWalk;
-
-    } else if (type == "BOUND_HMC") {
-        integratorType = IntegratorType::BoundHMC;
-
-    } else if (type == "STATIONS_TASK") {
-        integratorType = IntegratorType::StationsTask;
-
-    } else {
-        integratorType = IntegratorType::Empty;
-    }
 }
 
 /*! <!-- Segment dihedral angles into intervals
@@ -1693,8 +1628,8 @@ auto HMCSampler::buildTree(SimTK::State& state,
     if (depth == 0) {
         switch (coordinates) {
             case NUTSCoordinates::Cartesian:
-                throw std::runtime_error("Cartesian coordinates are not currently supported for NUTS "
-                                         "integration. Check if impl is ok.");
+                // throw std::runtime_error("Cartesian coordinates are not currently supported for NUTS "
+                //                          "integration. Check if impl is ok.");
                 if (direction == NUTSDirection::Backward) {
                     OPENMM::get().negateVelocities();
                 }
@@ -2985,10 +2920,8 @@ SimTK::Real HMCSampler::getTimestep() const {
 }
 
 void HMCSampler::setTimestep(SimTK::Real argTimestep, bool adaptive) {
-    shouldAdaptTimestep = adaptive;
     timeStepper->updIntegrator().setFixedStepSize(argTimestep);
     timestep = argTimestep;
-    prevTimestep = argTimestep;
 }
 
 /** Get/Set boost temperature **/
@@ -3021,68 +2954,6 @@ void HMCSampler::setBoostMDSteps(int argMDSteps) {
     this->boostMDSteps = argMDSteps;
     std::cout << "HMC: boost MD steps: " << this->boostMDSteps << std::endl;
 }
-
-// Stochastic optimization of the timestep using gradient descent
-void HMCSampler::adaptTimestep(SimTK::State&) {
-    // It's not time to adapt
-    if (nofSamples % acceptedStepsBufferSize != 0) {
-        return;
-    }
-
-    // Do not apply adaptive timesteps to OMMVV
-    if (integratorType == IntegratorType::OpenMMVelocityVerlet) {
-        return;
-    }
-
-    // Compute acceptance in the buffer
-    SimTK::Real totalAcceptance =
-        std::accumulate(acceptedStepsBuffer.begin(), acceptedStepsBuffer.end(), 0.0);
-    SimTK::Real newAcceptance = totalAcceptance / static_cast<SimTK::Real>(acceptedStepsBufferSize);
-
-    // Advance timestep ruler
-    prevAcceptance = acceptance;
-    acceptance = newAcceptance;
-
-    if (isnan(prevAcceptance) || isnan(acceptance)) {
-        return;
-    }
-
-    // Calculate gradients
-    SimTK::Real da = acceptance - prevAcceptance;
-    SimTK::Real dt = timestep - prevTimestep;
-    SimTK::Real dm = MDStepsPerSample - prevMDStepsPerSample;
-
-    prevTimestep = timestep;
-    prevMDStepsPerSample = MDStepsPerSample;
-
-    if (dt == 0.0 || dm == 0.0) {
-        // Only this gets executed - prevTimestep is also set in HMCSampler::setTimestep()
-        if (acceptance > idealAcceptance) {
-            timestep *= 1.05;
-            MDStepsPerSample += 1;
-        } else {
-            timestep /= 1.05;
-            MDStepsPerSample -= 1;
-            if (MDStepsPerSample < 1) {
-                MDStepsPerSample = 1;
-            }
-        }
-    } else {
-        timestep -= learningRate * (da / dt);
-        MDStepsPerSample -= learningRate * (da / dm);
-    }
-
-    // Set integrator timestep to newTimestep
-    timeStepper->updIntegrator().setFixedStepSize(timestep);
-
-    std::cout << "World " << world->getOwnIndex() << ": previous acceptance=" << acceptance
-              << ", timestep=" << timestep << ", MDStepsPerSample=" << MDStepsPerSample << std::endl;
-
-    // grep "MDStepsPerSample" adaptivets.txt | sed 's/,//g' | sed 's/=/ /g' | awk '{if (NR%2==0){print ($5,
-    // $7, $9)}}' grep "MDStepsPerSample" adaptivets.txt | sed 's/,//g' | sed 's/=/ /g' | awk '{if
-    // (NR%2==1){print ($5, $7, $9)}}'
-}
-
 
 /** Store new configuration and energy terms **/
 void HMCSampler::calcNewEnergies(SimTK::State& someState) {
@@ -3411,99 +3282,48 @@ void HMCSampler::printDrilling(SimTK::State& someState) {
 /**
  * Chooses whether to accept a sample or not based on a probability
  **/
-auto HMCSampler::acceptSample(const EnergySnapshot& proposedEnergy) -> bool {
-    // Local vars
-    SimTK::Real hereE_o = 0.0;
-    SimTK::Real hereE_n = 0.0;
-    SimTK::Real here_lnj = 0.0;
-
-    // The decision tree sets the value of internal variable acc
+auto HMCSampler::acceptSample(const EnergySnapshot& proposedEnergy, bool shouldPrint) -> bool {
     if (alwaysAccept) {
-        // Empty sampler
         return true;
     }
 
-    // Markov-Chain Monte Carlo
+    SimTK::Real E_prop = 0.0;
+    SimTK::Real E_curr = 0.0;
+    SimTK::Real lnJ = 0.0;
+
     if (DistortOpt == 0) {
-        hereE_o = proposedEnergy.total;
-        hereE_n = currentEnergy.total;
-        here_lnj = 0.0;
+        // Standard MCMC: compare full Hamiltonian totals
+        E_prop = proposedEnergy.total;
+        E_curr = currentEnergy.total;
     } else if (DistortOpt > 0) {
-        if (useFixman) {
-            hereE_o = proposedEnergy.potential + ke_prop_nma6 + proposedEnergy.fixman;
-            hereE_n = currentEnergy.potential + ke_n_nma6 + currentEnergy.fixman;
-            here_lnj = 0.0;
+        E_prop = proposedEnergy.potential + ke_prop_nma6 + (useFixman ? proposedEnergy.fixman : 0.0);
+        E_curr = currentEnergy.potential + ke_n_nma6 + (useFixman ? currentEnergy.fixman : 0.0);
+    } else { // DistortOpt < 0
+        E_prop = proposedEnergy.potential + proposedEnergy.fixman;
+        E_curr = currentEnergy.potential + currentEnergy.fixman;
+        lnJ = getDistortJacobianDetLog();
+    }
+
+    // deltaH = beta(E_prop - E_curr) - ln|J|
+    // Accept with min(1, exp(-deltaH))
+    const SimTK::Real delta = (beta * (E_prop - E_curr)) - lnJ;
+    const SimTK::Real prob = (delta <= 0.0) ? 1.0 : std::exp(-delta);
+    const SimTK::Real randVal = uniformRealDistribution(randomEngine);
+    const bool accept = randVal < prob;
+
+    if (shouldPrint) {
+        std::cout << "\t - Metropolis-Hastings: E_proposed=" << E_prop << " kJ/mol, E_current=" << E_curr
+                  << " kJ/mol, beta=" << beta << ", ln|J|=" << lnJ << ", E_delta=" << delta
+                  << " kJ/mol, acceptance probability=" << prob;
+        if (delta <= 0.0) {
+            std::cout << " (delta <= 0, always 1), ";
         } else {
-            hereE_o = proposedEnergy.potential + ke_prop_nma6;
-            hereE_n = currentEnergy.potential + ke_n_nma6;
-            here_lnj = 0.0;
+            std::cout << " (delta > 0, equal to exp(" << -delta << ")=" << std::exp(-delta) << "), ";
         }
-    } else if (DistortOpt < 0) {
-        hereE_o = proposedEnergy.potential + proposedEnergy.fixman;
-        hereE_n = currentEnergy.potential + currentEnergy.fixman;
-        here_lnj = getDistortJacobianDetLog();
+        std::cout << "u=" << randVal << " -> " << (accept ? " ACCEPT " : " REJECT ") << "\n ";
     }
 
-    // This is actually the Boltzmann factor not the probability because we don't have the partition function
-    const SimTK::Real beta_dE_mJ = (this->beta * (hereE_o - hereE_n)) - here_lnj;
-    SimTK::Real prob = -1;
-    if (beta_dE_mJ < 0) {
-        prob = 1;
-    } else {
-        prob = exp(-1.0 * beta_dE_mJ);
-    }
-
-    // Apply Metropolis-Hastings criterion
-    const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
-    return rand_no < prob;
-}
-
-/*!
- * <!--	Get printing energy details (before acc-rej step) -->
- */
-void HMCSampler::getMsg_EnergyDetails(std::stringstream& energyDetailsStream,
-                                      const SimTK::State& someState,
-                                      bool isTheSampleValid,
-                                      bool isTheSampleAccepted) {
-    energyDetailsStream << std::setprecision(5) << std::fixed << ", "
-                        << world->updMatterSubsystem().getNU(someState) << ", " << nofSamples << ", "
-                        << previousEnergy.potential << ", " << currentEnergy.potential;
-
-    // energyDetailsStream	<< ", " << getPEFromEvaluator(someState)
-
-    energyDetailsStream << previousEnergy.kinetic << ", " << currentEnergy.kinetic << ", "
-                        << previousEnergy.fixman << ", " << currentEnergy.fixman << ", "
-                        << previousEnergy.logSineSqrGamma2 << ", " << currentEnergy.logSineSqrGamma2 << ", "
-                        << previousEnergy.total << ", " << currentEnergy.total << ", "
-                        << bendStretchJacobianDetLog;
-
-    if (isTheSampleAccepted) {
-        energyDetailsStream << ", 1";
-    } else {
-        energyDetailsStream << ", 0";
-    }
-
-    // Print simulation type
-    if (this->alwaysAccept) {
-        // ss << ", (MD)";
-        energyDetailsStream << ", 128";
-    } else {
-        energyDetailsStream << ", 256";
-        // ss << ", (MH)";
-    }
-
-    // DELETE
-    energyDetailsStream << ", " << debug_rand_no;
-    energyDetailsStream << ", " << "HARDMOLNAME";
-
-#ifdef PRINTALOT
-    // Print validity
-    if (isTheSampleValid) {
-        ss << " ";
-    } else {
-        ss << " invalid";
-    }
-#endif
+    return accept;
 }
 
 /*!
@@ -3593,31 +3413,39 @@ auto HMCSampler::sampleIteration(SimTK::State& state, std::stringstream& sampler
 
     // Print all proposed energy terms for debugging
     if (shouldPrint) {
-        std::cout << "\t - Current energies: " << "PE=" << currentEnergy.potential << ", "
-                  << "KE=" << currentEnergy.kinetic << ", " << "Fixman=" << currentEnergy.fixman << ", "
-                  << "logSineSqrGamma2=" << currentEnergy.logSineSqrGamma2 << ", "
-                  << "Total=" << currentEnergy.total << "\n";
-        std::cout << "\t - Previous energies: " << "PE=" << previousEnergy.potential << ", "
-                  << "KE=" << previousEnergy.kinetic << ", " << "Fixman=" << previousEnergy.fixman << ", "
-                  << "logSineSqrGamma2=" << previousEnergy.logSineSqrGamma2 << ", "
-                  << "Total=" << previousEnergy.total << "\n";
-        std::cout << "\t - Proposed energies: " << "PE=" << result.energy.potential << ", "
-                  << "KE=" << result.energy.kinetic << ", " << "Fixman=" << result.energy.fixman << ", "
-                  << "logSineSqrGamma2=" << result.energy.logSineSqrGamma2 << ", "
-                  << "Total=" << result.energy.total << ", " << "NUTS depth=" << result.depth << "\n";
+        if (useNUTS) {
+            std::cout << "\t - Integrated with NUTS for depth=" << result.depth << " at step size "
+                      << timestep << " ps \n";
+        } else {
+            std::cout << "\t - Integrated for " << MDStepsPerSample << " steps at step size " << timestep
+                      << " ps \n";
+        }
+
+        std::cout << "\t - Current energies: " << "PE=" << currentEnergy.potential << " kJ/mol, "
+                  << "KE=" << currentEnergy.kinetic << " kJ/mol, " << "Fixman=" << currentEnergy.fixman
+                  << " kJ/mol, logSineSqrGamma2=" << currentEnergy.logSineSqrGamma2 << ", "
+                  << "Total=" << currentEnergy.total << " kJ/mol\n";
+        std::cout << "\t - Proposed energies: " << "PE=" << result.energy.potential << " kJ/mol, "
+                  << "KE=" << result.energy.kinetic << " kJ/mol, " << "Fixman=" << result.energy.fixman
+                  << " kJ/mol, logSineSqrGamma2=" << result.energy.logSineSqrGamma2 << ", "
+                  << "Total=" << result.energy.total << " kJ/mol\n";
     }
-    validProposedEnergy = result.energy.validate(currentEnergy, RT, numDegreesOfFreedom);
+    validProposedEnergy = result.energy.validate(currentEnergy, RT, DegreesOfFreedom{numDegreesOfFreedom});
+    if (validProposedEnergy) {
+        totalEnergiesBuffer.push_back(result.energy.total);
+    }
 
     // Check if we are good for Metropolis-Hastings step
     acc = integrationSuccessful && validProposedEnergy;
     if (acc) {
         // Apply Metropolis-Hastings criterion
-        acc = acceptSample(result.energy);
+        acc = acceptSample(result.energy, shouldPrint);
+    } else {
         if (shouldPrint) {
-            if (acc) {
-                std::cout << "\t - Metropolis-Hastings: accepted." << '\n';
-            } else {
-                std::cout << "\t - Metropolis-Hastings: rejected." << '\n';
+            if (!integrationSuccessful) {
+                std::cout << "\t - Sample rejected due to integration failure." << '\n';
+            } else if (!validProposedEnergy) {
+                std::cout << "\t - Sample rejected due to invalid proposed energy." << '\n';
             }
         }
     }
@@ -3635,23 +3463,18 @@ auto HMCSampler::sampleIteration(SimTK::State& state, std::stringstream& sampler
         previousEnergy = currentEnergy;
         currentEnergy = result.energy;
 
-        acceptedSteps++;
-        acceptedStepsBuffer.push_back(1);
-        acceptedStepsBuffer.pop_front();
+        ++numAcceptedSamples;
     } else {
+        system->realize(oldState);
         state = oldState;
-        system->realize(state, SimTK::Stage::Velocity);
-
-        acceptedStepsBuffer.push_back(0);
-        acceptedStepsBuffer.pop_front();
+        system->realize(state);
     }
+
+    ++numSamples;
 
     storeAdaptiveData(state);
 
-    // if (shouldPrint) {
-    //     getMsg_EnergyDetails(samplerOutStream, state, acc, acc);
-    // }
-
+    // TODO
     // Increase the sample counter and return
     ++nofSamples;
     numSamples_period++;
@@ -3792,7 +3615,6 @@ int HMCSampler::getMDStepsPerSample() const {
 
 void HMCSampler::setMDStepsPerSample(int mdStepsPerSample) {
     MDStepsPerSample = mdStepsPerSample;
-    prevMDStepsPerSample = mdStepsPerSample;
 }
 
 const bool& Sampler::getAcc() const {
