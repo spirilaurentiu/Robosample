@@ -3,6 +3,11 @@
 #include <chrono>
 #include <vector>
 
+#include "HarmonicAngleForce.h"
+#include "HarmonicBondForce.h"
+#include "Integrator.h"
+#include "TopologyElements.hpp"
+
 #if USE_CPU
 #    include "../Molmodel/src/gbsa/cpuObcInterface.h"
 #    include "../openmm/platforms/cpu/include/CpuPlatform.h"
@@ -14,459 +19,82 @@
 #    include "../openmm/platforms/cuda/include/CudaPlatform.h"
 #endif
 
-void ForceGroup::initialize(int forceGroupIndex,
-                            const std::vector<int>& rigidBodies,
-                            const SystemTopology& systemTopology,
-                            const ForceFieldParams& ffParams,
-                            const SimulationSettings& simSettings) {
-    std::cout << "Initializing OpenMM force group " << forceGroupIndex << ":\n";
-
-    OpenMM::NonbondedForce::NonbondedMethod nonbondedForceMethod;
-    OpenMM::CustomNonbondedForce::NonbondedMethod customNonbondedForceMethod;
-    OpenMM::GBSAOBCForce::NonbondedMethod gbsaForceMethod;
-
-    switch (ffParams.nonbondedMethod) {
-        case NonbondedMethod::NoCutoff:
-            nonbondedForceMethod = OpenMM::NonbondedForce::NoCutoff;
-            customNonbondedForceMethod = OpenMM::CustomNonbondedForce::NoCutoff;
-            gbsaForceMethod = OpenMM::GBSAOBCForce::NoCutoff;
-            break;
-        case NonbondedMethod::CutoffNonPeriodic:
-            nonbondedForceMethod = OpenMM::NonbondedForce::CutoffNonPeriodic;
-            customNonbondedForceMethod = OpenMM::CustomNonbondedForce::CutoffNonPeriodic;
-            gbsaForceMethod = OpenMM::GBSAOBCForce::CutoffNonPeriodic;
-            break;
-        default:
-            throw std::invalid_argument("Unsupported nonbonded method");
-    }
-
-    // Save force group index
-    fg = forceGroupIndex;
-
-    // Instantiate the thermostat with adjusted temperature
-    auto* thermostat =
-        new OpenMM::AndersenThermostat(simSettings.thermostatTemperatureInK, simSettings.collisionFrequency);
-    thermostat->setRandomNumberSeed(simSettings.seed);
-    registerForce(thermostat);
-
-    // Nonbonded forces
-    auto* nonbondedForce = new OpenMM::NonbondedForce();
-    nonbondedForce->setNonbondedMethod(nonbondedForceMethod);
-    nonbondedForce->setCutoffDistance(ffParams.nonbondedCutoffInNm);
-
-    if (nonbondedForceMethod == OpenMM::NonbondedForce::CutoffNonPeriodic) {
-        nonbondedForce->setUseDispersionCorrection(true);
-    } else {
-        nonbondedForce->setUseDispersionCorrection(false);
-    }
-
-    // 1-4 VdW Correction (Bond-based so we can target specific pairs)
-    OpenMM::CustomNonbondedForce* customNonbonded = nullptr;
-    if (ffParams.hasNBfix) {
-        customNonbonded = new OpenMM::CustomNonbondedForce(
-            "(a/r6)^2-b/r6; r6=r^6; a=acoef(type1, type2); b=bcoef(type1, type2);");
-        customNonbonded->addTabulatedFunction(
-            "acoef",
-            new OpenMM::Discrete2DFunction(ffParams.numTypes, ffParams.numTypes, ffParams.aCoef));
-        customNonbonded->addTabulatedFunction(
-            "bcoef",
-            new OpenMM::Discrete2DFunction(ffParams.numTypes, ffParams.numTypes, ffParams.bCoef));
-        customNonbonded->addPerParticleParameter("type");
-
-        customNonbonded->setNonbondedMethod(customNonbondedForceMethod);
-        customNonbonded->setCutoffDistance(ffParams.nonbondedCutoffInNm);
-
-        customNonbonded->setUseSwitchingFunction(nonbondedForce->getUseSwitchingFunction());
-        customNonbonded->setSwitchingDistance(nonbondedForce->getSwitchingDistance());
-    }
-
-    // GBSA OBC Force
-    // implicitSolventKappa
-    OpenMM::GBSAOBCForce* GBSAOBCForce = nullptr;
-    if (ffParams.useGBSAOBC2) {
-        GBSAOBCForce = new OpenMM::GBSAOBCForce();
-        GBSAOBCForce->setSolventDielectric(ffParams.gbsaSolventDielectric);
-        GBSAOBCForce->setSoluteDielectric(ffParams.gbsaSoluteDielectric);
-        GBSAOBCForce->setNonbondedMethod(gbsaForceMethod);
-        GBSAOBCForce->setCutoffDistance(ffParams.nonbondedCutoffInNm);
-
-        /*
-         * The following comment is copy-pasted from the OpenMM documentation for GBSAOBCForce (note that we
-         * only support CutoffNonPeriodic): When using GBSAOBCForce, the System should also include a
-         * NonbondedForce, and both objects must specify identical charges for all particles. Otherwise, the
-         * results will not be correct. Furthermore, if the nonbonded method is set to CutoffNonPeriodic or
-         * CutoffPeriodic, you should call setReactionFieldDielectric(1.0) on the NonbondedForce to turn off
-         * the reaction field approximation, which does not produce correct results when combined with GBSA.
-         */
-        if (nonbondedForceMethod == OpenMM::NonbondedForce::CutoffNonPeriodic) {
-            nonbondedForce->setReactionFieldDielectric(1.0);
-            nonbondedForce->setUseDispersionCorrection(false);
-        }
-    }
-
-    // Compute rigid body sizes - only multi-atom bodies cause terms to be skipped
-    std::unordered_map<int, int> rigidBodySizes;
-    for (int rb : rigidBodies) {
-        rigidBodySizes[rb]++;
-    }
-
-    auto inSameMultiAtomRigidBody = [&](int a, int b) {
-        return rigidBodies[a] == rigidBodies[b] && rigidBodySizes.at(rigidBodies[a]) > 1;
-    };
-
-    // Add atoms
-    for (const auto& atom : systemTopology.atoms) {
-        const SimTK::Real charge = atom.physics.chargeInE;
-        const SimTK::Real sigma = atom.physics.sigmaInNm;
-        const SimTK::Real epsilon = atom.physics.vdwWellDepthInKJ;
-
-        if (!std::isfinite(charge)) {
-            throw std::runtime_error("Non-finite charge for atom " + atom.identity.uniqueAtomName + ": "
-                                     + std::to_string(charge));
+class MTSIntegrator : public OpenMM::CustomIntegrator {
+    public:
+    MTSIntegrator(double stepSize, std::vector<std::pair<int, int>> groups)
+        : OpenMM::CustomIntegrator(stepSize) {
+        if (groups.empty()) {
+            throw std::invalid_argument("No force groups specified");
         }
 
-        if (!std::isfinite(sigma)) {
-            throw std::runtime_error("Non-finite sigma for atom " + atom.identity.uniqueAtomName + ": "
-                                     + std::to_string(sigma));
+        // Match Python: sort ascending by substep count
+        std::sort(groups.begin(), groups.end(), [](const auto& a, const auto& b) {
+            return a.second < b.second;
+        });
+
+        addPerDofVariable("x1", 0);
+        addUpdateContextState();
+        createSubsteps(1, groups);
+        addConstrainVelocities();
+    }
+
+    private:
+    void createSubsteps(int parentSubsteps, const std::vector<std::pair<int, int>>& groups) {
+        auto [group, substeps] = groups[0];
+
+        if (substeps % parentSubsteps != 0 || substeps / parentSubsteps < 1) {
+            throw std::invalid_argument("Substeps for each group must be a multiple of the previous group");
+        }
+        if (group < 0 || group > 31) {
+            throw std::invalid_argument("Force group must be between 0 and 31");
         }
 
-        if (!std::isfinite(epsilon)) {
-            throw std::runtime_error("Non-finite epsilon for atom " + atom.identity.uniqueAtomName + ": "
-                                     + std::to_string(epsilon));
-        }
+        int stepsPerParentStep = substeps / parentSubsteps;
+        std::string n = std::to_string(substeps);
+        std::string g = std::to_string(group);
 
-        if (ffParams.hasNBfix) {
-            nonbondedForce->addParticle(charge, 1.0, 0.0);
-            customNonbonded->addParticle({static_cast<SimTK::Real>(atom.identity.nonbondedIndex)});
-        } else {
-            nonbondedForce->addParticle(charge, sigma, epsilon);
-        }
+        for (int i = 0; i < stepsPerParentStep; ++i) {
+            // Half kick with this group's forces
+            addComputePerDof("v", "v+0.5*(dt/" + n + ")*f" + g + "/m");
 
-        if (ffParams.useGBSAOBC2) {
-            const SimTK::Real solventRadiusInNm = atom.physics.solventRadiusInNm;
-            const bool validSolventRadius = std::isfinite(solventRadiusInNm) && solventRadiusInNm > 0.0;
-            if (!validSolventRadius) {
-                throw std::runtime_error("Invalid solvent radius for atom " + atom.identity.uniqueAtomName
-                                         + ": " + std::to_string(solventRadiusInNm));
+            if (groups.size() == 1) {
+                // Innermost group: do the position update
+                addComputePerDof("x", "x+(dt/" + n + ")*v");
+                addComputePerDof("x1", "x");
+                addConstrainPositions();
+                addComputePerDof("v", "v+(x-x1)/(dt/" + n + ")");
+                addConstrainVelocities();
+            } else {
+                // Recurse into faster groups
+                createSubsteps(substeps, {groups.begin() + 1, groups.end()});
             }
 
-            const SimTK::Real screen = atom.physics.screen;
-            const bool validScreen = std::isfinite(screen) && screen >= 0.0 && screen <= 1.0;
-            if (!validScreen) {
-                throw std::runtime_error("Invalid screen value for atom " + atom.identity.uniqueAtomName
-                                         + ": " + std::to_string(screen));
-            }
-
-            GBSAOBCForce->addParticle(charge, solventRadiusInNm, screen);
+            // Second half kick
+            addComputePerDof("v", "v+0.5*(dt/" + n + ")*f" + g + "/m");
         }
     }
+};
 
-    if (GBSAOBCForce != nullptr) {
-        registerForce(GBSAOBCForce);
-    }
-
-    int numAddedExceptions = 0;
-
-    for (const auto& scaling14 : systemTopology.scaling14s) {
-        if (!std::isfinite(scaling14.chargeProduct)) {
-            throw std::runtime_error("Scaling 1-4 between atoms " + std::to_string(scaling14.atom1GlobalIndex)
-                                     + " and " + std::to_string(scaling14.atom4GlobalIndex)
-                                     + " has non-finite charge product: "
-                                     + std::to_string(scaling14.chargeProduct));
-        }
-
-        if (!std::isfinite(scaling14.sigma)) {
-            throw std::runtime_error("Scaling 1-4 between atoms " + std::to_string(scaling14.atom1GlobalIndex)
-                                     + " and " + std::to_string(scaling14.atom4GlobalIndex)
-                                     + " has non-finite sigma: " + std::to_string(scaling14.sigma));
-        }
-
-        if (!std::isfinite(scaling14.epsilon)) {
-            throw std::runtime_error("Scaling 1-4 between atoms " + std::to_string(scaling14.atom1GlobalIndex)
-                                     + " and " + std::to_string(scaling14.atom4GlobalIndex)
-                                     + " has non-finite epsilon: " + std::to_string(scaling14.epsilon));
-        }
-
-        nonbondedForce->addException(scaling14.atom1GlobalIndex,
-                                     scaling14.atom4GlobalIndex,
-                                     scaling14.chargeProduct,
-                                     scaling14.sigma,
-                                     scaling14.epsilon);
-
-        if (ffParams.hasNBfix) {
-            customNonbonded->addExclusion(scaling14.atom1GlobalIndex, scaling14.atom4GlobalIndex);
-        }
-    }
-
-    // Exclude 1-2 and 1-3 interactions
-    for (const auto& exclusion : systemTopology.exclusions) {
-        // If chargeProd and epsilon are both equal to 0, this will cause the interaction to be completely
-        // omitted from force and energy calculations
-        nonbondedForce->addException(exclusion.atom1GlobalIndex, exclusion.atom2GlobalIndex, 0.0, 0.1, 0.0);
-        ++numAddedExceptions;
-
-        if (ffParams.hasNBfix) {
-            customNonbonded->addExclusion(exclusion.atom1GlobalIndex, exclusion.atom2GlobalIndex);
-        }
-    }
-
-    std::vector<std::pair<int, int>> intraRigidPairs;
-
-    // Build adjacency list
-    std::vector<std::vector<int>> adj(systemTopology.atoms.size());
-    for (const auto& b : systemTopology.bonds) {
-        int a = b.globalIndices[0];
-        int c = b.globalIndices[1];
-        adj[a].push_back(c);
-        adj[c].push_back(a);
-    }
-
-    // Group atoms by rigid body
-    std::unordered_map<int, std::vector<int>> rbAtoms;
-    for (int i = 0; i < rigidBodies.size(); ++i) {
-        rbAtoms[rigidBodies[i]].push_back(i);
-    }
-
-    for (const auto& [rb, atomList] : rbAtoms) {
-        for (int a : atomList) {
-            std::queue<std::pair<int, int>> q;
-            std::unordered_set<int> visited;
-
-            q.push({a, 0});
-            visited.insert(a);
-
-            while (!q.empty()) {
-                auto [v, depth] = q.front();
-                q.pop();
-
-                if (depth == 4) {
-                    continue;
-                }
-
-                for (int nb : adj[v]) {
-                    if (rigidBodies[nb] != rb) {
-                        continue;
-                    }
-                    if (visited.insert(nb).second) {
-                        q.push({nb, depth + 1});
-                    }
-                }
-            }
-
-            for (int b : atomList) {
-                if (b <= a) {
-                    continue;
-                }
-                if (!visited.count(b)) {
-                    intraRigidPairs.emplace_back(a, b);
-                }
-            }
-        }
-    }
-
-    for (const auto& pair : intraRigidPairs) {
-        // If chargeProd and epsilon are both equal to 0, this will cause the interaction to be
-        // completelyomitted from force and energy calculations
-        nonbondedForce->addException(pair.first, pair.second, 0.0, 0.1, 0.0);
-        ++numAddedExceptions;
-
-        if (ffParams.hasNBfix) {
-            customNonbonded->addExclusion(pair.first, pair.second);
-        }
-    }
-
-    std::cout << "\tAdded " << numAddedExceptions << " nonbonded exceptions.\n";
-
-    // Register non-bonded forces
-    registerForce(nonbondedForce);
-    if (ffParams.hasNBfix) {
-        registerForce(customNonbonded);
-    }
-
-    // Add bonds
-    int numAddedBonds = 0;
-    auto* harmonicBondStretch = new OpenMM::HarmonicBondForce();
-
-    for (const auto& bond : systemTopology.bonds) {
-        const auto& g = bond.globalIndices;
-
-        // Don't add bonds between atoms in the same rigid body
-        if (inSameMultiAtomRigidBody(g[0], g[1])) {
-            continue;
-        }
-
-        harmonicBondStretch->addBond(g[0], g[1], bond.nominalLengthInNm, bond.stiffnessInKJPerNmSq * 2);
-        ++numAddedBonds;
-    }
-
-    registerForce(harmonicBondStretch);
-    std::cout << "\tAdded " << numAddedBonds << " bonds.\n";
-
-    // Add angles
-    int numAddedAngles = 0;
-    auto* harmonicAngleForce = new OpenMM::HarmonicAngleForce();
-
-    for (const auto& angle : systemTopology.angles) {
-        const auto& g = angle.globalIndices;
-
-        // Skip angles where all three atoms are in the same rigid body
-        if (inSameMultiAtomRigidBody(g[0], g[1]) && inSameMultiAtomRigidBody(g[1], g[2])) {
-            continue;
-        }
-
-        harmonicAngleForce->addAngle(g[0],
-                                     g[1],
-                                     g[2],
-                                     angle.nominalAngleInDeg * SimTK::DuMM::Deg2Rad,
-                                     angle.stiffnessInKJPerRadSq * 2);
-        ++numAddedAngles;
-    }
-
-    registerForce(harmonicAngleForce);
-    std::cout << "\tAdded " << numAddedAngles << " angles.\n";
-
-    // Define torsions
-    // Note that OpenMM only supports only periodic torsions by default (AMBER style), so we need to handle
-    // improper harmonic torsions differently For AMBER style torsions, OpenMM does not care if they are
-    // proper or improper
-    int numAddedPeriodicTorsions = 0;
-    auto* periodicTorsionForce = new OpenMM::PeriodicTorsionForce();
-
-    for (const auto& t : systemTopology.periodicTorsions) {
-        const auto& g = t.globalIndices;
-        for (int i = 0; i < t.numTerms; ++i) {
-            const auto& term = t.terms[i];
-
-            // Skip propers where the middle two atoms are in the same rigid body
-            if (!t.improper && inSameMultiAtomRigidBody(g[1], g[2])) {
-                continue;
-            }
-
-            // Skip improper torsions where all four atoms are in the same rigid body
-            if (t.improper && inSameMultiAtomRigidBody(g[0], g[1]) && inSameMultiAtomRigidBody(g[1], g[2])
-                && inSameMultiAtomRigidBody(g[2], g[3])) {
-                continue;
-            }
-
-            periodicTorsionForce->addTorsion(g[0],
-                                             g[1],
-                                             g[2],
-                                             g[3],
-                                             term.periodicity,
-                                             term.phaseDeg * SimTK::DuMM::Deg2Rad,
-                                             term.amplitudeKJ);
-            ++numAddedPeriodicTorsions;
-        }
-    }
-    std::cout << "\tAdded " << numAddedPeriodicTorsions << " periodic torsions.\n";
-    registerForce(periodicTorsionForce);
-
-    // Harmonic improper torsions (CHARMM) are handled using a CustomTorsionForce since OpenMM does not
-    // support them natively
-    if (!systemTopology.harmonicImproperTorsions.empty()) {
-        std::stringstream ss;
-        ss << std::setprecision(17) << "k*min(dtheta, 2*" << SimTK::Pi
-           << "-dtheta)^2; dtheta = abs(theta-theta0)";
-
-        auto* improperTorsionForce = new OpenMM::CustomTorsionForce(ss.str());
-        improperTorsionForce->addPerTorsionParameter("k");
-        improperTorsionForce->addPerTorsionParameter("theta0");
-
-        int numAddedImproperTorsions = 0;
-
-        for (const auto& t : systemTopology.harmonicImproperTorsions) {
-            const int a1 = t.globalIndices[0];
-            const int a2 = t.globalIndices[1];
-            const int a3 = t.globalIndices[2];
-            const int a4 = t.globalIndices[3];
-
-            // Improper torsions where all four atoms are in the same rigid body won't change, so we can skip
-            // them
-            if (inSameMultiAtomRigidBody(a1, a2) && inSameMultiAtomRigidBody(a2, a3)
-                && inSameMultiAtomRigidBody(a3, a4)) {
-                continue;
-            }
-
-            std::vector<double> params = {t.stiffnessInKJPerRadSq, t.nominalAngleInRad};
-            improperTorsionForce->addTorsion(a1, a2, a3, a4, params);
-            ++numAddedImproperTorsions;
-        }
-        registerForce(improperTorsionForce);
-        std::cout << "\tAdded " << numAddedImproperTorsions << " harmonic improper torsions.\n";
-    }
-
-    // Add correction map torsions (CMAPs) force
-    if (!systemTopology.cmapGrids.empty()) {
-        auto* cmapTorsionForce = new OpenMM::CMAPTorsionForce();
-        cmapTorsionForce->setUsesPeriodicBoundaryConditions(false);
-
-        for (const auto& grid : systemTopology.cmapGrids) {
-            cmapTorsionForce->addMap(grid.size, grid.energy);
-        }
-
-        int numAddedCmapTorsions = 0;
-
-        for (const auto& cmapTorsion : systemTopology.cmapTorsions) {
-            const bool phi_fixed = inSameMultiAtomRigidBody(cmapTorsion.torsionAAtom1GlobalIndex,
-                                                            cmapTorsion.torsionAAtom2GlobalIndex)
-                                   && inSameMultiAtomRigidBody(cmapTorsion.torsionAAtom2GlobalIndex,
-                                                               cmapTorsion.torsionAAtom3GlobalIndex)
-                                   && inSameMultiAtomRigidBody(cmapTorsion.torsionAAtom3GlobalIndex,
-                                                               cmapTorsion.torsionAAtom4GlobalIndex);
-            const bool psi_fixed = inSameMultiAtomRigidBody(cmapTorsion.torsionBAtom1GlobalIndex,
-                                                            cmapTorsion.torsionBAtom2GlobalIndex)
-                                   && inSameMultiAtomRigidBody(cmapTorsion.torsionBAtom2GlobalIndex,
-                                                               cmapTorsion.torsionBAtom3GlobalIndex)
-                                   && inSameMultiAtomRigidBody(cmapTorsion.torsionBAtom3GlobalIndex,
-                                                               cmapTorsion.torsionBAtom4GlobalIndex);
-            if (phi_fixed && psi_fixed) {
-                continue;
-            }
-
-            cmapTorsionForce->addTorsion(cmapTorsion.mapIndex,
-                                         cmapTorsion.torsionAAtom1GlobalIndex,
-                                         cmapTorsion.torsionAAtom2GlobalIndex,
-                                         cmapTorsion.torsionAAtom3GlobalIndex,
-                                         cmapTorsion.torsionAAtom4GlobalIndex,
-                                         cmapTorsion.torsionBAtom1GlobalIndex,
-                                         cmapTorsion.torsionBAtom2GlobalIndex,
-                                         cmapTorsion.torsionBAtom3GlobalIndex,
-                                         cmapTorsion.torsionBAtom4GlobalIndex);
-            ++numAddedCmapTorsions;
-        }
-
-        std::cout << "\tAdded " << numAddedCmapTorsions << " CMAP torsions.\n";
-        registerForce(cmapTorsionForce);
-    }
-
-    // Add Urey-Bradley Potential
-    if (!systemTopology.ureyBradleys.empty()) {
-        auto* ubForce = new OpenMM::HarmonicBondForce();
-        int numAddedUreyBradleys = 0;
-
-        for (const auto& term : systemTopology.ureyBradleys) {
-            if (inSameMultiAtomRigidBody(term.atom1GlobalIndex, term.atom3GlobalIndex)) {
-                continue;
-            }
-
-            ubForce->addBond(term.atom1GlobalIndex,
-                             term.atom3GlobalIndex,
-                             term.nominalLengthInNm,
-                             term.stiffnessInKJPerNmSq * 2);
-            ++numAddedUreyBradleys;
-        }
-
-        std::cout << "\tAdded " << numAddedUreyBradleys << " Urey-Bradley terms.\n";
-        registerForce(ubForce);
-    }
-}
-
-bool OPENMM::initialize(const std::vector<std::vector<int>>& worlds,
+auto OPENMM::initialize(const std::vector<std::vector<int>>& worlds,
                         const SystemTopology& systemTopology,
                         const ForceFieldParams& ffParams,
-                        const SimulationSettings& simSettings) {
+                        const SimulationSettings& simSettings) -> bool {
     // Instantiate
     OPENMM& omm = get();
+
+    // Copy data
+    omm.atomMbxByWorld = worlds;
+    omm.systemTopology = systemTopology;
+    omm.ffParams = ffParams;
+    omm.simSettings = simSettings;
+
+    omm.numWorlds = static_cast<int>(worlds.size());
+    omm.numAtomsInRigidBodiesByWorld.resize(omm.numWorlds);
+    for (int wIx = 0; wIx < omm.numWorlds; ++wIx) {
+        for (auto mbx : worlds[wIx]) {
+            omm.numAtomsInRigidBodiesByWorld[wIx][mbx]++;
+        }
+    }
 
     // Set up variables
     omm.numAtoms = systemTopology.atoms.size();
@@ -477,27 +105,7 @@ bool OPENMM::initialize(const std::vector<std::vector<int>>& worlds,
     // Allocate OpenMM system and add particles to it
     omm.system = std::make_unique<OpenMM::System>();
 
-    // Add atoms
     for (const auto& atom : systemTopology.atoms) {
-        const SimTK::Real charge = atom.physics.chargeInE;
-        const SimTK::Real sigma = atom.physics.sigmaInNm;
-        const SimTK::Real epsilon = atom.physics.vdwWellDepthInKJ;
-
-        if (!std::isfinite(charge)) {
-            throw std::runtime_error("Non-finite charge for atom " + atom.identity.uniqueAtomName + ": "
-                                     + std::to_string(charge));
-        }
-
-        if (!std::isfinite(sigma)) {
-            throw std::runtime_error("Non-finite sigma for atom " + atom.identity.uniqueAtomName + ": "
-                                     + std::to_string(sigma));
-        }
-
-        if (!std::isfinite(epsilon)) {
-            throw std::runtime_error("Non-finite epsilon for atom " + atom.identity.uniqueAtomName + ": "
-                                     + std::to_string(epsilon));
-        }
-
         if (atom.connectivity.root) {
             omm.system->addParticle(0.0); // massless root
         } else {
@@ -505,24 +113,80 @@ bool OPENMM::initialize(const std::vector<std::vector<int>>& worlds,
         }
     }
 
-    // Add a force group for each world
-    for (int forceGroupIndex = 0; forceGroupIndex < worlds.size(); ++forceGroupIndex) {
-        omm.forceGroups.emplace_back();
-        omm.forceGroups.back().initialize(forceGroupIndex,
-                                          worlds[forceGroupIndex],
-                                          systemTopology,
-                                          ffParams,
-                                          simSettings);
+    const int FAST_GROUP = 0;
+    const int SLOW_GROUP = 1;
 
-        // Gather all forces from all force groups into the system
-        // Force groups indices have already been set
-        for (const auto& force : omm.forceGroups.back().getForces()) {
-            omm.system->addForce(force);
-        }
+    // Nonbonded force
+    auto* nonbondedForce = omm.createNonbondedForce(systemTopology.atoms,
+                                                    systemTopology.scaling14s,
+                                                    systemTopology.exclusions,
+                                                    ffParams,
+                                                    ffParams.hasNBfix);
+    nonbondedForce->setForceGroup(SLOW_GROUP);
+    omm.nonbondedForceIndex = omm.system->addForce(nonbondedForce);
+
+    // GBSA OBC Force
+    // implicitSolventKappa
+    if (ffParams.useGBSAOBC2) {
+        auto* gbsaOBCForce = omm.createGBSAOBCForce(systemTopology.atoms, ffParams);
+        gbsaOBCForce->setForceGroup(SLOW_GROUP);
+        omm.system->addForce(gbsaOBCForce);
+    }
+
+    // 1-4 VdW Correction (Bond-based so we can target specific pairs)
+    if (ffParams.hasNBfix) {
+        auto* customNonbondedForce = omm.createCustomNonbondedForce(systemTopology.atoms,
+                                                                    systemTopology.scaling14s,
+                                                                    systemTopology.exclusions,
+                                                                    ffParams,
+                                                                    nonbondedForce->getUseSwitchingFunction(),
+                                                                    nonbondedForce->getSwitchingDistance());
+        customNonbondedForce->setForceGroup(SLOW_GROUP);
+        omm.system->addForce(customNonbondedForce);
+    }
+
+    // Add bonds
+    auto* harmonicBondForce = omm.createHarmonicBondForce();
+    harmonicBondForce->setForceGroup(FAST_GROUP);
+    omm.harmonicBondForceIndex = omm.system->addForce(harmonicBondForce);
+
+    // Add angles
+    auto* harmonicAngleForce = omm.createHarmonicAngleForce();
+    harmonicAngleForce->setForceGroup(SLOW_GROUP);
+    omm.harmonicAngleForceIndex = omm.system->addForce(harmonicAngleForce);
+
+    // For AMBER style torsions, OpenMM does not care if they are proper or improper
+    // Note that OpenMM only supports only periodic torsions by default (AMBER style), so we need to handle
+    // improper harmonic torsions differently
+    auto* periodicTorsionForce = omm.createPeriodicTorsionForce();
+    periodicTorsionForce->setForceGroup(SLOW_GROUP);
+    omm.periodicTorsionForceIndex = omm.system->addForce(periodicTorsionForce);
+
+    // Harmonic improper torsions (CHARMM) are handled using a CustomTorsionForce since OpenMM does not
+    // support them natively
+    if (!systemTopology.harmonicImproperTorsions.empty()) {
+        auto* improperTorsionForce = omm.createImproperHarmonicTorsionForce();
+        improperTorsionForce->setForceGroup(SLOW_GROUP);
+        omm.improperHarmonicTorsionForceIndex = omm.system->addForce(improperTorsionForce);
+    }
+
+    // Add correction map torsions (CMAPs) force
+    if (!systemTopology.cmapGrids.empty()) {
+        auto* cmapTorsionForce = omm.createCMAPTorsionForce();
+        cmapTorsionForce->setForceGroup(SLOW_GROUP);
+        omm.cmapTorsionForceIndex = omm.system->addForce(cmapTorsionForce);
+    }
+
+    // Add Urey-Bradley Potential
+    if (!systemTopology.ureyBradleys.empty()) {
+        auto* ubForce = omm.createUreyBradleyForce();
+        ubForce->setForceGroup(SLOW_GROUP);
+        omm.ureyBradleyForceIndex = omm.system->addForce(ubForce);
     }
 
     // Create the integrator
-    omm.integrator = std::make_unique<OpenMM::VerletIntegrator>(0.0007);
+    std::vector<std::pair<int, int>> groups = {{SLOW_GROUP, 1}, {FAST_GROUP, 4}};
+    omm.integrator = std::make_unique<MTSIntegrator>(0.001, groups);
 
 #if USE_CPU
     OpenMM::Platform* platform = new OpenMM::CpuPlatform();
@@ -576,14 +240,65 @@ bool OPENMM::initialize(const std::vector<std::vector<int>>& worlds,
     return true;
 }
 
+void OPENMM::setActiveForceGroup(int forceGroupIndex) {
+    // ensureInitialized();
+
+    // // Update harmonic bond parameters for the active force group
+    // auto& harmonicBondForceRef = system->getForce(harmonicBondForceIndex);
+    // auto* harmonicBondForce = dynamic_cast<OpenMM::HarmonicBondForce*>(&harmonicBondForceRef);
+
+    // for (const auto& bond : harmonicBondParamsByWorld[forceGroupIndex]) {
+    //     harmonicBondForce->setBondParameters(bond.index, bond.particle1, bond.particle2, bond.length,
+    //     bond.k);
+    // }
+    // harmonicBondForce->updateParametersInContext(*context);
+
+    // // Update harmonic angle parameters for the active force group
+    // auto& harmonicAngleForceRef = system->getForce(harmonicAngleForceIndex);
+    // auto* harmonicAngleForce = dynamic_cast<OpenMM::HarmonicAngleForce*>(&harmonicAngleForceRef);
+
+    // for (const auto& angle : harmonicAngleParamsByWorld[forceGroupIndex]) {
+    //     harmonicAngleForce->setAngleParameters(angle.index,
+    //                                            angle.particle1,
+    //                                            angle.particle2,
+    //                                            angle.particle3,
+    //                                            angle.angle,
+    //                                            angle.k);
+    // }
+    // harmonicAngleForce->updateParametersInContext(*context);
+
+    // // Update periodic torsion parameters for the active force group
+    // auto& periodicTorsionForceRef = system->getForce(periodicTorsionForceIndex);
+    // auto* periodicTorsionForce = dynamic_cast<OpenMM::PeriodicTorsionForce*>(&periodicTorsionForceRef);
+
+    // for (const auto& torsion : periodicTorsionParamsByWorld[forceGroupIndex]) {
+    //     periodicTorsionForce->setTorsionParameters(torsion.index,
+    //                                                torsion.particle1,
+    //                                                torsion.particle2,
+    //                                                torsion.particle3,
+    //                                                torsion.particle4,
+    //                                                torsion.periodicity,
+    //                                                torsion.phase,
+    //                                                torsion.k);
+    // }
+    // periodicTorsionForce->updateParametersInContext(*context);
+
+    // // Update nonbonded parameters for the active force group
+    // auto& nonbondedForceRef = system->getForce(nonbondedForceIndex);
+    // auto* nonbondedForce = dynamic_cast<OpenMM::NonbondedForce*>(&nonbondedForceRef);
+
+    // for (const auto& nb : nonbondedParamsByWorld[forceGroupIndex]) {
+    //     nonbondedForce->setParticleParameters(nb.index, nb.charge, nb.sigma, nb.epsilon);
+    // }
+    // nonbondedForce->updateParametersInContext(*context);
+}
+
 void OPENMM::evaluateEnergiesFromPositionCache(SimTK::Real& newPotentialEnergy,
                                                SimTK::Real& newKineticEnergy) {
     ensureInitialized();
 
     // Intentional value capture: relies on C++17 guaranteed copy elision.
-    //
-    const auto state =
-        context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1 << activeForceGroupIndex);
+    const auto state = context->getState(OpenMM::State::Energy, enforcePeriodicBox);
     newPotentialEnergy = state.getPotentialEnergy();
     newKineticEnergy = state.getKineticEnergy();
 }
@@ -596,7 +311,6 @@ auto OPENMM::integrateTrajectory(int steps, SimTK::Real timeStepInPicoseconds) -
     // Try to integrate
     bool success = true;
     try {
-        integrator->setIntegrationForceGroups(1 << activeForceGroupIndex);
         integrator->step(steps);
     } catch (const std::exception& e) {
         // Restore old positions in case of integration failure
@@ -608,12 +322,10 @@ auto OPENMM::integrateTrajectory(int steps, SimTK::Real timeStepInPicoseconds) -
     // Intentional value capture: relies on C++17 guaranteed copy elision.
     const auto state =
         context->getState(OpenMM::State::Positions | OpenMM::State::Energy | OpenMM::State::Velocities,
-                          enforcePeriodicBox,
-                          1 << activeForceGroupIndex);
+                          enforcePeriodicBox);
     const auto& positions = state.getPositions();
     const auto& velocities = state.getVelocities();
 
-    // DO NOT UNCOMMENT THIS - THIS IS A BUG AND BREAK SOMETHING SOMEWHERE Store energies
     potentialEnergy = state.getPotentialEnergy();
     kineticEnergy = state.getKineticEnergy();
 
@@ -630,6 +342,65 @@ auto OPENMM::integrateTrajectory(int steps, SimTK::Real timeStepInPicoseconds) -
         const auto& vel = velocities[i];
         simbodyAtomsVelocitiesCache[i] = {vel[0], vel[1], vel[2]};
     }
+
+    return success;
+}
+
+auto OPENMM::integrateTrajectory(std::vector<OpenMM::Vec3>& positions,
+                                 int direction,
+                                 std::vector<OpenMM::Vec3>& velocities,
+                                 int steps,
+                                 SimTK::Real timeStepInPicoseconds,
+                                 SimTK::Real& potentialEnergy,
+                                 SimTK::Real& kineticEnergy) -> bool {
+    ensureInitialized();
+
+    const auto initialState = context->getState(OpenMM::State::Energy);
+    const auto initialPE = initialState.getPotentialEnergy();
+    const auto initialKE = initialState.getKineticEnergy();
+    const auto initialTotalEnergy = initialPE + initialKE;
+
+    // Set positions
+    context->setPositions(positions);
+
+    // Negate velocities for backward integration
+    if (direction == -1) {
+        for (auto& vel : velocities) {
+            vel = -vel;
+        }
+    }
+    context->setVelocities(velocities);
+
+    // Integrate
+    bool success = true;
+    try {
+        integrator->setStepSize(timeStepInPicoseconds);
+        integrator->step(steps);
+    } catch (const std::exception& e) {
+        success = false;
+    }
+
+    // Restore directions of velocities
+    if (direction == -1) {
+        // Get new velocities
+        const auto state = context->getState(OpenMM::State::Velocities);
+        auto newVelocities = state.getVelocities();
+        for (auto& vel : newVelocities) {
+            vel = -vel;
+        }
+        context->setVelocities(newVelocities);
+    }
+
+    // Get new positions, energies, and velocities
+    const auto state =
+        context->getState(OpenMM::State::Positions | OpenMM::State::Energy | OpenMM::State::Velocities,
+                          enforcePeriodicBox);
+    positions = state.getPositions();
+    velocities = state.getVelocities();
+    potentialEnergy = state.getPotentialEnergy();
+    kineticEnergy = state.getKineticEnergy();
+
+    const auto totalEnergy = potentialEnergy + kineticEnergy;
 
     return success;
 }
@@ -659,8 +430,7 @@ void OPENMM::evaluateForcesFromPositionsCache(const std::vector<NonBondedMapping
     ensureInitialized();
 
     // Intentional value capture: relies on C++17 guaranteed copy elision
-    const auto state =
-        context->getState(OpenMM::State::Forces, enforcePeriodicBox, 1 << activeForceGroupIndex);
+    const auto state = context->getState(OpenMM::State::Forces, enforcePeriodicBox);
     const auto& forces = state.getForces();
 
     // Map forces from atoms to bodies
@@ -732,4 +502,383 @@ auto OPENMM::computePeriodicBoxVectors_Context(double a_length,
     }
 
     return std::make_tuple(a, b, c);
+}
+
+auto OPENMM::computeIntraRigidPairs(int wIx, int minBondedDistance) -> std::vector<std::pair<int, int>> {
+    std::vector<std::vector<int>> adj(numAtoms);
+    for (const auto& bond : systemTopology.bonds) {
+        int src = bond.globalIndices[0];
+        int dst = bond.globalIndices[1];
+        adj[src].push_back(dst);
+        adj[dst].push_back(src);
+    }
+
+    // Get rigid bodies for this world
+    const auto& rigidBodies = atomMbxByWorld[wIx];
+
+    std::unordered_map<int, std::vector<int>> atomsByRigidBody;
+    for (int idx = 0; idx < static_cast<int>(rigidBodies.size()); ++idx) {
+        atomsByRigidBody[rigidBodies[idx]].push_back(idx);
+    }
+
+    // BFS must stop BEFORE enqueuing nodes at minBondedDistance
+    // e.g. minBondedDistance=4: bonded = {src, 1-2, 1-3, 1-4}, returns 1-5+
+    const int stopDepth = minBondedDistance - 1;
+
+    std::vector<std::pair<int, int>> result;
+
+    for (const auto& [bodyId, atomList] : atomsByRigidBody) {
+        for (int src : atomList) {
+            std::unordered_set<int> bonded;
+            std::queue<std::pair<int, int>> bfsQueue;
+            bonded.insert(src);
+            bfsQueue.emplace(src, 0);
+
+            while (!bfsQueue.empty()) {
+                auto [cur, depth] = bfsQueue.front();
+                bfsQueue.pop();
+
+                if (depth == stopDepth) {
+                    continue; // don't enqueue next level
+                }
+
+                for (int nbr : adj[cur]) {
+                    if (!isSameRigidBody(wIx, src, nbr)) {
+                        continue;
+                    }
+                    if (bonded.insert(nbr).second) {
+                        bfsQueue.emplace(nbr, depth + 1);
+                    }
+                }
+            }
+
+            for (int dst : atomList) {
+                if (dst <= src) {
+                    continue;
+                }
+                if (bonded.find(dst) == bonded.end()) {
+                    result.emplace_back(src, dst);
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+[[nodiscard]] auto OPENMM::createNonbondedForce(const std::vector<RoboAtom>& atoms,
+                                                const std::vector<Scaling14>& scaling14s,
+                                                const std::vector<Exclusion>& exclusions,
+                                                const ForceFieldParams& ffParams,
+                                                bool hasNBfix) -> OpenMM::NonbondedForce* {
+    auto* nonbondedForce = new OpenMM::NonbondedForce();
+    nonbondedForce->setCutoffDistance(ffParams.nonbondedCutoffInNm);
+
+    switch (ffParams.nonbondedMethod) {
+        case NonbondedMethod::NoCutoff:
+            nonbondedForce->setNonbondedMethod(OpenMM::NonbondedForce::NoCutoff);
+            nonbondedForce->setUseDispersionCorrection(false);
+            break;
+        case NonbondedMethod::CutoffNonPeriodic:
+            nonbondedForce->setNonbondedMethod(OpenMM::NonbondedForce::CutoffNonPeriodic);
+            if (ffParams.useGBSAOBC2) {
+                nonbondedForce->setReactionFieldDielectric(1.0);
+                nonbondedForce->setUseDispersionCorrection(false);
+            } else {
+                nonbondedForce->setUseDispersionCorrection(true);
+            }
+            break;
+        default:
+            throw std::invalid_argument("Unsupported nonbonded method");
+    }
+
+    nonbondedParamsByWorld.resize(numWorlds);
+
+    // Add all particles
+    for (const auto& atom : atoms) {
+        int index = 0;
+        if (hasNBfix) {
+            index = nonbondedForce->addParticle(atom.physics.chargeInE, 1.0, 0.0);
+        } else {
+            index = nonbondedForce->addParticle(atom.physics.chargeInE,
+                                                atom.physics.sigmaInNm,
+                                                atom.physics.vdwWellDepthInKJ);
+        }
+
+        for (int wIx = 0; wIx < numWorlds; ++wIx) {
+            nonbondedParamsByWorld[wIx].push_back({atom.identity.globalIndex,
+                                                   atom.physics.chargeInE,
+                                                   atom.physics.sigmaInNm,
+                                                   atom.physics.vdwWellDepthInKJ});
+        }
+    }
+
+    // Add 1-4 scalings
+    for (const auto& scaling14 : scaling14s) {
+        nonbondedForce->addException(scaling14.atom1GlobalIndex,
+                                     scaling14.atom4GlobalIndex,
+                                     scaling14.chargeProduct,
+                                     scaling14.sigma,
+                                     scaling14.epsilon);
+    }
+
+    // Add 1-2 and 1-3 exclusions
+    for (const auto& exclusion : exclusions) {
+        // If chargeProd and epsilon are both equal to 0, this will cause the interaction to be completely
+        // omitted from force and energy calculations
+        nonbondedForce->addException(exclusion.atom1GlobalIndex, exclusion.atom2GlobalIndex, 0.0, 0.1, 0.0);
+    }
+
+    for (int wIx = 0; wIx < numWorlds; ++wIx) {
+        const auto intraRigidPairs = computeIntraRigidPairs(wIx, 4);
+        for (const auto& [particle1, particle2] : intraRigidPairs) {
+            nonbondedParamsByWorld[wIx][particle1].charge = 0.0;
+            nonbondedParamsByWorld[wIx][particle1].sigma = 1.0;
+            nonbondedParamsByWorld[wIx][particle1].epsilon = 0.0;
+
+            nonbondedParamsByWorld[wIx][particle2].charge = 0.0;
+            nonbondedParamsByWorld[wIx][particle2].sigma = 1.0;
+            nonbondedParamsByWorld[wIx][particle2].epsilon = 0.0;
+        }
+    }
+
+    return nonbondedForce;
+}
+
+[[nodiscard]] auto OPENMM::createGBSAOBCForce(const std::vector<RoboAtom>& atoms,
+                                              const ForceFieldParams& ffParams) -> OpenMM::GBSAOBCForce* {
+    OpenMM::GBSAOBCForce::NonbondedMethod gbsaForceMethod;
+    switch (ffParams.nonbondedMethod) {
+        case NonbondedMethod::NoCutoff:
+            gbsaForceMethod = OpenMM::GBSAOBCForce::NoCutoff;
+            break;
+        case NonbondedMethod::CutoffNonPeriodic:
+            gbsaForceMethod = OpenMM::GBSAOBCForce::CutoffNonPeriodic;
+            break;
+        default:
+            throw std::invalid_argument("Unsupported nonbonded method for GBSAOBCForce");
+    }
+
+    auto* force = new OpenMM::GBSAOBCForce();
+
+    force->setSolventDielectric(ffParams.gbsaSolventDielectric);
+    force->setSoluteDielectric(ffParams.gbsaSoluteDielectric);
+    force->setNonbondedMethod(gbsaForceMethod);
+    force->setCutoffDistance(ffParams.nonbondedCutoffInNm);
+
+    for (const auto& atom : atoms) {
+        force->addParticle(atom.physics.chargeInE, atom.physics.solventRadiusInNm, atom.physics.screen);
+    }
+
+    return force;
+}
+
+[[nodiscard]] auto OPENMM::createCustomNonbondedForce(const std::vector<RoboAtom>& atoms,
+                                                      const std::vector<Scaling14>& scaling14s,
+                                                      const std::vector<Exclusion>& exclusions,
+                                                      const ForceFieldParams& ffParams,
+                                                      bool useSwitchingFunction,
+                                                      SimTK::Real switchingDistance)
+    -> OpenMM::CustomNonbondedForce* {
+    auto* force = new OpenMM::CustomNonbondedForce(
+        "(a/r6)^2-b/r6; r6=r^6; a=acoef(type1, type2); b=bcoef(type1, type2);");
+    force->addTabulatedFunction(
+        "acoef",
+        new OpenMM::Discrete2DFunction(ffParams.numTypes, ffParams.numTypes, ffParams.aCoef));
+    force->addTabulatedFunction(
+        "bcoef",
+        new OpenMM::Discrete2DFunction(ffParams.numTypes, ffParams.numTypes, ffParams.bCoef));
+    force->addPerParticleParameter("type");
+
+    force->setCutoffDistance(ffParams.nonbondedCutoffInNm);
+    force->setUseSwitchingFunction(useSwitchingFunction);
+    force->setSwitchingDistance(switchingDistance);
+
+    switch (ffParams.nonbondedMethod) {
+        case NonbondedMethod::NoCutoff:
+            force->setNonbondedMethod(OpenMM::CustomNonbondedForce::NoCutoff);
+            break;
+        case NonbondedMethod::CutoffNonPeriodic:
+            force->setNonbondedMethod(OpenMM::CustomNonbondedForce::CutoffNonPeriodic);
+            break;
+        default:
+            throw std::invalid_argument("Unsupported nonbonded method");
+    }
+
+    for (const auto& atom : atoms) {
+        force->addParticle({static_cast<SimTK::Real>(atom.identity.nonbondedIndex)});
+    }
+
+    for (const auto& scaling14 : scaling14s) {
+        force->addExclusion(scaling14.atom1GlobalIndex, scaling14.atom4GlobalIndex);
+    }
+
+    // Exclude 1-2 and 1-3 interactions
+    for (const auto& exclusion : exclusions) {
+        // If chargeProd and epsilon are both equal to 0, this will cause the interaction to be completely
+        // omitted from force and energy calculations
+        force->addExclusion(exclusion.atom1GlobalIndex, exclusion.atom2GlobalIndex);
+    }
+
+    return force;
+}
+
+[[nodiscard]] auto OPENMM::createHarmonicBondForce() -> OpenMM::HarmonicBondForce* {
+    auto* force = new OpenMM::HarmonicBondForce();
+    harmonicBondParamsByWorld.resize(numWorlds);
+
+    for (const auto& bond : systemTopology.bonds) {
+        const auto particle1 = bond.globalIndices[0];
+        const auto particle2 = bond.globalIndices[1];
+        const auto length = bond.nominalLengthInNm;
+
+        // OpenMM defines the harmonic bond potential as 0.5 * k * (r-r0)^2, so we need to multiply by 2 to
+        // get the correct stiffness
+        auto stiffness = bond.stiffnessInKJPerNmSq * 2;
+
+        // Add bond and save the interaction index
+        const auto index = force->addBond(particle1, particle2, length, stiffness);
+
+        for (int wIx = 0; wIx < numWorlds; ++wIx) {
+            if (isSameRigidBody(wIx, particle1, particle2)) {
+                stiffness = 0.0;
+            }
+
+            harmonicBondParamsByWorld[wIx].push_back({index, particle1, particle2, length, stiffness});
+        }
+    }
+
+    return force;
+}
+
+[[nodiscard]] auto OPENMM::createHarmonicAngleForce() -> OpenMM::HarmonicAngleForce* {
+    auto* force = new OpenMM::HarmonicAngleForce();
+    harmonicAngleParamsByWorld.resize(numWorlds);
+
+    for (const auto& angle : systemTopology.angles) {
+        const auto particle1 = angle.globalIndices[0];
+        const auto particle2 = angle.globalIndices[1];
+        const auto particle3 = angle.globalIndices[2];
+        const auto angleInRad = angle.nominalAngleInDeg * SimTK::DuMM::Deg2Rad;
+
+        // OpenMM defines the harmonic angle potential as 0.5 * k * (theta-theta0)^2, so we need to multiply
+        // by 2 to get the correct stiffness
+        auto stiffness = angle.stiffnessInKJPerRadSq * 2;
+
+        const auto index = force->addAngle(particle1, particle2, particle3, angleInRad, stiffness);
+
+        for (int wIx = 0; wIx < numWorlds; ++wIx) {
+            if (isSameRigidBody(wIx, particle1, particle2) && isSameRigidBody(wIx, particle2, particle3)) {
+                stiffness = 0.0;
+            }
+
+            harmonicAngleParamsByWorld[wIx].push_back(
+                {index, particle1, particle2, particle3, angleInRad, stiffness});
+        }
+    }
+    return force;
+}
+
+[[nodiscard]] auto OPENMM::createPeriodicTorsionForce() -> OpenMM::PeriodicTorsionForce* {
+    auto* force = new OpenMM::PeriodicTorsionForce();
+    periodicTorsionParamsByWorld.resize(numWorlds);
+
+    for (const auto& torsion : systemTopology.periodicTorsions) {
+        const auto particle1 = torsion.globalIndices[0];
+        const auto particle2 = torsion.globalIndices[1];
+        const auto particle3 = torsion.globalIndices[2];
+        const auto particle4 = torsion.globalIndices[3];
+
+        for (const auto& term : torsion.terms) {
+            const auto periodicity = term.periodicity;
+            if (periodicity <= 0) {
+                continue;
+            }
+            const auto phase = term.phaseDeg * SimTK::DuMM::Deg2Rad;
+            auto stiffness = term.amplitudeKJ;
+
+            const auto index =
+                force->addTorsion(particle1, particle2, particle3, particle4, periodicity, phase, stiffness);
+
+            for (int wIx = 0; wIx < numWorlds; ++wIx) {
+                if (!torsion.improper) {
+                    // Skip propers where the middle two atoms are in the same rigid body
+                    if (isSameRigidBody(wIx, particle2, particle3)) {
+                        stiffness = 0.0;
+                    }
+                } else {
+                    // Skip improper torsions where all four atoms are in the same rigid body
+                    if (isSameRigidBody(wIx, particle1, particle2)
+                        && isSameRigidBody(wIx, particle2, particle3)
+                        && isSameRigidBody(wIx, particle3, particle4)) {
+                        stiffness = 0.0;
+                    }
+                }
+
+                periodicTorsionParamsByWorld[wIx].push_back(
+                    {index, particle1, particle2, particle3, particle4, periodicity, phase, stiffness});
+            }
+        }
+    }
+
+    return force;
+}
+
+[[nodiscard]] auto OPENMM::createImproperHarmonicTorsionForce() -> OpenMM::CustomTorsionForce* {
+    // Create force expression for harmonic improper torsions (CHARMM style)
+    std::stringstream strStream;
+    strStream << std::setprecision(17) << "k*min(dtheta, 2*" << SimTK::Pi
+              << "-dtheta)^2; dtheta = abs(theta-theta0)";
+
+    auto* force = new OpenMM::CustomTorsionForce(strStream.str());
+    force->addPerTorsionParameter("k");
+    force->addPerTorsionParameter("theta0");
+
+    for (const auto& torsion : systemTopology.harmonicImproperTorsions) {
+        const auto atom1GlobalIndex = torsion.globalIndices[0];
+        const auto atom2GlobalIndex = torsion.globalIndices[1];
+        const auto atom3GlobalIndex = torsion.globalIndices[2];
+        const auto atom4GlobalIndex = torsion.globalIndices[3];
+
+        const std::vector<SimTK::Real> params = {torsion.stiffnessInKJPerRadSq, torsion.nominalAngleInRad};
+        force->addTorsion(atom1GlobalIndex, atom2GlobalIndex, atom3GlobalIndex, atom4GlobalIndex, params);
+    }
+
+    return force;
+}
+
+[[nodiscard]] auto OPENMM::createCMAPTorsionForce() -> OpenMM::CMAPTorsionForce* {
+    auto* force = new OpenMM::CMAPTorsionForce();
+    force->setUsesPeriodicBoundaryConditions(enforcePeriodicBox);
+
+    for (const auto& grid : systemTopology.cmapGrids) {
+        force->addMap(grid.size, grid.energy);
+    }
+
+    for (const auto& cmapTorsion : systemTopology.cmapTorsions) {
+        force->addTorsion(cmapTorsion.mapIndex,
+                          cmapTorsion.torsionAAtom1GlobalIndex,
+                          cmapTorsion.torsionAAtom2GlobalIndex,
+                          cmapTorsion.torsionAAtom3GlobalIndex,
+                          cmapTorsion.torsionAAtom4GlobalIndex,
+                          cmapTorsion.torsionBAtom1GlobalIndex,
+                          cmapTorsion.torsionBAtom2GlobalIndex,
+                          cmapTorsion.torsionBAtom3GlobalIndex,
+                          cmapTorsion.torsionBAtom4GlobalIndex);
+    }
+
+    return force;
+}
+
+[[nodiscard]] auto OPENMM::createUreyBradleyForce() -> OpenMM::HarmonicBondForce* {
+    auto* force = new OpenMM::HarmonicBondForce();
+
+    for (const auto& term : systemTopology.ureyBradleys) {
+        force->addBond(term.atom1GlobalIndex,
+                       term.atom3GlobalIndex,
+                       term.nominalLengthInNm,
+                       term.stiffnessInKJPerNmSq * 2);
+    }
+
+    return force;
 }

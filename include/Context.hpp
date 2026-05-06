@@ -36,7 +36,6 @@ class Context {
 
     void setVerbose(bool verbose);
     void setGBSAOptions(bool useGBSAOBC2, SimTK::Real solventDielectric, SimTK::Real soluteDielectric);
-    void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
     bool setOutput(const std::string& outDir);
 
     void setNofRoundsTillReblock(int nofRoundsTillReblock);
@@ -88,8 +87,6 @@ class Context {
 
     void updNofRoundsTillReblock(int nofRoundsTillReblock);
 
-    std::size_t getWorldIndex(std::size_t which) const;
-
     // Adaptive Gibbs blocking: TODO: consider moving in World
     void allocateReblockQsCache();
     void allocateReblockQsCacheQVectors();
@@ -118,17 +115,8 @@ class Context {
         return worlds;
     }
 
-    void RotateWorlds();
-    //------------
-
-    // --- Main ---
-    void randomizeWorldIndexes();
-
     // Relationship BAT - mobod transforms
     void PrintZMatrixMobods(int wIx, SimTK::State& someState);
-
-    // Drilling drl
-    void passThroughBonds_template(int whichWorld);
 
     auto Pearson(std::vector<std::vector<SimTK::Real>> someVector,
                  int QIx1,
@@ -149,7 +137,6 @@ class Context {
                      std::size_t aIx2,
                      std::size_t aIx3,
                      std::size_t aIx4);
-
     void addDistances(const std::vector<std::size_t>& distanceIx);
     void addAngles(const std::vector<std::size_t>& angleIx);
     void addDihedrals(const std::vector<std::size_t>& dihedralIx);
@@ -159,21 +146,6 @@ class Context {
 
     // Print DuMM atoms stations in mobilized body frame
     void checkAtomStationsThroughDumm();
-
-    // Print Simbody related information
-    void PrintSimbodyMobods();
-    void PrintFreeE2EDist(std::size_t whichWorld, int whichCompound);
-
-    void PrintGeometryToLog(std::size_t whichWorld, std::size_t whichSampler);
-    void PrintDistancesToLog(std::size_t whichWorld, std::size_t whichSampler);
-    void PrintAnglesToLog(std::size_t whichWorld, std::size_t whichSampler);
-    void PrintDihedralsToLog(std::size_t whichWorld, std::size_t whichSampler);
-    void PrintDihedralsQsToLog(std::size_t whichWorld, std::size_t whichSampler);
-    void PrintSamplerDataToLog(std::size_t whichWorld, std::size_t whichSampler);
-    void PrintToLog(std::size_t whichReplica, std::size_t whichWorld, std::size_t whichSampler);
-
-    /** @name Write coordinates **/
-    /**@{**/
 
     /**
      * @brief Write pdb file.
@@ -194,24 +166,6 @@ class Context {
 
     auto getOutputDir() -> std::string;
     void setOutputDir(std::string arg);
-
-    /**@}**/
-
-    SimTK::Real Dihedral(std::size_t whichWorld,
-                         std::size_t whichCompound,
-                         std::size_t whichSampler,
-                         int a1,
-                         int a2,
-                         int a3,
-                         int a4);
-    SimTK::Real Roboangle(std::size_t whichWorld,
-                          std::size_t whichCompound,
-                          std::size_t whichSampler,
-                          int a1,
-                          int a2,
-                          int a3);
-    SimTK::Real
-    Distance(std::size_t whichWorld, std::size_t whichCompound, std::size_t whichSampler, int a1, int a2);
 
     //////////////////////////////////
     //// REPLICA EXCHANGE FUNCTIONS //
@@ -307,8 +261,6 @@ class Context {
     // Load replica's atomLocations into it's back world
     void restoreReplicaCoordinatesToBackWorld(int whichReplica);
 
-    // Stores replica's front world's coordinates into it's atomsLocations
-
     // This should always be a fully flexible world
     void storeReplicaCoordinatesFromFrontWorld(int whichReplica);
 
@@ -341,7 +293,6 @@ class Context {
     void set_WORK_PotentialAsFinal(int replicaIx);
 
     // ------------------------------------------------------------------------
-
     void initializeReplica(int whichReplica);
 
     // Reset worlds parameters according to thermodynamic state
@@ -356,12 +307,6 @@ class Context {
     // Set nonequilibrium parameters for one replica
     void updWorldsDistortOptions(int thisReplica);
     void updThermostatesQScaleFactors(int mixi);
-
-    // Rewind back world
-    void RewindBackWorld(int thisReplica);
-
-    // Run front world, rotate and transfer. Return worldIxs.front
-    int RunFrontWorldAndRotate(std::vector<int>& worldIxs);
 
     void writeLog(int mixi, int replicaIx);
     void writeDCD(int replicaIx);
@@ -384,10 +329,6 @@ class Context {
      * @return
      */
     void RunREX(int numEquilibrationRounds, int numProductionRounds, int writeFrequency, bool writeToStdio);
-
-    void transferCoordsFromWorldToWorld(int sourceWorldIndex, int destinationWorldIndex);
-    void transferCoordsFromWorldToReplica(int sourceWorldIndex, int destinationReplicaIndex, bool intoWORK);
-    void transferCoordsFromReplicaToWorld(int sourceReplicaIndex, int destinationWorldIndex);
 
     void setSubZmatrixBATStatsToSamplers(int thermoIx, int worldCnt);
 
@@ -417,10 +358,7 @@ class Context {
     // Run in testing mode
     bool testing = false;
 
-    std::vector<int> TopologyIXs;
-    std::vector<std::vector<int>> AmberAtomIXs;
     std::vector<World> worlds;
-
     std::vector<std::size_t> worldIndices;
     std::vector<std::vector<std::string>> rootMobilitiesStr;
 
@@ -430,7 +368,6 @@ class Context {
     int requiredNofRounds = -1;
 
     std::size_t nofWorlds = 0;
-    bool isWorldsOrderRandom = false;
 
     int pdbRestartFreq = 0;
 
@@ -521,9 +458,6 @@ class Context {
     SimTK::Real soluteDielectric = 1.0;
     SimTK::Real gbsaGlobalScaleFactor = 0.0; // Default is 0 (vacuum). Use 1 for implicit solvent (water)
 
-    bool useAmberForceFieldScaleFactors = true;
-    SimTK::Real globalForceFieldScaleFactor = 1.0; // Used in place of Amber scaling (not default)
-
     // Random number generator
     Random32 randomEngine;
 
@@ -534,40 +468,6 @@ class Context {
     public:
     // /** Implicit membrane mimicked by half-space contacts */
     // void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
-
-    std::vector<std::string> MobilityStr{"Zero",
-                                         "Free",
-                                         "Torsion",
-                                         "Rigid",
-                                         "BallF",
-                                         "BallM",
-                                         "Cylinder",
-                                         "Translation",
-                                         "FreeLine",
-                                         "LineOrientationF",
-                                         "LineOrientationM",
-                                         "UniversalM",
-                                         "Spherical",
-                                         "AnglePin",
-                                         "BendStretch",
-                                         "Slider",
-                                         "OrthoSpherical"};
-
-    SimTK::BondMobility::Mobility getMobility(const std::string& mobilityStr) {
-        // Assume MobilityStr is a vector defined elsewhere in your code
-        // std::vector<std::string> MobilityStr = { ... };
-
-        auto it = std::find(MobilityStr.begin(), MobilityStr.end(), mobilityStr);
-
-        if (it != MobilityStr.end()) {
-            // If the string is found, return the corresponding enum value
-            return static_cast<SimTK::BondMobility::Mobility>(std::distance(MobilityStr.begin(), it) + 1);
-        } else {
-            // If the string is not found, return the default value
-            return SimTK::BondMobility::Default;
-        }
-    }
-
 
     /**
      * @brief Get Z-matrix indexes table

@@ -5,6 +5,36 @@
 
 #include "bgeneral.hpp"
 
+void transferCoordsFromWorldToWorld(const World& srcWorld, World& destWorld) {
+    const auto& atomTargetLocations = srcWorld.getAtomTargetLocationsCache();
+    destWorld.setAtomTargetLocationsToState(atomTargetLocations);
+}
+
+void transferCoordsFromReplicaToWorld(const Replica& srcReplica, World& destWorld) {
+    const auto& atomTargetLocations = srcReplica.getAtomsLocationsInGround();
+    destWorld.setAtomTargetLocationsToState(atomTargetLocations);
+}
+
+void transferCoordsFromWorldToReplica(const World& srcWorld, Replica& destReplica, bool intoWORK) {
+    const auto& atomTargetLocations = srcWorld.getAtomTargetLocationsCache();
+    const auto potential = srcWorld.getSampler(0)->getCurrentEnergy().potential;
+    const auto fixman = srcWorld.getSampler(0)->getCurrentEnergy().fixman;
+
+    if (intoWORK) {
+        destReplica.updWORK() += srcWorld.getWork(); // TODO merge with Jacobians
+        destReplica.upd_WORK_Jacobian() += srcWorld.getSampler(0)->getDistortJacobianDetLog();
+        destReplica.upd_WORK_AtomsLocationsInGround(atomTargetLocations);
+        destReplica.set_WORK_PotentialEnergy_New(potential);
+        destReplica.set_WORK_Fixman(srcWorld.getSampler(0)->getCurrentEnergy().fixman);
+        destReplica.set_WORK_ReferencePotentialEnergy_New(potential);
+    } else {
+        destReplica.setAtomsLocationsInGround(atomTargetLocations);
+        destReplica.setPotentialEnergy(potential);
+        destReplica.setFixman(fixman);
+        destReplica.setReferencePotentialEnergy(potential);
+    }
+}
+
 /*!
  * <!-- Constructor: sets temperatures, random engine and checks for CUDA_ROOT -->
  */
@@ -468,27 +498,11 @@ void Context::addWorld(bool fixmanTorque,
     Span<Topology> t{topologies};
     worlds.emplace_back(worldIndices.back(), t, testing, zMatrix);
 
-    // Set force field scale factor.
-    if (useAmberForceFieldScaleFactors) {
-        worlds.back().setAmberForceFieldScaleFactors();
-    } else {
-        worlds.back().setGlobalForceFieldScaleFactor(globalForceFieldScaleFactor);
-    }
-
-    // Set the nonbonded method and cutoff
-    worlds.back().updForceField().setNonbondedMethod(nonbondedMethod);
-    worlds.back().updForceField().setNonbondedCutoff(nonbondedCutoffInNm);
-
     // If requested, add Fixman torque as an additional force subsystem
     if (fixmanTorque) {
         worlds.back().addFixmanTorque();
         worlds.back().updFixmanTorque()->setScaleFactor(1);
     }
-
-    // Set GBSA scaling and VdW mixing rule
-    worlds.back().setGbsaGlobalScaleFactor(gbsaGlobalScaleFactor);
-    worlds.back().updForceField().setVdwMixingRule(
-        SimTK::DuMMForceFieldSubsystem::LorentzBerthelot); // DuMMForceFieldSubsystem::WaldmanHagler
 
     // Set how many times to run sample_iteration()
     worlds.back().setSamplesPerRound(samplesPerRound);
@@ -611,7 +625,7 @@ void Context::addWorld(bool fixmanTorque,
     }
 
     // Let DuMM model this robot
-    worlds.back().modelTopologies();
+    worlds.back().modelTopologies(atomTargetLocationsCache);
     worlds.back().setAtomTargetLocationsToState(atomTargetLocationsCache);
 
     // Find bodies for roll mobilities
@@ -706,25 +720,6 @@ void Context::printThermodynamics() {
     // }
 }
 
-// Print Simbody related information
-void Context::PrintSimbodyMobods() {
-    // for(std::size_t worldIx = 0; worldIx < nofWorlds; worldIx++){
-    // 	std::cout << "Context::PrintSimbodyMobods world " << worldIx << "\n";
-    // 	for(std::size_t molIx = 0; molIx < numMolecules; molIx++){
-    // 		std::cout << "Context::PrintSimbodyMobods molecule " << molIx << "\n";
-    // 		const Topology& topology = worlds[worldIx].getTopology(molIx);
-
-    // 		for(std::size_t i = 0; i < topology.getNumAtoms(); i++){
-    // 			SimTK::Compound::AtomIndex aIx
-    // 				= (topology.subAtomList[i]).identity.compoundAtomIndex;
-    // 			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
-    // 			std::cout << "i aIx mbx " << i << " " << aIx << " "
-    // 				<< mbx << std::endl << std::flush;
-    // 		}
-    // 	}
-    // }
-}
-
 // Print DuMM atoms stations in mobilized body frame
 void Context::checkAtomStationsThroughDumm() {
     for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
@@ -790,20 +785,8 @@ void Context::allocateReblockQsCacheQVectors() {
     // }
 }
 
-// Return the world index in position 'which'. To be used when rotationg
-std::size_t Context::getWorldIndex(std::size_t which) const {
-    return worldIndices[which];
-}
-
 // --- Arrange different mixing parameters ---
 void Context::initializeMixingParameters() {
-    assert(!"Not implemented");
-    throw std::exception();
-}
-//------------
-
-// --- Mix ---
-void Context::RotateWorlds() {
     assert(!"Not implemented");
     throw std::exception();
 }
@@ -1057,48 +1040,48 @@ SimTK::Real Context::getFixman(int replica_i) {
 }
 
 // Calculate Fixman potential of replica I in replica J's back world. Uj(X_i)
-SimTK::Real Context::calcFixman_IInJ(int replica_i, int replica_j) {
+auto Context::calcFixman_IInJ(int replica_i, int replica_j) -> SimTK::Real {
     const SimTK::Real U_j = replicas[replica_j].getFixman();
 
     if (replica_j == replica_i) {
         // Same replica
         return U_j;
+    }
 
-    } else if (U_j <= SimTK::Eps) {
+    if (U_j <= SimTK::Eps) {
         // Fully flexible world
         return U_j;
-
-    } else {
-        // Get replica i thermodynamic state
-        const int thermoState_j = replica2ThermoIxs[replica_j];
-
-        // Get replica i back world
-        const int world_j_front = thermodynamicStates[thermoState_j].getWorldIndexes().front();
-        const int world_j_back = thermodynamicStates[thermoState_j].getWorldIndexes().back();
-
-        // Pass compounds to the new world
-        passTopologiesToNewWorld(world_j_back);
-
-        // Transfer coordinates from replica i to back world of replica j
-        const auto& X_i = replicas[replica_i].getAtomsLocationsInGround();
-        worlds[world_j_back].setAtomTargetLocationsToState(X_i);
-
-        // Transfer buffer coordinates of replica i back to back world
-        // Get thermoState corresponding to this replica
-        const int thermoIx = replica2ThermoIxs[replica_j];
-
-        // Get worlds indexes of this thermodynamic state
-        const std::vector<int>& worldIndexes = thermodynamicStates[thermoIx].getWorldIndexes();
-
-        // Transfer coordinates
-        const auto& coords = replicas[replica_j].getAtomsLocationsInGround();
-        worlds[worldIndexes.back()].setAtomTargetLocationsToState(coords);
-
-        passTopologiesToNewWorld(world_j_front);
-
-        // Calculate Fixman in replica i back world
-        return worlds[world_j_back].calcFixman();
     }
+
+    // Get replica i thermodynamic state
+    const int thermoState_j = replica2ThermoIxs[replica_j];
+
+    // Get replica i back world
+    const int world_j_front = thermodynamicStates[thermoState_j].getWorldIndexes().front();
+    const int world_j_back = thermodynamicStates[thermoState_j].getWorldIndexes().back();
+
+    // Pass compounds to the new world
+    passTopologiesToNewWorld(world_j_back);
+
+    // Transfer coordinates from replica i to back world of replica j
+    const auto& X_i = replicas[replica_i].getAtomsLocationsInGround();
+    worlds[world_j_back].setAtomTargetLocationsToState(X_i);
+
+    // Transfer buffer coordinates of replica i back to back world
+    // Get thermoState corresponding to this replica
+    const int thermoIx = replica2ThermoIxs[replica_j];
+
+    // Get worlds indexes of this thermodynamic state
+    const std::vector<int>& worldIndexes = thermodynamicStates[thermoIx].getWorldIndexes();
+
+    // Transfer coordinates
+    const auto& coords = replicas[replica_j].getAtomsLocationsInGround();
+    worlds[worldIndexes.back()].setAtomTargetLocationsToState(coords);
+
+    passTopologiesToNewWorld(world_j_front);
+
+    // Calculate Fixman in replica i back world
+    return worlds[world_j_back].getFixmanPotential();
 }
 
 void Context::swapThermodynamicStates(int replica_i, int replica_j) {
@@ -1977,72 +1960,6 @@ void Context::updWorldsDistortOptions(int thisReplica) {
     }
 }
 
-/*!
- * <!-- Rewind back world -->
- */
-void Context::RewindBackWorld(int thisReplica) {
-    // Get thermoState corresponding to this replica
-    // KEYWORD = replica, VALUE = thermoState
-    int thisThermoStateIx = replica2ThermoIxs[thisReplica];
-
-    // Get this world indexes from the corresponding thermoState
-    std::vector<int> replicaWorldIxs = thermodynamicStates[thisThermoStateIx].getWorldIndexes();
-
-    // == TRANSFER == coordinates from last world to current
-    // TODO: eliminate in the last iteration
-    int frontIx = replicaWorldIxs.front();
-    int backIx = replicaWorldIxs.back();
-    if (replicaWorldIxs.size() > 1) {
-        transferCoordsFromWorldToWorld(frontIx, backIx);
-    }
-
-    // == ROTATE == worlds indices (translate from right to left)
-    std::rotate(replicaWorldIxs.begin(), replicaWorldIxs.begin() + 1, replicaWorldIxs.end());
-}
-
-// Run front world, rotate and transfer
-auto Context::RunFrontWorldAndRotate(std::vector<int>& worldIxs) -> int {
-    throw std::runtime_error("RunFrontWorldAndRotate is deprecated and should not be used.");
-    return -1;
-
-    //     bool validated = false;
-
-    //     int frontWorldIx = -1;
-    //     int backWorldIx = -1;
-
-    //     // == SAMPLE == from the front world
-    //     frontWorldIx = worldIxs.front();
-    //     validated = RunWorld(frontWorldIx, "", true);
-
-    //     // Write pdbs every world
-    //     // writePdbs(nofRounds, frontWorldIx);
-
-    //     // == ROTATE == worlds indices (translate from right to left)
-    //     std::rotate(worldIxs.begin(), worldIxs.begin() + 1, worldIxs.end());
-
-    //     // == TRANSFER == coordinates from back world to front
-    //     frontWorldIx = worldIxs.front();
-    //     backWorldIx = worldIxs.back();
-
-    //     if (worldIxs.size() > 1) {
-    //         // spacedcout("[YDIRBUG]");
-    //         // std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
-    //         // spacedcout("[YDIRBUG]"); ceol;
-
-    //         transferCoordsFromWorldToWorld(backWorldIx, frontWorldIx);
-
-    // #ifdef PRINTALOT
-    //         if (validated) {
-    //             std::cout << "\n";
-    //         } else {
-    //             std::cout << " invalid sample." << std::endl;
-    //         }
-    // #endif
-    //     }
-
-    //     return worldIxs.front();
-}
-
 /**
  * Update the scale factors
  */
@@ -2430,47 +2347,51 @@ bool Context::RunWorld(int whichWorld, const std::string& header, bool shouldPri
         // #endif
     }
 
-// Print geometry to output stream too
-#pragma region REBAS_TEST
-    worldOutStream << " ";
+    // // Print geometry to output stream too
+    // #pragma region REBAS_TEST
+    //     worldOutStream << " ";
 
-    for (const auto& distanceIx : distanceIxs) {
-        if (distanceIx[0] == whichWorld) {
-            worldOutStream << std::fixed << std::setprecision(3)
-                           << Distance(distanceIx[0], distanceIx[1], 0, distanceIx[2], distanceIx[3]) << " ";
-        }
-    }
+    //     for (const auto& distanceIx : distanceIxs) {
+    //         if (distanceIx[0] == whichWorld) {
+    //             worldOutStream << std::fixed << std::setprecision(3)
+    //                            << Distance(distanceIx[0], distanceIx[1], 0, distanceIx[2], distanceIx[3])
+    //                            << " ";
+    //         }
+    //     }
 
-    for (const auto& angleIx : angleIxs) {
-        if (angleIx[0] == whichWorld) {
-            worldOutStream << std::fixed << std::setprecision(3)
-                           << Roboangle(angleIx[0], angleIx[1], 0, angleIx[2], angleIx[3], angleIx[4]) << " ";
-        }
-    }
+    //     for (const auto& angleIx : angleIxs) {
+    //         if (angleIx[0] == whichWorld) {
+    //             worldOutStream << std::fixed << std::setprecision(3)
+    //                            << Roboangle(angleIx[0], angleIx[1], 0, angleIx[2], angleIx[3], angleIx[4])
+    //                            << " ";
+    //         }
+    //     }
 
-    for (const auto& dihedralIx : dihedralIxs) {
-        if (dihedralIx[0] == whichWorld) {
-            worldOutStream << std::fixed << std::setprecision(3)
-                           << Dihedral(dihedralIx[0],
-                                       dihedralIx[1],
-                                       0,
-                                       dihedralIx[2],
-                                       dihedralIx[3],
-                                       dihedralIx[4],
-                                       dihedralIx[5])
-                           << " ";
+    //     for (const auto& dihedralIx : dihedralIxs) {
+    //         if (dihedralIx[0] == whichWorld) {
+    //             worldOutStream << std::fixed << std::setprecision(3)
+    //                            << Dihedral(dihedralIx[0],
+    //                                        dihedralIx[1],
+    //                                        0,
+    //                                        dihedralIx[2],
+    //                                        dihedralIx[3],
+    //                                        dihedralIx[4],
+    //                                        dihedralIx[5])
+    //                            << " ";
 
-            // std::cout <<"STUDY_Context::RunWorld"
-            // <<" | "<< dihedralIx[0] <<" "<< dihedralIx[1] <<" "<< dihedralIx[2] <<" "<< dihedralIx[3] <<"
-            // "<< dihedralIx[4] <<" "<< dihedralIx[5]
-            // <<" | "<< atoms[dihedralIx[0]].getInName() <<" "<< atoms[dihedralIx[1]].getInName() <<" "<<
-            // atoms[dihedralIx[2]].getInName() <<" "<< atoms[dihedralIx[3]].getInName()
-            // <<" | "<< Dihedral(dihedralIx[0], dihedralIx[1], 0, dihedralIx[2], dihedralIx[3],
-            // dihedralIx[4], dihedralIx[5])
-            // << std::endl;
-        }
-    }
-#pragma endregion REBAS_TEST
+    //             // std::cout <<"STUDY_Context::RunWorld"
+    //             // <<" | "<< dihedralIx[0] <<" "<< dihedralIx[1] <<" "<< dihedralIx[2] <<" "<<
+    //             dihedralIx[3] <<"
+    //             // "<< dihedralIx[4] <<" "<< dihedralIx[5]
+    //             // <<" | "<< atoms[dihedralIx[0]].getInName() <<" "<< atoms[dihedralIx[1]].getInName() <<"
+    //             "<<
+    //             // atoms[dihedralIx[2]].getInName() <<" "<< atoms[dihedralIx[3]].getInName()
+    //             // <<" | "<< Dihedral(dihedralIx[0], dihedralIx[1], 0, dihedralIx[2], dihedralIx[3],
+    //             // dihedralIx[4], dihedralIx[5])
+    //             // << std::endl;
+    //         }
+    //     }
+    // #pragma endregion REBAS_TEST
 
     // Print the world output stream
     if (verbose) {
@@ -2479,6 +2400,9 @@ bool Context::RunWorld(int whichWorld, const std::string& header, bool shouldPri
 
     return validated;
 }
+
+std::random_device rd;
+std::mt19937 g(rd());
 
 /*! <!--  -->*/
 void Context::RunReplicaWorldRange(int replicaIx,
@@ -2490,22 +2414,18 @@ void Context::RunReplicaWorldRange(int replicaIx,
     Replica& replica = replicas[replicaIx];
     const int thermoIx = replica2ThermoIxs[replicaIx];
     ThermodynamicState& thermoState = thermodynamicStates[thermoIx];
-    const std::vector<int>& thermoWorldIxs = thermoState.updWorldIndexes();
+
+    std::vector<int> thermoWorldIxs = thermoState.getWorldIndexes();
+    std::shuffle(thermoWorldIxs.begin(), thermoWorldIxs.end(), g);
+
     const std::vector<int>& distortOpts = thermoState.getDistortOptions();
 
     replica.updWORK() = 0.0;
     replica.upd_WORK_Jacobian() = 0.0;
 
-    // random world order
-    std::vector<int> shuffledWorldIndices = thermoState.updWorldIndexes();
-    // std::shuffle(shuffledWorldIndices.begin(), shuffledWorldIndices.end(), randomEngine);
-    // if (shuffledWorldIndices.size() != thermoWorldIxs.size()) {
-    //     throw std::runtime_error("Shuffled world indices size does not match thermo world indices size.");
-    // }
-
     // Loop through all worlds within the thermodynamic schedule
     // This is an index into the thermodynamic state’s world list
-    for (const int worldScheduleIndex : thermoState.updWorldIndexes()) {
+    for (const int worldScheduleIndex : thermoWorldIxs) {
         // Get the physical world object in the simulation
         const int worldIndex = thermoWorldIxs[worldScheduleIndex];
         World& currWorld = worlds[worldIndex];
@@ -2518,7 +2438,8 @@ void Context::RunReplicaWorldRange(int replicaIx,
         const bool firstWorldOverall = (worldScheduleIndex == 0);
 
         if (!firstWorldInRange && !firstWorldOverall) {
-            transferCoordsFromWorldToWorld(thermoWorldIxs[worldScheduleIndex - 1], worldIndex);
+            transferCoordsFromWorldToWorld(worlds[thermoWorldIxs[worldScheduleIndex - 1]],
+                                           worlds[worldIndex]);
         }
 
         // Header
@@ -2545,7 +2466,7 @@ void Context::RunReplicaWorldRange(int replicaIx,
         // Transfer coordinates
         const bool isEquilibrium = (distortIx == 0);
         const bool intoWORK = !isEquilibrium;
-        transferCoordsFromWorldToReplica(worldIndex, replicaIx, intoWORK);
+        transferCoordsFromWorldToReplica(worlds[worldIndex], replica, intoWORK);
 
         if (isEquilibrium) {
             // Calculate Q statistics
@@ -2585,7 +2506,7 @@ void Context::writeLog(int mixi, int replicaIx) {
     // Print stats for each world
     for (const auto wIx : worldIndices) {
         SimTK::State& currentAdvancedState = worlds[wIx].updIntegrator().updAdvancedState();
-        const auto& sampler = pHMC((worlds[wIx].getSampler(0)));
+        auto sampler = pHMC((worlds[wIx].updSampler(0)));
 
         const auto temperature = sampler->getTemperature();
         const auto NU = currentAdvancedState.getNU();
@@ -2736,7 +2657,7 @@ void Context::RunREX(int numEquilibrationRounds,
                 }
             }
 
-            transferCoordsFromReplicaToWorld(replicaIx, 0);
+            transferCoordsFromReplicaToWorld(replica, worlds[0]);
             transferQStatistics(thermoIx,
                                 thermoWorldIxs[wPart.nofEquilibriumWorlds - 1],
                                 thermoWorldIxs[wPart.nofEquilibriumWorlds - 1]);
@@ -2929,41 +2850,6 @@ void Context::RunREX(int numEquilibrationRounds,
     // foutUDot.close();
 
     OPENMM::get().shutdown();
-}
-
-void Context::transferCoordsFromWorldToWorld(int sourceWorldIndex, int destinationWorldIndex) {
-    const auto& atomTargetLocations = worlds[sourceWorldIndex].getAtomTargetLocationsCache();
-    worlds[destinationWorldIndex].setAtomTargetLocationsToState(atomTargetLocations);
-}
-
-void Context::transferCoordsFromReplicaToWorld(int sourceReplicaIndex, int destinationWorldIndex) {
-    const auto& atomTargetLocations = replicas[sourceReplicaIndex].getAtomsLocationsInGround();
-    worlds[destinationWorldIndex].setAtomTargetLocationsToState(atomTargetLocations);
-}
-
-void Context::transferCoordsFromWorldToReplica(int sourceWorldIndex,
-                                               int destinationReplicaIndex,
-                                               bool intoWORK) {
-    const World& world = worlds[sourceWorldIndex];
-    Replica& replica = replicas[destinationReplicaIndex];
-
-    const auto& atomTargetLocations = worlds[sourceWorldIndex].getAtomTargetLocationsCache();
-    const auto potential = world.getSampler(0)->currentEnergy.potential;
-    const auto fixman = world.getSampler(0)->currentEnergy.fixman;
-
-    if (intoWORK) {
-        replica.updWORK() += world.getWork(); // TODO merge with Jacobians
-        replica.upd_WORK_Jacobian() += world.getSampler(0)->getDistortJacobianDetLog();
-        replica.upd_WORK_AtomsLocationsInGround(atomTargetLocations);
-        replica.set_WORK_PotentialEnergy_New(potential);
-        replica.set_WORK_Fixman(world.getSampler(0)->currentEnergy.fixman);
-        replica.set_WORK_ReferencePotentialEnergy_New(potential);
-    } else {
-        replica.setAtomsLocationsInGround(atomTargetLocations);
-        replica.setPotentialEnergy(potential);
-        replica.setFixman(fixman);
-        replica.setReferencePotentialEnergy(potential);
-    }
 }
 
 void Context::initializeBinaryFile(const std::string& filename, uint32_t num_columns) {
@@ -3205,48 +3091,6 @@ void Context::writePdbs(int someIndex, int thermodynamicStateIx) {
     //}
 }
 
-void Context::randomizeWorldIndexes() {
-    // Random int for random world order
-    std::uniform_int_distribution<std::size_t> randWorldDistrib(1,
-                                                                nofWorlds
-                                                                    - 1); // TODO between 1 and nOfWorlds-1?
-
-    if (getNofWorlds() >= 3) {
-        // Swap world indices between vector position 2 and random
-        auto randVecPos = randWorldDistrib(randomEngine);
-        // std::cout << "Swapping position 1 with "
-        //	<< randVecPos << std::endl;
-
-        auto secondWorldIx = worldIndices[1];
-        auto randWorldIx = worldIndices[randVecPos];
-
-        worldIndices[1] = randWorldIx;
-        worldIndices[randVecPos] = secondWorldIx;
-    }
-}
-
-/*!
- * <!--  -->
- */
-void Context::passThroughBonds_template(int whichWorld) {
-    // Iterate molecules
-    for (const auto& topology : topologies) {
-        // Iterate molecule's bonds
-        for (const auto& bond : topology.getBonds()) {
-            RoboAtom& childAtom = systemTopology.atoms[bond.globalIndices[1]];
-            RoboAtom& parentAtom = systemTopology.atoms[bond.globalIndices[0]];
-
-            // Get Compound atom indexes
-            SimTK::Compound::AtomIndex child_cAIx = childAtom.identity.compoundAtomIndex;
-            SimTK::Compound::AtomIndex parent_cAIx = parentAtom.identity.compoundAtomIndex;
-
-            // Get DuMM atom indezes
-            SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
-            SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
-        }
-    }
-}
-
 /** Analysis related functions **/
 void Context::addDistance(std::size_t whichWorld,
                           std::size_t whichCompound,
@@ -3313,161 +3157,6 @@ void Context::addDihedrals(const std::vector<std::size_t>& dihedralIx) {
             // 	<< std::endl;
         }
     }
-}
-
-// --- Printing functions --
-
-// Print energy information
-void Context::PrintSamplerDataToLog(std::size_t whichWorld, std::size_t whichSampler) {
-    SimTK::State& currentAdvancedState = worlds[whichWorld].updIntegrator().updAdvancedState();
-
-    const auto NU = currentAdvancedState.getNU();
-    const auto acceptedSteps = pHMC((worlds[whichWorld].samplers[0]))->acceptedSteps;
-    const auto pe_o = pHMC((worlds[whichWorld].samplers[0]))->getPreviousEnergy().potential;
-    const auto ke_o = pHMC((worlds[whichWorld].samplers[0]))->getPreviousEnergy().kinetic;
-    const auto ke_n = pHMC((worlds[whichWorld].samplers[0]))->getCurrentEnergy().kinetic;
-    const auto fix_o = pHMC((worlds[whichWorld].samplers[0]))->getPreviousEnergy().fixman;
-    const auto fix_n = pHMC((worlds[whichWorld].samplers[0]))->getCurrentEnergy().fixman;
-
-    // Write to a file instead of stdout
-    logFile << std::fixed << std::setprecision(3)
-            << worlds[whichWorld].updSampler(whichSampler)->getTemperature() << " " << std::fixed
-            << std::setprecision(0) << whichWorld << " " << NU << " " << acceptedSteps << " " << std::fixed
-            << std::setprecision(2) << pe_o << " " << ke_o << " " << ke_n << " " << fix_o << " " << fix_n
-            << " ";
-}
-
-void Context::PrintGeometryToLog(std::size_t whichWorld, std::size_t whichSampler) {
-    PrintDistancesToLog(whichWorld, whichSampler);
-    PrintAnglesToLog(whichWorld, whichSampler);
-    PrintDihedralsQsToLog(whichWorld, whichSampler);
-}
-
-void Context::PrintDistancesToLog(std::size_t whichWorld, std::size_t whichSampler) {
-    for (const auto& distanceIx : distanceIxs) {
-        if (distanceIx[0] == whichWorld) {
-            logFile << std::fixed << std::setprecision(3)
-                    << Distance(distanceIx[0], distanceIx[1], 0, distanceIx[2], distanceIx[3]) << " ";
-        }
-    }
-}
-
-void Context::PrintAnglesToLog(std::size_t whichWorld, std::size_t whichSampler) {
-    for (const auto& angleIx : angleIxs) {
-        if (angleIx[0] == whichWorld) {
-            logFile << std::fixed << std::setprecision(3)
-                    << Roboangle(angleIx[0], angleIx[1], 0, angleIx[2], angleIx[3], angleIx[4]) << " ";
-        }
-    }
-}
-
-void Context::PrintDihedralsToLog(std::size_t whichWorld, std::size_t whichSampler) {
-    for (const auto& dihedralIx : dihedralIxs) {
-        if (dihedralIx[0] == whichWorld) {
-            logFile << std::fixed << std::setprecision(3)
-                    << Dihedral(dihedralIx[0],
-                                dihedralIx[1],
-                                0,
-                                dihedralIx[2],
-                                dihedralIx[3],
-                                dihedralIx[4],
-                                dihedralIx[5])
-                    << " ";
-        }
-    }
-}
-
-void Context::PrintDihedralsQsToLog(std::size_t whichWorld, std::size_t whichSampler) {
-    for (const auto& dihedralIx : dihedralIxs) {
-        if (dihedralIx[0] == whichWorld) {
-            // std::cout << "Context::PrintDihedralsQs w c s a1 a2 a3 a4 ="
-            //     << " " << dihedralIx[0] << " " << dihedralIx[1] << " " << 0
-            //     << " " << (worlds[whichWorld].getTopology(0)).getAtomName(
-            //     SimTK::Compound::AtomIndex(dihedralIx[2]))
-            //     << " " << (worlds[whichWorld].getTopology(0)).getAtomName(
-            //     SimTK::Compound::AtomIndex(dihedralIx[3]))
-            //     << " " << (worlds[whichWorld].getTopology(0)).getAtomName(
-            //     SimTK::Compound::AtomIndex(dihedralIx[4]))
-            //     << " " << (worlds[whichWorld].getTopology(0)).getAtomName(
-            //     SimTK::Compound::AtomIndex(dihedralIx[5]))
-            //     << std::endl;
-
-            logFile << std::fixed << std::setprecision(3)
-                    << Dihedral(dihedralIx[0],
-                                dihedralIx[1],
-                                0,
-                                dihedralIx[2],
-                                dihedralIx[3],
-                                dihedralIx[4],
-                                dihedralIx[5])
-                    << " ";
-
-            // const Topology& topology = worlds[whichWorld].getTopology(dihedralIx[1]);
-            // SimTK::State& currentAdvancedState = worlds[whichWorld].updIntegrator().updAdvancedState();
-            // SimTK::MobilizedBodyIndex mbx3 = topology.getAtomMobilizedBodyIndex(
-            //     SimTK::Compound::AtomIndex(dihedralIx[4]) );
-            // SimTK::MobilizedBody::Pin& mobod3 = (SimTK::MobilizedBody::Pin&)
-            // (worlds[whichWorld].uptMatterSubsystem().updMobilizedBody(mbx3));
-
-            // //std::cout << mbx3 << std::endl ;
-            // //std::cout << currentAdvancedState.getQ() << std::endl;
-            // //fprintf(logFile, "%.3f ", currentAdvancedState.getQ()[mbx3] );
-            // fprintf(logFile, "%.3f ", mobod3.getQ(currentAdvancedState) );
-        }
-    }
-}
-
-void Context::PrintFreeE2EDist(std::size_t whichWorld, int whichCompound) {
-    // const Topology& topology = worlds[whichWorld].getTopology(whichCompound);
-    // SimTK::State& currentAdvancedState = worlds[whichWorld].updIntegrator().updAdvancedState();
-
-    // for (const auto& distanceIx : distanceIxs) {
-    // 	if( distanceIx[0] == whichWorld ) {
-
-    // 		logFile << std::fixed << std::setprecision(3) <<
-    // 			Distance(distanceIx[0], distanceIx[1], 0, distanceIx[2], distanceIx[3]) << std::endl;
-
-    // 		SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndex(
-    // 			SimTK::Compound::AtomIndex(distanceIx[2]) );
-    // 		SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndex(
-    // 			SimTK::Compound::AtomIndex(distanceIx[3]) );
-    // 		SimTK::MobilizedBody& mobod1 = worlds[whichWorld].uptMatterSubsystem().updMobilizedBody(mbx1);
-    // 		SimTK::MobilizedBody& mobod2 = worlds[whichWorld].uptMatterSubsystem().updMobilizedBody(mbx2);
-    // 		SimTK::Transform X_PF1 = mobod1.getInboardFrame(currentAdvancedState);
-    // 		SimTK::Transform X_PF2 = mobod2.getInboardFrame(currentAdvancedState);
-    // 		//SimTK::Transform X_BM1 = mobod1.getOutboardFrame(currentAdvancedState);
-    // 		//SimTK::Transform X_BM2 = mobod2.getOutboardFrame(currentAdvancedState);
-    // 		SimTK::Transform X_FM1 = mobod1.getMobilizerTransform(currentAdvancedState);
-    // 		SimTK::Transform X_FM2 = mobod2.getMobilizerTransform(currentAdvancedState);
-
-    // 		SimTK::Transform deltaX_PF = X_PF2.p() - X_PF1.p();
-    // 		logFile << std::fixed << std::setprecision(3) << ((-1 * X_FM1.p()) + deltaX_PF.p() +
-    // X_FM2.p()).norm() << std::endl;
-
-    // 		//std::cout << "X_PF1:" << std::endl << X_PF1 << std::endl;
-    // 		//std::cout << "X_FM1:" << std::endl << X_FM1 << std::endl;
-    // 		//std::cout << "X_BM1:" << std::endl << X_BM1 << std::endl;
-    // 		//std::cout << "X_PF2:" << std::endl << X_PF2 << std::endl;
-    // 		//std::cout << "X_FM2:" << std::endl << X_FM2 << std::endl;
-    // 		//std::cout << "X_BM2:" << std::endl << X_BM2 << std::endl;
-
-    // 		//SimTK::Vec3 a1pos = X_PF1.R() * X_FM1.p();
-    // 		//SimTK::Vec3 a2pos = X_PF2.R() * X_FM2.p();
-    // 		//fprintf(logFile, "%.3f ",
-    // 		//    (a1pos - a2pos).norm() );
-
-    // 	}
-    // }
-}
-
-void Context::PrintToLog(std::size_t whichReplica, std::size_t whichWorld, std::size_t whichSampler) {
-    logFile << whichReplica << " ";
-
-    PrintSamplerDataToLog(whichWorld, whichSampler);
-
-    PrintGeometryToLog(whichWorld, whichSampler);
-
-    logFile << "\n";
 }
 
 // Write initial pdb for reference
@@ -3544,128 +3233,6 @@ void Context::setPdbPrefix(const std::string& argPdbPrefix) {
 
 std::string Context::getPdbPrefix() {
     return this->pdbPrefix;
-}
-
-SimTK::Real Context::Roboangle(std::size_t whichWorld,
-                               std::size_t whichCompound,
-                               std::size_t whichSampler,
-                               int a1,
-                               int a2,
-                               int a3) {
-    SimTK::State& state = worlds[whichWorld].updIntegrator().updAdvancedState();
-
-    Topology& topology = worlds[whichWorld].updTopology(whichCompound);
-
-    const SimTK::DuMMForceFieldSubsystem& dumm = worlds[whichWorld].getForceField();
-    const SimTK::SimbodyMatterSubsystem& matter = worlds[whichWorld].getMatterSubsystem();
-
-    int cAIx_1 = systemTopology.atoms[a1].identity.compoundAtomIndex;
-    int cAIx_2 = systemTopology.atoms[a2].identity.compoundAtomIndex;
-    int cAIx_3 = systemTopology.atoms[a3].identity.compoundAtomIndex;
-
-    SimTK::Vec3 a1pos, a2pos, a3pos, a4pos;
-    a1pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
-        SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(cAIx_1)),
-        dumm,
-        matter,
-        state);
-    a2pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
-        SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(cAIx_2)),
-        dumm,
-        matter,
-        state);
-    a3pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
-        SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(cAIx_3)),
-        dumm,
-        matter,
-        state);
-
-    return calculateAngleInRad(a1pos, a2pos, a3pos);
-}
-
-SimTK::Real Context::Dihedral(std::size_t whichWorld,
-                              std::size_t whichCompound,
-                              std::size_t whichSampler,
-                              int a1,
-                              int a2,
-                              int a3,
-                              int a4) {
-    SimTK::State& state = worlds[whichWorld].updIntegrator().updAdvancedState();
-
-    Topology& topology = worlds[whichWorld].updTopology(whichCompound);
-
-    SimTK::DuMMForceFieldSubsystem& dumm = worlds[whichWorld].updForceField();
-
-    SimTK::SimbodyMatterSubsystem& matter = worlds[whichWorld].updMatterSubsystem();
-
-    SimTK::Vec3 a1pos, a2pos, a3pos, a4pos;
-
-    // std::cout <<"Context::Dihedral"
-    // 	<<" | "<< whichWorld <<" "<< whichCompound <<" "<< whichSampler <<" "<< a1 <<" "<< a2 <<" "<< a3 <<"
-    // "<< a4
-    // 	<<" | "<< atoms[a1].getInName() <<" "<< atoms[a2].getInName() <<" "<< atoms[a3].getInName() <<" "<<
-    // atoms[a4].getInName()
-    // << std::endl;
-
-    int cAIx_1 = systemTopology.atoms[a1].identity.compoundAtomIndex;
-    int cAIx_2 = systemTopology.atoms[a2].identity.compoundAtomIndex;
-    int cAIx_3 = systemTopology.atoms[a3].identity.compoundAtomIndex;
-    int cAIx_4 = systemTopology.atoms[a4].identity.compoundAtomIndex;
-
-    a1pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
-        SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(cAIx_1)),
-        dumm,
-        matter,
-        state);
-    a2pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
-        SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(cAIx_2)),
-        dumm,
-        matter,
-        state);
-    a3pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
-        SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(cAIx_3)),
-        dumm,
-        matter,
-        state);
-    a4pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
-        SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(cAIx_4)),
-        dumm,
-        matter,
-        state);
-
-    return calculateDihedralInRad(a1pos, a2pos, a3pos, a4pos);
-}
-
-SimTK::Real Context::Distance(std::size_t whichWorld,
-                              std::size_t whichCompound,
-                              std::size_t whichSampler,
-                              int a1,
-                              int a2) {
-    SimTK::State& state = worlds[whichWorld].updIntegrator().updAdvancedState();
-
-    Topology& topology = worlds[whichWorld].updTopology(whichCompound);
-
-    SimTK::DuMMForceFieldSubsystem& dumm = worlds[whichWorld].updForceField();
-
-    SimTK::SimbodyMatterSubsystem& matter = worlds[whichWorld].updMatterSubsystem();
-
-    SimTK::Vec3 a1pos, a2pos;
-
-    int cAIx_1 = systemTopology.atoms[a1].identity.compoundAtomIndex;
-    int cAIx_2 = systemTopology.atoms[a2].identity.compoundAtomIndex;
-
-    a1pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
-        SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(cAIx_1)),
-        dumm,
-        matter,
-        state);
-    a2pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
-        SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(cAIx_2)),
-        dumm,
-        matter,
-        state);
-
-    return (a1pos - a2pos).norm();
 }
 
 // // Teodor's membrane
@@ -3770,19 +3337,6 @@ void Context::setGBSAOptions(bool useGBSAOBC2, SimTK::Real solventDielectric, Si
         // gbsaGlobalScaleFactor = 1.0 / 1.2; // GBSA OBC2 scaling factor
     } else {
         gbsaGlobalScaleFactor = 0.0; // No scaling
-    }
-}
-
-void Context::setForceFieldScaleFactors(SimTK::Real globalScaleFactor) {
-    useAmberForceFieldScaleFactors = false;
-
-    if (globalScaleFactor < 0 && globalScaleFactor > 1) {
-        std::cerr << "Invalid force field scale factor (valid range is 0 to 1). Default value of 1.0 will be "
-                     "used instead."
-                  << std::endl;
-        globalForceFieldScaleFactor = 1.0;
-    } else {
-        globalForceFieldScaleFactor = globalScaleFactor;
     }
 }
 

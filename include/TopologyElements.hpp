@@ -407,9 +407,9 @@ struct ForceFieldParams {
 };
 
 struct SimulationSettings {
-    uint32_t seed = 0;
     SimTK::Real thermostatTemperatureInK = 300.0;
     SimTK::Real collisionFrequency = 1.0;
+    int seed = 0;
 };
 
 using CanonicalBond = std::pair<std::size_t, std::size_t>;

@@ -69,6 +69,8 @@ One iteration must include:
 #include "EnergySnapshot.hpp"
 #include "OpenMM.hpp"
 #include "Sampler.hpp"
+#include "State.h"
+#include "Vec3.h"
 #include "bgeneral.hpp"
 // #include "TaskSpace.hpp"
 
@@ -100,15 +102,30 @@ enum class NUTSCoordinates : std::uint8_t {
     Torsional = 1
 };
 
-struct PhasePoint {
+struct PhasePointOpenMM {
+    std::vector<OpenMM::Vec3> positions;
+    std::vector<OpenMM::Vec3> momenta;
+};
+
+struct PhasePointSimbody {
     SimTK::Vector q;
     SimTK::Vector p;
 };
 
-struct NUTSNode {
-    PhasePoint minus;
-    PhasePoint plus;
-    PhasePoint proposal;
+struct NUTSNodeSimbody {
+    PhasePointSimbody minus;
+    PhasePointSimbody plus;
+    PhasePointSimbody proposal;
+    EnergySnapshot proposedEnergy;
+
+    int numValidSlices{0};
+    bool stop{false};
+};
+
+struct NUTSNodeOpenMM {
+    PhasePointOpenMM minus;
+    PhasePointOpenMM plus;
+    PhasePointOpenMM proposal;
     EnergySnapshot proposedEnergy;
 
     int numValidSlices{0};
@@ -116,8 +133,9 @@ struct NUTSNode {
 };
 
 struct NUTSResult {
-    PhasePoint proposal;
-    EnergySnapshot energy;
+    PhasePointSimbody proposalSimbody;
+    PhasePointOpenMM proposalOpenMM;
+    EnergySnapshot proposedEnergy;
     StopReason stopReason;
     int depth;
 };
@@ -364,14 +382,23 @@ class HMCSampler : virtual public Sampler {
     /** Apply the L operator **/
     void integrateVariableTrajectory(SimTK::State& someState);
 
-    auto isUTurn(const PhasePoint& minus, const PhasePoint& plus, NUTSCoordinates coordinates) -> bool;
-    auto buildTree(SimTK::State& state,
-                   int depth,
-                   NUTSDirection direction,
-                   SimTK::Real logU,
-                   SimTK::Real H0,
-                   NUTSCoordinates coordinates) -> NUTSNode;
-    auto integrateNUTS(SimTK::State& someState, NUTSCoordinates coordinates, int maxDepth) -> NUTSResult;
+    auto isUTurnOpenMM(const PhasePointOpenMM& minus, const PhasePointOpenMM& plus) -> bool;
+    auto isUTurnSimbody(const PhasePointSimbody& minus, const PhasePointSimbody& plus) -> bool;
+    auto buildTreeWithOpenMM(std::vector<OpenMM::Vec3>& positions,
+                             std::vector<OpenMM::Vec3>& velocities,
+                             int depth,
+                             NUTSDirection direction,
+                             SimTK::Real logU,
+                             SimTK::Real H0) -> NUTSNodeOpenMM;
+    auto integrateNUTSWithOpenMM(SimTK::State& state, int maxDepth) -> NUTSResult;
+
+
+    auto buildTreeWithSimbody(SimTK::State& state,
+                              int depth,
+                              NUTSDirection direction,
+                              SimTK::Real logU,
+                              SimTK::Real H0) -> NUTSNodeSimbody;
+    auto integrateNUTSWithSimbody(const SimTK::State& someState, int maxDepth) -> NUTSResult;
 
     /** Integrate trajectory one step at a time to compute quantities instantly **/
     virtual void integrateTrajectoryOneStepAtATime(SimTK::State& someState);
@@ -440,8 +467,11 @@ class HMCSampler : virtual public Sampler {
 
     void printDrilling(SimTK::State& someState);
 
-    virtual auto sampleIteration(SimTK::State& state, std::stringstream& samplerOutStream, bool shouldPrint)
-        -> bool;
+    auto sampleIteration(SimTK::State& state,
+                         std::vector<SimTK::Compound::AtomTargetLocations>& proposedAtomTargetLocations,
+                         bool shouldPrint) -> bool;
+
+    [[nodiscard]] auto integrateWithOpenMM(SimTK::State& state) -> NUTSResult;
 
     /**
      *  Add generalized coordinates to a buffer
@@ -759,7 +789,8 @@ class HMCSampler : virtual public Sampler {
     SimTK::Vector dummyJointForces;
     SimTK::Vector dummyAccelerations;
 
-    SimTK::Vector nutsDeltaQ;
+    SimTK::Vector nutsOpenMMDeltaQ;
+    SimTK::Vector nutsSimbodyDeltaQ;
     std::uniform_real_distribution<SimTK::Real> uniformReal01{0.0, 1.0};
     std::exponential_distribution<SimTK::Real> expDist{1.0};
 

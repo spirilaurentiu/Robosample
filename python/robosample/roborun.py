@@ -1,7 +1,14 @@
 import argparse
 import time
+from sys import stdout
 
+import mdtraj as md
+import numpy as np
+import parmed as pmd
+
+import openmm as mm
 import robosample
+from openmm import app, unit
 
 # python3 roborun.py 2but ../examples/2but.prmtop ../examples/2but.rst7 6000 0 10 1
 
@@ -123,7 +130,82 @@ parser.add_argument("write_freq", type=int, help="CSV and DCD write frequency.")
 # Parse the arguments
 args = parser.parse_args()
 
-# Temperature replica exchange parameters
+
+def run_openmm_equilibration():
+    prmtop = app.AmberPrmtopFile(args.prmtop)
+    inpcrd = app.AmberInpcrdFile(args.inpcrd)
+    system = prmtop.createSystem(
+        nonbondedMethod=app.CutoffNonPeriodic,
+        nonbondedCutoff=1.2 * unit.nanometer,
+        implicitSolvent=app.OBC2,
+        constraints=None,
+        removeCMMotion=False,
+    )
+
+    for force in system.getForces():
+        if isinstance(force, mm.HarmonicBondForce):
+            force.setForceGroup(0)  # fast — evaluated every inner step
+        else:
+            force.setForceGroup(1)  # slow — evaluated every outer step
+
+    # 4 inner bond steps per 1 outer step → effective bond dt = 0.25 fs
+    timestep = 1 * unit.femtoseconds
+    integrator = mm.MTSIntegrator(
+        timestep,  # outer timestep = 1 fs
+        [(1, 1), (0, 4)],  # group 1 once, group 0 four times
+    )
+
+    platform = mm.Platform.getPlatformByName("CUDA")
+    simulation = app.Simulation(prmtop.topology, system, integrator, platform)
+    simulation.context.setPositions(inpcrd.positions)
+
+    simulation.context.setVelocitiesToTemperature(300 * unit.kelvin)
+
+    simulation.minimizeEnergy()
+
+    # ---- PRINT ENERGIES BEFORE STEP ----
+    state = simulation.context.getState(getEnergy=True)
+    print(f"Kinetic Energy: {state.getKineticEnergy()}")
+    print(f"Potential Energy: {state.getPotentialEnergy()}")
+    print(f"Total Energy: {state.getKineticEnergy() + state.getPotentialEnergy()}")
+
+    simulation.step(1)
+
+    # ---- PRINT ENERGIES BEFORE STEP ----
+    state = simulation.context.getState(getEnergy=True)
+    print(f"Kinetic Energy: {state.getKineticEnergy()}")
+    print(f"Potential Energy: {state.getPotentialEnergy()}")
+    print(f"Total Energy: {state.getKineticEnergy() + state.getPotentialEnergy()}")
+
+    # Reporters
+    steps_per_frame = 1000
+    output_dcd = f"{args.name}_equil_openmm.dcd"
+    simulation.reporters.append(app.DCDReporter(output_dcd, steps_per_frame))
+    simulation.reporters.append(
+        app.StateDataReporter(
+            stdout,
+            steps_per_frame,
+            step=True,
+            potentialEnergy=True,
+            kineticEnergy=True,
+            totalEnergy=True,
+        )
+    )
+
+    simulation.step(10000)
+
+    traj = md.load(output_dcd, top=args.prmtop)
+    last = traj[-1]
+
+    parm = pmd.load_file(args.prmtop)
+    parm.coordinates = last.xyz[0] * 10.0
+    if last.unitcell_lengths is not None:
+        parm.box = list(last.unitcell_lengths[0] * 10.0) + list(last.unitcell_angles[0])
+    parm.save("last_frame.rst7", format="rst7", overwrite=True)
+
+
+run_openmm_equilibration()
+
 T0 = 300.0
 T_MAX = 1000.0
 NOF_REPLICAS = 1
@@ -134,45 +216,166 @@ R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 # 6 kcal/mol - tens to hundreds of picoseconds (moderate barrier, ~10KbT)
 # 10 kcal/mol - nanoseconds or longer (high barrier , ~16KbT)
 # 2 ps of MD is enough to explore shallow wells, but not to cross deep barriers without enhanced sampling (e.g., HMC, replica exchange)
-TIMESTEP_TD = 0.02  # Torsional dymaics time step is 10 fs
-MDSTEPS_TD = 10  # Torsional dynamics block trajectory length 1 ps
 
 TIMESTEP_CARTESIAN = 0.001
-MDSTEPS_CARTESIAN = 1000
+MDSTEPS_CARTESIAN = 500  # 500 fs
 
 # create robosample context
 context = robosample.Context(
     name=args.name,
     seed=args.seed,
     prmtop=args.prmtop,
-    inpcrd=args.inpcrd,
+    inpcrd="last_frame.rst7",
     write_freq=args.write_freq,
     testing=False,
 )
 
 # [[rb.BondFlexibility(), rb.BondFlexibility(), ...], [...], ...]
 
-# # Add cartesian world (will integrate with OpenMM)
-# context.addCartesianWorld().add_sampler(
-#     timeStep=TIMESTEP_CARTESIAN,
-#     mdSteps=MDSTEPS_CARTESIAN,
-#     boostMDSteps=MDSTEPS_CARTESIAN,
-#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
-#     use_nuts=False,
-# )
-########################### CARTESIAN #####################
-
-mask_phi = context.standard_dihedral_bonds["dihedral_type"] == "phi"
-mask_psi = context.standard_dihedral_bonds["dihedral_type"] == "psi"
-bonds = context.standard_dihedral_bonds[mask_phi | mask_psi]
-sele = context.build_flexibilities(bonds)
-context.addTorsionalWorld(sele).add_sampler(
-    timeStep=TIMESTEP_TD,
-    mdSteps=MDSTEPS_TD,
-    boostMDSteps=MDSTEPS_TD,
+context.addCartesianWorld().add_sampler(
+    timeStep=TIMESTEP_CARTESIAN,
+    mdSteps=MDSTEPS_CARTESIAN,
+    boostMDSteps=MDSTEPS_CARTESIAN,
     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
     use_nuts=False,
 )
+
+mask_phi = context.standard_dihedral_bonds["dihedral_type"] == "phi"
+mask_psi = context.standard_dihedral_bonds["dihedral_type"] == "psi"
+
+# mask_cyx = context.standard_dihedral_bonds["resname"] == "CYX"
+# mask_cyx_chi1 = (context.standard_dihedral_bonds["dihedral_type"] == "chi1") & mask_cyx
+# mask_cyx_chi2 = (context.standard_dihedral_bonds["dihedral_type"] == "chi2") & mask_cyx
+# mask_cyx_chi3 = (context.standard_dihedral_bonds["dihedral_type"] == "chi3") & mask_cyx
+
+bonds = context.standard_dihedral_bonds[mask_phi | mask_psi]
+sele = context.build_flexibilities(bonds)
+context.addTorsionalWorld(sele).add_sampler(
+    timeStep=0.001,
+    mdSteps=2000,  # ignored if using NUTS
+    boostMDSteps=2000,  # ignored if using NUTS
+    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+    use_nuts=True,
+)
+
+mask_terminus = context.standard_dihedral_bonds["resid"].between(0, 21)
+bonds = context.standard_dihedral_bonds[(mask_phi | mask_psi) & mask_terminus]
+sele = context.build_flexibilities(bonds)
+context.addTorsionalWorld(sele).add_sampler(
+    timeStep=0.001,
+    mdSteps=2000,  # ignored if using NUTS
+    boostMDSteps=2000,  # ignored if using NUTS
+    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+    use_nuts=True,
+)
+
+##################### SIDECHAIN ##############################
+# chi_types = ["chi1", "chi2", "chi3", "chi4", "chi5"]
+# mask_target_chis = context.standard_dihedral_bonds["dihedral_type"].isin(chi_types)
+# mask_not_cyx = context.standard_dihedral_bonds["resname"] != "CYX"
+# mask_sidechain = mask_target_chis & mask_not_cyx
+
+# bonds = context.standard_dihedral_bonds[mask_sidechain]
+# sele = context.build_flexibilities(bonds)
+# context.addTorsionalWorld(sele).add_sampler(
+#     timeStep=0.01,
+#     mdSteps=1000,  # ignored if using NUTS
+#     boostMDSteps=1000,  # ignored if using NUTS
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+#     use_nuts=True,
+# )
+
+
+# chi_types = ["chi1", "chi2", "chi3", "chi4", "chi5"]
+# df = context.standard_dihedral_bonds
+
+# mask_chi = df["dihedral_type"].isin(chi_types)
+# mask_not_cyx = df["resname"] != "CYX"
+# mask_base = mask_chi & mask_not_cyx
+
+# # Light terminals: small rotating group, low barrier, fast oscillation
+# WORLD1_RESIDUES = {"SER", "THR", "CYS", "CYM"}
+# WORLD1_STEP = 0.005  # Tight wells on OG/OG1/SG need small steps
+
+# # Flexible chains: long polar/charged side chains, medium barriers
+# WORLD2_RESIDUES = {
+#     "ASN",
+#     "ASP",
+#     "ASH",
+#     "GLN",
+#     "GLU",
+#     "GLH",
+#     "LYS",
+#     "LYN",
+#     "ARG",
+#     "MET",
+#     "PRO",
+# }
+# WORLD2_STEP = 0.01
+
+# # Branched/aromatic: heavy rotating groups, high barriers (~3-5 kcal/mol)
+# WORLD3_RESIDUES = {"VAL", "LEU", "ILE", "PHE", "TYR", "TRP", "HID", "HIE", "HIP"}
+# WORLD3_STEP = 0.03
+
+# # Side chains must appear in one side chain world
+# mask_w1 = mask_base & df["resname"].isin(WORLD1_RESIDUES)
+# mask_w2 = mask_base & df["resname"].isin(WORLD2_RESIDUES)
+# mask_w3 = mask_base & df["resname"].isin(WORLD3_RESIDUES)
+
+# uncovered = mask_base & ~(mask_w1 | mask_w2 | mask_w3)
+# if uncovered.any():
+#     missing = df[uncovered]["resname"].unique().tolist()
+#     raise ValueError(f"Residues not assigned to any torsional world: {missing}")
+
+# overlap = (mask_w1 & mask_w2) | (mask_w1 & mask_w3) | (mask_w2 & mask_w3)
+# if overlap.any():
+#     raise ValueError("Residue appears in more than one torsional world")
+
+# # Add side chain worlds
+# for mask, step, label in [
+#     (mask_w1, WORLD1_STEP, "light-terminals"),
+#     (mask_w2, WORLD2_STEP, "flexible-chains"),
+#     (mask_w3, WORLD3_STEP, "branched-aromatic"),
+# ]:
+#     bonds = df[mask]
+#     sele = context.build_flexibilities(bonds)
+#     context.addTorsionalWorld(sele).add_sampler(
+#         timeStep=step,
+#         mdSteps=1000,  # Ignored if using NUTS
+#         boostMDSteps=1000,  # Ignored if using NUTS
+#         acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+#         use_nuts=True,
+#     )
+##################### SIDECHAIN ##############################
+
+# mask_phi = context.standard_dihedral_bonds["dihedral_type"] == "phi"
+# mask_psi = context.standard_dihedral_bonds["dihedral_type"] == "psi"
+# bonds = context.standard_dihedral_bonds[mask_phi | mask_psi]
+# sele = context.build_flexibilities(bonds)
+# context.addTorsionalWorld(sele).add_sampler(
+#     timeStep=0.02,
+#     mdSteps=50,
+#     boostMDSteps=50,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+#     use_nuts=False,
+# )
+
+# for resid in range(len(context.standard_dihedral_bonds["resid"].unique())):
+#     mask_phi = context.standard_dihedral_bonds["dihedral_type"] == "phi"
+#     mask_psi = context.standard_dihedral_bonds["dihedral_type"] == "psi"
+#     mask_resid = context.standard_dihedral_bonds["resid"] == resid
+#     bonds = context.standard_dihedral_bonds[(mask_phi | mask_psi) & mask_resid]
+#     if bonds.empty:
+#         continue
+
+#     sele = context.build_flexibilities(bonds)
+#     context.addTorsionalWorld(sele).add_sampler(
+#         timeStep=TIMESTEP_TD,
+#         mdSteps=MDSTEPS_TD,
+#         boostMDSteps=MDSTEPS_TD,
+#         acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+#         use_nuts=False,
+#     )
 
 # # # # # # # # # # Add torsional world with standardized dihedrals
 # # # # # # # # # sele = context.build_flexibilities(context.standard_dihedral_bonds)
@@ -329,6 +532,12 @@ end_time = time.perf_counter()
 duration = end_time - start_time
 
 print(f"run_rex() took {duration:.4f} seconds")
+
+# Calculate RMSD
+traj = md.load(f"{args.name}_{args.seed}.repl0.dcd", top=args.prmtop)
+ref = md.load("last_frame.rst7", top=args.prmtop)
+rmsd = md.rmsd(traj, ref)
+print(f"RMSD to reference: {np.max(rmsd)}")
 
 """
 source leaprc.protein.ff19SB

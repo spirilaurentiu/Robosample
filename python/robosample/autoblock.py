@@ -507,15 +507,15 @@ def run_pipeline(
     corr, trans_frames = transition_correlation_matrix(
         angles_rad, events, window=window
     )
-    # return [corr]
+    return [corr]
 
     # plot_entropy_trace(norm_ent, events, hard_traj)
     # plot_corr(corr)  # aggregate (unchanged)
 
-    per_corrs = plot_per_transition_corr(  # ← new
-        angles_rad, events, window=window
-    )
-    return per_corrs
+    # per_corrs = plot_per_transition_corr(  # ← new
+    #     angles_rad, events, window=window
+    # )
+    # return per_corrs
 
     # return dict(
     #     angles_rad=angles_rad,
@@ -601,9 +601,9 @@ for cycle in range(10):
 
     # Add cartesian world (will integrate with OpenMM)
     context.addCartesianWorld().add_sampler(
-        timeStep=TIMESTEP_CARTESIAN,
-        mdSteps=MDSTEPS_CARTESIAN,
-        boostMDSteps=MDSTEPS_CARTESIAN,
+        timeStep=0.001,
+        mdSteps=500,
+        boostMDSteps=500,
         acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
         use_nuts=False,
     )
@@ -653,9 +653,9 @@ for cycle in range(10):
 
             sele = context.build_flexibilities(bonds)
             context.addTorsionalWorld(sele).add_sampler(
-                timeStep=TIMESTEP_TD,
-                mdSteps=MDSTEPS_TD,
-                boostMDSteps=MDSTEPS_TD,
+                timeStep=0.025,
+                mdSteps=2000,  # ignored if using NUTS
+                boostMDSteps=2000,  # ignored if using NUTS
                 acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
                 use_nuts=True,
             )
@@ -668,7 +668,7 @@ for cycle in range(10):
     import time
 
     start_time = time.time()
-    context.run_rex(0, 10, args.write_freq, True)
+    context.run_rex(0, 100, args.write_freq, True)
     end_time = time.time()
     duration = end_time - start_time
     print(f"Rex run time: {duration} seconds")

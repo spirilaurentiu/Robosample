@@ -17,10 +17,9 @@
 #include <sstream>
 #include <unordered_set>
 
-#if BUILD_CONSTRAINTS
-#    include "Constraint.h"
-#endif
-
+#include "Compound.h"
+#include "Constraint.h"
+#include "DuMMForceFieldSubsystem.h"
 #include "FixmanTorque.hpp"
 #include "TopologyElements.hpp"
 #include "common.h"
@@ -33,6 +32,11 @@
 #include "Topology.hpp"
 
 class Context;
+
+struct TopoAtom {
+    int topoIx;
+    SimTK::Compound::AtomIndex cAIx;
+};
 
 template <typename T>
 std::string vecToString(const std::vector<T>& v) {
@@ -334,7 +338,8 @@ class World {
                    bool isVisual = true,
                    SimTK::Real visualizerFrequency = 0.0015);
 
-    const std::vector<SimTK::Compound::AtomTargetLocations>& getAtomTargetLocationsCache() const {
+    [[nodiscard]] auto getAtomTargetLocationsCache() const
+        -> const std::vector<SimTK::Compound::AtomTargetLocations>& {
         return atomTargetLocationsCache;
     }
 
@@ -348,17 +353,15 @@ class World {
                             const std::vector<RoboPeriodicTorsion>& properPeriodicTorsions,
                             const std::vector<RoboHarmonicImproperTorsion>& harmonicImproperTorsions);
 
-    void modelTopologies();
+    void modelTopologies(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 
     SimTK::Real getRecommendedTimesteps();
 
-#if BUILD_CONSTRAINTS
     /** Add contact constraints to specific bodies **/
     void addRodConstraint(SimTK::State& someState);
 
     /** Add contact constraints to specific bodies **/
     const SimTK::State& addSpeedConstraint(int prmtopIndex);
-#endif
 
     //=========================================================================
     //                   TaskSpace Functions
@@ -391,13 +394,6 @@ class World {
 
     /** Get the number of molecules **/
     int getNofMolecules() const;
-
-    // These are no longer needed TODO: delete
-    /** Get MobilizedBody to AtomIndex map **/
-    std::map<SimTK::MobilizedBodyIndex, std::pair<int, SimTK::Compound::AtomIndex>>& getMbx2aIx();
-
-    /** Get the number of MobilizedBodies in this Compound **/
-    std::size_t getNofMobilizedBodies() const;
 
     /** Get U scale factor for the mobilized body **/
     SimTK::Real getMobodUScaleFactor(SimTK::MobilizedBodyIndex&) const;
@@ -486,14 +482,6 @@ class World {
      to calculate locations. **/
     void updateAtomListsFromSimbody(const SimTK::State& state);
 
-    /** Access to molecule (Topology) objects
-    Get a readable reference of one of the molecules **/
-    const Topology& getTopology(std::size_t moleculeNumber) const;
-
-    /** Get a writeble reference of one of the molecules **/
-    Topology& updTopology(std::size_t moleculeNumber);
-    //...............
-
     //.......................
     // --- Thermodynamics ---
     //.......................
@@ -515,15 +503,6 @@ class World {
     /** Use the Fixman torque as an additional force subsystem.
     Careful not have different temperatures for World and Fixman Torque. **/
     void addFixmanTorque();
-
-    /** Amber like scale factors. **/
-    void setAmberForceFieldScaleFactors();
-
-    /** Set a global scaling factor for all the terms the forcefield **/
-    void setGlobalForceFieldScaleFactor(SimTK::Real);
-
-    /** Set GBSA implicit solvent scale factor **/
-    void setGbsaGlobalScaleFactor(SimTK::Real);
 
     [[nodiscard]] auto getCompoundSystem() const -> const SimTK::CompoundSystem& {
         return *compoundSystem;
@@ -572,7 +551,9 @@ class World {
     //...............
 
     // Calculate Fixman potential
-    SimTK::Real calcFixman();
+    [[nodiscard]] auto getFixmanPotential() const -> SimTK::Real {
+        return getSampler(0)->getCurrentEnergy().fixman;
+    }
 
     /** Generate a number of samples **/
     auto generateSamples(int howMany,
@@ -598,10 +579,14 @@ class World {
 
     // TODO Use Sampler polymorphism
     /** Get a sampler based on its position in the samplers vector **/
-    BaseSampler* getSampler(std::size_t which) const;
+    [[nodiscard]] auto getSampler(std::size_t which) const -> const BaseSampler* {
+        return samplers[which].get();
+    }
 
     /** Get a writable sampler based on its position in the samplers vector **/
-    BaseSampler* updSampler(std::size_t which);
+    [[nodiscard]] auto updSampler(std::size_t which) const -> BaseSampler* {
+        return samplers[which].get();
+    }
 
     /** Get writble pointer to FixmanTorque implementation **/
     FixmanTorque* updFixmanTorque();
@@ -799,7 +784,6 @@ class World {
     std::size_t numMolecules = 0;
     std::size_t numAtoms = 0;
 
-
     /** Molecules (topologies<-Compounds) objects **/
     Span<Topology> topologies;
     std::vector<std::string> roots;
@@ -813,7 +797,7 @@ class World {
     std::vector<std::vector<SimTK::Real>> zMatrixBAT;
 
     // --- Thermodynamics ---
-    SimTK::Real temperature;
+    SimTK::Real temperature = SimTK::NaN;
 
     // // Contact related
     // std::unique_ptr<ContactTrackerSubsystem> tracker;
@@ -828,11 +812,6 @@ class World {
     std::vector<SimTK::Real> normX_BMp;
     std::vector<SimTK::Real> acosX_PF00_means;
     std::vector<SimTK::Real> normX_BMp_means;
-
-    // std::vector<SimTK::Real> CppQs;
-
-    // // --- Graphics ---
-    bool visual;
 
     // --- Mixing data ---
     int ownWorldIndex;
@@ -857,14 +836,12 @@ class World {
     SimTK::Array_<SimTK::Vec3> taskStationPInHost;
     SimTK::Array_<SimTK::Vec3> taskDeltaStationP;
 
-#if BUILD_CONSTRAINTS
     // Constraints
     std::vector<std::pair<SimTK::MobilizedBodyIndex, SimTK::MobilizedBodyIndex>> rodBodies;
     SimTK::Array_<SimTK::Vec3> conStationPInGuest;
     SimTK::Array_<SimTK::Vec3> conStationPInHost;
     SimTK::Array_<SimTK::Vec3> conDeltaStationP;
     SimTK::Array_<SimTK::Constraint::Rod> rodConstraints;
-#endif
 
     // X axis to Z axis switch
     const SimTK::Transform X_to_Z = SimTK::Rotation(-90 * SimTK::Deg2Rad, SimTK::YAxis);
@@ -880,58 +857,28 @@ class World {
 
     //
     void setSamplesPerRound(int samples);
-    int getSamplesPerRound() const;
+    [[nodiscard]] auto getSamplesPerRound() const -> int;
 
     void setDistortOption(int distort);
-    int getDistortOption() const;
+    [[nodiscard]] auto getDistortOption() const -> int;
 
     void setRootMobility(ROOT_MOBILITY rootMobility);
-    const SimTK::String& getRootMobility() const;
+    [[nodiscard]] auto getRootMobility() const -> const SimTK::String&;
 
-    const int getOwnIndex() const {
+    [[nodiscard]] auto getOwnIndex() const -> int {
         return ownWorldIndex;
     }
 
-    const std::vector<RootAtomBond>& getRootAtomBonds() const {
+    [[nodiscard]] auto getRootAtomBonds() const -> const std::vector<RootAtomBond>& {
         return rootAtomBonds;
     }
 
-    const std::vector<RigidBodyAtomBond>& getRigidBodyAtomBonds() const {
+    [[nodiscard]] auto getRigidBodyAtomBonds() const -> const std::vector<RigidBodyAtomBond>& {
         return rigidBodyAtomBonds;
     }
 
-    /*!
-     * <!--	 -->
-     */
-    const std::pair<int, SimTK::Compound::AtomIndex>&
-    getMobodRootAtomIndex(SimTK::MobilizedBodyIndex mbIndex) const {
-        auto it = mbx2aIx.find(mbIndex);
-
-        if (it != mbx2aIx.end()) {
-            return it->second;
-
-        } else {
-            return errorTopoAtomPair;
-        }
-    }
-
-    /*!
-     * <!--	 -->
-     */
-    std::pair<int, SimTK::Compound::AtomIndex>& updMobodRootAtomIndex(SimTK::MobilizedBodyIndex mbIndex) {
-        auto it = mbx2aIx.find(mbIndex);
-
-        if (it != mbx2aIx.end()) {
-            return it->second;
-
-        } else {
-            return errorTopoAtomPair;
-        }
-    }
-
-    // Assign the atom index to the mobilized body index
-    void setAtomIndex(SimTK::MobilizedBodyIndex mbIndex, int topoIx, SimTK::Compound::AtomIndex aIndex) {
-        mbx2aIx[mbIndex] = std::pair<int, SimTK::Compound::AtomIndex>{topoIx, aIndex};
+    [[nodiscard]] auto getMobodRootAtomIndex(SimTK::MobilizedBodyIndex mbIndex) const -> const TopoAtom& {
+        return mbxRootCAIx[mbIndex];
     }
 
     // BAT --------------------------------------------------------------------
@@ -954,18 +901,27 @@ class World {
         -> CoordinateTransferError;
     [[nodiscard]] auto hasRigidBodyViolations(SimTK::Real timeStep, int numSteps) -> bool;
 
-    const std::vector<CoordinateTransferError>& getCoordinateTransferErrors() const {
+    [[nodiscard]] auto getCoordinateTransferErrors() const -> const std::vector<CoordinateTransferError>& {
         return coordinateTransferErrors;
     }
 
+    [[nodiscard]] auto getMbx(int topoIx, int cAIx) const -> SimTK::MobilizedBodyIndex {
+        return topoAtomToMbx[topoIx][cAIx];
+    }
+
+    [[nodiscard]] auto getDAIx(int topoIx, int cAIx) const -> SimTK::DuMM::AtomIndex {
+        return topoAtomToDAIX[topoIx][cAIx];
+    }
+
     private:
-    SimTK::Real findDecorrelationTime(const SimTK::State& state,
-                                      int equilibrationSteps,
-                                      int tuneSteps,
-                                      SimTK::Real timestep);
+    auto findDecorrelationTime(const SimTK::State& state,
+                               int equilibrationSteps,
+                               int tuneSteps,
+                               SimTK::Real timestep) -> SimTK::Real;
     void optimizeCoordinates(std::vector<std::vector<double>>& coordinates,
                              const std::vector<double>& scale) const;
-    SimTK::Real integratedAutocorrelation(const std::vector<SimTK::Real>& x, int maxLag = -1) const;
+    [[nodiscard]] auto integratedAutocorrelation(const std::vector<SimTK::Real>& x, int maxLag = -1) const
+        -> SimTK::Real;
     bool tuned = false;
 
     bool testing = false;
@@ -977,14 +933,8 @@ class World {
     std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocationsCacheOld;
     std::vector<std::pair<bool, SimTK::Real>> acceptanceRMSD;
 
-    // Map mbx2aIx contains only atoms at the origin of mobods
-    // topology index and atom index
-    std::map<SimTK::MobilizedBodyIndex, std::pair<int, SimTK::Compound::AtomIndex>> mbx2aIx;
     std::vector<RootAtomBond> rootAtomBonds;
     std::vector<RigidBodyAtomBond> rigidBodyAtomBonds;
-
-    // Map mbx2aIx contains only atoms at the origin of mobods
-    // std::map<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex> mbx2aIx;
 
     // Maps a generalized velocity scale factor for every mobod
     std::map<SimTK::MobilizedBodyIndex, SimTK::Real> mbx2uScale;
@@ -1012,4 +962,39 @@ class World {
     std::reference_wrapper<const ZMatrix> zMatrix;
 
     SimTK::State worldState;
+
+    /**
+     * Maps a specific atom within a topology to its assigned global Mobilized Body.
+     *
+     * Lookup: [topology_index][compound_atom_index] -> mobilized_body_index
+     *
+     * Use this to determine which rigid body an atom belongs to. Mobilized Body indices (mbx) are contiguous
+     * [0, N) across the entire system. They are NOT local to the topology. Example: topo[0] might contain mbx
+     * 0-10, and topo[1] starts at mbx 11.
+     */
+    std::vector<std::vector<SimTK::MobilizedBodyIndex>> topoAtomToMbx;
+
+    /**
+     * Maps a specific atom within a topology to its assigned global DuMM Atom Index.
+     *
+     * Lookup: [topology_index][compound_atom_index] -> dumm_atom_index
+     *
+     * Use this to determine which DuMM Atom an atom belongs to, which in turn determines its force field
+     * parameters. DuMM Atom indices (aIx) are contiguous [0, N) across the entire system. They are NOT local
+     * to the topology. Example: topo[0] might contain aIx 0-10, and topo[1] starts at aIx 11.
+     */
+    std::vector<std::vector<SimTK::DuMM::AtomIndex>> topoAtomToDAIX;
+
+    std::vector<std::vector<bool>> topoAtomIsRigidBodyRoot;
+
+    /**
+     * Identifies the "Root" atom for a given Mobilized Body.
+     *
+     * Lookup: [mobilized_body_index] -> compound_atom_index
+     *
+     * The root atom defines the origin of the mobilized body's local frame.
+     * Since cAIx is part of the static Topology definition, this value is constant across all worlds, even
+     * though the mbx itself is world-specific.
+     */
+    std::vector<TopoAtom> mbxRootCAIx;
 };
