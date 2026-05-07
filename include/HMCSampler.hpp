@@ -67,6 +67,7 @@ One iteration must include:
 #include <thread>
 
 #include "EnergySnapshot.hpp"
+#include "NUTS.hpp"
 #include "OpenMM.hpp"
 #include "Sampler.hpp"
 #include "State.h"
@@ -84,69 +85,13 @@ One iteration must include:
 class Topology;
 class Context;
 
-enum class StopReason : std::uint8_t {
-    NotUsingNUTS,
-    MaxDepth,
-    UTurn,
-    SubtreeUTurn,
-    NoValidProposals
-};
-
-enum class NUTSDirection : std::uint8_t {
-    Backward = 0,
-    Forward = 1
-};
-
-enum class NUTSCoordinates : std::uint8_t {
-    Cartesian = 0,
-    Torsional = 1
-};
-
-struct PhasePointOpenMM {
-    std::vector<OpenMM::Vec3> positions;
-    std::vector<OpenMM::Vec3> momenta;
-};
-
-struct PhasePointSimbody {
-    SimTK::Vector q;
-    SimTK::Vector p;
-};
-
-struct NUTSNodeSimbody {
-    PhasePointSimbody minus;
-    PhasePointSimbody plus;
-    PhasePointSimbody proposal;
-    EnergySnapshot proposedEnergy;
-
-    int numValidSlices{0};
-    bool stop{false};
-};
-
-struct NUTSNodeOpenMM {
-    PhasePointOpenMM minus;
-    PhasePointOpenMM plus;
-    PhasePointOpenMM proposal;
-    EnergySnapshot proposedEnergy;
-
-    int numValidSlices{0};
-    bool stop{false};
-};
-
-struct NUTSResult {
-    PhasePointSimbody proposalSimbody;
-    PhasePointOpenMM proposalOpenMM;
-    EnergySnapshot proposedEnergy;
-    StopReason stopReason;
-    int depth;
-};
-
 void writePdb(SimTK::Compound& c,
               SimTK::State& advanced,
               const char* dirname,
               const char* prefix,
               int midlength,
               const char* sufix,
-              double aTime);
+              SimTK::Real aTime);
 
 /** A Generalized Coordinates Hamiltonian Monte Carlo sampler as described in
 J Chem Theory Comput. 2017 Oct 10;13(10):4649-4659. In short it consists
@@ -287,10 +232,10 @@ class HMCSampler : virtual public Sampler {
      * It translates generalized velocities u into Cartesian velocities
      * for each atom on all topologies
      */
-    SimTK::Matrix& calcMathJacobian(const SimTK::State& someState, SimTK::Matrix& mathJ);
+    auto calcMathJacobian(const SimTK::State& someState, SimTK::Matrix& mathJ) -> SimTK::Matrix&;
 
     void PrintUDot(const SimTK::State& someState);
-    const SimTK::Vector& GetUDot(const SimTK::State& someState);
+    auto GetUDot(const SimTK::State& someState) -> const SimTK::Vector&;
 
     /*
      * Get the diagonal 3Nx3N matrix containing the atoms masses
@@ -301,24 +246,21 @@ class HMCSampler : virtual public Sampler {
     void useFixmanPotential() {
         useFixman = true;
     }
-    bool isUsingFixmanPotential() const {
+    [[nodiscard]] auto isUsingFixmanPotential() const -> bool {
         return useFixman;
     }
 
     // Compute Fixman potential
-    SimTK::Real calcFixman(const SimTK::State& someState);
-
-    // Evaluate the potential energy at current state
-    SimTK::Real getPEFromEvaluator(const SimTK::State& someState) const;
+    auto calcFixman(const SimTK::State& someState) -> SimTK::Real;
 
     // Get/set Jacobians
-    SimTK::Real getDistortJacobianDetLog() const;
+    [[nodiscard]] auto getDistortJacobianDetLog() const -> SimTK::Real;
     void setDistortJacobianDetLog(SimTK::Real argJ);
 
     // Set/get residual embedded potential energy: potential
     // stored inside rigid bodies
     void setREP(SimTK::Real);
-    SimTK::Real getREP() const;
+    [[nodiscard]] auto getREP() const -> SimTK::Real;
 
     /** Calculate O(n2) the square root of the mass matrix inverse
     denoted by Jain l* = [I -JPsiK]*sqrt(D) (adjoint of l).
@@ -335,11 +277,11 @@ class HMCSampler : virtual public Sampler {
     void loadUScaleFactors(const SimTK::State& someState);
 
     /** Get/Set the timestep for integration **/
-    virtual SimTK::Real getTimestep() const;
+    [[nodiscard]] virtual auto getTimestep() const -> SimTK::Real;
     virtual void setTimestep(SimTK::Real ts, bool adaptive);
 
     /** Get/Set boost temperature **/
-    SimTK::Real getBoostTemperature();
+    auto getBoostTemperature() -> SimTK::Real;
     void setBoostTemperature(SimTK::Real);
     void setBoostMDSteps(int);
 
@@ -355,9 +297,9 @@ class HMCSampler : virtual public Sampler {
     };
     std::vector<std::string> REBAS_MoleculeNames = {"ETHANE", "ALA1", "TRPCH"};
 
-    std::vector<double>&
-    dihedralSegmenter(int nofIntervals, double segHalfDiff, std::vector<double>& segLims);
-    int findSegmentIndex(double value, const std::vector<double>& segLims);
+    std::vector<SimTK::Real>&
+    dihedralSegmenter(int nofIntervals, SimTK::Real segHalfDiff, std::vector<SimTK::Real>& segLims);
+    int findSegmentIndex(SimTK::Real value, const std::vector<SimTK::Real>& segLims);
 
     bool REBAS_Scale_Mbx(REBAS_MoleculeName_Ix molName, SimTK::MobilizedBodyIndex mbx);
     void perturbPositions(SimTK::State& someState, PositionsPerturbMethod);
@@ -383,7 +325,6 @@ class HMCSampler : virtual public Sampler {
     void integrateVariableTrajectory(SimTK::State& someState);
 
     auto isUTurnOpenMM(const PhasePointOpenMM& minus, const PhasePointOpenMM& plus) -> bool;
-    auto isUTurnSimbody(const PhasePointSimbody& minus, const PhasePointSimbody& plus) -> bool;
     auto buildTreeWithOpenMM(std::vector<OpenMM::Vec3>& positions,
                              std::vector<OpenMM::Vec3>& velocities,
                              int depth,
@@ -393,11 +334,15 @@ class HMCSampler : virtual public Sampler {
     auto integrateNUTSWithOpenMM(SimTK::State& state, int maxDepth) -> NUTSResult;
 
 
-    auto buildTreeWithSimbody(SimTK::State& state,
+    void buildTreeWithSimbody(SimTK::State& state,
                               int depth,
                               NUTSDirection direction,
                               SimTK::Real logU,
-                              SimTK::Real H0) -> NUTSNodeSimbody;
+                              SimTK::Real H0,
+                              NUTSNodeRef& nodeOut,
+                              NUTSTrajectoryLog& log,
+                              int& fwdLeafCount,
+                              int& bwdLeafCount);
     auto integrateNUTSWithSimbody(const SimTK::State& someState, int maxDepth) -> NUTSResult;
 
     /** Integrate trajectory one step at a time to compute quantities instantly **/
@@ -673,9 +618,9 @@ class HMCSampler : virtual public Sampler {
     }
 
     // Doesn't take masses into account
-    double calcMobodsMBAT(const SimTK::State& someState);
-    double calcMobodsBATJacobianDetLog_NEW(const SimTK::State& someState);
-    double studyBATScale(const SimTK::State& someState);
+    SimTK::Real calcMobodsMBAT(const SimTK::State& someState);
+    SimTK::Real calcMobodsBATJacobianDetLog_NEW(const SimTK::State& someState);
+    SimTK::Real studyBATScale(const SimTK::State& someState);
 
 #pragma region REBAS_TEST
     void setReplica(int thisReplica) {
@@ -795,4 +740,7 @@ class HMCSampler : virtual public Sampler {
     std::exponential_distribution<SimTK::Real> expDist{1.0};
 
     std::vector<SimTK::Real> totalEnergiesBuffer;
+
+    NUTSWorkspaceSimbody nutsWorkspaceSimbody;
+    int nutsMaxDepthSimbody = 16;
 };

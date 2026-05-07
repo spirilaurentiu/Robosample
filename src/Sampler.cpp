@@ -17,32 +17,22 @@ Sampler::Sampler(World& argWorld,
                  SimTK::DuMMForceFieldSubsystem& argDumm,
                  SimTK::GeneralForceSubsystem& argForces,
                  SimTK::TimeStepper& argTimeStepper)
-    : world(&argWorld)
-    , compoundSystem(&argCompoundSystem)
-    , matter(&argMatter)
+    : world(argWorld)
+    , compoundSystem(argCompoundSystem)
+    , matter(argMatter)
     , topologies(argTopologies)
-    , dumm(&argDumm)
-    , forces(&argForces)
-    , timeStepper(&argTimeStepper)
-    , thermostat(ThermostatName::None)
-    , temperature(SimTK::Zero)
-    , RT(SimTK::Zero)
-    , beta(std::numeric_limits<SimTK::Real>::min())
-    , seed(std::numeric_limits<uint32_t>::min())
-    , nofSamples(std::numeric_limits<int>::min())
-    , acc(false)
-    , system(&argMatter.getSystem())
-    , alwaysAccept(false) {
-    // this->rootTopology = argResidue;
+    , dumm(argDumm)
+    , forces(argForces)
+    , timeStepper(argTimeStepper)
+    , system(argMatter.getSystem()) {
     assert(topologies.size() > 0);
-    rootTopology = &topologies[0];
+    rootTopology = topologies.data();
 
     // Set total number of atoms and dofs
     natoms = 0;
     for (const auto& topology : topologies) {
         natoms += topology.getNumAtoms();
     }
-    // std::cout << "OMMBUG Sampler::Sampler " << this->natoms << "\n" << std::flush;
 
     // Set total mass of the system to non-realistic valaue
     this->totalMass = 0;
@@ -83,7 +73,7 @@ SimTK::Real Sampler::calcMassDeterminant(SimTK::State& state) {
     SimTK::Vector V(nu);
     SimTK::Vector DetV(nu);
     SimTK::Real D0 = 1.0;
-    matter->calcDetM(state, V, DetV, &D0);
+    matter.get().calcDetM(state, V, DetV, &D0);
     return D0;
 }
 
@@ -93,7 +83,7 @@ SimTK::Real Sampler::calcMassDeterminant(const SimTK::State& state) {
     SimTK::Vector V(nu);
     SimTK::Vector DetV(nu);
     SimTK::Real D0 = 1.0;
-    matter->calcDetM(state, V, DetV, &D0);
+    matter.get().calcDetM(state, V, DetV, &D0);
     return D0;
 }
 
@@ -201,7 +191,7 @@ void Sampler::checkAtomStationsThroughDumm() {
             // SimTK::Vec3 atomMobodStation =
             //	topology.getAtomLocationInMobilizedBodyFrame(aIx);
             SimTK::Vec3 atomMobodStationThroughDumm =
-                topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm);
+                topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm);
 
             // std::cout << " through Compound " << atomMobodStation
             //	<< std::endl;
@@ -238,7 +228,7 @@ void Sampler::loadMbx2mobility(int whichWorld) // DANGER
     // 			// Get body, parentBody
     // 			const SimTK::MobilizedBodyIndex mbx =
     // 				topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
-    // 			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+    // 			const SimTK::MobilizedBody& mobod = matter.get().getMobilizedBody(mbx);
     // 			const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
     // 			SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
@@ -272,8 +262,8 @@ void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 
     // } // every topology
 
-    // for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
-    //     // const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+    // for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter.get().getNumBodies(); ++mbx){
+    //     // const SimTK::MobilizedBody& mobod = matter.get().getMobilizedBody(mbx);
     //     // SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
     //     // int mobodNQ = mobod.getNumQ(someState);
     //     // int mobodNU = mobod.getNumU(someState);

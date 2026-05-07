@@ -383,10 +383,6 @@ class Context {
     std::vector<std::vector<std::size_t>> angleIxs;
     std::vector<std::vector<std::size_t>> dihedralIxs;
 
-    SimTK::Real geom1[PRINT_BUFFER_SIZE];
-    SimTK::Real geom2[PRINT_BUFFER_SIZE];
-    SimTK::Real geom3[PRINT_BUFFER_SIZE];
-
     // Output
     std::ofstream logFile;
 

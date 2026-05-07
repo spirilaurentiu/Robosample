@@ -2416,7 +2416,7 @@ void Context::RunReplicaWorldRange(int replicaIx,
     ThermodynamicState& thermoState = thermodynamicStates[thermoIx];
 
     std::vector<int> thermoWorldIxs = thermoState.getWorldIndexes();
-    std::shuffle(thermoWorldIxs.begin(), thermoWorldIxs.end(), g);
+    // std::shuffle(thermoWorldIxs.begin(), thermoWorldIxs.end(), g);
 
     const std::vector<int>& distortOpts = thermoState.getDistortOptions();
 

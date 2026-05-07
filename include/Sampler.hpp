@@ -1,12 +1,7 @@
-#ifndef __SAMPLER_HPP__
-#define __SAMPLER_HPP__
+#pragma once
 
 #include "Random.hpp"
 #include "bgeneral.hpp"
-
-#ifndef PRINT_BUFFER_SIZE
-#    define PRINT_BUFFER_SIZE 4096
-#endif
 
 class Topology;
 class World;
@@ -114,10 +109,13 @@ class Sampler {
     void PrintSimbodyStateCache(SimTK::State& someState);
 
     // Classes we need to access
-    World* world;
-    const SimTK::System* system;
-    SimTK::CompoundSystem* compoundSystem;
-    SimTK::SimbodyMatterSubsystem* matter;
+    std::reference_wrapper<World> world;
+    std::reference_wrapper<const SimTK::System> system;
+    std::reference_wrapper<SimTK::CompoundSystem> compoundSystem;
+    std::reference_wrapper<SimTK::SimbodyMatterSubsystem> matter;
+    std::reference_wrapper<SimTK::DuMMForceFieldSubsystem> dumm;
+    std::reference_wrapper<SimTK::GeneralForceSubsystem> forces;
+    std::reference_wrapper<SimTK::TimeStepper> timeStepper;
 
     // SimTK::Compound *rootTopology;
     Topology* rootTopology;
@@ -134,20 +132,16 @@ class Sampler {
     std::map<SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility> mbx2mobility;
     std::map<SimTK::QIndex, JointType> qIndex2jointType;
 
-    SimTK::DuMMForceFieldSubsystem* dumm;
-    SimTK::GeneralForceSubsystem* forces;
-    SimTK::TimeStepper* timeStepper;
-
     // Thermodynamics
     bool alwaysAccept = false;
-    ThermostatName thermostat;
+    ThermostatName thermostat = ThermostatName::None;
     SimTK::Real temperature = SimTK::NaN;
     SimTK::Real RT = SimTK::NaN;
     SimTK::Real beta = SimTK::NaN;
 
     // Sampling
     int nofSamples = 0;
-    uint32_t seed;
+    uint32_t seed = 0;
     bool acc = false;
 
     int numSamples_period = 0;
@@ -176,6 +170,3 @@ class Sampler {
 
     std::lognormal_distribution<SimTK::Real> lognormal = std::lognormal_distribution<SimTK::Real>(0.0, 1.0);
 };
-
-
-#endif // __SAMPLER_HPP__
