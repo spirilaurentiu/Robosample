@@ -236,8 +236,8 @@ class Context(rb.Context):
 
         # Store bonds that correspond to standardized dihedrals (protein backbone phi, psi, sidechain chi, etc)
         standard_dihedral_bond_columns = [
-            "atom1_prmtop_index",
-            "atom2_prmtop_index",
+            "atom1_parmed_index",
+            "atom2_parmed_index",
             "dihedral_type",
             "resname",
             "resid",
@@ -443,8 +443,8 @@ class Context(rb.Context):
                     # Define standardized dihedral names
                     if dihedral_type != "non-standard":
                         new_dihedral_bond = {
-                            "atom1_prmtop_index": atom1_prmtop,
-                            "atom2_prmtop_index": atom2_prmtop,
+                            "atom1_parmed_index": atom1_prmtop,
+                            "atom2_parmed_index": atom2_prmtop,
                             "dihedral_type": dihedral_type,
                             "resname": self.parm.residues[resid].name,
                             "resid": resid,
@@ -599,6 +599,10 @@ class Context(rb.Context):
                         molecule_index=instance_index,
                     )
                     self.z_matrix.append(row)
+
+        # Find minimum and maximum prmtop index
+        self.min_prmtop_index = min(self.prmtop_to_global_index.keys())
+        self.max_prmtop_index = max(self.prmtop_to_global_index.keys())
 
         excluded = set()
         length_conv = pmd.unit.angstrom.conversion_factor_to(pmd.unit.nanometers)
@@ -848,8 +852,8 @@ class Context(rb.Context):
         for _, bond in source.iterrows():
             flex = rb.BondFlexibility()
 
-            atom1 = self.parm.atoms[bond["atom1_prmtop_index"]]
-            atom2 = self.parm.atoms[bond["atom2_prmtop_index"]]
+            atom1 = self.parm.atoms[bond["atom1_parmed_index"]]
+            atom2 = self.parm.atoms[bond["atom2_parmed_index"]]
 
             flex.globalIndex1 = self.prmtop_to_global_index[atom1.idx]
             flex.globalIndex2 = self.prmtop_to_global_index[atom2.idx]
@@ -1487,4 +1491,192 @@ class Context(rb.Context):
             (strong_blocks, strong_blocks_correlation),
             (weak_blocks, weak_blocks_correlation),
             rogue_blocks,
+        )
+
+    def find_bond(
+        self, atom1_parmed_index: int, atom2_parmed_index: int
+    ) -> pd.DataFrame:
+        """
+        Find a bond between two atoms using ParmEd atom indices.
+
+        Parameters
+        ----------
+        atom1_parmed_index : int
+            0-based ParmEd atom index (`atom.idx`).
+
+        atom2_parmed_index : int
+            0-based ParmEd atom index (`atom.idx`).
+
+        Notes
+        -----
+        Index conventions:
+
+        - ParmEd `atom.idx`          : 0-based
+        - VMD atom index (`%i`)      : 0-based
+        - PyMOL atom `id`            : usually 1-based (PDB serial)
+        - Amber masks (`@1`, `:1`)   : 1-based
+
+        Example
+        -------
+        If PyMOL shows atom `id=152`, the corresponding ParmEd/VMD index
+        is usually `151`.
+
+        Returns
+        -------
+        pd.DataFrame
+            Matching bond row(s).
+
+        Raises
+        ------
+        ValueError
+            If the bond is not found or if the atom indices are out of range.
+        """
+
+        if atom1_parmed_index < self.min_prmtop_index:
+            raise ValueError(
+                f"atom1_parmed_index {atom1_parmed_index} is out of range (must be >= {self.min_prmtop_index})"
+            )
+        if atom2_parmed_index < self.min_prmtop_index:
+            raise ValueError(
+                f"atom2_parmed_index {atom2_parmed_index} is out of range (must be >= {self.min_prmtop_index})"
+            )
+        if atom1_parmed_index > self.max_prmtop_index:
+            raise ValueError(
+                f"atom1_parmed_index {atom1_parmed_index} is out of range (must be <= {self.max_prmtop_index})"
+            )
+        if atom2_parmed_index > self.max_prmtop_index:
+            raise ValueError(
+                f"atom2_parmed_index {atom2_parmed_index} is out of range (must be <= {self.max_prmtop_index})"
+            )
+
+        # Aliasing
+        df = self.standard_dihedral_bonds
+
+        # Find the bond in either direction (atom1-atom2 or atom2-atom1) for the specified molecule
+        mask = (
+            (df["atom1_parmed_index"] == atom1_parmed_index)
+            & (df["atom2_parmed_index"] == atom2_parmed_index)
+        ) | (
+            (df["atom1_parmed_index"] == atom2_parmed_index)  # reversed
+            & (df["atom2_parmed_index"] == atom1_parmed_index)
+        )
+
+        result = df[mask]
+
+        if result.empty:
+            suggestions = []
+
+            # Possible 1-based -> 0-based confusion
+            decremented_mask = (
+                (df["atom1_parmed_index"] == atom1_parmed_index - 1)
+                & (df["atom2_parmed_index"] == atom2_parmed_index - 1)
+            ) | (
+                (df["atom1_parmed_index"] == atom2_parmed_index - 1)
+                & (df["atom2_parmed_index"] == atom1_parmed_index - 1)
+            )
+
+            if not df[decremented_mask].empty:
+                suggestions.append(
+                    f"Found bond using indices ({atom1_parmed_index - 1}, "
+                    f"{atom2_parmed_index - 1}). "
+                    f"You may have supplied 1-based indices instead of ParmEd 0-based indices."
+                )
+
+            # Possible 0-based -> 1-based confusion
+            incremented_mask = (
+                (df["atom1_parmed_index"] == atom1_parmed_index + 1)
+                & (df["atom2_parmed_index"] == atom2_parmed_index + 1)
+            ) | (
+                (df["atom1_parmed_index"] == atom2_parmed_index + 1)
+                & (df["atom2_parmed_index"] == atom1_parmed_index + 1)
+            )
+
+            if not df[incremented_mask].empty:
+                suggestions.append(
+                    f"Found bond using indices ({atom1_parmed_index + 1}, "
+                    f"{atom2_parmed_index + 1}). "
+                    f"You may have mixed 0-based and 1-based indexing conventions."
+                )
+
+            message = (
+                f"Bond not found between ParmEd atoms indices "
+                f"{atom1_parmed_index} and {atom2_parmed_index}."
+            )
+
+            if suggestions:
+                message += "\n\nPossible indexing issue:\n- " + "\n- ".join(suggestions)
+
+            message += (
+                "\n\nIndexing conventions (this function expects ParmEd atom indices):"
+                "\n"
+                "\n- ParmEd `atom.idx`             : 0-based"
+                "\n- VMD atom index (`%i`)         : 0-based"
+                "\n- PyMOL atom `id`               : usually 1-based (PDB serial)"
+                "\n- Amber masks (`@1`, `:1`)      : 1-based"
+            )
+
+            raise ValueError(message)
+
+        return result
+
+    def find_bonds(
+        self,
+        bond_pairs: list[tuple[int, int]],
+    ) -> pd.DataFrame:
+        """
+        Find multiple bonds between atoms using ParmEd atom indices.
+
+        Parameters
+        ----------
+        bond_pairs : list[tuple[int, int]]
+            List of atom index pairs specified as
+            `(atom1_parmed_index, atom2_parmed_index)`.
+
+            All indices must be 0-based ParmEd atom indices
+            (`atom.idx`).
+
+        Notes
+        -----
+        Index conventions (this function expects ParmEd indices):
+
+        - ParmEd `atom.idx`          : 0-based
+        - VMD atom index (`%i`)      : 0-based
+        - PyMOL atom `id`            : usually 1-based (PDB serial)
+        - Amber masks (`@1`, `:1`)   : 1-based
+
+        Example
+        -------
+        If PyMOL shows atom `id=152`, the corresponding ParmEd/VMD index
+        is usually `151`.
+
+        Examples
+        --------
+        Find a single bond:
+
+        >>> context.find_bonds([(3175, 3177)])
+
+        Find multiple bonds:
+
+        >>> context.find_bonds(
+        ...     [
+        ...         (3175, 3177),
+        ...         (4001, 4003),
+        ...         (5120, 5122),
+        ...     ]
+        ... )
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing all matching bond row(s).
+
+        Raises
+        ------
+        ValueError
+            If any bond is not found or if any atom index is out of range.
+        """
+
+        return pd.concat(
+            [self.find_bond(atom1, atom2) for atom1, atom2 in bond_pairs],
+            ignore_index=True,
         )
