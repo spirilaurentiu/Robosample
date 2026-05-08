@@ -116,7 +116,7 @@ void Context::loadAmberSystem(const SystemTopology& systemTopology,
     this->simSettings = simSettings;
     this->zMatrix = zMatrix;
 
-    numMolecules = systemTopology.rootAtomGlobalIndices.size();
+    numMolecules = static_cast<int>(systemTopology.rootAtomGlobalIndices.size());
 
     // Construct a Compound for every atom
     // Since we iterate the list of atoms, we can also validate the global indices
@@ -141,12 +141,13 @@ void Context::loadAmberSystem(const SystemTopology& systemTopology,
 
     // Add new topologies
     topologies.reserve(numMolecules);
-    for (std::size_t molIx = 0; molIx < systemTopology.rootAtomGlobalIndices.size(); molIx++) {
+    for (std::size_t molIx = 0; molIx < systemTopology.rootAtomGlobalIndices.size(); ++molIx) {
         // New empty topology
         SimTK::Compound::Name name = "MOL_" + std::to_string(molIx);
         Topology topology(name,
                           SimTK::CompoundSystem::CompoundIndex(molIx),
-                          systemTopology.rootAtomGlobalIndices[molIx]);
+                          systemTopology.rootAtomGlobalIndices[molIx],
+                          systemTopology.rootMobilities[molIx]);
 
         // Set spans
         const auto atomRangeBegin =
@@ -491,7 +492,6 @@ auto Context::validateContext() -> bool {
  */
 void Context::addWorld(bool fixmanTorque,
                        int samplesPerRound,
-                       ROOT_MOBILITY rootMobility,
                        const std::vector<std::vector<BondFlexibility>>& rollFlexibilities) {
     // Create new world and add its index
     worldIndices.push_back(worldIndices.size());
@@ -513,10 +513,6 @@ void Context::addWorld(bool fixmanTorque,
     // Set seed for random number generators
     worlds.back().setSeed(randomEngine());
 
-    // @TODO what does it do? how does it work if we have multiple molecules?
-    // Propagate root mobility
-    worlds.back().setRootMobility(rootMobility);
-
     // Store the number of worlds
     nofWorlds = worlds.size();
 
@@ -527,12 +523,6 @@ void Context::addWorld(bool fixmanTorque,
                                      systemTopology.angles,
                                      systemTopology.periodicTorsions,
                                      systemTopology.harmonicImproperTorsions);
-
-    // Allocate root mobilities - TODO
-    rootMobilitiesStr.push_back({});
-    for (unsigned int molIx = 0; molIx < topologies.size(); molIx++) {
-        rootMobilitiesStr.back().push_back("Rigid");
-    }
 
     // Helper to create a normalized bond key (always min-first) e.g., (3,5) and (5,3) both become (3,5)
     auto make_bond_key = [](int i, int j) {

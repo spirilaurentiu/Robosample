@@ -64,7 +64,6 @@ class Context {
 
     void addWorld(bool fixmanTorque,
                   int samplesPerRound,
-                  ROOT_MOBILITY rootMobility,
                   const std::vector<std::vector<BondFlexibility>>& flexibilities);
 
     // Add task spaces
@@ -360,7 +359,6 @@ class Context {
 
     std::vector<World> worlds;
     std::vector<std::size_t> worldIndices;
-    std::vector<std::vector<std::string>> rootMobilitiesStr;
 
     int moleculeCount = -1;
 

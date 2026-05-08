@@ -6,7 +6,7 @@ import collections.abc
 import numpy
 import numpy.typing
 import typing
-__all__: list[str] = ['AcceptRejectMode', 'AtomClassIndex', 'BondCenterChirality', 'BondFlexibility', 'BondMobility', 'CMAPGrid', 'CMAPTorsion', 'ChargedAtomTypeIndex', 'CompoundAtomIndex', 'Context', 'CoordinateTransferError', 'CutoffNonPeriodic', 'Exclusion', 'ForceFieldParams', 'IntegratorType', 'NoCutoff', 'NonbondedMethod', 'ReferenceIndices', 'RoboAngle', 'RoboAtom', 'RoboAtomConnectivity', 'RoboAtomElement', 'RoboAtomIdentity', 'RoboAtomPhysics', 'RoboBond', 'RoboHarmonicImproperTorsion', 'RoboPeriodicTorsion', 'RoboPeriodicTorsionTerm', 'RootMobility', 'RunType', 'SamplerName', 'Scaling14', 'SimulationSettings', 'SystemTopology', 'ThermostatName', 'TopologyRange', 'TopologyRangeType', 'UreyBradley', 'Vec3', 'VectorCMAPGrid', 'VectorCMAPTorsion', 'VectorExclusion', 'VectorInt', 'VectorRoboAngle', 'VectorRoboAtom', 'VectorRoboBond', 'VectorRoboHarmonicImproperTorsion', 'VectorRoboPeriodicTorsion', 'VectorScaling14', 'VectorTopologyRange', 'VectorUreyBradley', 'World', 'ZMatrixRow', 'align_flip_and_translate_frame_along_x_axis', 'calculate_angle_in_rad', 'calculate_dihedral_in_rad', 'calculate_log_sum_exp2', 'calculate_mag_sq', 'multiply_by_scalar', 'normalize_in_place', 'safe_log_sine_sqr']
+__all__: list[str] = ['AcceptRejectMode', 'AtomClassIndex', 'BondCenterChirality', 'BondFlexibility', 'BondMobility', 'CMAPGrid', 'CMAPTorsion', 'ChargedAtomTypeIndex', 'CompoundAtomIndex', 'Context', 'CoordinateTransferError', 'CutoffNonPeriodic', 'Exclusion', 'ForceFieldParams', 'IntegratorType', 'NoCutoff', 'NonbondedMethod', 'ReferenceIndices', 'RoboAngle', 'RoboAtom', 'RoboAtomConnectivity', 'RoboAtomElement', 'RoboAtomIdentity', 'RoboAtomPhysics', 'RoboBond', 'RoboHarmonicImproperTorsion', 'RoboPeriodicTorsion', 'RoboPeriodicTorsionTerm', 'RootMobility', 'RunType', 'SamplerName', 'Scaling14', 'SimulationSettings', 'SystemTopology', 'ThermostatName', 'TopologyRange', 'TopologyRangeType', 'UreyBradley', 'Vec3', 'VectorCMAPGrid', 'VectorCMAPTorsion', 'VectorExclusion', 'VectorInt', 'VectorRoboAngle', 'VectorRoboAtom', 'VectorRoboBond', 'VectorRoboHarmonicImproperTorsion', 'VectorRoboPeriodicTorsion', 'VectorRootMobility', 'VectorScaling14', 'VectorTopologyRange', 'VectorUreyBradley', 'World', 'ZMatrixRow', 'align_flip_and_translate_frame_along_x_axis', 'calculate_angle_in_rad', 'calculate_dihedral_in_rad', 'calculate_log_sum_exp2', 'calculate_mag_sq', 'multiply_by_scalar', 'normalize_in_place', 'safe_log_sine_sqr']
 class AcceptRejectMode:
     """
     Members:
@@ -325,7 +325,7 @@ class Context:
         """
         Add an empty themodynamic state to the context.
         """
-    def add_world(self, arg0: bool, arg1: typing.SupportsInt | typing.SupportsIndex, arg2: RootMobility, arg3: collections.abc.Sequence[collections.abc.Sequence[BondFlexibility]]) -> None:
+    def add_world(self, arg0: bool, arg1: typing.SupportsInt | typing.SupportsIndex, arg2: collections.abc.Sequence[collections.abc.Sequence[BondFlexibility]]) -> None:
         """
         Add an empty world.
         """
@@ -948,25 +948,25 @@ class RootMobility:
     """
     Members:
     
-      FREE
+      Free
     
-      CARTESIAN
+      Cartesian
     
-      WELD
+      Weld
     
-      FREE_LINE
+      FreeLine
     
-      BALL
+      Ball
     
-      PIN
+      Pin
     """
-    BALL: typing.ClassVar[RootMobility]  # value = <RootMobility.BALL: 4>
-    CARTESIAN: typing.ClassVar[RootMobility]  # value = <RootMobility.CARTESIAN: 1>
-    FREE: typing.ClassVar[RootMobility]  # value = <RootMobility.FREE: 0>
-    FREE_LINE: typing.ClassVar[RootMobility]  # value = <RootMobility.FREE_LINE: 3>
-    PIN: typing.ClassVar[RootMobility]  # value = <RootMobility.PIN: 5>
-    WELD: typing.ClassVar[RootMobility]  # value = <RootMobility.WELD: 2>
-    __members__: typing.ClassVar[dict[str, RootMobility]]  # value = {'FREE': <RootMobility.FREE: 0>, 'CARTESIAN': <RootMobility.CARTESIAN: 1>, 'WELD': <RootMobility.WELD: 2>, 'FREE_LINE': <RootMobility.FREE_LINE: 3>, 'BALL': <RootMobility.BALL: 4>, 'PIN': <RootMobility.PIN: 5>}
+    Ball: typing.ClassVar[RootMobility]  # value = <RootMobility.Ball: 4>
+    Cartesian: typing.ClassVar[RootMobility]  # value = <RootMobility.Cartesian: 1>
+    Free: typing.ClassVar[RootMobility]  # value = <RootMobility.Free: 0>
+    FreeLine: typing.ClassVar[RootMobility]  # value = <RootMobility.FreeLine: 3>
+    Pin: typing.ClassVar[RootMobility]  # value = <RootMobility.Pin: 5>
+    Weld: typing.ClassVar[RootMobility]  # value = <RootMobility.Weld: 2>
+    __members__: typing.ClassVar[dict[str, RootMobility]]  # value = {'Free': <RootMobility.Free: 0>, 'Cartesian': <RootMobility.Cartesian: 1>, 'Weld': <RootMobility.Weld: 2>, 'FreeLine': <RootMobility.FreeLine: 3>, 'Ball': <RootMobility.Ball: 4>, 'Pin': <RootMobility.Pin: 5>}
     @typing.overload
     def __eq__(self, other: RootMobility) -> bool:
         ...
@@ -1145,7 +1145,7 @@ class SimulationSettings:
     def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self, seed: typing.SupportsInt | typing.SupportsIndex = 0, thermostat_temperature_in_k: typing.SupportsFloat | typing.SupportsIndex = 300.0, collision_frequency: typing.SupportsFloat | typing.SupportsIndex = 1.0) -> None:
+    def __init__(self, thermostat_temperature_in_k: typing.SupportsFloat | typing.SupportsIndex = 300.0, collision_frequency: typing.SupportsFloat | typing.SupportsIndex = 1.0, seed: typing.SupportsInt | typing.SupportsIndex = 0) -> None:
         ...
     @property
     def collision_frequency(self) -> float:
@@ -1175,6 +1175,7 @@ class SystemTopology:
     harmonic_improper_torsions: VectorRoboHarmonicImproperTorsion
     periodic_torsions: VectorRoboPeriodicTorsion
     root_atom_global_indices: VectorInt
+    root_mobilities: VectorRootMobility
     scaling14s: VectorScaling14
     topology_ranges: VectorTopologyRange
     urey_bradleys: VectorUreyBradley
@@ -1182,7 +1183,7 @@ class SystemTopology:
     def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self, root_atom_global_indices: robo_bindings.VectorInt | None = None, topology_ranges: robo_bindings.VectorTopologyRange | None = None, atoms: robo_bindings.VectorRoboAtom | None = None, bonds: robo_bindings.VectorRoboBond | None = None, angles: robo_bindings.VectorRoboAngle | None = None, periodic_torsions: robo_bindings.VectorRoboPeriodicTorsion | None = None, harmonic_improper_torsions: robo_bindings.VectorRoboHarmonicImproperTorsion | None = None, cmap_grids: robo_bindings.VectorCMAPGrid | None = None, cmap_torsions: robo_bindings.VectorCMAPTorsion | None = None, urey_bradleys: robo_bindings.VectorUreyBradley | None = None, scaling14s: robo_bindings.VectorScaling14 | None = None, exclusions: robo_bindings.VectorExclusion | None = None) -> None:
+    def __init__(self, root_atom_global_indices: robo_bindings.VectorInt | None = None, topology_ranges: robo_bindings.VectorTopologyRange | None = None, atoms: robo_bindings.VectorRoboAtom | None = None, bonds: robo_bindings.VectorRoboBond | None = None, angles: robo_bindings.VectorRoboAngle | None = None, periodic_torsions: robo_bindings.VectorRoboPeriodicTorsion | None = None, harmonic_improper_torsions: robo_bindings.VectorRoboHarmonicImproperTorsion | None = None, cmap_grids: robo_bindings.VectorCMAPGrid | None = None, cmap_torsions: robo_bindings.VectorCMAPTorsion | None = None, urey_bradleys: robo_bindings.VectorUreyBradley | None = None, scaling14s: robo_bindings.VectorScaling14 | None = None, exclusions: robo_bindings.VectorExclusion | None = None, root_mobilities: robo_bindings.VectorRootMobility | None = None) -> None:
         ...
 class ThermostatName:
     """
@@ -2086,6 +2087,103 @@ class VectorRoboPeriodicTorsion:
     def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> RoboPeriodicTorsion:
         """
         Remove and return the item at index ``i``
+        """
+class VectorRootMobility:
+    __hash__: typing.ClassVar[None] = None
+    def __bool__(self) -> bool:
+        """
+        Check whether the list is nonempty
+        """
+    def __contains__(self, x: RootMobility) -> bool:
+        """
+        Return true the container contains ``x``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Delete the list elements at index ``i``
+        """
+    @typing.overload
+    def __delitem__(self, arg0: slice) -> None:
+        """
+        Delete list elements using a slice object
+        """
+    def __eq__(self, arg0: VectorRootMobility) -> bool:
+        ...
+    @typing.overload
+    def __getitem__(self, s: slice) -> VectorRootMobility:
+        """
+        Retrieve list elements using a slice object
+        """
+    @typing.overload
+    def __getitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> RootMobility:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: VectorRootMobility) -> None:
+        """
+        Copy constructor
+        """
+    @typing.overload
+    def __init__(self, arg0: collections.abc.Iterable) -> None:
+        ...
+    def __iter__(self) -> collections.abc.Iterator[RootMobility]:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __ne__(self, arg0: VectorRootMobility) -> bool:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: RootMobility) -> None:
+        ...
+    @typing.overload
+    def __setitem__(self, arg0: slice, arg1: VectorRootMobility) -> None:
+        """
+        Assign list elements using a slice object
+        """
+    def append(self, x: RootMobility) -> None:
+        """
+        Add an item to the end of the list
+        """
+    def clear(self) -> None:
+        """
+        Clear the contents
+        """
+    def count(self, x: RootMobility) -> int:
+        """
+        Return the number of times ``x`` appears in the list
+        """
+    @typing.overload
+    def extend(self, L: VectorRootMobility) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    @typing.overload
+    def extend(self, L: collections.abc.Iterable) -> None:
+        """
+        Extend the list by appending all the items in the given list
+        """
+    def insert(self, i: typing.SupportsInt | typing.SupportsIndex, x: RootMobility) -> None:
+        """
+        Insert an item at a given position.
+        """
+    @typing.overload
+    def pop(self) -> RootMobility:
+        """
+        Remove and return the last item
+        """
+    @typing.overload
+    def pop(self, i: typing.SupportsInt | typing.SupportsIndex) -> RootMobility:
+        """
+        Remove and return the item at index ``i``
+        """
+    def remove(self, x: RootMobility) -> None:
+        """
+        Remove the first item from the list whose value is x. It is an error if there is no such item.
         """
 class VectorScaling14:
     def __bool__(self) -> bool:

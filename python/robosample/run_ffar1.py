@@ -107,30 +107,77 @@ T_MAX = 1000.0
 NOF_REPLICAS = 1
 R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 
-TIMESTEP_CARTESIAN = 0.001
-MDSTEPS_CARTESIAN = 500  # 500 fs
-
 # create robosample context
 context = robosample.Context(
     name=args.name,
     seed=args.seed,
     prmtop=args.prmtop,
-    inpcrd=args.inpcrd,
+    inpcrd="last_frame.rst7",
     write_freq=args.write_freq,
     testing=False,
 )
 
+
+def find_middle_c_indices(seq):
+    result = []
+
+    i = 0
+    n = len(seq)
+
+    while i < n:
+        if seq[i] != "C":
+            i += 1
+            continue
+
+        start = i
+
+        while i < n and seq[i] == "C":
+            i += 1
+
+        end = i - 1
+        length = end - start + 1
+
+        if length >= 3:
+            middle = (start + end) // 2
+            result.append(middle)
+
+    return result
+
+
+# print(
+#     *context.standard_dihedral_bonds.loc[
+#         context.standard_dihedral_bonds["molecule_index"] == 0, "dss"
+#     ].tolist()
+# )
+
+# exit()
+
+# First molecule is the target
+context.set_root_mobility(0, robosample.rb.RootMobility.Free)
+
+# Next two molecules are the outer proteins
+context.set_root_mobility(1, robosample.rb.RootMobility.Weld)
+context.set_root_mobility(2, robosample.rb.RootMobility.Weld)
+
+# All other molecules are lipids and solvent
+for mol_ix in range(3, context.get_num_molecules()):
+    context.set_root_mobility(mol_ix, robosample.rb.RootMobility.Free)
+
 # [[rb.BondFlexibility(), rb.BondFlexibility(), ...], [...], ...]
 
 # context.addCartesianWorld().add_sampler(
-#     timeStep=TIMESTEP_CARTESIAN,
-#     mdSteps=MDSTEPS_CARTESIAN,
-#     boostMDSteps=MDSTEPS_CARTESIAN,
-#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+#     timeStep=0.001,
+#     mdSteps=500,
+#     boostMDSteps=500,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
 #     use_nuts=False,
 # )
 
-bonds = context.find_bonds(
+# mask_phi_psi = context.standard_dihedral_bonds["dihedral_type"].isin(["phi", "psi"])
+# mask_target_mol_ix = context.standard_dihedral_bonds["molecule_index"].isin([1, 2])
+# outer_bonds = context.standard_dihedral_bonds[mask_phi_psi & mask_target_mol_ix]
+
+tm_bonds = context.find_bonds(
     [
         (3168, 3171),
         (3780, 3770),
@@ -140,12 +187,35 @@ bonds = context.find_bonds(
         (533, 548),
     ]
 )
+
+# print(
+#     *context.standard_dihedral_bonds.loc[
+#         context.standard_dihedral_bonds["molecule_index"] == 0, "resid"
+#     ].tolist()
+# )
+
+# print(context.standard_dihedral_bonds["molecule_index"].tolist())
+
+# ss = context.standard_dihedral_bonds.loc[
+#     context.standard_dihedral_bonds["molecule_index"] == 0, "dss"
+# ].tolist()
+# resids = find_middle_c_indices(ss)
+# tm_bonds = context.standard_dihedral_bonds.loc[
+#     (context.standard_dihedral_bonds["molecule_index"] == 0)
+#     & (context.standard_dihedral_bonds["resid"].isin(resids))
+#     & (context.standard_dihedral_bonds["dihedral_type"] == "psi")
+# ]
+
+# import pandas as pd
+# bonds = pd.concat([outer_bonds, tm_bonds], axis=0).drop_duplicates()
+bonds = tm_bonds
+
 sele = context.build_flexibilities(bonds)
 context.addTorsionalWorld(sele).add_sampler(
-    timeStep=0.1,
-    mdSteps=100,  # ignored if using NUTS
-    boostMDSteps=100,  # ignored if using NUTS
-    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+    timeStep=0.05,
+    mdSteps=200,  # ignored if using NUTS
+    boostMDSteps=200,  # ignored if using NUTS
+    acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
     use_nuts=False,
 )
 
@@ -171,11 +241,26 @@ context.addTorsionalWorld(sele).add_sampler(
 # bonds = context.standard_dihedral_bonds[mask_c_terminus]
 # sele = context.build_flexibilities(bonds)
 # context.addTorsionalWorld(sele).add_sampler(
-#     timeStep=0.01,
-#     mdSteps=2000,  # ignored if using NUTS
-#     boostMDSteps=2000,  # ignored if using NUTS
-#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
-#     use_nuts=True,
+#     timeStep=0.025,
+#     mdSteps=100,  # ignored if using NUTS
+#     boostMDSteps=100,  # ignored if using NUTS
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
+#     use_nuts=False,
+# )
+
+
+# # C terminus
+# mask_c_terminus = (context.standard_dihedral_bonds["molecule_index"] == 0) & (
+#     context.standard_dihedral_bonds["dss"] == "C"
+# )
+# bonds = context.standard_dihedral_bonds[mask_c_terminus]
+# sele = context.build_flexibilities(bonds)
+# context.addTorsionalWorld(sele).add_sampler(
+#     timeStep=0.005,
+#     mdSteps=100,  # ignored if using NUTS
+#     boostMDSteps=100,  # ignored if using NUTS
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
+#     use_nuts=False,
 # )
 
 ##################### SIDECHAIN ##############################

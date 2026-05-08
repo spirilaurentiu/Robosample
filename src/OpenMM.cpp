@@ -99,14 +99,18 @@ auto OPENMM::initialize(const std::vector<std::vector<int>>& worlds,
     // Set up variables
     omm.numAtoms = systemTopology.atoms.size();
     omm.ommAtomsPositionsCache = std::vector<OpenMM::Vec3>(omm.numAtoms);
-    omm.ommAtomsPositionsCacheOld = std::vector<OpenMM::Vec3>(omm.numAtoms);
-    omm.simbodyAtomsPositionsCache = std::vector<SimTK::Vec3>(omm.numAtoms);
+    // omm.ommAtomsPositionsCacheOld = std::vector<OpenMM::Vec3>(omm.numAtoms);
+    // omm.simbodyAtomsPositionsCache = std::vector<SimTK::Vec3>(omm.numAtoms);
 
     // Allocate OpenMM system and add particles to it
     omm.system = std::make_unique<OpenMM::System>();
 
     for (const auto& atom : systemTopology.atoms) {
-        if (atom.connectivity.root) {
+        const auto moleculeIndex = atom.identity.moleculeIndex;
+        const bool isRoot = atom.connectivity.root;
+        const bool isWeld = systemTopology.rootMobilities[moleculeIndex] == SimTK::RootMobility::Weld;
+
+        if (isRoot && isWeld) {
             omm.system->addParticle(0.0); // massless root
         } else {
             omm.system->addParticle(atom.physics.massInDaltons);
@@ -122,14 +126,14 @@ auto OPENMM::initialize(const std::vector<std::vector<int>>& worlds,
                                                     systemTopology.exclusions,
                                                     ffParams,
                                                     ffParams.hasNBfix);
-    nonbondedForce->setForceGroup(SLOW_GROUP);
+    // nonbondedForce->setForceGroup(SLOW_GROUP);
     omm.nonbondedForceIndex = omm.system->addForce(nonbondedForce);
 
     // GBSA OBC Force
     // implicitSolventKappa
     if (ffParams.useGBSAOBC2) {
         auto* gbsaOBCForce = omm.createGBSAOBCForce(systemTopology.atoms, ffParams);
-        gbsaOBCForce->setForceGroup(SLOW_GROUP);
+        // gbsaOBCForce->setForceGroup(SLOW_GROUP);
         omm.system->addForce(gbsaOBCForce);
     }
 
@@ -141,52 +145,52 @@ auto OPENMM::initialize(const std::vector<std::vector<int>>& worlds,
                                                                     ffParams,
                                                                     nonbondedForce->getUseSwitchingFunction(),
                                                                     nonbondedForce->getSwitchingDistance());
-        customNonbondedForce->setForceGroup(SLOW_GROUP);
+        // customNonbondedForce->setForceGroup(SLOW_GROUP);
         omm.system->addForce(customNonbondedForce);
     }
 
     // Add bonds
     auto* harmonicBondForce = omm.createHarmonicBondForce();
-    harmonicBondForce->setForceGroup(FAST_GROUP);
+    // harmonicBondForce->setForceGroup(FAST_GROUP);
     omm.harmonicBondForceIndex = omm.system->addForce(harmonicBondForce);
 
     // Add angles
     auto* harmonicAngleForce = omm.createHarmonicAngleForce();
-    harmonicAngleForce->setForceGroup(SLOW_GROUP);
+    // harmonicAngleForce->setForceGroup(SLOW_GROUP);
     omm.harmonicAngleForceIndex = omm.system->addForce(harmonicAngleForce);
 
     // For AMBER style torsions, OpenMM does not care if they are proper or improper
     // Note that OpenMM only supports only periodic torsions by default (AMBER style), so we need to handle
     // improper harmonic torsions differently
     auto* periodicTorsionForce = omm.createPeriodicTorsionForce();
-    periodicTorsionForce->setForceGroup(SLOW_GROUP);
+    // periodicTorsionForce->setForceGroup(SLOW_GROUP);
     omm.periodicTorsionForceIndex = omm.system->addForce(periodicTorsionForce);
 
     // Harmonic improper torsions (CHARMM) are handled using a CustomTorsionForce since OpenMM does not
     // support them natively
     if (!systemTopology.harmonicImproperTorsions.empty()) {
         auto* improperTorsionForce = omm.createImproperHarmonicTorsionForce();
-        improperTorsionForce->setForceGroup(SLOW_GROUP);
+        // improperTorsionForce->setForceGroup(SLOW_GROUP);
         omm.improperHarmonicTorsionForceIndex = omm.system->addForce(improperTorsionForce);
     }
 
     // Add correction map torsions (CMAPs) force
     if (!systemTopology.cmapGrids.empty()) {
         auto* cmapTorsionForce = omm.createCMAPTorsionForce();
-        cmapTorsionForce->setForceGroup(SLOW_GROUP);
+        // cmapTorsionForce->setForceGroup(SLOW_GROUP);
         omm.cmapTorsionForceIndex = omm.system->addForce(cmapTorsionForce);
     }
 
     // Add Urey-Bradley Potential
     if (!systemTopology.ureyBradleys.empty()) {
         auto* ubForce = omm.createUreyBradleyForce();
-        ubForce->setForceGroup(SLOW_GROUP);
+        // ubForce->setForceGroup(SLOW_GROUP);
         omm.ureyBradleyForceIndex = omm.system->addForce(ubForce);
     }
 
     // Create the integrator
     std::vector<std::pair<int, int>> groups = {{SLOW_GROUP, 1}, {FAST_GROUP, 4}};
-    omm.integrator = std::make_unique<MTSIntegrator>(0.001, groups);
+    omm.integrator = std::make_unique<OpenMM::VerletIntegrator>(0.001);
 
 #if USE_CPU
     OpenMM::Platform* platform = new OpenMM::CpuPlatform();
@@ -227,12 +231,12 @@ auto OPENMM::initialize(const std::vector<std::vector<int>>& worlds,
     // All OpenMM components initialized successfully
     omm.initialized = true;
 
-    // Set initial positions
-    for (const auto& atom : systemTopology.atoms) {
-        omm.ommAtomsPositionsCache[atom.identity.globalIndex] =
-            OpenMM::Vec3(atom.position[0], atom.position[1], atom.position[2]);
-    }
-    omm.context->setPositions(omm.ommAtomsPositionsCache);
+    // // Set initial positions
+    // for (const auto& atom : systemTopology.atoms) {
+    //     omm.ommAtomsPositionsCache[atom.identity.globalIndex] =
+    //         OpenMM::Vec3(atom.position[0], atom.position[1], atom.position[2]);
+    // }
+    // omm.context->setPositions(omm.ommAtomsPositionsCache);
 
     // Log initialization
     std::cout << "[INFO] Initialized OpenMM. Using version " << platform->getOpenMMVersion() << ".\n";
@@ -313,9 +317,9 @@ auto OPENMM::integrateTrajectory(int steps, SimTK::Real timeStepInPicoseconds) -
     try {
         integrator->step(steps);
     } catch (const std::exception& e) {
-        // Restore old positions in case of integration failure
-        ommAtomsPositionsCache = ommAtomsPositionsCacheOld;
-        context->setPositions(ommAtomsPositionsCache);
+        // // Restore old positions in case of integration failure
+        // ommAtomsPositionsCache = ommAtomsPositionsCacheOld;
+        // context->setPositions(ommAtomsPositionsCache);
         success = false;
     }
 
@@ -329,19 +333,21 @@ auto OPENMM::integrateTrajectory(int steps, SimTK::Real timeStepInPicoseconds) -
     potentialEnergy = state.getPotentialEnergy();
     kineticEnergy = state.getKineticEnergy();
 
-    // Copy positions and velocities
-    simbodyAtomsPositionsCache.resize(positions.size());
-    simbodyAtomsVelocitiesCache.resize(velocities.size());
+    // // Copy positions and velocities
+    // simbodyAtomsPositionsCache.resize(positions.size());
+    // simbodyAtomsVelocitiesCache.resize(velocities.size());
+    // ommAtomsPositionsCache = positions;
+    // ommAtomsVelocitiesCache = velocities;
 
-    for (size_t i = 0; i < positions.size(); ++i) {
-        const auto& pos = positions[i];
-        simbodyAtomsPositionsCache[i] = {pos[0], pos[1], pos[2]};
-    }
+    // for (size_t i = 0; i < positions.size(); ++i) {
+    //     const auto& pos = positions[i];
+    //     simbodyAtomsPositionsCache[i] = {pos[0], pos[1], pos[2]};
+    // }
 
-    for (size_t i = 0; i < velocities.size(); ++i) {
-        const auto& vel = velocities[i];
-        simbodyAtomsVelocitiesCache[i] = {vel[0], vel[1], vel[2]};
-    }
+    // for (size_t i = 0; i < velocities.size(); ++i) {
+    //     const auto& vel = velocities[i];
+    //     simbodyAtomsVelocitiesCache[i] = {vel[0], vel[1], vel[2]};
+    // }
 
     return success;
 }
@@ -360,16 +366,16 @@ auto OPENMM::integrateTrajectory(std::vector<OpenMM::Vec3>& positions,
     const auto initialKE = initialState.getKineticEnergy();
     const auto initialTotalEnergy = initialPE + initialKE;
 
-    // Set positions
-    context->setPositions(positions);
+    // // Set positions
+    // context->setPositions(positions);
 
-    // Negate velocities for backward integration
-    if (direction == -1) {
-        for (auto& vel : velocities) {
-            vel = -vel;
-        }
-    }
-    context->setVelocities(velocities);
+    // // Negate velocities for backward integration
+    // if (direction == -1) {
+    //     for (auto& vel : velocities) {
+    //         vel = -vel;
+    //     }
+    // }
+    // context->setVelocities(velocities);
 
     // Integrate
     bool success = true;

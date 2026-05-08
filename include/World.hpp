@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include <array>
+#include <atomic>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -74,6 +75,12 @@ struct CoordinateTransferError {
     SimTK::Real angles{0}, anglesMax{0};
     SimTK::Real properDihedrals{0}, properDihedralsMax{0};
     SimTK::Real improperDihedrals{0}, improperDihedralsMax{0};
+};
+
+struct SpatialForces {
+    SimTK::Vec3 torque;
+    SimTK::Vec3 force;
+    SimTK::Vec3 COM;
 };
 
 //==============================================================================
@@ -142,15 +149,6 @@ struct RigidTorsion {
     bool ringClosing = false;
 };
 
-enum class ROOT_MOBILITY : int {
-    FREE = 0,
-    CARTESIAN,
-    WELD,
-    FREE_LINE,
-    BALL,
-    PIN
-};
-
 struct BondStretchKey {
     SimTK::DuMM::AtomClassIndex atomClassIndex1;
     SimTK::DuMM::AtomClassIndex atomClassIndex2;
@@ -160,7 +158,7 @@ struct BondStretchKey {
         atomClassIndex2 = std::max(aCIx1, aCIx2);
     }
 
-    bool operator<(const BondStretchKey& other) const {
+    auto operator<(const BondStretchKey& other) const -> bool {
         if (atomClassIndex1 != other.atomClassIndex1) {
             return atomClassIndex1 < other.atomClassIndex1;
         }
@@ -173,12 +171,12 @@ struct BondStretchValue {
     SimTK::Real stiffness;
     SimTK::Real length;
 
-    bool operator==(const BondStretchValue& other) const {
+    auto operator==(const BondStretchValue& other) const -> bool {
         static constexpr SimTK::Real epsilon = 1e-9;
         return std::abs(stiffness - other.stiffness) < epsilon && std::abs(length - other.length) < epsilon;
     }
 
-    bool operator!=(const BondStretchValue& other) const {
+    auto operator!=(const BondStretchValue& other) const -> bool {
         return !(*this == other);
     }
 };
@@ -862,9 +860,6 @@ class World {
     void setDistortOption(int distort);
     [[nodiscard]] auto getDistortOption() const -> int;
 
-    void setRootMobility(ROOT_MOBILITY rootMobility);
-    [[nodiscard]] auto getRootMobility() const -> const SimTK::String&;
-
     [[nodiscard]] auto getOwnIndex() const -> int {
         return ownWorldIndex;
     }
@@ -880,6 +875,8 @@ class World {
     [[nodiscard]] auto getMobodRootAtomIndex(SimTK::MobilizedBodyIndex mbIndex) const -> const TopoAtom& {
         return mbxRootCAIx[mbIndex];
     }
+
+    [[nodiscard]] auto calcSpatialForces() -> std::vector<SpatialForces>;
 
     // BAT --------------------------------------------------------------------
 
@@ -936,6 +933,8 @@ class World {
     std::vector<RootAtomBond> rootAtomBonds;
     std::vector<RigidBodyAtomBond> rigidBodyAtomBonds;
 
+    std::set<SimTK::MobilizedBodyIndex> interestingMobodIndices;
+
     // Maps a generalized velocity scale factor for every mobod
     std::map<SimTK::MobilizedBodyIndex, SimTK::Real> mbx2uScale;
 
@@ -950,7 +949,6 @@ class World {
     int samplesPerRound = 0;
 
     Random32 randomEngine;
-    SimTK::String rootMobilizer;
 
     std::vector<std::vector<SimTK::MobilizedBodyIndex>> mobodLocks;
 

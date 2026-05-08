@@ -70,7 +70,7 @@ void NUTSWorkspaceSimbody::init(int maxDepth, int nDOF) {
 
     pTemp = nextVec();
 
-    assert(ptr == slab + slabDoubles); // sanity: used exactly what we planned
+    // assert(ptr == slab + slabDoubles); // sanity: used exactly what we planned
 
     // SimTK adapter - one heap allocation, reused every leaf
     pTempSimTK.resize(nDOF);

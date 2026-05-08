@@ -2,16 +2,100 @@
 
 #include "Compound.h"
 
+inline auto canonical(SimTK::Compound::AtomIndex a, SimTK::Compound::AtomIndex b) -> CompoundAtomIndexPair {
+    return (a < b) ? std::make_pair(a, b) : std::make_pair(b, a);
+}
+
 Topology::Topology(const SimTK::Compound::Name& name,
                    SimTK::CompoundSystem::CompoundIndex compoundIndex,
-                   int rootGlobalAtomIx)
+                   int rootGlobalAtomIx,
+                   SimTK::RootMobility rootMobility)
     : SimTK::Compound(name)
     , compoundIndex(compoundIndex)
-    , rootGlobalAtomIx(rootGlobalAtomIx) {
+    , rootGlobalAtomIx(rootGlobalAtomIx)
+    , rootMobility(rootMobility) {
     setCompoundName(name);
 }
 
-SimTK::Real Topology::calcLogSineSqrGamma2(const SimTK::State& quatState) const {
+void Topology::setAtoms(Span<RoboAtom> atoms) {
+    subAtomList = atoms;
+}
+
+void Topology::setBonds(Span<RoboBond> bonds) {
+    subBondList = bonds;
+
+    for (std::size_t i = 0; i < subBondList.size(); ++i) {
+        const auto& bond = subBondList[i];
+        const auto canonicalBond = canonicalizeBond(bond.compoundAtomIndices[0], bond.compoundAtomIndices[1]);
+        const auto cAIx0 = canonicalBond.first;
+        const auto cAIx1 = canonicalBond.second;
+
+        const std::string name =
+            subAtomList[cAIx0].identity.uniqueAtomName + "-" + subAtomList[cAIx1].identity.uniqueAtomName;
+        atomName2bond[name] = i;
+    }
+}
+
+auto Topology::getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0,
+                                          SimTK::Compound::AtomIndex cAIx1) const -> const RoboBond& {
+    const auto canonicalBond = canonicalizeBond(cAIx0, cAIx1);
+    const auto name = subAtomList[canonicalBond.first].identity.uniqueAtomName + "-"
+                      + subAtomList[canonicalBond.second].identity.uniqueAtomName;
+    const auto bondIt = atomName2bond.find(name);
+    if (bondIt == atomName2bond.end()) {
+        const auto& atom1Name = subAtomList[cAIx0].identity.uniqueAtomName;
+        const auto& atom2Name = subAtomList[cAIx1].identity.uniqueAtomName;
+        throw std::runtime_error("No bond found between " + atom1Name + " and " + atom2Name);
+    }
+    return subBondList[bondIt->second];
+}
+
+void Topology::setAngles(Span<RoboAngle> angles) {
+    subAngleList = angles;
+
+    for (std::size_t i = 0; i < subAngleList.size(); ++i) {
+        const auto& angle = subAngleList[i];
+        const auto canonicalAngle = canonicalizeAngle(angle.compoundAtomIndices[0],
+                                                      angle.compoundAtomIndices[1],
+                                                      angle.compoundAtomIndices[2]);
+        const auto cAIx0 = canonicalAngle[0];
+        const auto cAIx1 = canonicalAngle[1];
+        const auto cAIx2 = canonicalAngle[2];
+
+        const std::string name = subAtomList[cAIx0].identity.uniqueAtomName + "-"
+                                 + subAtomList[cAIx1].identity.uniqueAtomName + "-"
+                                 + subAtomList[cAIx2].identity.uniqueAtomName;
+        atomName2angle[name] = i;
+    }
+}
+
+auto Topology::getAngleByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0,
+                                           SimTK::Compound::AtomIndex cAIx1,
+                                           SimTK::Compound::AtomIndex cAIx2) const -> const RoboAngle& {
+    const auto canonicalAngle = canonicalizeAngle(cAIx0, cAIx1, cAIx2);
+    const auto name = subAtomList[canonicalAngle[0]].identity.uniqueAtomName + "-"
+                      + subAtomList[canonicalAngle[1]].identity.uniqueAtomName + "-"
+                      + subAtomList[canonicalAngle[2]].identity.uniqueAtomName;
+    const auto angleIt = atomName2angle.find(name);
+    if (angleIt == atomName2angle.end()) {
+        const auto& atom1Name = subAtomList[cAIx0].identity.uniqueAtomName;
+        const auto& atom2Name = subAtomList[cAIx1].identity.uniqueAtomName;
+        const auto& atom3Name = subAtomList[cAIx2].identity.uniqueAtomName;
+        throw std::runtime_error("No angle found between " + atom1Name + ", " + atom2Name + " and "
+                                 + atom3Name);
+    }
+    return subAngleList[angleIt->second];
+}
+
+void Topology::setPeriodicTorsions(Span<RoboPeriodicTorsion> periodicTorsions) {
+    subPeriodicTorsions = periodicTorsions;
+}
+
+void Topology::setImproperHarmonicTorsions(Span<RoboHarmonicImproperTorsion> improperHarmonicTorsions) {
+    subImproperHarmonicTorsions = improperHarmonicTorsions;
+}
+
+auto Topology::calcLogSineSqrGamma2(const SimTK::State& quatState) const -> SimTK::Real {
     // Get atom transform and convert to quaternion (w,x,y,z)
     const SimTK::Transform X = calcAtomFrameInGroundFrame(quatState, rootCompoundAtomIx);
     const SimTK::Quaternion quat = X.R().convertRotationToQuaternion();

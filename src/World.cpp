@@ -977,7 +977,8 @@ auto World::isOverconstrained() const -> bool {
     // This is only supported for rigid or torsional bonds
     std::vector<RigidBond> rigidBonds;
     std::vector<RigidAngle> rigidAngles;
-    std::vector<RigidTorsion> rigidProperTorsions, rigidImproperTorsions;
+    std::vector<RigidTorsion> rigidProperTorsions;
+    std::vector<RigidTorsion> rigidImproperTorsions;
 
     for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
         const auto& topology = topologies[topoIx];
@@ -1442,7 +1443,7 @@ void World::modelTopologies(const std::vector<SimTK::Compound::AtomTargetLocatio
         compoundSystem->adoptCompound(topology);
         compoundSystem->modelOneCompound(SimTK::CompoundSystem::CompoundIndex(topoIx),
                                          topology.updAtomFrameCache(),
-                                         "Rigid");
+                                         topology.getRootMobility());
     }
 
     compoundSystem->realizeTopology();
@@ -1564,6 +1565,9 @@ void World::modelTopologies(const std::vector<SimTK::Compound::AtomTargetLocatio
             }
 
             rigidBodyAtomBonds.push_back(rigidBodyAtomBond);
+
+            interestingMobodIndices.insert(childMBIx);
+            interestingMobodIndices.insert(parentMBIx);
         }
     }
 
@@ -4338,6 +4342,30 @@ auto World::generateSamples(int howManySamplesPerRound,
     return validated;
 }
 
+auto World::calcSpatialForces() -> std::vector<SpatialForces> {
+    if (getSampler(0)->getIntegratorType() != IntegratorType::OpenMMVelocityVerlet) {
+        throw std::runtime_error(
+            "World::calcSpatialForces() is only implemented for OpenMMVelocityVerlet sampler");
+    }
+
+    compoundSystem->realize(worldState);
+    SimTK::Vector_<SimTK::SpatialVec> reactionForces;
+    matter->calcMobilizerReactionForces(worldState, reactionForces);
+
+    for (const auto mbx : interestingMobodIndices) {
+        const auto& mobod = matter->getMobilizedBody(mbx);
+
+        const auto& torque_G = reactionForces[mbx][0];
+        const auto& force_G = reactionForces[mbx][1];
+
+        const auto& COM_station = mobod.getBodyMassCenterStation(worldState);
+        const auto& COM_ground = mobod.findStationLocationInGround(worldState, COM_station);
+
+        std::cout << "mbx=" << mbx << " torque_G=" << torque_G << " force_G=" << force_G
+                  << " COM=" << COM_ground << std::endl;
+    }
+}
+
 /** Print information about Simbody systems. For debugging purpose. **/
 void World::PrintSimbodyStateCache(SimTK::State& someState) {
     std::cout << " System Stage: " << someState.getSystemStage() << std::endl;
@@ -4360,43 +4388,6 @@ void World::setSamplesPerRound(int samples) {
 
 int World::getSamplesPerRound() const {
     return samplesPerRound;
-}
-
-// void World::setDistortOption(int distort) {
-// 	distortOption = distort;
-// }
-
-// int World::getDistortOption() const {
-// 	return distortOption;
-// }
-
-void World::setRootMobility(ROOT_MOBILITY rootMobility) {
-    switch (rootMobility) {
-        case ROOT_MOBILITY::FREE:
-            rootMobilizer = "Free";
-            break;
-        case ROOT_MOBILITY::CARTESIAN:
-            rootMobilizer = "Cartesian";
-            break;
-        case ROOT_MOBILITY::WELD:
-            rootMobilizer = "Weld";
-            break;
-        case ROOT_MOBILITY::FREE_LINE:
-            rootMobilizer = "FreeLine";
-            break;
-        case ROOT_MOBILITY::BALL:
-            rootMobilizer = "Ball";
-            break;
-        case ROOT_MOBILITY::PIN:
-            rootMobilizer = "Pin";
-            break;
-        default:
-            break;
-    }
-}
-
-const SimTK::String& World::getRootMobility() const {
-    return rootMobilizer;
 }
 
 /*!

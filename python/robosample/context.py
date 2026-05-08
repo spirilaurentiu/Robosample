@@ -39,7 +39,6 @@ class Sampler:
 class World:
     fixmanTorque: bool
     samplesPerRound: int
-    rootMobility: rb.RootMobility
     flexibilities: list[rb.BondFlexibility]
     isCartesian: bool
     samplers: list[Sampler]
@@ -311,6 +310,9 @@ class Context(rb.Context):
                         unique_atom_name += "_ROOT"  # e.g. ALA1_N_4_ROOT
                         self.system_topology.root_atom_global_indices.append(
                             global_index
+                        )
+                        self.system_topology.root_mobilities.append(
+                            rb.RootMobility.Weld
                         )
 
                     # Get Lennard-Jones parameters for this atom
@@ -953,7 +955,6 @@ class Context(rb.Context):
         w = World(
             fixmanTorque=False,
             samplesPerRound=samplesPerRound,
-            rootMobility=rb.RootMobility.WELD,
             flexibilities=[flexibilities],
             isCartesian=True,
             samplers=list[Sampler](),
@@ -980,7 +981,6 @@ class Context(rb.Context):
         w = World(
             fixmanTorque=True,
             samplesPerRound=samplesperRound,
-            rootMobility=rb.RootMobility.WELD,
             flexibilities=torsional_bonds,
             isCartesian=False,
             samplers=list[Sampler](),
@@ -1035,13 +1035,11 @@ class Context(rb.Context):
                 "Adding world with the following parameters: ",
                 f"fixmanTorque={world.fixmanTorque}, ",
                 f"samplesPerRound={world.samplesPerRound}, ",
-                f"rootMobility={world.rootMobility}, ",
                 f"flexibilities length={len(world.flexibilities)}, ",
             )
             super().add_world(
                 world.fixmanTorque,
                 world.samplesPerRound,
-                world.rootMobility,
                 world.flexibilities,
             )
 
@@ -1492,6 +1490,12 @@ class Context(rb.Context):
             (weak_blocks, weak_blocks_correlation),
             rogue_blocks,
         )
+
+    def get_num_molecules(self) -> int:
+        return len(self.system_topology.topology_ranges)
+
+    def set_root_mobility(self, molecule_index: int, mobility: rb.BondMobility):
+        self.system_topology.root_mobilities[molecule_index] = mobility
 
     def find_bond(
         self, atom1_parmed_index: int, atom2_parmed_index: int

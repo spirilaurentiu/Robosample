@@ -3,14 +3,10 @@
 #include <cstddef>
 #include <unordered_map>
 
-#include "OpenMM.hpp"
+#include "CompoundSystem.h"
 #include "TopologyElements.hpp"
 
 using CompoundAtomIndexPair = std::pair<SimTK::Compound::AtomIndex, SimTK::Compound::AtomIndex>;
-
-inline CompoundAtomIndexPair canonical(SimTK::Compound::AtomIndex a, SimTK::Compound::AtomIndex b) {
-    return (a < b) ? std::make_pair(a, b) : std::make_pair(b, a);
-}
 
 /** Topological information (bonds graph) for one molecule.
 It maps to one compound in Molmodel thus it is derived
@@ -28,122 +24,65 @@ class Topology : public SimTK::Compound {
     public:
     Topology(const SimTK::Compound::Name& name,
              SimTK::CompoundSystem::CompoundIndex compoundIndex,
-             int rootGlobalAtomIx);
+             int rootGlobalAtomIx,
+             SimTK::RootMobility rootMobility);
 
     ~Topology() override = default;
 
-    void setAtoms(Span<RoboAtom> atoms) {
-        subAtomList = atoms;
-    }
-    const Span<RoboAtom> getAtoms() const {
+    void setAtoms(Span<RoboAtom> atoms);
+    [[nodiscard]] auto getAtoms() const -> Span<RoboAtom> {
         return subAtomList;
     }
-    Span<RoboAtom> updAtoms() {
+    [[nodiscard]] auto updAtoms() -> Span<RoboAtom> {
         return subAtomList;
     }
 
-    void setBonds(Span<RoboBond> bonds) {
-        subBondList = bonds;
-
-        for (std::size_t i = 0; i < subBondList.size(); ++i) {
-            const auto& bond = subBondList[i];
-            const auto canonicalBond =
-                canonicalizeBond(bond.compoundAtomIndices[0], bond.compoundAtomIndices[1]);
-            const auto cAIx0 = canonicalBond.first;
-            const auto cAIx1 = canonicalBond.second;
-
-            const std::string name =
-                subAtomList[cAIx0].identity.uniqueAtomName + "-" + subAtomList[cAIx1].identity.uniqueAtomName;
-            atomName2bond[name] = i;
-        }
-    }
-    const RoboBond& getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0,
-                                               SimTK::Compound::AtomIndex cAIx1) const {
-        const auto canonicalBond = canonicalizeBond(cAIx0, cAIx1);
-        const auto name = subAtomList[canonicalBond.first].identity.uniqueAtomName + "-"
-                          + subAtomList[canonicalBond.second].identity.uniqueAtomName;
-        const auto bondIt = atomName2bond.find(name);
-        if (bondIt == atomName2bond.end()) {
-            const auto& atom1Name = subAtomList[cAIx0].identity.uniqueAtomName;
-            const auto& atom2Name = subAtomList[cAIx1].identity.uniqueAtomName;
-            throw std::runtime_error("No bond found between " + atom1Name + " and " + atom2Name);
-        }
-        return subBondList[bondIt->second];
-    }
-    const Span<RoboBond> getBonds() const {
+    void setBonds(Span<RoboBond> bonds);
+    [[nodiscard]] auto getBonds() const -> Span<RoboBond> {
         return subBondList;
     }
-    Span<RoboBond> updBonds() {
+    [[nodiscard]] auto updBonds() -> Span<RoboBond> {
         return subBondList;
     }
+    auto getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const
+        -> const RoboBond&;
 
-    void setAngles(Span<RoboAngle> angles) {
-        subAngleList = angles;
-
-        for (std::size_t i = 0; i < subAngleList.size(); ++i) {
-            const auto& angle = subAngleList[i];
-            const auto canonicalAngle = canonicalizeAngle(angle.compoundAtomIndices[0],
-                                                          angle.compoundAtomIndices[1],
-                                                          angle.compoundAtomIndices[2]);
-            const auto cAIx0 = canonicalAngle[0];
-            const auto cAIx1 = canonicalAngle[1];
-            const auto cAIx2 = canonicalAngle[2];
-
-            const std::string name = subAtomList[cAIx0].identity.uniqueAtomName + "-"
-                                     + subAtomList[cAIx1].identity.uniqueAtomName + "-"
-                                     + subAtomList[cAIx2].identity.uniqueAtomName;
-            atomName2angle[name] = i;
-        }
-    }
-    const RoboAngle& getAngleByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0,
-                                                 SimTK::Compound::AtomIndex cAIx1,
-                                                 SimTK::Compound::AtomIndex cAIx2) const {
-        const auto canonicalAngle = canonicalizeAngle(cAIx0, cAIx1, cAIx2);
-        const auto name = subAtomList[canonicalAngle[0]].identity.uniqueAtomName + "-"
-                          + subAtomList[canonicalAngle[1]].identity.uniqueAtomName + "-"
-                          + subAtomList[canonicalAngle[2]].identity.uniqueAtomName;
-        const auto angleIt = atomName2angle.find(name);
-        if (angleIt == atomName2angle.end()) {
-            const auto& atom1Name = subAtomList[cAIx0].identity.uniqueAtomName;
-            const auto& atom2Name = subAtomList[cAIx1].identity.uniqueAtomName;
-            const auto& atom3Name = subAtomList[cAIx2].identity.uniqueAtomName;
-            throw std::runtime_error("No angle found between " + atom1Name + ", " + atom2Name + " and "
-                                     + atom3Name);
-        }
-        return subAngleList[angleIt->second];
-    }
-    const Span<RoboAngle> getAngles() const {
+    void setAngles(Span<RoboAngle> angles);
+    [[nodiscard]] auto getAngles() const -> Span<RoboAngle> {
         return subAngleList;
     }
-    Span<RoboAngle> updAngles() {
+    [[nodiscard]] auto updAngles() -> Span<RoboAngle> {
         return subAngleList;
     }
+    auto getAngleByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0,
+                                     SimTK::Compound::AtomIndex cAIx1,
+                                     SimTK::Compound::AtomIndex cAIx2) const -> const RoboAngle&;
 
-    void setPeriodicTorsions(Span<RoboPeriodicTorsion> periodicTorsions) {
-        subPeriodicTorsions = periodicTorsions;
-    }
-    const Span<RoboPeriodicTorsion> getPeriodicTorsions() const {
+    void setPeriodicTorsions(Span<RoboPeriodicTorsion> periodicTorsions);
+    [[nodiscard]] auto getPeriodicTorsions() const -> Span<RoboPeriodicTorsion> {
         return subPeriodicTorsions;
     }
-    Span<RoboPeriodicTorsion> updPeriodicTorsions() {
+    [[nodiscard]] auto updPeriodicTorsions() -> Span<RoboPeriodicTorsion> {
         return subPeriodicTorsions;
     }
 
-    void setImproperHarmonicTorsions(Span<RoboHarmonicImproperTorsion> improperHarmonicTorsions) {
-        subImproperHarmonicTorsions = improperHarmonicTorsions;
-    }
-    const Span<RoboHarmonicImproperTorsion> getImproperHarmonicTorsions() const {
+    void setImproperHarmonicTorsions(Span<RoboHarmonicImproperTorsion> improperHarmonicTorsions);
+    [[nodiscard]] auto getImproperHarmonicTorsions() const -> Span<RoboHarmonicImproperTorsion> {
         return subImproperHarmonicTorsions;
     }
-    Span<RoboHarmonicImproperTorsion> updImproperHarmonicTorsions() {
+    [[nodiscard]] auto updImproperHarmonicTorsions() -> Span<RoboHarmonicImproperTorsion> {
         return subImproperHarmonicTorsions;
+    }
+
+    [[nodiscard]] auto getRootMobility() const -> SimTK::RootMobility {
+        return rootMobility;
     }
 
     /**
      * @brief Get the name of this molecule
      * @return name of the molecule
      */
-    const std::string getName() const {
+    [[nodiscard]] auto getName() const -> const std::string& {
         return this->name;
     }
 
@@ -154,7 +93,7 @@ class Topology : public SimTK::Compound {
      *
      * @return CompoundIndex
      */
-    inline SimTK::CompoundSystem::CompoundIndex getCompoundIndex() const {
+    [[nodiscard]] auto getCompoundIndex() const -> SimTK::CompoundSystem::CompoundIndex {
         return compoundIndex;
     }
 
@@ -168,9 +107,9 @@ class Topology : public SimTK::Compound {
      * @note This quantity may represent an orientation regularization term.
      * @return log(sin²(pitch)), computed safely with analytic limits near singularities.
      */
-    SimTK::Real calcLogSineSqrGamma2(const SimTK::State& quatState) const;
+    [[nodiscard]] auto calcLogSineSqrGamma2(const SimTK::State& quatState) const -> SimTK::Real;
 
-    SimTK::Real calcLogDetMBATGamma2Contribution(const SimTK::State& quatState) const;
+    [[nodiscard]] auto calcLogDetMBATGamma2Contribution(const SimTK::State& quatState) const -> SimTK::Real;
 
     /**
      * @brief Get a reference to the atom object in the atom list of this Compound.
@@ -179,7 +118,7 @@ class Topology : public SimTK::Compound {
      * with the global atom index.
      * @return Reference to the Atom object.
      */
-    const RoboAtom& getAtom(SimTK::Compound::AtomIndex cAIx) const;
+    [[nodiscard]] const RoboAtom& getAtom(SimTK::Compound::AtomIndex cAIx) const;
 
     /**
      * @brief Get a reference to the bond object in the bond list of this Compound.
@@ -190,17 +129,17 @@ class Topology : public SimTK::Compound {
      * @param aIx1 Global Atom Index of the other atom in the bond.
      * @return Reference to the BondLink object.
      */
-    const RoboBond& getBondByGlobalAtomIndex(int aIx0, int aIx1) const;
+    auto getBondByGlobalAtomIndex(int aIx0, int aIx1) const -> const RoboBond&;
 
     /**
      * @brief Get the bonded neighbor atom in the parent mobilized body.
      * @param aIx Compound Atom Index
      * @return Compound atom index of the root
      */
-    SimTK::Compound::AtomIndex
-    getChemicalParentOfMobodRootAtom(SimTK::Compound::AtomIndex aIx,
-                                     const SimTK::SimbodyMatterSubsystem& matter,
-                                     const SimTK::DuMMForceFieldSubsystem& dumm) const;
+    auto getChemicalParentOfMobodRootAtom(SimTK::Compound::AtomIndex aIx,
+                                          const SimTK::SimbodyMatterSubsystem& matter,
+                                          const SimTK::DuMMForceFieldSubsystem& dumm) const
+        -> SimTK::Compound::AtomIndex;
 
     /**
      * @brief Calculate all atom frames in top frame. It avoids calling
@@ -222,31 +161,30 @@ class Topology : public SimTK::Compound {
      * @param cAIx: atom Compound AtomIndex
      * @return Atom's Top level transform
      */
-    const SimTK::Transform& getTopTransform(SimTK::Compound::AtomIndex cAIx) const;
-
-    // Interface to access the maps
+    auto getTopTransform(SimTK::Compound::AtomIndex cAIx) const -> const SimTK::Transform&;
 
     // Return mbx by calling DuMM functions
-    SimTK::MobilizedBodyIndex
-    getAtomMobilizedBodyIndexThroughDumm(SimTK::Compound::AtomIndex aIx,
-                                         const SimTK::DuMMForceFieldSubsystem& dumm) const;
+    auto getAtomMobilizedBodyIndexThroughDumm(SimTK::Compound::AtomIndex aIx,
+                                              const SimTK::DuMMForceFieldSubsystem& dumm) const
+        -> SimTK::MobilizedBodyIndex;
 
     // Get atom location on mobod through DuMM functions
-    SimTK::Vec3
-    getAtomLocationInMobilizedBodyFrameThroughDumm(SimTK::Compound::AtomIndex aIx,
-                                                   const SimTK::DuMMForceFieldSubsystem& dumm) const;
+    auto getAtomLocationInMobilizedBodyFrameThroughDumm(SimTK::Compound::AtomIndex aIx,
+                                                        const SimTK::DuMMForceFieldSubsystem& dumm) const
+        -> SimTK::Vec3;
 
-    SimTK::Vec3 calcAtomLocationInGroundFrameThroughSimbody(SimTK::Compound::AtomIndex aIx,
-                                                            const SimTK::DuMMForceFieldSubsystem& dumm,
-                                                            const SimTK::SimbodyMatterSubsystem& matter,
-                                                            const SimTK::State& someState) const;
+    auto calcAtomLocationInGroundFrameThroughSimbody(SimTK::Compound::AtomIndex aIx,
+                                                     const SimTK::DuMMForceFieldSubsystem& dumm,
+                                                     const SimTK::SimbodyMatterSubsystem& matter,
+                                                     const SimTK::State& someState) const -> SimTK::Vec3;
 
-    SimTK::Transform matchAtomTargetLocations(const SimTK::Compound::AtomTargetLocations& atomTargets);
-    SimTK::Real getMatchError(const SimTK::Compound::AtomTargetLocations& atomTargets);
+    auto matchAtomTargetLocations(const SimTK::Compound::AtomTargetLocations& atomTargets)
+        -> SimTK::Transform;
+    auto getMatchError(const SimTK::Compound::AtomTargetLocations& atomTargets) -> SimTK::Real;
 
     void writeAtomListPdb(std::string dirname,
                           std::string prefix,
-                          std::string sufix,
+                          std::string suffix,
                           int maxNofDigits,
                           int index) const;
 
@@ -260,16 +198,16 @@ class Topology : public SimTK::Compound {
      * @param cAIx Compound Atom Index
      * @return Global Atom Index
      */
-    int getGlobalAtomIndex(SimTK::Compound::AtomIndex cAIx);
+    auto getGlobalAtomIndex(SimTK::Compound::AtomIndex cAIx) -> int;
 
     /** Print atom to MobilizedBodyIndex and bond to Compound::Bond index
      * maps **/
     void printMaps();
 
-    const std::vector<SimTK::Transform>& getAtomFrameCache() const {
+    auto getAtomFrameCache() const -> const std::vector<SimTK::Transform>& {
         return atomFrameCache;
     }
-    std::vector<SimTK::Transform>& updAtomFrameCache() {
+    auto updAtomFrameCache() -> std::vector<SimTK::Transform>& {
         return atomFrameCache;
     }
 
@@ -306,4 +244,5 @@ class Topology : public SimTK::Compound {
     SimTK::Compound::AtomIndex rootCompoundAtomIx; // in subAtomList index
 
     bool flipAllChirality = false;
+    SimTK::RootMobility rootMobility = SimTK::RootMobility::Weld;
 };

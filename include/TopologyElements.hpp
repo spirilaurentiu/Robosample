@@ -2,6 +2,7 @@
 
 #include <array>
 
+#include "CompoundSystem.h"
 #include "Molmodel.h"
 #include "Simbody.h"
 #include "bgeneral.hpp"
@@ -390,6 +391,7 @@ struct SystemTopology {
     std::vector<UreyBradley> ureyBradleys;
     std::vector<Scaling14> scaling14s;
     std::vector<Exclusion> exclusions;
+    std::vector<SimTK::RootMobility> rootMobilities;
 };
 
 struct ForceFieldParams {

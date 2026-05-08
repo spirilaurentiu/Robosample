@@ -240,34 +240,34 @@ context.addCartesianWorld().add_sampler(
     use_nuts=False,
 )
 
-mask_phi = context.standard_dihedral_bonds["dihedral_type"] == "phi"
-mask_psi = context.standard_dihedral_bonds["dihedral_type"] == "psi"
+# mask_phi = context.standard_dihedral_bonds["dihedral_type"] == "phi"
+# mask_psi = context.standard_dihedral_bonds["dihedral_type"] == "psi"
 
-# mask_cyx = context.standard_dihedral_bonds["resname"] == "CYX"
-# mask_cyx_chi1 = (context.standard_dihedral_bonds["dihedral_type"] == "chi1") & mask_cyx
-# mask_cyx_chi2 = (context.standard_dihedral_bonds["dihedral_type"] == "chi2") & mask_cyx
-# mask_cyx_chi3 = (context.standard_dihedral_bonds["dihedral_type"] == "chi3") & mask_cyx
+# # mask_cyx = context.standard_dihedral_bonds["resname"] == "CYX"
+# # mask_cyx_chi1 = (context.standard_dihedral_bonds["dihedral_type"] == "chi1") & mask_cyx
+# # mask_cyx_chi2 = (context.standard_dihedral_bonds["dihedral_type"] == "chi2") & mask_cyx
+# # mask_cyx_chi3 = (context.standard_dihedral_bonds["dihedral_type"] == "chi3") & mask_cyx
 
-bonds = context.standard_dihedral_bonds[mask_phi | mask_psi]
-sele = context.build_flexibilities(bonds)
-context.addTorsionalWorld(sele).add_sampler(
-    timeStep=0.001,
-    mdSteps=2000,  # ignored if using NUTS
-    boostMDSteps=2000,  # ignored if using NUTS
-    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
-    use_nuts=True,
-)
+# bonds = context.standard_dihedral_bonds[mask_phi | mask_psi]
+# sele = context.build_flexibilities(bonds)
+# context.addTorsionalWorld(sele).add_sampler(
+#     timeStep=0.001,
+#     mdSteps=2000,  # ignored if using NUTS
+#     boostMDSteps=2000,  # ignored if using NUTS
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+#     use_nuts=True,
+# )
 
-mask_terminus = context.standard_dihedral_bonds["resid"].between(0, 21)
-bonds = context.standard_dihedral_bonds[(mask_phi | mask_psi) & mask_terminus]
-sele = context.build_flexibilities(bonds)
-context.addTorsionalWorld(sele).add_sampler(
-    timeStep=0.001,
-    mdSteps=2000,  # ignored if using NUTS
-    boostMDSteps=2000,  # ignored if using NUTS
-    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
-    use_nuts=True,
-)
+# mask_terminus = context.standard_dihedral_bonds["resid"].between(0, 21)
+# bonds = context.standard_dihedral_bonds[(mask_phi | mask_psi) & mask_terminus]
+# sele = context.build_flexibilities(bonds)
+# context.addTorsionalWorld(sele).add_sampler(
+#     timeStep=0.001,
+#     mdSteps=2000,  # ignored if using NUTS
+#     boostMDSteps=2000,  # ignored if using NUTS
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+#     use_nuts=True,
+# )
 
 ##################### SIDECHAIN ##############################
 # chi_types = ["chi1", "chi2", "chi3", "chi4", "chi5"]

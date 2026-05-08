@@ -1,6 +1,7 @@
 #include <Python.h>
 
 #include <optional>
+#include <pybind11/cast.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
@@ -11,6 +12,7 @@
 #include "molmodel/internal/Compound.h"
 
 #include "BondCenter.hpp"
+#include "CompoundSystem.h"
 #include "Context.hpp"
 #include "Rotation.h"
 #include "SmallMatrix.h"
@@ -32,6 +34,7 @@ PYBIND11_MAKE_OPAQUE(std::vector<UreyBradley>);
 PYBIND11_MAKE_OPAQUE(std::vector<Scaling14>);
 PYBIND11_MAKE_OPAQUE(std::vector<Exclusion>);
 PYBIND11_MAKE_OPAQUE(std::vector<TopologyRange>);
+PYBIND11_MAKE_OPAQUE(std::vector<SimTK::RootMobility>);
 
 auto transform_to_numpy(const SimTK::Transform& transform) -> py::array_t<SimTK::Real> {
     py::array_t<SimTK::Real> array({3, 4});
@@ -260,13 +263,13 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .value("CutoffNonPeriodic", NonbondedMethod::CutoffNonPeriodic)
         .export_values();
 
-    py::enum_<ROOT_MOBILITY>(m, "RootMobility")
-        .value("FREE", ROOT_MOBILITY::FREE)
-        .value("CARTESIAN", ROOT_MOBILITY::CARTESIAN)
-        .value("WELD", ROOT_MOBILITY::WELD)
-        .value("FREE_LINE", ROOT_MOBILITY::FREE_LINE)
-        .value("BALL", ROOT_MOBILITY::BALL)
-        .value("PIN", ROOT_MOBILITY::PIN);
+    py::enum_<SimTK::RootMobility>(m, "RootMobility")
+        .value("Free", SimTK::RootMobility::Free)
+        .value("Cartesian", SimTK::RootMobility::Cartesian)
+        .value("Weld", SimTK::RootMobility::Weld)
+        .value("FreeLine", SimTK::RootMobility::FreeLine)
+        .value("Ball", SimTK::RootMobility::Ball)
+        .value("Pin", SimTK::RootMobility::Pin);
 
     py::enum_<SimTK::BondMobility::Mobility>(m, "BondMobility")
         .value("Free", SimTK::BondMobility::Mobility::Free)
@@ -602,6 +605,11 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("atom_2_global_index", &Exclusion::atom2GlobalIndex);
 
     // System topology contains many vectors, so we bind them all as vector types to get list-like behavior
+    py::bind_vector<std::vector<TopologyRange>>(m, "VectorTopologyRange")
+        .def("__repr__", [](const std::vector<TopologyRange>&) -> std::string {
+            return "VectorTopologyRange()";
+        });
+
     py::bind_vector<std::vector<RoboAtom>>(m, "VectorRoboAtom")
         .def("__repr__", [](const std::vector<RoboAtom>&) -> std::string {
             return "VectorRoboAtom()";
@@ -652,12 +660,13 @@ PYBIND11_MODULE(MODULE_NAME, m) {
             return "VectorExclusion()";
         });
 
-    py::bind_vector<std::vector<TopologyRange>>(m, "VectorTopologyRange")
-        .def("__repr__", [](const std::vector<TopologyRange>&) -> std::string {
-            return "VectorTopologyRange()";
+    py::bind_vector<std::vector<SimTK::RootMobility>>(m, "VectorRootMobility")
+        .def("__repr__", [](const std::vector<SimTK::RootMobility>&) -> std::string {
+            return "VectorRootMobility()";
         });
 
     // Allow construction from plain Python lists
+    py::implicitly_convertible<py::iterable, std::vector<TopologyRange>>();
     py::implicitly_convertible<py::iterable, std::vector<RoboAtom>>();
     py::implicitly_convertible<py::iterable, std::vector<RoboBond>>();
     py::implicitly_convertible<py::iterable, std::vector<RoboAngle>>();
@@ -668,35 +677,38 @@ PYBIND11_MODULE(MODULE_NAME, m) {
     py::implicitly_convertible<py::iterable, std::vector<UreyBradley>>();
     py::implicitly_convertible<py::iterable, std::vector<Scaling14>>();
     py::implicitly_convertible<py::iterable, std::vector<Exclusion>>();
-    py::implicitly_convertible<py::iterable, std::vector<TopologyRange>>();
+    py::implicitly_convertible<py::iterable, std::vector<SimTK::RootMobility>>();
 
     py::class_<SystemTopology>(m, "SystemTopology")
         .def(py::init<>())
-        .def(py::init([](std::optional<VectorInt> root_indices,
-                         std::optional<std::vector<TopologyRange>> ranges,
-                         std::optional<std::vector<RoboAtom>> atoms,
-                         std::optional<std::vector<RoboBond>> bonds,
-                         std::optional<std::vector<RoboAngle>> angles,
-                         std::optional<std::vector<RoboPeriodicTorsion>> propers,
-                         std::optional<std::vector<RoboHarmonicImproperTorsion>> impropers,
-                         std::optional<std::vector<CMAPGrid>> grids,
-                         std::optional<std::vector<CMAPTorsion>> cmap_torsions,
-                         std::optional<std::vector<UreyBradley>> urey_bradleys,
-                         std::optional<std::vector<Scaling14>> scaling14s,
-                         std::optional<std::vector<Exclusion>> exclusions) -> SystemTopology {
-                 return SystemTopology{root_indices.value_or(VectorInt()),
-                                       ranges.value_or(std::vector<TopologyRange>()),
-                                       atoms.value_or(std::vector<RoboAtom>()),
-                                       bonds.value_or(std::vector<RoboBond>()),
-                                       angles.value_or(std::vector<RoboAngle>()),
-                                       propers.value_or(std::vector<RoboPeriodicTorsion>()),
-                                       impropers.value_or(std::vector<RoboHarmonicImproperTorsion>()),
-                                       grids.value_or(std::vector<CMAPGrid>()),
-                                       cmap_torsions.value_or(std::vector<CMAPTorsion>()),
-                                       urey_bradleys.value_or(std::vector<UreyBradley>()),
-                                       scaling14s.value_or(std::vector<Scaling14>()),
-                                       exclusions.value_or(std::vector<Exclusion>())};
-             }),
+        .def(py::init(
+                 [](const std::optional<VectorInt>& root_indices,
+                    const std::optional<std::vector<TopologyRange>>& ranges,
+                    const std::optional<std::vector<RoboAtom>>& atoms,
+                    const std::optional<std::vector<RoboBond>>& bonds,
+                    const std::optional<std::vector<RoboAngle>>& angles,
+                    const std::optional<std::vector<RoboPeriodicTorsion>>& propers,
+                    const std::optional<std::vector<RoboHarmonicImproperTorsion>>& impropers,
+                    const std::optional<std::vector<CMAPGrid>>& grids,
+                    const std::optional<std::vector<CMAPTorsion>>& cmap_torsions,
+                    const std::optional<std::vector<UreyBradley>>& urey_bradleys,
+                    const std::optional<std::vector<Scaling14>>& scaling14s,
+                    const std::optional<std::vector<Exclusion>>& exclusions,
+                    const std::optional<std::vector<SimTK::RootMobility>>& rootMobilities) -> SystemTopology {
+                     return SystemTopology{root_indices.value_or(VectorInt()),
+                                           ranges.value_or(std::vector<TopologyRange>()),
+                                           atoms.value_or(std::vector<RoboAtom>()),
+                                           bonds.value_or(std::vector<RoboBond>()),
+                                           angles.value_or(std::vector<RoboAngle>()),
+                                           propers.value_or(std::vector<RoboPeriodicTorsion>()),
+                                           impropers.value_or(std::vector<RoboHarmonicImproperTorsion>()),
+                                           grids.value_or(std::vector<CMAPGrid>()),
+                                           cmap_torsions.value_or(std::vector<CMAPTorsion>()),
+                                           urey_bradleys.value_or(std::vector<UreyBradley>()),
+                                           scaling14s.value_or(std::vector<Scaling14>()),
+                                           exclusions.value_or(std::vector<Exclusion>()),
+                                           rootMobilities.value_or(std::vector<SimTK::RootMobility>())};
+                 }),
              py::arg("root_atom_global_indices") = py::none(),
              py::arg("topology_ranges") = py::none(),
              py::arg("atoms") = py::none(),
@@ -708,7 +720,8 @@ PYBIND11_MODULE(MODULE_NAME, m) {
              py::arg("cmap_torsions") = py::none(),
              py::arg("urey_bradleys") = py::none(),
              py::arg("scaling14s") = py::none(),
-             py::arg("exclusions") = py::none())
+             py::arg("exclusions") = py::none(),
+             py::arg("root_mobilities") = py::none())
         .def_readwrite("root_atom_global_indices", &SystemTopology::rootAtomGlobalIndices)
         .def_readwrite("topology_ranges", &SystemTopology::topologyRanges)
         .def_readwrite("atoms", &SystemTopology::atoms)
@@ -720,7 +733,8 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("cmap_torsions", &SystemTopology::cmapTorsions)
         .def_readwrite("urey_bradleys", &SystemTopology::ureyBradleys)
         .def_readwrite("scaling14s", &SystemTopology::scaling14s)
-        .def_readwrite("exclusions", &SystemTopology::exclusions);
+        .def_readwrite("exclusions", &SystemTopology::exclusions)
+        .def_readwrite("root_mobilities", &SystemTopology::rootMobilities);
 
     py::class_<ForceFieldParams>(m, "ForceFieldParams")
         .def(py::init<>())
@@ -764,12 +778,12 @@ PYBIND11_MODULE(MODULE_NAME, m) {
 
     py::class_<SimulationSettings>(m, "SimulationSettings")
         .def(py::init<>())
-        .def(py::init([](uint32_t seed, SimTK::Real temp, SimTK::Real freq) -> SimulationSettings {
-                 return SimulationSettings{seed, temp, freq};
+        .def(py::init([](SimTK::Real temp, SimTK::Real freq, int seed) -> SimulationSettings {
+                 return SimulationSettings{temp, freq, seed};
              }),
-             py::arg("seed") = 0,
              py::arg("thermostat_temperature_in_k") = 300.0,
-             py::arg("collision_frequency") = 1.0)
+             py::arg("collision_frequency") = 1.0,
+             py::arg("seed") = 0)
         .def_readwrite("seed", &SimulationSettings::seed)
         .def_readwrite("thermostat_temperature_in_k", &SimulationSettings::thermostatTemperatureInK)
         .def_readwrite("collision_frequency", &SimulationSettings::collisionFrequency);

@@ -124,9 +124,9 @@ class OPENMM {
         ensureInitialized();
         context->setVelocitiesToTemperature(temperature, seed);
 
-        // Update velocities cache
-        const auto state = context->getState(OpenMM::State::Velocities);
-        ommAtomsVelocitiesCache = state.getVelocities();
+        // // Update velocities cache
+        // const auto state = context->getState(OpenMM::State::Velocities);
+        // ommAtomsVelocitiesCache = state.getVelocities();
     }
 
     [[nodiscard]] auto getPotentialEnergy() const -> SimTK::Real {
@@ -139,35 +139,25 @@ class OPENMM {
         return kineticEnergy;
     }
 
-    [[nodiscard]] auto getPositions() const -> const std::vector<SimTK::Vec3>& {
-        ensureInitialized();
-        return simbodyAtomsPositionsCache;
-    }
+    // [[nodiscard]] auto getPositions() const -> const std::vector<SimTK::Vec3>& {
+    //     ensureInitialized();
+    //     return simbodyAtomsPositionsCache;
+    // }
 
-    void negateVelocities() {
-        ensureInitialized();
-        const auto state = context->getState(OpenMM::State::Velocities);
-        auto velocities = state.getVelocities();
-        for (auto& vel : velocities) {
-            vel = -vel;
-        }
-        context->setVelocities(velocities);
-    }
+    // [[nodiscard]] auto getVelocities() const -> const std::vector<SimTK::Vec3>& {
+    //     ensureInitialized();
+    //     return simbodyAtomsVelocitiesCache;
+    // }
 
-    [[nodiscard]] auto getVelocities() const -> const std::vector<SimTK::Vec3>& {
-        ensureInitialized();
-        return simbodyAtomsVelocitiesCache;
-    }
+    // [[nodiscard]] auto getPositionsCache() const -> const std::vector<OpenMM::Vec3>& {
+    //     ensureInitialized();
+    //     return ommAtomsPositionsCache;
+    // }
 
-    [[nodiscard]] auto getPositionsCache() const -> const std::vector<OpenMM::Vec3>& {
-        ensureInitialized();
-        return ommAtomsPositionsCache;
-    }
-
-    [[nodiscard]] auto getVelocitiesCache() const -> const std::vector<OpenMM::Vec3>& {
-        ensureInitialized();
-        return ommAtomsVelocitiesCache;
-    }
+    // [[nodiscard]] auto getVelocitiesCache() const -> const std::vector<OpenMM::Vec3>& {
+    //     ensureInitialized();
+    //     return ommAtomsVelocitiesCache;
+    // }
 
     void updatePositionsCache(const std::vector<NonBondedMapping>& nonBondedMappings,
                               const SimTK::Vector_<SimTK::Vec3>& inclAtomPos_G);
@@ -266,10 +256,11 @@ class OPENMM {
     int ureyBradleyForceIndex = std::numeric_limits<int>::max();
 
     std::size_t numAtoms = 0;
-    std::vector<OpenMM::Vec3> ommAtomsPositionsCache, ommAtomsPositionsCacheOld;
-    std::vector<OpenMM::Vec3> ommAtomsVelocitiesCache;
-    std::vector<SimTK::Vec3> simbodyAtomsPositionsCache;
-    std::vector<SimTK::Vec3> simbodyAtomsVelocitiesCache;
+    std::vector<OpenMM::Vec3> ommAtomsPositionsCache;
+    // std::vector<OpenMM::Vec3> ommAtomsPositionsCacheOld;
+    // std::vector<OpenMM::Vec3> ommAtomsVelocitiesCache;
+    // std::vector<SimTK::Vec3> simbodyAtomsPositionsCache;
+    // std::vector<SimTK::Vec3> simbodyAtomsVelocitiesCache;
     SimTK::Real potentialEnergy = 0, kineticEnergy = 0;
 
     bool enforcePeriodicBox = false;

@@ -1591,99 +1591,99 @@ inline auto dot(const std::vector<OpenMM::Vec3>& first, const std::vector<OpenMM
     return result;
 }
 
-/// Compute delta = q_fwd - q_bwd atom-wise.
-auto deltaQ(const std::vector<OpenMM::Vec3>& q_fwd, const std::vector<OpenMM::Vec3>& q_bwd)
-    -> std::vector<OpenMM::Vec3> {
-    std::vector<OpenMM::Vec3> deltaQ(q_fwd.size());
-    for (size_t i = 0; i < q_fwd.size(); ++i) {
-        deltaQ[i] = q_fwd[i] - q_bwd[i];
-    }
-    return deltaQ;
-}
+// /// Compute delta = q_fwd - q_bwd atom-wise.
+// auto deltaQ(const std::vector<OpenMM::Vec3>& q_fwd, const std::vector<OpenMM::Vec3>& q_bwd)
+//     -> std::vector<OpenMM::Vec3> {
+//     std::vector<OpenMM::Vec3> deltaQ(q_fwd.size());
+//     for (size_t i = 0; i < q_fwd.size(); ++i) {
+//         deltaQ[i] = q_fwd[i] - q_bwd[i];
+//     }
+//     return deltaQ;
+// }
 
-auto HMCSampler::isUTurnOpenMM(const PhasePointOpenMM& minus, const PhasePointOpenMM& plus) -> bool {
-    const auto dq = deltaQ(plus.positions, minus.positions);
-    return (dot(dq, plus.momenta) < 0.0) || (dot(dq, minus.momenta) < 0.0);
-}
+// auto HMCSampler::isUTurnOpenMM(const PhasePointOpenMM& minus, const PhasePointOpenMM& plus) -> bool {
+//     const auto dq = deltaQ(plus.positions, minus.positions);
+//     return (dot(dq, plus.momenta) < 0.0) || (dot(dq, minus.momenta) < 0.0);
+// }
 
-auto HMCSampler::buildTreeWithOpenMM(std::vector<OpenMM::Vec3>& positions,
-                                     std::vector<OpenMM::Vec3>& velocities,
-                                     int depth,
-                                     NUTSDirection direction,
-                                     SimTK::Real logU,
-                                     SimTK::Real H0) -> NUTSNodeOpenMM {
-    NUTSNodeOpenMM node;
+// auto HMCSampler::buildTreeWithOpenMM(std::vector<OpenMM::Vec3>& positions,
+//                                      std::vector<OpenMM::Vec3>& velocities,
+//                                      int depth,
+//                                      NUTSDirection direction,
+//                                      SimTK::Real logU,
+//                                      SimTK::Real H0) -> NUTSNodeOpenMM {
+//     NUTSNodeOpenMM node;
 
-    if (depth == 0) {
-        int velocitySign = (direction == NUTSDirection::Backward) ? -1 : 1;
+//     if (depth == 0) {
+//         int velocitySign = (direction == NUTSDirection::Backward) ? -1 : 1;
 
-        OPENMM::get().integrateTrajectory(positions,
-                                          velocitySign,
-                                          velocities,
-                                          1,
-                                          timestep,
-                                          node.proposedEnergy.potential,
-                                          node.proposedEnergy.kinetic);
+//         OPENMM::get().integrateTrajectory(positions,
+//                                           velocitySign,
+//                                           velocities,
+//                                           1,
+//                                           timestep,
+//                                           node.proposedEnergy.potential,
+//                                           node.proposedEnergy.kinetic);
 
-        // Calculate momenta from velocities
-        std::vector<OpenMM::Vec3> momenta(velocities.size());
-        for (const auto& topology : topologies) {
-            for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topology.getNumAtoms(); ++cAIx) {
-                const auto& atom = topology.getAtoms()[cAIx];
-                const auto& vel = velocities[atom.identity.globalIndex];
-                momenta[atom.identity.globalIndex] = vel * atom.physics.massInDaltons;
-            }
-        }
+//         // Calculate momenta from velocities
+//         std::vector<OpenMM::Vec3> momenta(velocities.size());
+//         for (const auto& topology : topologies) {
+//             for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topology.getNumAtoms(); ++cAIx) {
+//                 const auto& atom = topology.getAtoms()[cAIx];
+//                 const auto& vel = velocities[atom.identity.globalIndex];
+//                 momenta[atom.identity.globalIndex] = vel * atom.physics.massInDaltons;
+//             }
+//         }
 
-        node.minus = {positions, momenta};
-        node.plus = {positions, momenta};
-        node.proposal = {positions, momenta};
+//         node.minus = {positions, momenta};
+//         node.plus = {positions, momenta};
+//         node.proposal = {positions, momenta};
 
-        node.proposedEnergy.fixman = 0;
-        node.proposedEnergy.logSineSqrGamma2 = 0;
-        node.proposedEnergy.total = node.proposedEnergy.potential + node.proposedEnergy.kinetic;
+//         node.proposedEnergy.fixman = 0;
+//         node.proposedEnergy.logSineSqrGamma2 = 0;
+//         node.proposedEnergy.total = node.proposedEnergy.potential + node.proposedEnergy.kinetic;
 
-        const auto H_leaf = node.proposedEnergy.potential + node.proposedEnergy.kinetic;
-        node.numValidSlices = (H_leaf <= -logU) ? 1 : 0;
-        node.stop = (H_leaf - H0) > 1000;
+//         const auto H_leaf = node.proposedEnergy.potential + node.proposedEnergy.kinetic;
+//         node.numValidSlices = (H_leaf <= -logU) ? 1 : 0;
+//         node.stop = (H_leaf - H0) > 1000;
 
-        return node;
-    }
+//         return node;
+//     }
 
-    // Recursive Binary Tree Expansion: build first half
-    node = buildTreeWithOpenMM(positions, velocities, depth - 1, direction, logU, H0);
-    if (node.stop) {
-        return node;
-    }
+//     // Recursive Binary Tree Expansion: build first half
+//     node = buildTreeWithOpenMM(positions, velocities, depth - 1, direction, logU, H0);
+//     if (node.stop) {
+//         return node;
+//     }
 
-    // Build second half (state is already at the end of the first half)
-    NUTSNodeOpenMM subtree = buildTreeWithOpenMM(positions, velocities, depth - 1, direction, logU, H0);
+//     // Build second half (state is already at the end of the first half)
+//     NUTSNodeOpenMM subtree = buildTreeWithOpenMM(positions, velocities, depth - 1, direction, logU, H0);
 
-    // Combine stats
-    const int numValidSlices = node.numValidSlices + subtree.numValidSlices;
+//     // Combine stats
+//     const int numValidSlices = node.numValidSlices + subtree.numValidSlices;
 
-    // Progressive sampling: Accept the proposal from the new subtree with probability proportional to its
-    // size
-    const auto acceptProb =
-        static_cast<SimTK::Real>(subtree.numValidSlices) / static_cast<SimTK::Real>(numValidSlices);
-    if (!subtree.stop && (uniformReal01(randomEngine) < acceptProb)) {
-        node.proposal = subtree.proposal;
-        node.proposedEnergy = subtree.proposedEnergy;
-    }
+//     // Progressive sampling: Accept the proposal from the new subtree with probability proportional to its
+//     // size
+//     const auto acceptProb =
+//         static_cast<SimTK::Real>(subtree.numValidSlices) / static_cast<SimTK::Real>(numValidSlices);
+//     if (!subtree.stop && (uniformReal01(randomEngine) < acceptProb)) {
+//         node.proposal = subtree.proposal;
+//         node.proposedEnergy = subtree.proposedEnergy;
+//     }
 
-    // Update boundaries based on expansion direction
-    if (direction == NUTSDirection::Backward) {
-        node.minus = subtree.minus;
-    } else {
-        node.plus = subtree.plus;
-    }
+//     // Update boundaries based on expansion direction
+//     if (direction == NUTSDirection::Backward) {
+//         node.minus = subtree.minus;
+//     } else {
+//         node.plus = subtree.plus;
+//     }
 
-    // Check No-U-Turn criterion for the merged tree
-    node.stop = subtree.stop || isUTurnOpenMM(node.minus, node.plus);
-    node.numValidSlices = numValidSlices;
+//     // Check No-U-Turn criterion for the merged tree
+//     node.stop = subtree.stop || isUTurnOpenMM(node.minus, node.plus);
+//     node.numValidSlices = numValidSlices;
 
-    return node;
-}
+//     return node;
+// }
 
 void HMCSampler::buildTreeWithSimbody(SimTK::State& state,
                                       int depth,
@@ -1818,171 +1818,172 @@ void HMCSampler::buildTreeWithSimbody(SimTK::State& state,
     nodeOut.numValidSlices = totalValid;
 }
 
-auto HMCSampler::integrateNUTSWithOpenMM(SimTK::State& state, int maxDepth) -> NUTSResult {
-    // Draw slice variable U ~ Uniform(0, exp(-H(q, p)))
-    // A state at Hamiltonian H is slice-valid iff H <= logU
-    const SimTK::Real H0 = previousEnergy.total;
-    const SimTK::Real logU = -H0 - expDist(randomEngine);
+// auto HMCSampler::integrateNUTSWithOpenMM(SimTK::State& state, int maxDepth) -> NUTSResult {
+//     // Draw slice variable U ~ Uniform(0, exp(-H(q, p)))
+//     // A state at Hamiltonian H is slice-valid iff H <= logU
+//     const SimTK::Real H0 = previousEnergy.total;
+//     const SimTK::Real logU = -H0 - expDist(randomEngine);
 
-    // Initial boundary Setup
-    dumm.get().updateOpenMMPositionsFromState(state);
-    const auto initialPositions = OPENMM::get().getPositionsCache();
+//     // Initial boundary Setup
+//     dumm.get().updateOpenMMPositionsFromState(state);
+//     const auto initialPositions = OPENMM::get().getPositionsCache();
 
-    const auto& initialVelocities = OPENMM::get().getVelocitiesCache();
-    std::vector<OpenMM::Vec3> initialMomenta(initialVelocities.size());
-    for (const auto& topology : topologies) {
-        for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topology.getNumAtoms(); ++cAIx) {
-            const auto& atom = topology.getAtoms()[cAIx];
-            const auto& vel = initialVelocities[atom.identity.globalIndex];
-            initialMomenta[atom.identity.globalIndex] = vel * atom.physics.massInDaltons;
-        }
-    }
+//     const auto& initialVelocities = OPENMM::get().getVelocitiesCache();
+//     std::vector<OpenMM::Vec3> initialMomenta(initialVelocities.size());
+//     for (const auto& topology : topologies) {
+//         for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topology.getNumAtoms(); ++cAIx) {
+//             const auto& atom = topology.getAtoms()[cAIx];
+//             const auto& vel = initialVelocities[atom.identity.globalIndex];
+//             initialMomenta[atom.identity.globalIndex] = vel * atom.physics.massInDaltons;
+//         }
+//     }
 
-    // Initialize all three phase points to the current state
-    // minus and plus are the trajectory boundaries; proposal is the current accepted sample
-    // All three start at the same point
-    NUTSNodeOpenMM tree;
-    tree.minus = {initialPositions, initialMomenta};
-    tree.plus = {initialPositions, initialMomenta};
-    tree.proposal = {initialPositions, initialMomenta};
-    tree.proposedEnergy = previousEnergy;
-    tree.numValidSlices = 1;
+//     // Initialize all three phase points to the current state
+//     // minus and plus are the trajectory boundaries; proposal is the current accepted sample
+//     // All three start at the same point
+//     NUTSNodeOpenMM tree;
+//     tree.minus = {initialPositions, initialMomenta};
+//     tree.plus = {initialPositions, initialMomenta};
+//     tree.proposal = {initialPositions, initialMomenta};
+//     tree.proposedEnergy = previousEnergy;
+//     tree.numValidSlices = 1;
 
-    // We need two states to track the "left-most" and "right-most" edges
-    auto leftEdgePositions = OPENMM::get().getPositionsCache();
-    auto leftEdgeVelocities = OPENMM::get().getVelocitiesCache();
-    auto rightEdgePositions = leftEdgePositions;
-    auto rightEdgeVelocities = leftEdgeVelocities;
+//     // We need two states to track the "left-most" and "right-most" edges
+//     auto leftEdgePositions = OPENMM::get().getPositionsCache();
+//     auto leftEdgeVelocities = OPENMM::get().getVelocitiesCache();
+//     auto rightEdgePositions = leftEdgePositions;
+//     auto rightEdgeVelocities = leftEdgeVelocities;
 
-    StopReason stopReason = StopReason::MaxDepth;
-    bool proposalUpdated = false;
+//     StopReason stopReason = StopReason::MaxDepth;
+//     bool proposalUpdated = false;
 
-    int lastDepth = 0;
-    for (int depth = 0; depth < maxDepth; ++depth) {
-        lastDepth = depth;
-        const NUTSDirection direction =
-            (randomEngine() % 2) == 0 ? NUTSDirection::Backward : NUTSDirection::Forward;
+//     int lastDepth = 0;
+//     for (int depth = 0; depth < maxDepth; ++depth) {
+//         lastDepth = depth;
+//         const NUTSDirection direction =
+//             (randomEngine() % 2) == 0 ? NUTSDirection::Backward : NUTSDirection::Forward;
 
-        NUTSNodeOpenMM subtree;
-        if (direction == NUTSDirection::Backward) {
-            subtree = buildTreeWithOpenMM(leftEdgePositions, leftEdgeVelocities, depth, direction, logU, H0);
-        } else {
-            subtree =
-                buildTreeWithOpenMM(rightEdgePositions, rightEdgeVelocities, depth, direction, logU, H0);
-        }
+//         NUTSNodeOpenMM subtree;
+//         if (direction == NUTSDirection::Backward) {
+//             subtree = buildTreeWithOpenMM(leftEdgePositions, leftEdgeVelocities, depth, direction, logU,
+//             H0);
+//         } else {
+//             subtree =
+//                 buildTreeWithOpenMM(rightEdgePositions, rightEdgeVelocities, depth, direction, logU, H0);
+//         }
 
-        if (subtree.stop) {
-            stopReason = StopReason::SubtreeUTurn;
-            break;
-        }
+//         if (subtree.stop) {
+//             stopReason = StopReason::SubtreeUTurn;
+//             break;
+//         }
 
-        // Accept proposal from subtree with probability proportional to its slice-valid count
-        // The slice variable is what enforces detailed balance
-        const int numValidSlices = tree.numValidSlices + subtree.numValidSlices;
-        const auto acceptProb =
-            static_cast<SimTK::Real>(subtree.numValidSlices) / static_cast<SimTK::Real>(numValidSlices);
+//         // Accept proposal from subtree with probability proportional to its slice-valid count
+//         // The slice variable is what enforces detailed balance
+//         const int numValidSlices = tree.numValidSlices + subtree.numValidSlices;
+//         const auto acceptProb =
+//             static_cast<SimTK::Real>(subtree.numValidSlices) / static_cast<SimTK::Real>(numValidSlices);
 
-        // Always accept if requested
-        if (alwaysAccept || uniformReal01(randomEngine) < acceptProb) {
-            tree.proposal = subtree.proposal;
-            tree.proposedEnergy = subtree.proposedEnergy;
-            proposalUpdated = true;
-        }
+//         // Always accept if requested
+//         if (alwaysAccept || uniformReal01(randomEngine) < acceptProb) {
+//             tree.proposal = subtree.proposal;
+//             tree.proposedEnergy = subtree.proposedEnergy;
+//             proposalUpdated = true;
+//         }
 
-        if (direction == NUTSDirection::Backward) {
-            tree.minus = subtree.minus;
-        } else {
-            tree.plus = subtree.plus;
-        }
+//         if (direction == NUTSDirection::Backward) {
+//             tree.minus = subtree.minus;
+//         } else {
+//             tree.plus = subtree.plus;
+//         }
 
-        tree.numValidSlices += subtree.numValidSlices;
+//         tree.numValidSlices += subtree.numValidSlices;
 
-        if (isUTurnOpenMM(tree.minus, tree.plus)) {
-            stopReason = StopReason::UTurn;
-            break;
-        }
-    }
+//         if (isUTurnOpenMM(tree.minus, tree.plus)) {
+//             stopReason = StopReason::UTurn;
+//             break;
+//         }
+//     }
 
-    if (!proposalUpdated) {
-        stopReason = StopReason::NoValidProposals;
-        tree.proposal = {initialPositions, initialVelocities};
-        tree.proposedEnergy = previousEnergy;
-        tree.numValidSlices = 0;
-        tree.stop = true;
-    } else {
-        const auto& finalPositions = tree.proposal.positions;
-        const auto& finalMomenta = tree.proposal.momenta;
+//     if (!proposalUpdated) {
+//         stopReason = StopReason::NoValidProposals;
+//         tree.proposal = {initialPositions, initialVelocities};
+//         tree.proposedEnergy = previousEnergy;
+//         tree.numValidSlices = 0;
+//         tree.stop = true;
+//     } else {
+//         const auto& finalPositions = tree.proposal.positions;
+//         const auto& finalMomenta = tree.proposal.momenta;
 
-        matter.get().invalidateSubsystemTopologyCache();
-        for (int i = 0; i < dumm.get().getNumAtoms(); i++) {
-            const SimTK::DuMM::AtomIndex aix(i);
-            const auto mbx = dumm.get().getAtomBody(aix);
+//         matter.get().invalidateSubsystemTopologyCache();
+//         for (int i = 0; i < dumm.get().getNumAtoms(); i++) {
+//             const SimTK::DuMM::AtomIndex aix(i);
+//             const auto mbx = dumm.get().getAtomBody(aix);
 
-            SimTK::MobilizedBody& mobod = matter.get().updMobilizedBody(mbx);
-            const auto parentMbx = mobod.getParentMobilizedBody().getMobilizedBodyIndex();
+//             SimTK::MobilizedBody& mobod = matter.get().updMobilizedBody(mbx);
+//             const auto parentMbx = mobod.getParentMobilizedBody().getMobilizedBodyIndex();
 
-            const SimTK::Vec3 finalPos{finalPositions[i][0], finalPositions[i][1], finalPositions[i][2]};
+//             const SimTK::Vec3 finalPos{finalPositions[i][0], finalPositions[i][1], finalPositions[i][2]};
 
-            SimTK::Vec3 parentFinalPos;
-            if (parentMbx == 0) {
-                parentFinalPos = SimTK::Vec3{0, 0, 0};
-            } else {
-                parentFinalPos = SimTK::Vec3{finalPositions[parentMbx - 1][0],
-                                             finalPositions[parentMbx - 1][1],
-                                             finalPositions[parentMbx - 1][2]};
-            }
+//             SimTK::Vec3 parentFinalPos;
+//             if (parentMbx == 0) {
+//                 parentFinalPos = SimTK::Vec3{0, 0, 0};
+//             } else {
+//                 parentFinalPos = SimTK::Vec3{finalPositions[parentMbx - 1][0],
+//                                              finalPositions[parentMbx - 1][1],
+//                                              finalPositions[parentMbx - 1][2]};
+//             }
 
 
-            const auto X_PF = SimTK::Transform(SimTK::Rotation(), finalPos);
-            const auto X_BM = SimTK::Transform(SimTK::Rotation(), parentFinalPos);
-            const auto X_FM = SimTK::Transform(SimTK::Rotation());
+//             const auto X_PF = SimTK::Transform(SimTK::Rotation(), finalPos);
+//             const auto X_BM = SimTK::Transform(SimTK::Rotation(), parentFinalPos);
+//             const auto X_FM = SimTK::Transform(SimTK::Rotation());
 
-            mobod.updateDefaultFrames(X_PF, X_BM);
-            mobod.setQToFitTransform(state, X_FM);
-        }
+//             mobod.updateDefaultFrames(X_PF, X_BM);
+//             mobod.setQToFitTransform(state, X_FM);
+//         }
 
-        state = system.get().realizeTopology();
-        system.get().realize(state, SimTK::Stage::Position);
+//         state = system.get().realizeTopology();
+//         system.get().realize(state, SimTK::Stage::Position);
 
-        // Set velocities
-        std::vector<OpenMM::Vec3> finalVelocities(finalMomenta.size());
-        for (const auto& topology : topologies) {
-            for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topology.getNumAtoms(); ++cAIx) {
-                const auto& atom = topology.getAtoms()[cAIx];
-                const auto& vel = finalMomenta[atom.identity.globalIndex];
-                finalVelocities[atom.identity.globalIndex] = vel / atom.physics.massInDaltons;
-            }
-        }
+//         // Set velocities
+//         std::vector<OpenMM::Vec3> finalVelocities(finalMomenta.size());
+//         for (const auto& topology : topologies) {
+//             for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topology.getNumAtoms(); ++cAIx) {
+//                 const auto& atom = topology.getAtoms()[cAIx];
+//                 const auto& vel = finalMomenta[atom.identity.globalIndex];
+//                 finalVelocities[atom.identity.globalIndex] = vel / atom.physics.massInDaltons;
+//             }
+//         }
 
-        for (int i = 0; i < dumm.get().getNumAtoms(); i++) {
-            SimTK::MobilizedBody& mobod =
-                matter.get().updMobilizedBody(dumm.get().getAtomBody(SimTK::DuMM::AtomIndex(i)));
-            mobod.setUToFitLinearVelocity(
-                state,
-                {finalVelocities[i][0], finalVelocities[i][1], finalVelocities[i][2]});
-        }
-        system.get().realize(state, SimTK::Stage::Velocity);
-    }
+//         for (int i = 0; i < dumm.get().getNumAtoms(); i++) {
+//             SimTK::MobilizedBody& mobod =
+//                 matter.get().updMobilizedBody(dumm.get().getAtomBody(SimTK::DuMM::AtomIndex(i)));
+//             mobod.setUToFitLinearVelocity(
+//                 state,
+//                 {finalVelocities[i][0], finalVelocities[i][1], finalVelocities[i][2]});
+//         }
+//         system.get().realize(state, SimTK::Stage::Velocity);
+//     }
 
-    switch (stopReason) {
-        case StopReason::MaxDepth:
-            std::cout << "\t - NUTS stopped at depth " << lastDepth << ": StopReason::MaxDepth.\n";
-            break;
-        case StopReason::SubtreeUTurn:
-            std::cout << "\t - NUTS stopped at depth " << lastDepth << " StopReason::SubtreeUTurn.\n";
-            break;
-        case StopReason::UTurn:
-            std::cout << "\t - NUTS stopped at depth " << lastDepth << " StopReason::UTurn.\n";
-            break;
-        case StopReason::NoValidProposals:
-            std::cout << "\t - NUTS stopped at depth " << lastDepth << " StopReason::NoValidProposals.\n";
-            break;
-        default:
-            break;
-    }
+//     switch (stopReason) {
+//         case StopReason::MaxDepth:
+//             std::cout << "\t - NUTS stopped at depth " << lastDepth << ": StopReason::MaxDepth.\n";
+//             break;
+//         case StopReason::SubtreeUTurn:
+//             std::cout << "\t - NUTS stopped at depth " << lastDepth << " StopReason::SubtreeUTurn.\n";
+//             break;
+//         case StopReason::UTurn:
+//             std::cout << "\t - NUTS stopped at depth " << lastDepth << " StopReason::UTurn.\n";
+//             break;
+//         case StopReason::NoValidProposals:
+//             std::cout << "\t - NUTS stopped at depth " << lastDepth << " StopReason::NoValidProposals.\n";
+//             break;
+//         default:
+//             break;
+//     }
 
-    return {{}, tree.proposal, tree.proposedEnergy, stopReason, lastDepth};
-}
+//     return {{}, tree.proposal, tree.proposedEnergy, stopReason, lastDepth};
+// }
 
 auto HMCSampler::integrateNUTSWithSimbody(const SimTK::State& state, int maxDepth) -> NUTSResult {
     // Slice variable
@@ -2643,83 +2644,83 @@ void HMCSampler::integrateTrajectory_TaskSpace(SimTK::State& someState) {
 }
 
 void HMCSampler::rebuildSimbodyTopologyFromOpenMMPositions(SimTK::State& someState) {
-    // Get a reference to OpenMM Cartesian positions (expressed in Ground)
-    const auto& positions = OPENMM::get().getPositions();
-    const auto& velocities = OPENMM::get().getVelocities();
+    // // Get a reference to OpenMM Cartesian positions (expressed in Ground)
+    // const auto& positions = OPENMM::get().getPositions();
+    // const auto& velocities = OPENMM::get().getVelocities();
 
-    // IMPORTANT:
-    // Although this may look like "updating positions in the State",
-    // what we actually do is *redefine the multibody model itself*.
-    //
-    // Given Cartesian coordinates, we reconstruct a multibody system whose
-    // *default (zero-Q) geometry* exactly matches the OpenMM configuration.
-    //
-    // This is achieved by redefining mobilizer attachment frames (X_PF, X_BM),
-    // which are MODEL-level quantities. As a consequence, the existing topology
-    // becomes invalid and must be discarded.
-    matter.get().invalidateSubsystemTopologyCache();
+    // // IMPORTANT:
+    // // Although this may look like "updating positions in the State",
+    // // what we actually do is *redefine the multibody model itself*.
+    // //
+    // // Given Cartesian coordinates, we reconstruct a multibody system whose
+    // // *default (zero-Q) geometry* exactly matches the OpenMM configuration.
+    // //
+    // // This is achieved by redefining mobilizer attachment frames (X_PF, X_BM),
+    // // which are MODEL-level quantities. As a consequence, the existing topology
+    // // becomes invalid and must be discarded.
+    // matter.get().invalidateSubsystemTopologyCache();
 
-    // We are NOT copying positions into Simbody.
-    // Instead, we redefine where every joint is attached so that,
-    // with zero mobilizer motion (X_FM = I), the OpenMM geometry is reproduced.
-    for (int i = 0; i < dumm.get().getNumAtoms(); i++) {
-        // RoboAtom index in DuMM
-        const SimTK::DuMM::AtomIndex aix(i);
+    // // We are NOT copying positions into Simbody.
+    // // Instead, we redefine where every joint is attached so that,
+    // // with zero mobilizer motion (X_FM = I), the OpenMM geometry is reproduced.
+    // for (int i = 0; i < dumm.get().getNumAtoms(); i++) {
+    //     // RoboAtom index in DuMM
+    //     const SimTK::DuMM::AtomIndex aix(i);
 
-        // Mobilized body that owns this atom
-        const SimTK::MobilizedBodyIndex mbx = dumm.get().getAtomBody(aix);
-        SimTK::MobilizedBody& mobod = matter.get().updMobilizedBody(mbx);
+    //     // Mobilized body that owns this atom
+    //     const SimTK::MobilizedBodyIndex mbx = dumm.get().getAtomBody(aix);
+    //     SimTK::MobilizedBody& mobod = matter.get().updMobilizedBody(mbx);
 
-        // Parent body of this mobilized body
-        const SimTK::MobilizedBodyIndex parentMbx = mobod.getParentMobilizedBody().getMobilizedBodyIndex();
+    //     // Parent body of this mobilized body
+    //     const SimTK::MobilizedBodyIndex parentMbx = mobod.getParentMobilizedBody().getMobilizedBodyIndex();
 
-        // X_PF: SimTK::Transform from inboard mobilizer frame F to parent body frame P
-        // This defines where the joint is attached on the *parent* body.
-        //
-        // Here we place the joint anchor at the OpenMM Cartesian position
-        // of the current atom.
-        const SimTK::Transform X_PF = SimTK::Transform(SimTK::Rotation(), positions[i]);
+    //     // X_PF: SimTK::Transform from inboard mobilizer frame F to parent body frame P
+    //     // This defines where the joint is attached on the *parent* body.
+    //     //
+    //     // Here we place the joint anchor at the OpenMM Cartesian position
+    //     // of the current atom.
+    //     const SimTK::Transform X_PF = SimTK::Transform(SimTK::Rotation(), positions[i]);
 
-        // X_BM: SimTK::Transform from outboard mobilizer frame M to child body frame B
-        // This defines where the joint is attached on the *child* body.
-        //
-        // There are numAtoms + 1 mobilized bodies, with body 0 being Ground.
-        // For Ground, we attach at the origin; otherwise we use the OpenMM
-        // position of the parent body's representative atom.
-        const SimTK::Transform X_BM =
-            SimTK::Transform(SimTK::Rotation(),
-                             parentMbx == 0 ? SimTK::Vec3(0, 0, 0) : positions[parentMbx - 1]);
+    //     // X_BM: SimTK::Transform from outboard mobilizer frame M to child body frame B
+    //     // This defines where the joint is attached on the *child* body.
+    //     //
+    //     // There are numAtoms + 1 mobilized bodies, with body 0 being Ground.
+    //     // For Ground, we attach at the origin; otherwise we use the OpenMM
+    //     // position of the parent body's representative atom.
+    //     const SimTK::Transform X_BM =
+    //         SimTK::Transform(SimTK::Rotation(),
+    //                          parentMbx == 0 ? SimTK::Vec3(0, 0, 0) : positions[parentMbx - 1]);
 
-        // Redefine the joint geometry:
-        // - F: joint location on the parent body
-        // - M: joint location on the child body
-        //
-        // This modifies the MODEL, not the State.
-        mobod.updateDefaultFrames(X_PF, X_BM);
+    //     // Redefine the joint geometry:
+    //     // - F: joint location on the parent body
+    //     // - M: joint location on the child body
+    //     //
+    //     // This modifies the MODEL, not the State.
+    //     mobod.updateDefaultFrames(X_PF, X_BM);
 
-        // X_FM: SimTK::Transform encoding mobilizer motion (generalized coordinates)
-        // We set it to identity, i.e. zero joint motion.
-        //
-        // As a result, the body pose is entirely determined by the
-        // newly defined default frames X_PF and X_BM, not by Q.
-        const SimTK::Transform X_FM = SimTK::Transform(SimTK::Rotation());
-        mobod.setQToFitTransform(someState, X_FM);
-    }
+    //     // X_FM: SimTK::Transform encoding mobilizer motion (generalized coordinates)
+    //     // We set it to identity, i.e. zero joint motion.
+    //     //
+    //     // As a result, the body pose is entirely determined by the
+    //     // newly defined default frames X_PF and X_BM, not by Q.
+    //     const SimTK::Transform X_FM = SimTK::Transform(SimTK::Rotation());
+    //     mobod.setQToFitTransform(someState, X_FM);
+    // }
 
-    // Rebuild the multibody system using the new joint attachment frames.
-    // This produces a new internal-coordinate parameterization whose
-    // default configuration matches the OpenMM geometry.
-    // This sets Q=0, U=0
-    someState = system.get().realizeTopology();
-    system.get().realize(someState, SimTK::Stage::Position);
+    // // Rebuild the multibody system using the new joint attachment frames.
+    // // This produces a new internal-coordinate parameterization whose
+    // // default configuration matches the OpenMM geometry.
+    // // This sets Q=0, U=0
+    // someState = system.get().realizeTopology();
+    // system.get().realize(someState, SimTK::Stage::Position);
 
-    // Set velocities
-    for (int i = 0; i < dumm.get().getNumAtoms(); i++) {
-        SimTK::MobilizedBody& mobod =
-            matter.get().updMobilizedBody(dumm.get().getAtomBody(SimTK::DuMM::AtomIndex(i)));
-        mobod.setUToFitLinearVelocity(someState, velocities[i]);
-    }
-    system.get().realize(someState, SimTK::Stage::Velocity);
+    // // Set velocities
+    // for (int i = 0; i < dumm.get().getNumAtoms(); i++) {
+    //     SimTK::MobilizedBody& mobod =
+    //         matter.get().updMobilizedBody(dumm.get().getAtomBody(SimTK::DuMM::AtomIndex(i)));
+    //     mobod.setUToFitLinearVelocity(someState, velocities[i]);
+    // }
+    // system.get().realize(someState, SimTK::Stage::Velocity);
 }
 
 /*
@@ -3620,17 +3621,20 @@ auto HMCSampler::sampleIteration(
                     // result = integrateWithOpenMM(state);
 
                     dumm.get().updateOpenMMPositionsFromState(state);
-                    dumm.get().integrateTrajectoryWithOpenMM(MDStepsPerSample, timestep);
+                    // dumm.get().integrateTrajectoryWithOpenMM(MDStepsPerSample, timestep);
 
-                    result.proposedEnergy.potential = OPENMM::get().getPotentialEnergy();
-                    result.proposedEnergy.kinetic = this->unboostKEFactor * OPENMM::get().getKineticEnergy();
+                    OPENMM::get().integrateTrajectory(result.proposalOpenMM.positions,
+                                                      1,
+                                                      result.proposalOpenMM.momenta,
+                                                      1,
+                                                      timestep,
+                                                      result.proposedEnergy.potential,
+                                                      result.proposedEnergy.kinetic);
+
                     result.proposedEnergy.fixman = 0.0;
                     result.proposedEnergy.logSineSqrGamma2 = 0.0;
                     result.proposedEnergy.total =
-                        result.proposedEnergy.potential + result.proposedEnergy.kinetic
-                        + result.proposedEnergy.fixman - (0.5 * RT * result.proposedEnergy.logSineSqrGamma2);
-
-                    result.proposalOpenMM.positions = OPENMM::get().getPositionsCache();
+                        result.proposedEnergy.potential + result.proposedEnergy.kinetic;
                 }
                 break;
             case IntegratorType::Verlet:
@@ -3755,8 +3759,9 @@ auto HMCSampler::sampleIteration(
                 }
             }
 
-            // TODO do we need this here?
-            rebuildSimbodyTopologyFromOpenMMPositions(state);
+            // // TODO do we need this here?
+            // rebuildSimbodyTopologyFromOpenMMPositions(state);
+            // system.get().realize(state);
         } else {
             // Set the proposed configuration and recompute M(q)
             state.updQ() = result.proposalSimbody.q;
@@ -3813,69 +3818,70 @@ auto HMCSampler::sampleIteration(
 }
 
 auto HMCSampler::integrateWithOpenMM(SimTK::State& state) -> NUTSResult {
-    NUTSResult result;
+    // NUTSResult result;
 
-    // cartesianRandomSteps(randomEngine)
-    dumm.get().updateOpenMMPositionsFromState(state);
-    dumm.get().integrateTrajectoryWithOpenMM(MDStepsPerSample, timestep);
+    // // cartesianRandomSteps(randomEngine)
+    // dumm.get().updateOpenMMPositionsFromState(state);
+    // dumm.get().integrateTrajectoryWithOpenMM(MDStepsPerSample, timestep);
 
-    result.proposedEnergy.potential = OPENMM::get().getPotentialEnergy();
-    result.proposedEnergy.kinetic = this->unboostKEFactor * OPENMM::get().getKineticEnergy();
-    result.proposedEnergy.fixman = 0.0;
-    result.proposedEnergy.logSineSqrGamma2 = 0.0;
-    result.proposedEnergy.total = result.proposedEnergy.potential + result.proposedEnergy.kinetic
-                                  + result.proposedEnergy.fixman
-                                  - (0.5 * RT * result.proposedEnergy.logSineSqrGamma2);
+    // result.proposedEnergy.potential = OPENMM::get().getPotentialEnergy();
+    // result.proposedEnergy.kinetic = this->unboostKEFactor * OPENMM::get().getKineticEnergy();
+    // result.proposedEnergy.fixman = 0.0;
+    // result.proposedEnergy.logSineSqrGamma2 = 0.0;
+    // result.proposedEnergy.total = result.proposedEnergy.potential + result.proposedEnergy.kinetic
+    //                               + result.proposedEnergy.fixman
+    //                               - (0.5 * RT * result.proposedEnergy.logSineSqrGamma2);
 
-    // Extract the proposed configuration from OpenMM
-    const auto& finalPositions = OPENMM::get().getPositions();
-    const auto& finalVelocities = OPENMM::get().getVelocities();
+    // // Extract the proposed configuration from OpenMM
+    // const auto& finalPositions = OPENMM::get().getPositions();
+    // const auto& finalVelocities = OPENMM::get().getVelocities();
 
-    matter.get().invalidateSubsystemTopologyCache();
-    for (int i = 0; i < dumm.get().getNumAtoms(); i++) {
-        const SimTK::DuMM::AtomIndex aix(i);
-        const auto mbx = dumm.get().getAtomBody(aix);
+    // matter.get().invalidateSubsystemTopologyCache();
+    // for (int i = 0; i < dumm.get().getNumAtoms(); i++) {
+    //     const SimTK::DuMM::AtomIndex aix(i);
+    //     const auto mbx = dumm.get().getAtomBody(aix);
 
-        SimTK::MobilizedBody& mobod = matter.get().updMobilizedBody(mbx);
-        const auto parentMbx = mobod.getParentMobilizedBody().getMobilizedBodyIndex();
+    //     SimTK::MobilizedBody& mobod = matter.get().updMobilizedBody(mbx);
+    //     const auto parentMbx = mobod.getParentMobilizedBody().getMobilizedBodyIndex();
 
-        const SimTK::Vec3 finalPos{finalPositions[i][0], finalPositions[i][1], finalPositions[i][2]};
+    //     const SimTK::Vec3 finalPos{finalPositions[i][0], finalPositions[i][1], finalPositions[i][2]};
 
-        SimTK::Vec3 parentFinalPos;
-        if (parentMbx == 0) {
-            parentFinalPos = SimTK::Vec3{0, 0, 0};
-        } else {
-            parentFinalPos = SimTK::Vec3{finalPositions[parentMbx - 1][0],
-                                         finalPositions[parentMbx - 1][1],
-                                         finalPositions[parentMbx - 1][2]};
-        }
-
-
-        const auto X_PF = SimTK::Transform(SimTK::Rotation(), finalPos);
-        const auto X_BM = SimTK::Transform(SimTK::Rotation(), parentFinalPos);
-        const auto X_FM = SimTK::Transform(SimTK::Rotation());
-
-        mobod.updateDefaultFrames(X_PF, X_BM);
-        mobod.setQToFitTransform(state, X_FM);
-    }
-
-    state = system.get().realizeTopology();
-    system.get().realize(state, SimTK::Stage::Position);
-
-    // Set velocities
-    for (int i = 0; i < dumm.get().getNumAtoms(); i++) {
-        SimTK::MobilizedBody& mobod =
-            matter.get().updMobilizedBody(dumm.get().getAtomBody(SimTK::DuMM::AtomIndex(i)));
-        mobod.setUToFitLinearVelocity(state,
-                                      {finalVelocities[i][0], finalVelocities[i][1], finalVelocities[i][2]});
-    }
-    system.get().realize(state, SimTK::Stage::Velocity);
+    //     SimTK::Vec3 parentFinalPos;
+    //     if (parentMbx == 0) {
+    //         parentFinalPos = SimTK::Vec3{0, 0, 0};
+    //     } else {
+    //         parentFinalPos = SimTK::Vec3{finalPositions[parentMbx - 1][0],
+    //                                      finalPositions[parentMbx - 1][1],
+    //                                      finalPositions[parentMbx - 1][2]};
+    //     }
 
 
-    result.stopReason = StopReason::NotUsingNUTS;
-    result.depth = -1;
+    //     const auto X_PF = SimTK::Transform(SimTK::Rotation(), finalPos);
+    //     const auto X_BM = SimTK::Transform(SimTK::Rotation(), parentFinalPos);
+    //     const auto X_FM = SimTK::Transform(SimTK::Rotation());
 
-    return result;
+    //     mobod.updateDefaultFrames(X_PF, X_BM);
+    //     mobod.setQToFitTransform(state, X_FM);
+    // }
+
+    // state = system.get().realizeTopology();
+    // system.get().realize(state, SimTK::Stage::Position);
+
+    // // Set velocities
+    // for (int i = 0; i < dumm.get().getNumAtoms(); i++) {
+    //     SimTK::MobilizedBody& mobod =
+    //         matter.get().updMobilizedBody(dumm.get().getAtomBody(SimTK::DuMM::AtomIndex(i)));
+    //     mobod.setUToFitLinearVelocity(state,
+    //                                   {finalVelocities[i][0], finalVelocities[i][1],
+    //                                   finalVelocities[i][2]});
+    // }
+    // system.get().realize(state, SimTK::Stage::Velocity);
+
+
+    // result.stopReason = StopReason::NotUsingNUTS;
+    // result.depth = -1;
+
+    // return result;
 }
 
 /**
@@ -4480,7 +4486,7 @@ void HMCSampler::setSubZMatrixBATStats(
 
 // Check if is root atom
 #ifndef NDEBUG
-        SimTK::Vec3 station = topologies[topoIx].getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm);
+        SimTK::Vec3 station = topologies[topoIx].getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm);
         assert((station[0] < 0.000001) && (station[1] < 0.000001) && (station[2] < 0.000001)
                && "HMCSampler: root atom is not in the mobod center");
 #endif
