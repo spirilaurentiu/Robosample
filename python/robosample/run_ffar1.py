@@ -112,7 +112,7 @@ context = robosample.Context(
     name=args.name,
     seed=args.seed,
     prmtop=args.prmtop,
-    inpcrd="last_frame.rst7",
+    inpcrd=args.inpcrd,
     write_freq=args.write_freq,
     testing=False,
 )
@@ -165,13 +165,13 @@ for mol_ix in range(3, context.get_num_molecules()):
 
 # [[rb.BondFlexibility(), rb.BondFlexibility(), ...], [...], ...]
 
-# context.addCartesianWorld().add_sampler(
-#     timeStep=0.001,
-#     mdSteps=500,
-#     boostMDSteps=500,
-#     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
-#     use_nuts=False,
-# )
+context.addCartesianWorld().add_sampler(
+    timeStep=0.001,
+    mdSteps=500,
+    boostMDSteps=500,
+    acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
+    use_nuts=False,
+)
 
 # mask_phi_psi = context.standard_dihedral_bonds["dihedral_type"].isin(["phi", "psi"])
 # mask_target_mol_ix = context.standard_dihedral_bonds["molecule_index"].isin([1, 2])

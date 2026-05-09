@@ -3,7 +3,6 @@ import time
 from sys import stdout
 
 import mdtraj as md
-import numpy as np
 import parmed as pmd
 
 import openmm as mm
@@ -204,7 +203,7 @@ def run_openmm_equilibration():
     parm.save("last_frame.rst7", format="rst7", overwrite=True)
 
 
-run_openmm_equilibration()
+# run_openmm_equilibration()
 
 T0 = 300.0
 T_MAX = 1000.0
@@ -225,38 +224,38 @@ context = robosample.Context(
     name=args.name,
     seed=args.seed,
     prmtop=args.prmtop,
-    inpcrd="last_frame.rst7",
+    inpcrd=args.inpcrd,
     write_freq=args.write_freq,
     testing=False,
 )
 
 # [[rb.BondFlexibility(), rb.BondFlexibility(), ...], [...], ...]
 
-context.addCartesianWorld().add_sampler(
-    timeStep=TIMESTEP_CARTESIAN,
-    mdSteps=MDSTEPS_CARTESIAN,
-    boostMDSteps=MDSTEPS_CARTESIAN,
-    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+# context.addCartesianWorld().add_sampler(
+#     timeStep=TIMESTEP_CARTESIAN,
+#     mdSteps=MDSTEPS_CARTESIAN,
+#     boostMDSteps=MDSTEPS_CARTESIAN,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+#     use_nuts=False,
+# )
+
+mask_phi = context.standard_dihedral_bonds["dihedral_type"] == "phi"
+mask_psi = context.standard_dihedral_bonds["dihedral_type"] == "psi"
+
+# mask_cyx = context.standard_dihedral_bonds["resname"] == "CYX"
+# mask_cyx_chi1 = (context.standard_dihedral_bonds["dihedral_type"] == "chi1") & mask_cyx
+# mask_cyx_chi2 = (context.standard_dihedral_bonds["dihedral_type"] == "chi2") & mask_cyx
+# mask_cyx_chi3 = (context.standard_dihedral_bonds["dihedral_type"] == "chi3") & mask_cyx
+
+bonds = context.standard_dihedral_bonds[mask_phi | mask_psi]
+sele = context.build_flexibilities(bonds)
+context.addTorsionalWorld(sele).add_sampler(
+    timeStep=0.025,
+    mdSteps=20,  # ignored if using NUTS
+    boostMDSteps=20,  # ignored if using NUTS
+    acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
     use_nuts=False,
 )
-
-# mask_phi = context.standard_dihedral_bonds["dihedral_type"] == "phi"
-# mask_psi = context.standard_dihedral_bonds["dihedral_type"] == "psi"
-
-# # mask_cyx = context.standard_dihedral_bonds["resname"] == "CYX"
-# # mask_cyx_chi1 = (context.standard_dihedral_bonds["dihedral_type"] == "chi1") & mask_cyx
-# # mask_cyx_chi2 = (context.standard_dihedral_bonds["dihedral_type"] == "chi2") & mask_cyx
-# # mask_cyx_chi3 = (context.standard_dihedral_bonds["dihedral_type"] == "chi3") & mask_cyx
-
-# bonds = context.standard_dihedral_bonds[mask_phi | mask_psi]
-# sele = context.build_flexibilities(bonds)
-# context.addTorsionalWorld(sele).add_sampler(
-#     timeStep=0.001,
-#     mdSteps=2000,  # ignored if using NUTS
-#     boostMDSteps=2000,  # ignored if using NUTS
-#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
-#     use_nuts=True,
-# )
 
 # mask_terminus = context.standard_dihedral_bonds["resid"].between(0, 21)
 # bonds = context.standard_dihedral_bonds[(mask_phi | mask_psi) & mask_terminus]
@@ -534,10 +533,10 @@ duration = end_time - start_time
 print(f"run_rex() took {duration:.4f} seconds")
 
 # Calculate RMSD
-traj = md.load(f"{args.name}_{args.seed}.repl0.dcd", top=args.prmtop)
-ref = md.load("last_frame.rst7", top=args.prmtop)
-rmsd = md.rmsd(traj, ref)
-print(f"RMSD to reference: {np.max(rmsd)}")
+# traj = md.load(f"{args.name}_{args.seed}.repl0.dcd", top=args.prmtop)
+# ref = md.load("last_frame.rst7", top=args.prmtop)
+# rmsd = md.rmsd(traj, ref)
+# print(f"RMSD to reference: {np.max(rmsd)}")
 
 """
 source leaprc.protein.ff19SB

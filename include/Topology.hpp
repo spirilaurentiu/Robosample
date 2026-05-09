@@ -191,7 +191,7 @@ class Topology : public SimTK::Compound {
     /**
      * @brief Create a mapping between the local compound atom indices and the global atom indices.
      */
-    void loadIndicesMaps();
+    void loadIndicesMaps(const SimTK::Compound::AtomTargetLocations& atomTargets);
 
     /**
      * @brief Get the global atom index from the local compound atom index.

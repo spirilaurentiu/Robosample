@@ -173,7 +173,7 @@ const RoboBond& Topology::getBondByGlobalAtomIndex(int aIx0, int aIx1) const {
                         "Topology::getBondByGlobalAtomIndex(): No bond with specified atom indices found.");
 }
 
-void Topology::loadIndicesMaps() {
+void Topology::loadIndicesMaps(const SimTK::Compound::AtomTargetLocations& atomTargets) {
     // // print spans
     // for (const auto& a : subAtomList) {
     // 	std::cout << "Topology::loadIndicesMaps(): Atom " << a.identity.uniqueAtomName << std::endl;
@@ -251,6 +251,7 @@ void Topology::loadIndicesMaps() {
     // std::sort(aIxPair2Bonds.begin(), aIxPair2Bonds.end());
 
     atomFrameCache = std::vector<SimTK::Transform>(subAtomList.size(), SimTK::Transform());
+    buildCache(atomTargets);
 }
 
 int Topology::getGlobalAtomIndex(SimTK::Compound::AtomIndex cAIx) {
@@ -264,10 +265,14 @@ int Topology::getGlobalAtomIndex(SimTK::Compound::AtomIndex cAIx) {
  * to be called every time the coordinates change though. -->
  */
 void Topology::calcAtomsTopTransforms() {
-    for (const auto& a : subAtomList) {
-        SimTK::Compound::AtomIndex aIx = a.identity.compoundAtomIndex;
-        aIx2TopTransform[aIx] = calcDefaultAtomFrameInCompoundFrame(aIx);
-    }
+    throw std::runtime_error("Topology::calcAtomsTopTransforms() is deprecated.");
+
+    // for (const auto& a : subAtomList) {
+    //     SimTK::Compound::AtomIndex aIx = a.identity.compoundAtomIndex;
+    //     aIx2TopTransform[aIx] = calcDefaultAtomFrameInCompoundFrame(aIx);
+    // }
+
+    // computeAllFrames(aIx2TopTransform);
 }
 
 /*!
@@ -329,13 +334,16 @@ auto Topology::matchAtomTargetLocations(const SimTK::Compound::AtomTargetLocatio
     matchDefaultBondAngles(atomTargets);
     matchDefaultDirections(atomTargets);
     matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
-    matchDefaultTopLevelTransform(atomTargets);
+
+    // Recalculate atom frames in top compound frame
+    computeAllFrames(aIx2TopTransform, atomTargets);
+
+    // Call to Kabasch78
+    matchDefaultTopLevelTransform(atomTargets, aIx2TopTransform);
 
     // Get the Ground to Top Transform
     const SimTK::Transform G_X_T = getTopLevelTransform();
 
-    // Recalculate atom frames in top compound frame
-    calcAtomsTopTransforms();
 
     // // Ensure residual is low enough only on debug builds
     // assert(getTransformAndResidual(atomTargets).residual < 1e-5 && "After setAtoms_Compound_Match, residual

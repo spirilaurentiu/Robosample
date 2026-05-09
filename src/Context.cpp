@@ -334,7 +334,7 @@ void Context::loadAmberSystem(const SystemTopology& systemTopology,
         topology.setTopLevelTransform(SimTK::Transform(SimTK::Rotation(), rootAtom.position));
 
         // Match the topology to the input coordinates
-        topology.loadIndicesMaps();
+        topology.loadIndicesMaps(atomTargets);
         topology.matchAtomTargetLocations(atomTargets);
 
         topologies.push_back(topology);
