@@ -159,12 +159,12 @@ class OPENMM {
     //     return ommAtomsVelocitiesCache;
     // }
 
-    void updatePositionsCache(const std::vector<NonBondedMapping>& nonBondedMappings,
+    void updatePositionsCache(const NonBondedMappings& nonBondedMappings,
                               const SimTK::Vector_<SimTK::Vec3>& inclAtomPos_G);
 
     void evaluateEnergiesFromPositionCache(SimTK::Real& newPotentialEnergy, SimTK::Real& newKineticEnergy);
 
-    void evaluateForcesFromPositionsCache(const std::vector<NonBondedMapping>& nonBondedMappings,
+    void evaluateForcesFromPositionsCache(const NonBondedMappings& nonBondedMappings,
                                           const SimTK::Vector_<SimTK::Vec3>& inclAtomStation_G,
                                           SimTK::Vector_<SimTK::SpatialVec>& inclBodyForces_G) const;
 

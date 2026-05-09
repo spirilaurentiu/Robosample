@@ -3626,7 +3626,7 @@ auto HMCSampler::sampleIteration(
                     OPENMM::get().integrateTrajectory(result.proposalOpenMM.positions,
                                                       1,
                                                       result.proposalOpenMM.momenta,
-                                                      1,
+                                                      MDStepsPerSample,
                                                       timestep,
                                                       result.proposedEnergy.potential,
                                                       result.proposedEnergy.kinetic);

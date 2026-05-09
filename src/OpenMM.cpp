@@ -21,7 +21,7 @@
 
 class MTSIntegrator : public OpenMM::CustomIntegrator {
     public:
-    MTSIntegrator(double stepSize, std::vector<std::pair<int, int>> groups)
+    MTSIntegrator(SimTK::Real stepSize, std::vector<std::pair<int, int>> groups)
         : OpenMM::CustomIntegrator(stepSize) {
         if (groups.empty()) {
             throw std::invalid_argument("No force groups specified");
@@ -218,7 +218,7 @@ auto OPENMM::initialize(const std::vector<std::vector<int>>& worlds,
     try {
         omm.context = std::make_unique<OpenMM::Context>(*omm.system, *omm.integrator, *platform);
 
-        const double speed = omm.context->getPlatform().getSpeed();
+        const SimTK::Real speed = omm.context->getPlatform().getSpeed();
         std::cout << "Created OpenMM context with " << PLATFORM_NAME << " platform with relative speed "
                   << speed << "\n";
 
@@ -411,42 +411,96 @@ auto OPENMM::integrateTrajectory(std::vector<OpenMM::Vec3>& positions,
     return success;
 }
 
-void OPENMM::updatePositionsCache(const std::vector<NonBondedMapping>& nonBondedMappings,
+void OPENMM::updatePositionsCache(const NonBondedMappings& nonBondedMappings,
                                   const SimTK::Vector_<SimTK::Vec3>& inclAtomPos_G) {
-    // TODO This loop transforms from SimTK::Vec3 to OpenMM::Vec3
-    // When you have the time and consider that this is worth the effort, you may force OpenMM to accept
-    // SimTK::Vec3 directly
-    // 1. Context::setPositions which calls
-    // 2. ContextImpl::setPositions which calls (for CUDA):
-    // 3. CudaUpdateStateDataKernel::setPositions
-    for (const auto& mapping : nonBondedMappings) {
-        const std::size_t dAIx = mapping.dummAtomIndex;
-        const std::size_t iax = mapping.includedAtomIndex;
-        const SimTK::Vec3& pos_G = inclAtomPos_G[iax];
+    // SimTK::Vec3 is SimTK::Real[3] and OpenMM::Vec3 is {SimTK::Real x,y,z} — same layout.
+    // Verified at compile time; lets us treat both sides as flat SimTK::Real* and
+    // skip the OpenMM::Vec3 constructor, exposing plain scalar stores to the vectorizer.
+    static_assert(sizeof(SimTK::Vec3) == 3 * sizeof(SimTK::Real), "SimTK::Vec3 layout changed");
+    static_assert(sizeof(OpenMM::Vec3) == 3 * sizeof(SimTK::Real), "OpenMM::Vec3 layout changed");
 
-        ommAtomsPositionsCache[dAIx] = OpenMM::Vec3(pos_G[0], pos_G[1], pos_G[2]);
+    const int N = static_cast<int>(nonBondedMappings.dummAtomIndex.size());
+    const int* __restrict__ dAIxArr = nonBondedMappings.dummAtomIndex.data();
+    const int* __restrict__ iaxArr = nonBondedMappings.includedAtomIndex.data();
+
+    // Flat views — no Vec3 abstraction in the hot loop
+    const auto* __restrict__ src = reinterpret_cast<const SimTK::Real*>(&inclAtomPos_G[0]);
+    auto* __restrict__ dst = reinterpret_cast<SimTK::Real*>(ommAtomsPositionsCache.data());
+
+// Each iteration is fully independent (gather-scatter with disjoint writes).
+// schedule(static) avoids dynamic overhead; if() guard skips thread-launch
+// cost for tiny systems where serial is faster.
+#pragma omp parallel for schedule(static) if (N > 512)
+    for (int i = 0; i < N; ++i) {
+        const int srcIx = iaxArr[i] * 3;
+        const int dstIx = dAIxArr[i] * 3;
+        dst[dstIx] = src[srcIx];
+        dst[dstIx + 1] = src[srcIx + 1];
+        dst[dstIx + 2] = src[srcIx + 2];
     }
 
     context->setPositions(ommAtomsPositionsCache);
 }
 
-void OPENMM::evaluateForcesFromPositionsCache(const std::vector<NonBondedMapping>& nonBondedMappings,
+void OPENMM::evaluateForcesFromPositionsCache(const NonBondedMappings& nonBondedMappings,
                                               const SimTK::Vector_<SimTK::Vec3>& inclAtomStation_G,
                                               SimTK::Vector_<SimTK::SpatialVec>& inclBodyForces_G) const {
     ensureInitialized();
 
-    // Intentional value capture: relies on C++17 guaranteed copy elision
     const auto state = context->getState(OpenMM::State::Forces, enforcePeriodicBox);
     const auto& forces = state.getForces();
 
-    // Map forces from atoms to bodies
-    for (const auto& mapping : nonBondedMappings) {
-        const std::size_t dAIx = mapping.dummAtomIndex;
-        const std::size_t iax = mapping.includedAtomIndex;
-        const std::size_t ibx = mapping.bodyIndex;
+    static_assert(sizeof(OpenMM::Vec3) == 3 * sizeof(SimTK::Real));
+    static_assert(sizeof(SimTK::Vec3) == 3 * sizeof(SimTK::Real));
+    static_assert(sizeof(SimTK::SpatialVec) == 6 * sizeof(SimTK::Real));
 
-        const SimTK::Vec3 simForce(forces[dAIx][0], forces[dAIx][1], forces[dAIx][2]);
-        inclBodyForces_G[ibx] += SimTK::SpatialVec(inclAtomStation_G[iax] % simForce, simForce);
+    const int N = static_cast<int>(nonBondedMappings.dummAtomIndex.size());
+
+    // SoA pointers — no struct stride in the hot loop
+    const int* __restrict__ dAIxArr = nonBondedMappings.dummAtomIndex.data();
+    const int* __restrict__ iaxArr = nonBondedMappings.includedAtomIndex.data();
+    const int* __restrict__ ibxArr = nonBondedMappings.bodyIndex.data();
+
+    // Flat SimTK::Real views — kills Vec3 constructor overhead, lets the compiler
+    // see plain loads and cross-product as scalar FMAs
+    const auto* __restrict__ frc = reinterpret_cast<const SimTK::Real*>(forces.data());
+    const auto* __restrict__ sta = reinterpret_cast<const SimTK::Real*>(&inclAtomStation_G[0]);
+
+    // inclBodyForces_G is small (numBodies << N) and stays hot in L1/L2.
+    // Scatter writes to it are cache hits — no atomics or body-sort needed.
+    // SpatialVec layout: [0]=torque (3d), [1]=force (3d)
+    auto* __restrict__ bfrc = reinterpret_cast<SimTK::Real*>(&inclBodyForces_G[0]);
+
+    // Prefetch distance: tune to hide load latency (cache line = 64 bytes = ~2.6 Vec3s)
+    constexpr int PF = 8;
+
+    for (int i = 0; i < N; ++i) {
+        // Software prefetch — hides the gather latency for random reads into
+        // forces and stations since dAIx/iax can jump anywhere in a large array
+        if (i + PF < N) {
+            __builtin_prefetch(frc + (dAIxArr[i + PF] * 3), 0, 1);
+            __builtin_prefetch(sta + (iaxArr[i + PF] * 3), 0, 1);
+        }
+
+        const int fi = dAIxArr[i] * 3;
+        const int si = iaxArr[i] * 3;
+        const int bi = ibxArr[i] * 6; // SpatialVec = 6 doubles
+
+        const SimTK::Real f0 = frc[fi];
+        const SimTK::Real f1 = frc[fi + 1];
+        const SimTK::Real f2 = frc[fi + 2];
+        const SimTK::Real s0 = sta[si];
+        const SimTK::Real s1 = sta[si + 1];
+        const SimTK::Real s2 = sta[si + 2];
+
+        // Cross product s % f, written as FMAs explicitly
+        // Without this, compiler may emit separate mul+sub+add without -ffast-math
+        bfrc[bi] += std::fma(s1, f2, -(s2 * f1));     // torque x
+        bfrc[bi + 1] += std::fma(s2, f0, -(s0 * f2)); // torque y
+        bfrc[bi + 2] += std::fma(s0, f1, -(s1 * f0)); // torque z
+        bfrc[bi + 3] += f0;                           // force x
+        bfrc[bi + 4] += f1;                           // force y
+        bfrc[bi + 5] += f2;                           // force z
     }
 }
 
@@ -456,16 +510,16 @@ auto OPENMM::evaluatePotentialEnergyFromPositionsCache() const -> SimTK::Real {
     return state.getPotentialEnergy();
 }
 
-auto OPENMM::computePeriodicBoxVectors_Context(double a_length,
-                                               double b_length,
-                                               double c_length,
-                                               double alpha,
-                                               double beta,
-                                               double gamma)
+auto OPENMM::computePeriodicBoxVectors_Context(SimTK::Real a_length,
+                                               SimTK::Real b_length,
+                                               SimTK::Real c_length,
+                                               SimTK::Real alpha,
+                                               SimTK::Real beta,
+                                               SimTK::Real gamma)
     -> std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> {
     ensureInitialized();
 
-    const double TOL = 1e-6;
+    const SimTK::Real TOL = 1e-6;
 
     // // Convert angles from degrees to radians
     // alpha = SimTK::Deg2Rad * alpha;
@@ -477,9 +531,9 @@ auto OPENMM::computePeriodicBoxVectors_Context(double a_length,
 
     OpenMM::Vec3 b(b_length * std::cos(gamma), b_length * std::sin(gamma), 0.0);
 
-    double cx = c_length * std::cos(beta);
-    double cy = c_length * (std::cos(alpha) - std::cos(beta) * std::cos(gamma)) / std::sin(gamma);
-    double cz = std::sqrt(c_length * c_length - cx * cx - cy * cy);
+    SimTK::Real cx = c_length * std::cos(beta);
+    SimTK::Real cy = c_length * (std::cos(alpha) - std::cos(beta) * std::cos(gamma)) / std::sin(gamma);
+    SimTK::Real cz = std::sqrt(c_length * c_length - cx * cx - cy * cy);
 
     OpenMM::Vec3 c(cx, cy, cz);
 

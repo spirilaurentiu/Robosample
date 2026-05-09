@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 from typing import Dict, List, Tuple
 
-import atomtypes
 import parmed as pmd
 
 PROTEIN_BACKBONE = {
@@ -283,6 +284,12 @@ LIPID_DIHEDRALS = {
         "lipid-chi18": ("C117", "C118", "C119", "C120"),
     },
 }
+
+# Define residue name sets once at module level
+PROTEIN_RESIDUES: frozenset[str] = frozenset(PROTEIN_SIDECHAIN.keys())
+LIPID_RESIDUES: frozenset[str] = frozenset(LIPID_DIHEDRALS.keys()) - {
+    ""
+}  # exclude acyl chain sentinel
 
 
 def _is_dihedral_intraresidue(dihedral: pmd.topologyobjects.Dihedral) -> bool:
@@ -787,18 +794,23 @@ class DihedralClassifier:
         self, gparent: pmd.Atom, parent: pmd.Atom, child: pmd.Atom, gchild: pmd.Atom
     ) -> str | None:
 
-        return self._classify_protein(gparent, parent, child, gchild)
+        # Use residue names of the central bond atoms (parent & child) for dispatch.
+        # These are always in the same molecule; gparent/gchild may cross a boundary.
+        residue_names = frozenset(a.residue.name for a in (parent, child))
 
-        # Extract atom types (not atom names) to dispatch to the appropriate classifier
-        atom_types = [gparent.type, parent.type, child.type, gchild.type]
-
-        # Handle protein backbone and side chains
-        if all(t in atomtypes.AMBER_FF19SB_ATOM_TYPES for t in atom_types):
-            return self._classify_protein(gparent, parent, child, gchild)
-
-        # Handle lipids
-        if all(t in atomtypes.AMBER_LIPID_21_ATOM_TYPES for t in atom_types):
-            return self._classify_lipid(gparent, parent, child, gchild)
+        match (
+            bool(residue_names & PROTEIN_RESIDUES),
+            bool(residue_names & LIPID_RESIDUES),
+        ):
+            case (True, False):
+                return self._classify_protein(gparent, parent, child, gchild)
+            case (False, True):
+                return self._classify_lipid(gparent, parent, child, gchild)
+            case (True, True):
+                # Cross-molecule dihedral (e.g., protein-lipid linker) — not classifiable
+                return None
+            case _:
+                return None
 
         # # Try to classify as nucleic acid first
         # # Some glycosidic dihedrals may superficially resemble nucleic acid torsions, so we check for nucleic acid residues first to avoid misclassification.
