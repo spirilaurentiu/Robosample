@@ -249,7 +249,7 @@ mask_psi = context.standard_dihedral_bonds["dihedral_type"] == "psi"
 
 bonds = context.standard_dihedral_bonds[mask_phi | mask_psi]
 sele = context.build_flexibilities(bonds)
-context.addTorsionalWorld(sele).add_sampler(
+context.add_torsional_world(sele).add_sampler(
     timeStep=0.025,
     mdSteps=20,  # ignored if using NUTS
     boostMDSteps=20,  # ignored if using NUTS

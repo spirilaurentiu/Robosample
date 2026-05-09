@@ -12,7 +12,7 @@ def test_chamber():
     )
 
     # Add cartesian world (will integrate with OpenMM)
-    context.addCartesianWorld().add_sampler(
+    context.add_cartesian_world().add_sampler(
         timeStep=0.001,
         mdSteps=1,
         boostMDSteps=1,
@@ -20,7 +20,7 @@ def test_chamber():
     )
 
     sele = context.getDefaultBonds("standard")
-    context.addTorsionalWorld(sele).add_sampler(
+    context.add_torsional_world(sele).add_sampler(
         timeStep=0.005, mdSteps=64, boostMDSteps=64
     )
 

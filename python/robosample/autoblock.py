@@ -600,7 +600,7 @@ for cycle in range(10):
     )
 
     # Add cartesian world (will integrate with OpenMM)
-    context.addCartesianWorld().add_sampler(
+    context.add_cartesian_world().add_sampler(
         timeStep=0.001,
         mdSteps=500,
         boostMDSteps=500,
@@ -652,7 +652,7 @@ for cycle in range(10):
             bonds = context.standard_dihedral_bonds.loc[block]
 
             sele = context.build_flexibilities(bonds)
-            context.addTorsionalWorld(sele).add_sampler(
+            context.add_torsional_world(sele).add_sampler(
                 timeStep=0.025,
                 mdSteps=2000,  # ignored if using NUTS
                 boostMDSteps=2000,  # ignored if using NUTS

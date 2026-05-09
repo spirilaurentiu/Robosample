@@ -16,6 +16,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "Compound.h"
@@ -77,10 +78,12 @@ struct CoordinateTransferError {
     SimTK::Real improperDihedrals{0}, improperDihedralsMax{0};
 };
 
-struct SpatialForces {
-    SimTK::Vec3 torque;
+struct SpatialForceSample {
+    int outboardPrmtopIndex;
     SimTK::Vec3 force;
-    SimTK::Vec3 COM;
+    SimTK::Vec3 torque;
+    SimTK::Real u;
+    SimTK::Real uDot;
 };
 
 //==============================================================================
@@ -333,8 +336,7 @@ class World {
                    Span<Topology> topo,
                    bool testing,
                    const ZMatrix& _zMatrix,
-                   bool isVisual = true,
-                   SimTK::Real visualizerFrequency = 0.0015);
+                   bool wantSpatialForceHistory);
 
     [[nodiscard]] auto getAtomTargetLocationsCache() const
         -> const std::vector<SimTK::Compound::AtomTargetLocations>& {
@@ -876,7 +878,11 @@ class World {
         return mbxRootCAIx[mbIndex];
     }
 
-    [[nodiscard]] auto calcSpatialForces() -> std::vector<SpatialForces>;
+    void calcSpatialForces();
+    void writeSpatialForces(const std::string& filename) const;
+    [[nodiscard]] auto getWantSpatialForceHistory() const -> bool {
+        return wantSpatialForceHistory;
+    }
 
     // BAT --------------------------------------------------------------------
 
@@ -934,6 +940,10 @@ class World {
     std::vector<RigidBodyAtomBond> rigidBodyAtomBonds;
 
     std::set<SimTK::MobilizedBodyIndex> interestingMobodIndices;
+    std::map<SimTK::MobilizedBodyIndex, int> mbx2PrmtopInboardIndex;
+    std::map<int, int> prmtopInboardIndex2PrmtopOutboardIndex;
+    std::unordered_map<int, std::vector<SpatialForceSample>> spatialForceHistory;
+    bool wantSpatialForceHistory = false;
 
     // Maps a generalized velocity scale factor for every mobod
     std::map<SimTK::MobilizedBodyIndex, SimTK::Real> mbx2uScale;

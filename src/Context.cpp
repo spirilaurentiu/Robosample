@@ -492,11 +492,12 @@ auto Context::validateContext() -> bool {
  */
 void Context::addWorld(bool fixmanTorque,
                        int samplesPerRound,
-                       const std::vector<std::vector<BondFlexibility>>& rollFlexibilities) {
+                       const std::vector<std::vector<BondFlexibility>>& rollFlexibilities,
+                       bool wantSpatialForceHistory) {
     // Create new world and add its index
     worldIndices.push_back(worldIndices.size());
     Span<Topology> t{topologies};
-    worlds.emplace_back(worldIndices.back(), t, testing, zMatrix);
+    worlds.emplace_back(worldIndices.back(), t, testing, zMatrix, wantSpatialForceHistory);
 
     // If requested, add Fixman torque as an additional force subsystem
     if (fixmanTorque) {
@@ -2453,6 +2454,10 @@ void Context::RunReplicaWorldRange(int replicaIx,
         }
         const bool validated = RunWorld(worldIndex, headerToRunWorld, shouldPrint);
 
+        if (currWorld.getWantSpatialForceHistory()) {
+            currWorld.calcSpatialForces();
+        }
+
         // Transfer coordinates
         const bool isEquilibrium = (distortIx == 0);
         const bool intoWORK = !isEquilibrium;
@@ -2603,11 +2608,6 @@ void Context::RunREX(int numEquilibrationRounds,
     std::cout << rexOutput.str() << '\n';
     std::cout << rexOutput.str() << '\n';
     // ------------------------------------------------------------------------
-
-    // First frame of DCD is the initial coordinates
-    for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++) {
-        writeDCD(replicaIx);
-    }
 
     // REPLICA EXCHANGE MAIN LOOP -------------------------------------------->
     const int totalRounds = numEquilibrationRounds + numProductionRounds;
@@ -2838,6 +2838,12 @@ void Context::RunREX(int numEquilibrationRounds,
 
     // foutU.close();
     // foutUDot.close();
+
+    for (const auto& world : worlds) {
+        if (world.getWantSpatialForceHistory()) {
+            world.writeSpatialForces("vectors.dat");
+        }
+    }
 
     OPENMM::get().shutdown();
 }

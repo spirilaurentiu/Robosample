@@ -64,7 +64,8 @@ class Context {
 
     void addWorld(bool fixmanTorque,
                   int samplesPerRound,
-                  const std::vector<std::vector<BondFlexibility>>& flexibilities);
+                  const std::vector<std::vector<BondFlexibility>>& rollFlexibilities,
+                  bool wantSpatialForceHistory);
 
     // Add task spaces
     void addTaskSpacesLS();

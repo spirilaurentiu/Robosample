@@ -37,11 +37,12 @@ class Sampler:
 
 @dataclass
 class World:
-    fixmanTorque: bool
-    samplesPerRound: int
-    flexibilities: list[rb.BondFlexibility]
-    isCartesian: bool
+    fixman_torque: bool
+    samples_per_round: int
+    roll_flexibilities: list[rb.BondFlexibility]
+    is_cartesian: bool
     samplers: list[Sampler]
+    want_spatial_force_history: bool
 
     def add_sampler(
         self,
@@ -62,7 +63,7 @@ class World:
             "Can only add samplers before initializing the context"
         )
 
-        if self.isCartesian:
+        if self.is_cartesian:
             integratorType = rb.IntegratorType.OMMVV
             useFixmanPotential = False
 
@@ -935,7 +936,7 @@ class Context(rb.Context):
 
         return flexibilities
 
-    def addCartesianWorld(self, samplesPerRound: int = 1) -> World:
+    def add_cartesian_world(self, samplesPerRound: int = 1) -> World:
         flexibilities = []
         for bond in self.system_topology.bonds:
             if bond.ring_closing:
@@ -953,17 +954,21 @@ class Context(rb.Context):
             flexibilities.append(flex)
 
         w = World(
-            fixmanTorque=False,
-            samplesPerRound=samplesPerRound,
-            flexibilities=[flexibilities],
-            isCartesian=True,
+            fixman_torque=False,
+            samples_per_round=samplesPerRound,
+            roll_flexibilities=[flexibilities],
+            is_cartesian=True,
             samplers=list[Sampler](),
+            want_spatial_force_history=False,
         )
         self.worlds.append(w)
         return self.worlds[-1]
 
-    def addTorsionalWorld(
-        self, torsional_bonds: list[rb.BondFlexibility], samplesperRound: int = 1
+    def add_torsional_world(
+        self,
+        torsional_bonds: list[rb.BondFlexibility],
+        samplesperRound: int = 1,
+        want_spatial_force_history: bool = False,
     ):
         """# !!!!!!!!!!!!!!!!!!!!! torsional bonds are in prmtop order, we reorder them in bat coordinates inside this function !!!!!!!!!!!!!!!!!!!!!"""
 
@@ -979,11 +984,12 @@ class Context(rb.Context):
         #     torsional_bonds_reordered.append(rb.BondFlexibility(self.prmtop_to_global_index[b.i], self.prmtop_to_global_index[b.j], b.mobility))
 
         w = World(
-            fixmanTorque=True,
-            samplesPerRound=samplesperRound,
-            flexibilities=torsional_bonds,
-            isCartesian=False,
+            fixman_torque=True,
+            samples_per_round=samplesperRound,
+            roll_flexibilities=torsional_bonds,
+            is_cartesian=False,
             samplers=list[Sampler](),
+            want_spatial_force_history=want_spatial_force_history,
         )
         self.worlds.append(w)
 
@@ -1033,14 +1039,15 @@ class Context(rb.Context):
         for world in self.worlds:
             print(
                 "Adding world with the following parameters: ",
-                f"fixmanTorque={world.fixmanTorque}, ",
-                f"samplesPerRound={world.samplesPerRound}, ",
-                f"flexibilities length={len(world.flexibilities)}, ",
+                f"fixmanTorque={world.fixman_torque}, ",
+                f"samplesPerRound={world.samples_per_round}, ",
+                f"flexibilities length={len(world.roll_flexibilities)}, ",
             )
             super().add_world(
-                world.fixmanTorque,
-                world.samplesPerRound,
-                world.flexibilities,
+                world.fixman_torque,
+                world.samples_per_round,
+                world.roll_flexibilities,
+                world.want_spatial_force_history,
             )
 
         # OpenMM must be initialized before adding samplers since they want to calculate energies when initializing

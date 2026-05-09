@@ -15,7 +15,8 @@
         "repreng.csv",
         "tamasfe.even-better-toml",
         "ryanluker.vscode-coverage-gutters",
-        "tekumara.typos-vscode"
+        "tekumara.typos-vscode",
+        "go2sh.tcl-language-support",
     ],
     "unwantedRecommendations": [
         "ms-vscode.cpptools",

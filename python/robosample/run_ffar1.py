@@ -122,7 +122,7 @@ for mol_ix in range(3, context.get_num_molecules()):
     context.set_root_mobility(mol_ix, robosample.rb.RootMobility.Free)
 
 ############# CARTESIAN WORLD #############
-context.addCartesianWorld().add_sampler(
+context.add_cartesian_world().add_sampler(
     timeStep=0.001,
     mdSteps=50_000,
     boostMDSteps=50_000,
@@ -142,7 +142,7 @@ bonds = context.standard_dihedral_bonds.loc[
 ]
 
 sele = context.build_flexibilities(bonds)
-context.addTorsionalWorld(sele).add_sampler(
+context.add_torsional_world(sele).add_sampler(
     timeStep=0.005,  # 5 fs
     mdSteps=500,
     boostMDSteps=500,
@@ -191,7 +191,7 @@ bonds = context.standard_dihedral_bonds.loc[
     context.standard_dihedral_bonds["dihedral_type"].isin(side_dihedral_types)
 ]
 sele = context.build_flexibilities(bonds)
-context.addTorsionalWorld(sele).add_sampler(
+context.add_torsional_world(sele).add_sampler(
     timeStep=0.01,  # 10 fs
     mdSteps=500,  # ignored if using NUTS
     boostMDSteps=500,  # ignored if using NUTS
@@ -207,7 +207,7 @@ bonds = context.standard_dihedral_bonds.loc[
     & (context.standard_dihedral_bonds["resid"].isin(range(146, 182)))
 ]
 sele = context.build_flexibilities(bonds)
-context.addTorsionalWorld(sele).add_sampler(
+context.add_torsional_world(sele).add_sampler(
     timeStep=0.02,  # 20 fs
     mdSteps=300,  # ignored if using NUTS
     boostMDSteps=300,  # ignored if using NUTS
@@ -223,7 +223,7 @@ bonds = context.standard_dihedral_bonds.loc[
     & (context.standard_dihedral_bonds["resid"].isin(range(209, 223)))
 ]
 sele = context.build_flexibilities(bonds)
-context.addTorsionalWorld(sele).add_sampler(
+context.add_torsional_world(sele).add_sampler(
     timeStep=0.02,  # 20 fs
     mdSteps=300,  # ignored if using NUTS
     boostMDSteps=300,  # ignored if using NUTS
@@ -239,7 +239,7 @@ bonds = context.standard_dihedral_bonds.loc[
     & (context.standard_dihedral_bonds["resid"].isin(range(235, 242)))
 ]
 sele = context.build_flexibilities(bonds)
-context.addTorsionalWorld(sele).add_sampler(
+context.add_torsional_world(sele).add_sampler(
     timeStep=0.02,  # 20 fs
     mdSteps=300,  # ignored if using NUTS
     boostMDSteps=300,  # ignored if using NUTS
@@ -263,7 +263,7 @@ bonds = context.standard_dihedral_bonds.loc[
     & (~context.standard_dihedral_bonds["resid"].isin(helix_residues))
 ]
 sele = context.build_flexibilities(bonds)
-context.addTorsionalWorld(sele).add_sampler(
+context.add_torsional_world(sele).add_sampler(
     timeStep=0.01,  # 1 fs
     mdSteps=1000,  # ignored if using NUTS
     boostMDSteps=1000,  # ignored if using NUTS
@@ -273,7 +273,7 @@ context.addTorsionalWorld(sele).add_sampler(
 ################### World 4 ###############
 
 ############### World D - Diagnostic / Structural Reporters ###############
-diag_resid = [14, 146, 182, 209, 223, 238]
+diag_resid = [14, 37, 41, 62, 86, 110, 130, 146, 182, 209, 223, 238, 247, 257, 290]
 
 bonds = context.standard_dihedral_bonds.loc[
     (context.standard_dihedral_bonds["resid"].isin(diag_resid))
@@ -282,11 +282,10 @@ bonds = context.standard_dihedral_bonds.loc[
 ]
 
 sele = context.build_flexibilities(bonds)
-world = context.addTorsionalWorld(sele)
-world.add_sampler(
+world = context.add_torsional_world(sele, want_spatial_force_history=True).add_sampler(
     timeStep=0.02,  # 20 fs
-    mdSteps=200,
-    boostMDSteps=200,
+    mdSteps=250,
+    boostMDSteps=250,
     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
     use_nuts=False,
 )

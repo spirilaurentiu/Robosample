@@ -28,7 +28,7 @@ def simulation_results():
     # Put torsions on middle bonds in standard dihedrals and integrate with 10 fs time step for 1 ps
     # Torsions are protein phi, psi and chi1
     sele = context.getDefaultBonds("standard")
-    context.addTorsionalWorld(sele).add_sampler(
+    context.add_torsional_world(sele).add_sampler(
         timeStep=0.01, mdSteps=0, boostMDSteps=0
     )
 

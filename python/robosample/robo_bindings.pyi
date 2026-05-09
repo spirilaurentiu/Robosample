@@ -325,9 +325,14 @@ class Context:
         """
         Add an empty themodynamic state to the context.
         """
-    def add_world(self, arg0: bool, arg1: typing.SupportsInt | typing.SupportsIndex, arg2: collections.abc.Sequence[collections.abc.Sequence[BondFlexibility]]) -> None:
+    def add_world(self, fixman_torque: bool, samples_per_round: typing.SupportsInt | typing.SupportsIndex, roll_flexibilities: collections.abc.Sequence[collections.abc.Sequence[BondFlexibility]], want_spatial_force_history: bool) -> None:
         """
-        Add an empty world.
+                    Add an empty world.
+        
+                    Args:
+                        roll_flexibilities: A list of lists of BondFlexibility objects, 
+                                            e.g., [[rb.BondFlexibility(), ...], [...]]
+                        want_spatial_force_history: A boolean indicating whether to track spatial force history.
         """
     def calculate_openmm_energy(self, worldIndex: typing.SupportsInt | typing.SupportsIndex) -> float:
         """

@@ -842,7 +842,20 @@ PYBIND11_MODULE(MODULE_NAME, m) {
              &Context::calculatePotentialEnergy,
              py::arg("worldIndex"),
              "Calculate the OpenMM energy of the current state for a specific world index.")
-        .def("add_world", &Context::addWorld, "Add an empty world.")
+        .def("add_world",
+             &Context::addWorld,
+             py::arg("fixman_torque"),
+             py::arg("samples_per_round"),
+             py::arg("roll_flexibilities"),
+             py::arg("want_spatial_force_history"),
+             R"doc(
+            Add an empty world.
+
+            Args:
+                roll_flexibilities: A list of lists of BondFlexibility objects, 
+                                    e.g., [[rb.BondFlexibility(), ...], [...]]
+                want_spatial_force_history: A boolean indicating whether to track spatial force history.
+                )doc")
         .def("getWorld",
              py::overload_cast<std::size_t>(&Context::getWorld, py::const_),
              py::return_value_policy::reference)

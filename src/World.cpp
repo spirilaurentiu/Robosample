@@ -1394,19 +1394,18 @@ StationTaskLaurentiu::StationTaskLaurentiu() {
 
 /** Constructor. Initializes the following objects:
  *  - CompoundSystem,
- *	  - SimbodyMatterSubsystem, GeneralForceSubsystem, DecorationSubsystem,
- *		Visualizer, Visualizer::Reporter, DuMMForceFieldSubsystem,
+ *	  - SimbodyMatterSubsystem, GeneralForceSubsystem, DecorationSubsystem, DuMMForceFieldSubsystem,
  *  - Integrator with a TimeStepper on top **/
 World::World(int worldIndex,
              Span<Topology> topo,
              bool testing,
              const ZMatrix& _zMatrix,
-             bool isVisual,
-             SimTK::Real visualizerFrequency)
+             bool wantSpatialForceHistory)
     : ownWorldIndex(worldIndex)
     , topologies(topo)
     , testing(testing)
-    , zMatrix(_zMatrix) {
+    , zMatrix(_zMatrix)
+    , wantSpatialForceHistory(wantSpatialForceHistory) {
     compoundSystem = std::make_unique<SimTK::CompoundSystem>();
     matter = std::make_unique<SimTK::SimbodyMatterSubsystem>(*compoundSystem);
     forces = std::make_unique<SimTK::GeneralForceSubsystem>(*compoundSystem);
@@ -1463,12 +1462,25 @@ void World::modelTopologies(const std::vector<SimTK::Compound::AtomTargetLocatio
         topoAtomIsRigidBodyRoot.emplace_back();
 
         // mbxToCAIx contains only atoms at the origin of mobilized body frames
-        std::map<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex> mbxToCAIx;
+        std::map<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex> mbx2InboardCAIx;
         for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topology.getNumAtoms(); ++cAIx) {
             const auto mbx = topology.getAtomMobilizedBodyIndexThroughDumm(cAIx, *forceField);
 
             if (topology.getAtomLocationInMobilizedBodyFrame(cAIx) == 0) {
-                mbxToCAIx.insert(std::make_pair(mbx, cAIx));
+                mbx2InboardCAIx.insert(std::make_pair(mbx, cAIx));
+
+                if (mbx > 1 && cAIx > 0 && wantSpatialForceHistory) {
+                    const auto atomPrmtopIndex = topology.getAtoms()[cAIx].identity.prmtopIndex;
+                    mbx2PrmtopInboardIndex.insert(std::make_pair(mbx, atomPrmtopIndex));
+
+                    std::cout << "Mobx " << mbx << " has inboard CAIx " << cAIx << " with prmtop index "
+                              << atomPrmtopIndex << std::endl;
+
+                    const auto ouboardCAIx =
+                        topology.getChemicalParentOfMobodRootAtom(cAIx, *matter, *forceField);
+                    const auto outboardPrmtopIndex = topology.getAtoms()[ouboardCAIx].identity.prmtopIndex;
+                    prmtopInboardIndex2PrmtopOutboardIndex[atomPrmtopIndex] = outboardPrmtopIndex;
+                }
             }
         }
 
@@ -1486,7 +1498,7 @@ void World::modelTopologies(const std::vector<SimTK::Compound::AtomTargetLocatio
             forceField->setDuMMAtomMass(dAIx, topology.getAtoms()[cAIx].physics.massInDaltons);
 
             // Find where we are in the rigid body
-            const auto rigidBodyRootCAIx = mbxToCAIx.at(mbx);
+            const auto rigidBodyRootCAIx = mbx2InboardCAIx.at(mbx);
             mbxRootCAIx[mbx] = {topoIx, rigidBodyRootCAIx};
 
             // This atom is at the origin of the mobilized body frame
@@ -4342,8 +4354,8 @@ auto World::generateSamples(int howManySamplesPerRound,
     return validated;
 }
 
-auto World::calcSpatialForces() -> std::vector<SpatialForces> {
-    if (getSampler(0)->getIntegratorType() != IntegratorType::OpenMMVelocityVerlet) {
+void World::calcSpatialForces() {
+    if (getSampler(0)->getIntegratorType() == IntegratorType::OpenMMVelocityVerlet) {
         throw std::runtime_error(
             "World::calcSpatialForces() is only implemented for OpenMMVelocityVerlet sampler");
     }
@@ -4355,14 +4367,66 @@ auto World::calcSpatialForces() -> std::vector<SpatialForces> {
     for (const auto mbx : interestingMobodIndices) {
         const auto& mobod = matter->getMobilizedBody(mbx);
 
+        const auto prmtopOutboardIndex = prmtopInboardIndex2PrmtopOutboardIndex[mbx2PrmtopInboardIndex[mbx]];
         const auto& torque_G = reactionForces[mbx][0];
         const auto& force_G = reactionForces[mbx][1];
+        const auto u = mobod.getOneU(worldState, 0);
+        const auto uDot = mobod.getOneUDot(worldState, 0);
 
-        const auto& COM_station = mobod.getBodyMassCenterStation(worldState);
-        const auto& COM_ground = mobod.findStationLocationInGround(worldState, COM_station);
+        // const auto& COM_station = mobod.getBodyMassCenterStation(worldState);
+        // const auto& COM_ground = mobod.findStationLocationInGround(worldState, COM_station);
 
-        std::cout << "mbx=" << mbx << " torque_G=" << torque_G << " force_G=" << force_G
-                  << " COM=" << COM_ground << std::endl;
+        int prmIdx = mbx2PrmtopInboardIndex[mbx];
+        spatialForceHistory[prmIdx].push_back({prmtopOutboardIndex, force_G, torque_G, u, uDot});
+    }
+}
+
+void World::writeSpatialForces(const std::string& filename) const {
+    std::ofstream out(filename);
+    out << "# frame  inboard_idx  outboard_idx  fx  fy  fz  tx  ty  tz  u  uDot\n";
+
+    // Global max magnitude across all atoms and all frames
+    double globalMaxF = 0.0;
+    double globalMaxT = 0.0;
+
+    for (const auto& [prmIdx, samples] : spatialForceHistory) {
+        for (const auto& s : samples) {
+            globalMaxF = std::max(globalMaxF, s.force.norm());
+            globalMaxT = std::max(globalMaxT, s.torque.norm());
+        }
+    }
+
+    const double forceScale = (globalMaxF > 0.0) ? 1.0 / globalMaxF : 1.0;
+    const double torqueScale = (globalMaxT > 0.0) ? 1.0 / globalMaxT : 1.0;
+
+    // --- Number of frames ---
+    int nFrames = 0;
+    for (const auto& [_, samples] : spatialForceHistory) {
+        nFrames = std::max(nFrames, (int)samples.size());
+    }
+
+    // --- Sorted inboard indices for consistent output order ---
+    std::vector<int> sortedIndices;
+    sortedIndices.reserve(spatialForceHistory.size());
+    for (const auto& [prmIdx, _] : spatialForceHistory) {
+        sortedIndices.push_back(prmIdx);
+    }
+    std::sort(sortedIndices.begin(), sortedIndices.end());
+
+    // Write
+    for (int frame = 0; frame < nFrames; ++frame) {
+        for (const int prmIdx : sortedIndices) {
+            const auto& s = spatialForceHistory.at(prmIdx).at(frame);
+
+            const SimTK::Vec3 f = s.force * forceScale;
+            const SimTK::Vec3 t = s.torque * torqueScale;
+
+            if (prmIdx != s.outboardPrmtopIndex) {
+                out << frame << " " << prmIdx << " " << s.outboardPrmtopIndex << " " << f[0] << " " << f[1]
+                    << " " << f[2] << " " << t[0] << " " << t[1] << " " << t[2] << " " << s.u << " " << s.uDot
+                    << "\n";
+            }
+        }
     }
 }
 

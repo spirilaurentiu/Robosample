@@ -56,7 +56,7 @@ def test_steady_state():
     )
 
     sele = context.getDefaultBonds("standard")
-    context.addTorsionalWorld(sele).add_sampler(timeStep=0, mdSteps=0, boostMDSteps=0)
+    context.add_torsional_world(sele).add_sampler(timeStep=0, mdSteps=0, boostMDSteps=0)
 
     # context.initialize([300.0])
 
