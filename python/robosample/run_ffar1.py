@@ -100,12 +100,23 @@ T_MAX = 1000.0
 NOF_REPLICAS = 1
 R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 
+import mdtraj as md
+import parmed as pmd
+
+traj = md.load("vmd/ffar1_6000.repl0.dcd", top=args.prmtop)
+last = traj[-1]
+parm = pmd.load_file(args.prmtop)
+parm.coordinates = last.xyz[0] * 10.0
+if last.unitcell_lengths is not None:
+    parm.box = list(last.unitcell_lengths[0] * 10.0) + list(last.unitcell_angles[0])
+parm.save("last_frame.rst7", format="rst7", overwrite=True)
+
 # create robosample context
 context = robosample.Context(
     name=args.name,
     seed=args.seed,
     prmtop=args.prmtop,
-    inpcrd=args.inpcrd,
+    inpcrd="last_frame.rst7",
     write_freq=args.write_freq,
     testing=False,
 )
@@ -121,15 +132,15 @@ context.set_root_mobility(2, robosample.rb.RootMobility.Weld)
 for mol_ix in range(3, context.get_num_molecules()):
     context.set_root_mobility(mol_ix, robosample.rb.RootMobility.Free)
 
-############# CARTESIAN WORLD #############
-context.add_cartesian_world().add_sampler(
-    timeStep=0.001,
-    mdSteps=50_000,
-    boostMDSteps=50_000,
-    acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
-    use_nuts=False,
-)
-############### CARTESIAN WORLD #############
+# ############# CARTESIAN WORLD #############
+# context.add_cartesian_world().add_sampler(
+#     timeStep=0.001,
+#     mdSteps=50_000,
+#     boostMDSteps=50_000,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
+#     use_nuts=False,
+# )
+# ############### CARTESIAN WORLD #############
 
 ############### World 2a ###############
 resid = [103, 136, 173, 182, 190, 201, 232, 236, 243, 257, 275]

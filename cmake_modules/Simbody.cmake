@@ -1,30 +1,48 @@
-SET(SIMBODY_DIRS)
-SET(SIMBODY_INCLUDE_DIRS)
+set(SIMBODY_DIRS)
+set(SIMBODY_INCLUDE_DIRS)
 
-SET(SIMTK_COMMON_DIRS . Scalar SmallMatrix Mechanics BigMatrix Geometry Simulation Random Polynomial)
+set(SIMTK_COMMON_DIRS
+    .
+    Scalar
+    SmallMatrix
+    Mechanics
+    BigMatrix
+    Geometry
+    Simulation
+    Random
+    Polynomial)
 foreach(subdir ${SIMTK_COMMON_DIRS})
-    SET(SIMBODY_DIRS ${SIMBODY_DIRS} ${CMAKE_SOURCE_DIR}/Simbody01/SimTKcommon/${subdir})
-    SET(SIMBODY_INCLUDE_DIRS ${SIMBODY_INCLUDE_DIRS}
-        ${CMAKE_SOURCE_DIR}/Simbody01/SimTKcommon/${subdir}/include
-        ${CMAKE_SOURCE_DIR}/Simbody01/SimTKcommon/${subdir}/include/SimTKcommon
-        ${CMAKE_SOURCE_DIR}/Simbody01/SimTKcommon/${subdir}/include/SimTKcommon/internal)
+  set(SIMBODY_DIRS ${SIMBODY_DIRS}
+                   ${CMAKE_SOURCE_DIR}/Simbody01/SimTKcommon/${subdir})
+  set(SIMBODY_INCLUDE_DIRS
+      ${SIMBODY_INCLUDE_DIRS}
+      ${CMAKE_SOURCE_DIR}/Simbody01/SimTKcommon/${subdir}/include
+      ${CMAKE_SOURCE_DIR}/Simbody01/SimTKcommon/${subdir}/include/SimTKcommon
+      ${CMAKE_SOURCE_DIR}/Simbody01/SimTKcommon/${subdir}/include/SimTKcommon/internal
+  )
 endforeach(subdir)
 
-SET(SIMTK_MATH_DIRS . LinearAlgebra Integrators Integrators/src/CPodes/sundials Optimizers Geometry)
+set(SIMTK_MATH_DIRS . LinearAlgebra Integrators Integrators/src/CPodes/sundials
+                    Optimizers Geometry)
 foreach(subdir ${SIMTK_MATH_DIRS})
-    SET(SIMBODY_DIRS ${SIMBODY_DIRS} ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/${subdir})
-    SET(SIMBODY_INCLUDE_DIRS ${SIMBODY_INCLUDE_DIRS}
-        ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/${subdir}/include
-        ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/${subdir}/include/simmath
-        ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/${subdir}/include/simmath/internal)
+  set(SIMBODY_DIRS ${SIMBODY_DIRS}
+                   ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/${subdir})
+  set(SIMBODY_INCLUDE_DIRS
+      ${SIMBODY_INCLUDE_DIRS}
+      ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/${subdir}/include
+      ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/${subdir}/include/simmath
+      ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/${subdir}/include/simmath/internal
+  )
 endforeach(subdir)
 
-SET(SIMBODY_DIRS ${SIMBODY_DIRS} ${CMAKE_SOURCE_DIR}/Simbody01/Simbody)
-IF(BUILD_VISUALIZER)
-    SET(SIMBODY_DIRS ${SIMBODY_DIRS} ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer)
-ENDIF(BUILD_VISUALIZER)
+set(SIMBODY_DIRS ${SIMBODY_DIRS} ${CMAKE_SOURCE_DIR}/Simbody01/Simbody)
+if(BUILD_VISUALIZER)
+  set(SIMBODY_DIRS ${SIMBODY_DIRS}
+                   ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer)
+endif(BUILD_VISUALIZER)
 
-SET(SIMBODY_INCLUDE_DIRS ${SIMBODY_INCLUDE_DIRS}
+set(SIMBODY_INCLUDE_DIRS
+    ${SIMBODY_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/include
     ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/include/simbody
     ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/include/simbody/internal
@@ -32,29 +50,31 @@ SET(SIMBODY_INCLUDE_DIRS ${SIMBODY_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include/simbody
     ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include/simbody/internal)
 
-IF(BUILD_VISUALIZER)
-    SET(SIMBODY_INCLUDE_DIRS ${SIMBODY_INCLUDE_DIRS}
-        ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include
-        ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include/simbody
-        ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include/simbody/internal)
-ENDIF(BUILD_VISUALIZER)
+if(BUILD_VISUALIZER)
+  set(SIMBODY_INCLUDE_DIRS
+      ${SIMBODY_INCLUDE_DIRS}
+      ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include
+      ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include/simbody
+      ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include/simbody/internal)
+endif(BUILD_VISUALIZER)
 
 # find source and header files
-SET(SIMBODY_SOURCE_C_FILES)
-SET(SIMBODY_SOURCE_CXX_FILES)
-SET(SIMBODY_SOURCE_INCLUDE_FILES)
+set(SIMBODY_SOURCE_C_FILES)
+set(SIMBODY_SOURCE_CXX_FILES)
+set(SIMBODY_SOURCE_INCLUDE_FILES)
 
-FOREACH(subdir ${SIMBODY_DIRS})
-    FILE(GLOB src_c_files ${subdir}/src/*.c ${subdir}/src/*/*.c)
-    SET(SIMBODY_SOURCE_C_FILES ${SIMBODY_SOURCE_C_FILES} ${src_c_files})
+foreach(subdir ${SIMBODY_DIRS})
+  file(GLOB src_c_files ${subdir}/src/*.c ${subdir}/src/*/*.c)
+  set(SIMBODY_SOURCE_C_FILES ${SIMBODY_SOURCE_C_FILES} ${src_c_files})
 
-    FILE(GLOB src_cxx_files ${subdir}/src/*.cpp ${subdir}/src/*/*.cpp)
-    SET(SIMBODY_SOURCE_CXX_FILES ${SIMBODY_SOURCE_CXX_FILES} ${src_cxx_files})
+  file(GLOB src_cxx_files ${subdir}/src/*.cpp ${subdir}/src/*/*.cpp)
+  set(SIMBODY_SOURCE_CXX_FILES ${SIMBODY_SOURCE_CXX_FILES} ${src_cxx_files})
 
-    # pimpl pattern is used and headers are stored in the src directory
-    FILE(GLOB incl_files ${subdir}/src/*.h ${subdir}/src/*/*.h)
-    SET(SIMBODY_SOURCE_INCLUDE_FILES ${SIMBODY_SOURCE_INCLUDE_FILES} ${incl_files})
-ENDFOREACH(subdir)
+  # pimpl pattern is used and headers are stored in the src directory
+  file(GLOB incl_files ${subdir}/src/*.h ${subdir}/src/*/*.h)
+  set(SIMBODY_SOURCE_INCLUDE_FILES ${SIMBODY_SOURCE_INCLUDE_FILES}
+                                   ${incl_files})
+endforeach(subdir)
 
 set(SIMBODY_COMMON_DEFS
     SimTK_SimTKCOMMON_LIBRARY_NAME="SimTKcommon"

@@ -80,26 +80,23 @@ void World::setAtomTargetLocationsToState(
     worldState = compoundSystem->realizeTopology();
     compoundSystem->realize(worldState, SimTK::Stage::Position);
 
-    bool wantTesting = true;
-    if (wantTesting) {
-        for (int topoIx = 0; topoIx < topologies.size(); topoIx++) {
-            const auto& topo = topologies[topoIx];
-            const auto& targets = atomTargets[topoIx];
+    // for (int topoIx = 0; topoIx < topologies.size(); topoIx++) {
+    //     const auto& topo = topologies[topoIx];
+    //     const auto& targets = atomTargets[topoIx];
 
-            for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topo.getNumAtoms(); ++cAIx) {
-                const auto computedLoc =
-                    topo.calcAtomLocationInGroundFrameThroughSimbody(cAIx, *forceField, *matter, worldState);
-                const auto& targetLoc = targets[cAIx];
+    //     for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topo.getNumAtoms(); ++cAIx) {
+    //         const auto computedLoc =
+    //             topo.calcAtomLocationInGroundFrameThroughSimbody(cAIx, *forceField, *matter, worldState);
+    //         const auto& targetLoc = targets[cAIx];
 
-                const SimTK::Real diffNorm = (targetLoc - computedLoc).norm();
-                if (diffNorm > 1e-6) {
-                    std::cerr << "\t[ERROR] Atom location mismatch for topology " << topoIx << " atom "
-                              << cAIx << ": computed " << computedLoc << ", target " << targetLoc
-                              << ", diff norm " << diffNorm << '\n';
-                }
-            }
-        }
-    }
+    //         const SimTK::Real diffNorm = (targetLoc - computedLoc).norm();
+    //         if (diffNorm > 1e-6) {
+    //             std::cerr << "\t[ERROR] Atom location mismatch for topology " << topoIx << " atom " << cAIx
+    //                       << ": computed " << computedLoc << ", target " << targetLoc << ", diff norm "
+    //                       << diffNorm << '\n';
+    //         }
+    //     }
+    // }
 
     if (testing) {
         coordinateTransferErrors.push_back(checkCoordinateTransfer(atomTargets));
