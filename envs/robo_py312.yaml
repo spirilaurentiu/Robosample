@@ -2,6 +2,8 @@ name: robo_py312
 channels:
   - conda-forge
   - nodefaults
+config:
+  channel_priority: flexible
 dependencies:
   # Build tools
   - cmake
@@ -11,7 +13,7 @@ dependencies:
   - conda-forge::gxx_linux-64
 
   # Python
-  - python=3.12
+  - python
   - pip
 
   # Coding tools

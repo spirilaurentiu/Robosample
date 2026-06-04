@@ -2,11 +2,56 @@ name: cuda11.4.1
 channels:
   - conda-forge
   - nvidia
+  - nodefaults
 dependencies:
+  # Compilers for this version of CUDA
   - gcc_linux-64=11
   - gxx_linux-64=11
-  - cuda-toolkit=11.4.1
+
+  # Mark correct CUDA version
   - cuda-version=11.4.1
+
+  # Requested by OpenMM
+  - cudatoolkit=11.4.1
+
+  # Equivalent to cuda-toolkit=11.4.1, but actually pulls correct versions
+  - cuda-cccl=11.4.1
+  - cuda-command-line-tools=11.4.1
+  - cuda-compiler=11.4.1
+  - cuda-cudart=11.4.1
+  - cuda-cudart-dev=11.4.1
+  - cuda-cuobjdump=11.4.1
+  - cuda-cupti=11.4.1
+  - cuda-cuxxfilt=11.4.1
+  - cuda-driver-dev=11.4.1
+  - cuda-gdb=11.4.1
+  - cuda-libraries=11.4.1
+  - cuda-libraries-dev=11.4.1
+  - cuda-nsight=11.4.1
+  - cuda-nvcc=11.4.1
+  - cuda-nvdisasm=11.4.1
+  - cuda-nvml-dev=11.4.1
+  - cuda-nvprof=11.4.1
+  - cuda-nvprune=11.4.1
+  - cuda-nvrtc=11.4.1
+  - cuda-nvrtc-dev=11.4.1
+  - cuda-nvtx=11.4.1
+  - cuda-nvvp=11.4.1
+  - cuda-opencl=11.4.1
+  - cuda-opencl-dev=11.4.1
+  - cuda-profiler-api=11.4.1
+  - cuda-samples=11.4.1
+  - cuda-sanitizer-api=11.4.1
+  - cuda-thrust=11.4.1
+  - cuda-tools=11.4.1
+  - cuda-version=11.4.1
+  - cuda-visual-tools=11.4.1
+
+# These variables are set on environment activation (i.e. after `conda activate XXX`)
+# $CONDA_PREFIX resolves to the environment's root directory at that point,
+# so these paths correctly point to the nvcc compiler and the GCC C++ host compiler
+# bundled in this environment. OpenMM requires both to be explicitly set when
+# building/running with CUDA support.
 variables:
   OPENMM_CUDA_COMPILER: $CONDA_PREFIX/bin/nvcc
   CUDA_HOST_COMPILER: $CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++

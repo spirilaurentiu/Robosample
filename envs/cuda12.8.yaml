@@ -2,11 +2,56 @@ name: cuda12.8
 channels:
   - conda-forge
   - nvidia
+  - nodefaults
 dependencies:
+  # Compilers for this version of CUDA
   - gcc_linux-64=14
   - gxx_linux-64=14
-  - cuda-toolkit=12.8
+
+  # Mark correct CUDA version
   - cuda-version=12.8
+
+  # Requested by OpenMM
+  - cudatoolkit=12.8
+
+  # Equivalent to cuda-toolkit=12.8, but actually pulls correct versions
+  - cuda-cccl=12.8
+  - cuda-command-line-tools=12.8
+  - cuda-compiler=12.8
+  - cuda-cudart=12.8
+  - cuda-cudart-dev=12.8
+  - cuda-cuobjdump=12.8
+  - cuda-cupti=12.8
+  - cuda-cuxxfilt=12.8
+  - cuda-driver-dev=12.8
+  - cuda-gdb=12.8
+  - cuda-libraries=12.8
+  - cuda-libraries-dev=12.8
+  - cuda-nsight=12.8
+  - cuda-nvcc=12.8
+  - cuda-nvdisasm=12.8
+  - cuda-nvml-dev=12.8
+  - cuda-nvprof=12.8
+  - cuda-nvprune=12.8
+  - cuda-nvrtc=12.8
+  - cuda-nvrtc-dev=12.8
+  - cuda-nvtx=12.8
+  - cuda-nvvp=12.8
+  - cuda-opencl=12.8
+  - cuda-opencl-dev=12.8
+  - cuda-profiler-api=12.8
+  - cuda-samples=12.8
+  - cuda-sanitizer-api=12.8
+  - cuda-thrust=12.8
+  - cuda-tools=12.8
+  - cuda-version=12.8
+  - cuda-visual-tools=12.8
+
+# These variables are set on environment activation (i.e. after `conda activate XXX`)
+# $CONDA_PREFIX resolves to the environment's root directory at that point,
+# so these paths correctly point to the nvcc compiler and the GCC C++ host compiler
+# bundled in this environment. OpenMM requires both to be explicitly set when
+# building/running with CUDA support.
 variables:
   OPENMM_CUDA_COMPILER: $CONDA_PREFIX/bin/nvcc
   CUDA_HOST_COMPILER: $CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++
