@@ -4282,36 +4282,34 @@ auto World::generateSamples(int howManySamplesPerRound,
         validated = updSampler(0)->sampleIteration(worldState, atomTargetLocationsCache, shouldPrint);
 
     } else {
-        // // Simbody supports locking mobilizers
-        // for (const auto& mobodLock : mobodLocks) {
-        // 	for (const auto mbx : mobodLock) {
-        // 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        // 		mobod.lock(worldState);
-        // 	}
+        // Simbody supports locking mobilizers
+        for (const auto& mobodLock : mobodLocks) {
+            for (const auto mbx : mobodLock) {
+                const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+                mobod.lock(worldState);
+            }
 
-        // 	// compoundSystem->realize(worldState, SimTK::Stage::Position);
+            // Sample
+            for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
+                validated &=
+                    updSampler(0)->sampleIteration(worldState, atomTargetLocationsCache, shouldPrint);
+                if (!validated) {
+                    continue;
+                }
+            }
 
-        // 	// Sample
-        // 	for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
-        // 		validated &= updSampler(0)->sample_iteration(worldState, worldOutStream, verbose);
-        // 		if (!validated) {
-        // 			continue;
-        // 		}
-        // 	}
+            if (!validated) {
+                break;
+            }
 
-        // 	if (!validated) {
-        // 		std::cout << "\tWorld " << ownWorldIndex << " sample rejected during sampling mobilizer " <<
-        // std::endl; 		break;
-        // 	}
+            for (const auto mbx : mobodLock) {
+                const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+                mobod.unlock(worldState);
+            }
+        }
 
-        // 	for (const auto mbx : mobodLock) {
-        // 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        // 		mobod.unlock(worldState);
-        // 	}
-        // }
-
-        // TODO the above will lock literally everything, so it won't simulate anything
-        validated = updSampler(0)->sampleIteration(worldState, atomTargetLocationsCache, shouldPrint);
+        // // TODO the above will lock literally everything, so it won't simulate anything
+        // validated = updSampler(0)->sampleIteration(worldState, atomTargetLocationsCache, shouldPrint);
     }
 
     // if (testing && updSampler(0)->getIntegratorType() == IntegratorType::OMMVV) {

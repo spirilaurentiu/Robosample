@@ -153,7 +153,7 @@ bonds = context.standard_dihedral_bonds.loc[
 ]
 
 sele = context.build_flexibilities(bonds)
-context.add_torsional_world(sele).add_sampler(
+context.add_robotic_world(sele).add_sampler(
     timeStep=0.005,  # 5 fs
     mdSteps=500,
     boostMDSteps=500,
@@ -202,7 +202,7 @@ bonds = context.standard_dihedral_bonds.loc[
     context.standard_dihedral_bonds["dihedral_type"].isin(side_dihedral_types)
 ]
 sele = context.build_flexibilities(bonds)
-context.add_torsional_world(sele).add_sampler(
+context.add_robotic_world(sele).add_sampler(
     timeStep=0.01,  # 10 fs
     mdSteps=500,  # ignored if using NUTS
     boostMDSteps=500,  # ignored if using NUTS
@@ -218,7 +218,7 @@ bonds = context.standard_dihedral_bonds.loc[
     & (context.standard_dihedral_bonds["resid"].isin(range(146, 182)))
 ]
 sele = context.build_flexibilities(bonds)
-context.add_torsional_world(sele).add_sampler(
+context.add_robotic_world(sele).add_sampler(
     timeStep=0.02,  # 20 fs
     mdSteps=300,  # ignored if using NUTS
     boostMDSteps=300,  # ignored if using NUTS
@@ -234,7 +234,7 @@ bonds = context.standard_dihedral_bonds.loc[
     & (context.standard_dihedral_bonds["resid"].isin(range(209, 223)))
 ]
 sele = context.build_flexibilities(bonds)
-context.add_torsional_world(sele).add_sampler(
+context.add_robotic_world(sele).add_sampler(
     timeStep=0.02,  # 20 fs
     mdSteps=300,  # ignored if using NUTS
     boostMDSteps=300,  # ignored if using NUTS
@@ -250,7 +250,7 @@ bonds = context.standard_dihedral_bonds.loc[
     & (context.standard_dihedral_bonds["resid"].isin(range(235, 242)))
 ]
 sele = context.build_flexibilities(bonds)
-context.add_torsional_world(sele).add_sampler(
+context.add_robotic_world(sele).add_sampler(
     timeStep=0.02,  # 20 fs
     mdSteps=300,  # ignored if using NUTS
     boostMDSteps=300,  # ignored if using NUTS
@@ -274,7 +274,7 @@ bonds = context.standard_dihedral_bonds.loc[
     & (~context.standard_dihedral_bonds["resid"].isin(helix_residues))
 ]
 sele = context.build_flexibilities(bonds)
-context.add_torsional_world(sele).add_sampler(
+context.add_robotic_world(sele).add_sampler(
     timeStep=0.01,  # 1 fs
     mdSteps=1000,  # ignored if using NUTS
     boostMDSteps=1000,  # ignored if using NUTS
@@ -293,7 +293,7 @@ bonds = context.standard_dihedral_bonds.loc[
 ]
 
 sele = context.build_flexibilities(bonds)
-world = context.add_torsional_world(sele, want_spatial_force_history=True).add_sampler(
+world = context.add_robotic_world(sele, want_spatial_force_history=True).add_sampler(
     timeStep=0.02,  # 20 fs
     mdSteps=250,
     boostMDSteps=250,

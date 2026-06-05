@@ -54,8 +54,8 @@ bonds = context.standard_dihedral_bonds.loc[
     & (context.standard_dihedral_bonds["molecule_index"] == 0)
 ]
 
-sele = context.build_flexibilities(bonds)
-context.add_torsional_world(sele).add_sampler(
+sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion)
+context.add_robotic_world(sele).add_sampler(
     timeStep=0.005,  # 5 fs
     mdSteps=500,
     boostMDSteps=500,
@@ -66,4 +66,4 @@ context.add_torsional_world(sele).add_sampler(
 # Add replicas (geometric temperature ladder)
 context.initialize([300])
 
-context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, True)
+context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, False)

@@ -652,7 +652,7 @@ for cycle in range(10):
             bonds = context.standard_dihedral_bonds.loc[block]
 
             sele = context.build_flexibilities(bonds)
-            context.add_torsional_world(sele).add_sampler(
+            context.add_robotic_world(sele).add_sampler(
                 timeStep=0.025,
                 mdSteps=2000,  # ignored if using NUTS
                 boostMDSteps=2000,  # ignored if using NUTS
