@@ -1,57 +1,15 @@
 name: cuda12.3
 channels:
   - conda-forge
-  - nvidia
   - nodefaults
 dependencies:
-  # Compilers for this version of CUDA
-  - gcc_linux-64=12.2
-  - gxx_linux-64=12.2
-
-  # Mark correct CUDA version
+  - python=3.12
+  - gcc_linux-64=12
+  - gxx_linux-64=12
   - cuda-version=12.3
-
-  # Requested by OpenMM
-  - cudatoolkit=12.3
-
-  # Equivalent to cuda-toolkit=12.3, but actually pulls correct versions
-  - cuda-cccl=12.3
-  - cuda-command-line-tools=12.3
-  - cuda-compiler=12.3
-  - cuda-cudart=12.3
-  - cuda-cudart-dev=12.3
-  - cuda-cuobjdump=12.3
-  - cuda-cupti=12.3
-  - cuda-cuxxfilt=12.3
-  - cuda-driver-dev=12.3
-  - cuda-gdb=12.3
-  - cuda-libraries=12.3
-  - cuda-libraries-dev=12.3
-  - cuda-nsight=12.3
-  - cuda-nvcc=12.3
-  - cuda-nvdisasm=12.3
-  - cuda-nvml-dev=12.3
-  - cuda-nvprof=12.3
-  - cuda-nvprune=12.3
-  - cuda-nvrtc=12.3
-  - cuda-nvrtc-dev=12.3
-  - cuda-nvtx=12.3
-  - cuda-nvvp=12.3
-  - cuda-opencl=12.3
-  - cuda-opencl-dev=12.3
-  - cuda-profiler-api=12.3
-  - cuda-samples=12.3
-  - cuda-sanitizer-api=12.3
-  - cuda-thrust=12.3
-  - cuda-tools=12.3
-  - cuda-version=12.3
-  - cuda-visual-tools=12.3
-
-# These variables are set on environment activation (i.e. after `conda activate XXX`)
-# $CONDA_PREFIX resolves to the environment's root directory at that point,
-# so these paths correctly point to the nvcc compiler and the GCC C++ host compiler
-# bundled in this environment. OpenMM requires both to be explicitly set when
-# building/running with CUDA support.
+  - cuda-toolkit=12.3
+  - openmm=8.1
+  - pytorch-gpu=2.5
 variables:
   OPENMM_CUDA_COMPILER: $CONDA_PREFIX/bin/nvcc
   CUDA_HOST_COMPILER: $CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++

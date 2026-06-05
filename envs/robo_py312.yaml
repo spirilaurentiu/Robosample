@@ -2,24 +2,23 @@ name: robo_py312
 channels:
   - conda-forge
   - nodefaults
-config:
-  channel_priority: flexible
 dependencies:
   # Build tools
   - cmake
   - ninja
   - pkg-config
-  - conda-forge::gcc_linux-64
-  - conda-forge::gxx_linux-64
+  - gcc_linux-64
+  - gxx_linux-64
 
   # Python
-  - python
+  - python=3
   - pip
 
   # Coding tools
   - gtest
 
-  # Hardware acceleration (CUDA is installed separately)
+  # Hardware acceleration requested and installed by OpenMM
+  # This happens regardless of the underlying hardware
   - ocl-icd
   - ocl-icd-system
   - opencl-headers

@@ -7,7 +7,7 @@
 | **General** | ![codecov](coverage.svg) ![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit) ![Typos](https://img.shields.io/badge/typos-passing-2ea44f) |
 | **C++** | ![Clang-Tidy](https://img.shields.io/badge/clang--tidy-checked-blue?logo=llvm) ![Clang-Format](https://img.shields.io/badge/clang--format-enabled-blue?logo=llvm) |
 | **Python** | ![Python Version](https://img.shields.io/badge/python-3.12-blue?logo=python&logoColor=white) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) |
-| **CUDA** | ![CUDA Support](https://img.shields.io/badge/cuda-10.0--13.1-76B900?logo=nvidia&logoColor=white) |
+| **CUDA** | ![CUDA Support](https://img.shields.io/badge/cuda-12.0--13.3-76B900?logo=nvidia&logoColor=white) |
 | **Config & Docs** | ![CMake](https://img.shields.io/badge/cmake-formatted-064F8C?logo=cmake&logoColor=white) ![Markdown](https://img.shields.io/badge/markdown-linted-000000?logo=markdown&logoColor=white) ![JSON](https://img.shields.io/badge/json-validated-000000?logo=json&logoColor=white) |
 
 Robosample uses Simbody and Molmodel to perform efficient GCHMC sampling on macromolecules via reduced-coordinate robotics algorithms, featuring OpenMM GPU support and a dedicated Python/Conda ecosystem for seamless research integration.
@@ -236,17 +236,39 @@ The development environment is a combination of `.yaml` files from `envs/`:
 
 * `envs/robo_py312.yaml` (bioinformatics tools).
 
-* `envs/cuda*.yaml` that pairs CUDA Toolkit and GCC versions. These `.yaml` files were generated using ``tools/generate_cuda_envs.py` based on [this](https://gist.github.com/ax3l/9489132). To get the supported CUDA version, run `nvidia-smi`.
+* `envs/cuda*.yaml` for NVidia GPUs.
+
+* `envs/rocm.yaml` for AMD GPUs.
+
+* `envs/cpu.yaml` for no hardware acceleration.
 
 * `envs/util.yaml` for non-essential, but useful packages.
 
-Combine these files into a `.yaml` that contains all tools needed to configure and build the project and install:
+Combine these files into a `.yaml` that contains all tools needed to configure and build the project and install (hardware acceleration `.yaml` must be first):
 
 ```bash
 conda-merge envs/cuda13.0.yaml envs/robo_py312.yaml > robo_py312.yaml
 mamba env create -f robo_py312.yaml
 conda activate robo_py312
 ```
+
+CUDA behavior is strictly specified:
+
+| CUDA  | cuDNN | Python | OpenMM | PyTorch |
+|-------|-------|--------|--------|---------|
+| 12.0  | 9.10  | 3.11   | 8.1    | 2.5     |
+| 12.1  | 9.10  | 3.12   | 8.1    | 2.5     |
+| 12.2  | 9.10  | 3.12   | 8.1    | 2.5     |
+| 12.3  | 9.10  | 3.12   | 8.1    | 2.5     |
+| 12.4  | 9.10  | 3.12   | 8.1    | 2.5     |
+| 12.5  | 9.10  | 3.12   | 8.1    | 2.5     |
+| 12.6  | 9.10  | 3.13   | 8.3    | 2.7     |
+| 12.8  | 9.10  | 3.13   | 8.3    | 2.7     |
+| 12.9  | 9.10  | 3.13   | 8.3    | 2.7     |
+| 13.0  | 9.20  | 3.14   | 8.5    | 2.11    |
+| 13.1  | 9.20  | 3.14   | 8.5    | 2.11    |
+| 13.2  | 9.20  | 3.14   | 8.5    | 2.11    |
+| 13.3  | 9.20  | 3.14   | 8.5    | 2.11    |
 
 If something goes wrong, delete this environment using:
 

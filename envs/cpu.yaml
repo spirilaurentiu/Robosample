@@ -1,0 +1,8 @@
+name: cpu
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - pytorch
+  - torchvision
+  - torchaudio
