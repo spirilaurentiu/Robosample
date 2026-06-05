@@ -848,7 +848,7 @@ class Context(rb.Context):
         )
 
     def build_flexibilities(
-        self, source: pd.DataFrame, mobility: rb.BondMobility
+        self, source: pd.DataFrame, mobility: rb.BondMobility, roll: bool
     ) -> list[rb.BondFlexibility]:
         """
         [[rb.BondFlexibility(), rb.BondFlexibility(), ...], [...], ...]
@@ -874,7 +874,10 @@ class Context(rb.Context):
 
             flexibilities.append(flex)
 
-        return [flexibilities]
+        result = [flexibilities]
+        if roll:
+            result = [[item] for item in result[0]]
+        return result
 
     def create_torsional_bonds(
         self, bond_indices: list[tuple[int, int]]

@@ -38,8 +38,7 @@ def run_test():
     bonds = context.standard_dihedral_bonds.loc[
         context.standard_dihedral_bonds["dihedral_type"].isin(dihs)
     ]
-    sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion)
-    sele = [[item] for item in sele[0]]
+    sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, True)
     context.add_robotic_world(sele).add_sampler(
         timeStep=0.01,
         mdSteps=10,

@@ -54,7 +54,7 @@ bonds = context.standard_dihedral_bonds.loc[
     & (context.standard_dihedral_bonds["molecule_index"] == 0)
 ]
 
-sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion)
+sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, False)
 context.add_robotic_world(sele).add_sampler(
     timeStep=0.005,  # 5 fs
     mdSteps=500,
