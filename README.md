@@ -234,7 +234,7 @@ git push origin update --force
 
 The development environment is a combination of `.yaml` files from `envs/`:
 
-* `envs/robo_py312.yaml` (bioinformatics tools).
+* `envs/base.yaml` (bioinformatics tools).
 
 * `envs/cuda*.yaml` for NVidia GPUs.
 
@@ -244,12 +244,12 @@ The development environment is a combination of `.yaml` files from `envs/`:
 
 * `envs/util.yaml` for non-essential, but useful packages.
 
-Combine these files into a `.yaml` that contains all tools needed to configure and build the project and install (hardware acceleration `.yaml` must be first):
+Combine these files into a `.yaml` that contains all tools needed to configure and build the project and install (**hardware acceleration `.yaml` must be last**):
 
 ```bash
-conda-merge envs/cuda13.0.yaml envs/robo_py312.yaml > robo_py312.yaml
-mamba env create -f robo_py312.yaml
-conda activate robo_py312
+conda-merge envs/base.yaml envs/cuda12.0.yaml > robo_cuda12.0.yaml
+mamba env create -f robo_cuda12.0.yaml
+conda activate robo_cuda12.0
 ```
 
 CUDA behavior is strictly specified:
@@ -274,8 +274,7 @@ If something goes wrong, delete this environment using:
 
 ```bash
 conda deactivate
-mamba env remove -n robo_py312
-mamba clean --all
+mamba env remove -n robo_XXX
 ```
 
 ### Building Robosample

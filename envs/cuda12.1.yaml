@@ -1,4 +1,4 @@
-name: cuda12.1
+name: robo_cuda12.1
 channels:
   - conda-forge
   - nodefaults

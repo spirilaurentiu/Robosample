@@ -1,4 +1,4 @@
-name: cpu
+name: robo_cpu
 channels:
   - conda-forge
   - nodefaults

@@ -1,4 +1,4 @@
-name: rocm
+name: robo_rocm
 channels:
   - conda-forge
   - nodefaults
