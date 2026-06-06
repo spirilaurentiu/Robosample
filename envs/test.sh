@@ -29,6 +29,7 @@ echo ""
 echo "[ CUDA / GPU ]"
 check "nvcc is conda-local"   bash -c "which nvcc | grep -q '$CONDA_PREFIX'"
 check "nvcc version"          nvcc --version
+check "libcudart loadable"    python -c "import ctypes; ctypes.CDLL('libcudart.so')"
 check "clinfo"                clinfo
 
 echo ""
@@ -46,6 +47,11 @@ b = torch.randn(1000, 1000, device='cuda')
 c = torch.mm(a, b)
 torch.cuda.synchronize()
 print(f'matmul OK — tensor on: {c.device}')
+"
+check "nccl"                  python -c "
+import torch
+v = torch.cuda.nccl.version()
+print(f'NCCL version: {v}')
 "
 
 echo ""

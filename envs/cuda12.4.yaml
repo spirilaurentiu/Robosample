@@ -8,5 +8,6 @@ dependencies:
   - gxx_linux-64=12
   - cuda-version
   - cuda-toolkit
+  - nccl
   - openmm=8.1.2
   - pytorch-gpu=2.5.1=cuda124*

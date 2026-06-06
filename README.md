@@ -281,12 +281,16 @@ mkdir -p $CONDA_PREFIX/etc/conda/activate.d
 cat > $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh << 'EOF'
 export OPENMM_CUDA_COMPILER="$CONDA_PREFIX/bin/nvcc"
 export CUDA_HOST_COMPILER="$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++"
+export OMPI_MCA_opal_cuda_support=true
+export UCX_MEMTYPE_CACHE=n
 EOF
 
 mkdir -p $CONDA_PREFIX/etc/conda/deactivate.d
 cat > $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh << 'EOF'
 unset OPENMM_CUDA_COMPILER
 unset CUDA_HOST_COMPILER
+unset OMPI_MCA_opal_cuda_support
+unset UCX_MEMTYPE_CACHE
 EOF
 
 conda activate base && conda activate robo_cuda13.0
