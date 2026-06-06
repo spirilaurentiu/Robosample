@@ -1,6 +1,6 @@
-name: robo_cuda12.1
+name: robo_cuda12.4
 channels:
-  - nvidia/label/cuda-12.1.1
+  - nvidia/label/cuda-12.4.1
   - conda-forge
   - nodefaults
 dependencies:
@@ -9,4 +9,4 @@ dependencies:
   - cuda-version
   - cuda-toolkit
   - openmm=8.1.2
-  - pytorch-gpu=2.5.1=cuda121*
+  - pytorch-gpu=2.5.1=cuda124*

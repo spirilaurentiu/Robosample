@@ -3,10 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.14
   - gcc_linux-64=15
   - gxx_linux-64=15
-  - openmm=8.5
-  - pytorch=2.11
-variables:
-  LD_PRELOAD: $CONDA_PREFIX/lib/libatomic.so.1
+  - openmm=8.5.1
+  - pytorch=2.11.0

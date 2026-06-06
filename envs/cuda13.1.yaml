@@ -1,16 +1,12 @@
 name: robo_cuda13.1
 channels:
+  - nvidia/label/cuda-13.1.2
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.14
   - gcc_linux-64=15
   - gxx_linux-64=15
-  - cuda-version=13.1
-  - cuda-toolkit=13.1
-  - openmm=8.5
-  - pytorch-gpu=2.11
-variables:
-  OPENMM_CUDA_COMPILER: $CONDA_PREFIX/bin/nvcc
-  CUDA_HOST_COMPILER: $CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++
-  LD_PRELOAD: $CONDA_PREFIX/lib/libatomic.so.1
+  - cuda-version
+  - cuda-toolkit
+  - openmm=8.5.1
+  - pytorch-gpu=2.11.0=cuda131*

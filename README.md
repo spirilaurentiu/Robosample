@@ -232,49 +232,77 @@ git push origin update --force
 
 ### Create a `mamba` environment
 
+While all environments install Python 3.12, CUDA introduces multiple version dependencies:
+
+| CUDA  | cuDNN | OpenMM | PyTorch |
+|-------|-------|--------|---------|
+| 12.0  | 9.10  | 8.1.2  | 2.5.1   |
+| 12.1  | 9.10  | 8.1.2  | 2.5.1   |
+| 12.2  | 9.10  | 8.1.2  | 2.5.1   |
+| 12.3  | 9.10  | 8.1.2  | 2.5.1   |
+| 12.4  | 9.10  | 8.1.2  | 2.5.1   |
+| 12.5  | 9.10  | 8.1.2  | 2.5.1   |
+| 12.6  | 9.10  | 8.3.1  | 2.7.1   |
+| 12.8  | 9.10  | 8.3.1  | 2.7.1   |
+| 12.9  | 9.10  | 8.3.1  | 2.7.1   |
+| 13.0  | 9.20  | 8.5.1  | 2.11.0  |
+| 13.1  | 9.20  | 8.5.1  | 2.11.0  |
+| 13.2  | 9.20  | 8.5.1  | 2.11.0  |
+| 13.3  | 9.20  | 8.5.1  | 2.11.0  |
+
 The development environment is a combination of `.yaml` files from `envs/`:
 
 * `envs/base.yaml` (bioinformatics tools).
 
 * `envs/cuda*.yaml` for NVidia GPUs.
 
-* `envs/rocm.yaml` for AMD GPUs.
-
 * `envs/cpu.yaml` for no hardware acceleration.
-
-* `envs/util.yaml` for non-essential, but useful packages.
 
 Combine these files into a `.yaml` that contains all tools needed to configure and build the project and install (**hardware acceleration `.yaml` must be last**):
 
 ```bash
-conda-merge envs/base.yaml envs/cuda12.0.yaml > robo_cuda12.0.yaml
-mamba env create -f robo_cuda12.0.yaml
-conda activate robo_cuda12.0
+conda-merge envs/base.yaml envs/cuda13.0.yaml > robo_cuda13.0.yaml
+mamba env create -f robo_cuda13.0.yaml
+conda activate robo_cuda13.0
 ```
 
-CUDA behavior is strictly specified:
+Set `modeller` key in:
 
-| CUDA  | cuDNN | Python | OpenMM | PyTorch |
-|-------|-------|--------|--------|---------|
-| 12.0  | 9.10  | 3.11   | 8.1    | 2.5     |
-| 12.1  | 9.10  | 3.12   | 8.1    | 2.5     |
-| 12.2  | 9.10  | 3.12   | 8.1    | 2.5     |
-| 12.3  | 9.10  | 3.12   | 8.1    | 2.5     |
-| 12.4  | 9.10  | 3.12   | 8.1    | 2.5     |
-| 12.5  | 9.10  | 3.12   | 8.1    | 2.5     |
-| 12.6  | 9.10  | 3.13   | 8.3    | 2.7     |
-| 12.8  | 9.10  | 3.13   | 8.3    | 2.7     |
-| 12.9  | 9.10  | 3.13   | 8.3    | 2.7     |
-| 13.0  | 9.20  | 3.14   | 8.5    | 2.11    |
-| 13.1  | 9.20  | 3.14   | 8.5    | 2.11    |
-| 13.2  | 9.20  | 3.14   | 8.5    | 2.11    |
-| 13.3  | 9.20  | 3.14   | 8.5    | 2.11    |
+```bash
+file $CONDA_PREFIX/lib/modeller-*/modlib/modeller/config.py
+```
+
+If using CUDA, set up variables:
+
+```bash
+conda activate robo_cuda13.0
+
+mkdir -p $CONDA_PREFIX/etc/conda/activate.d
+cat > $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh << 'EOF'
+export OPENMM_CUDA_COMPILER="$CONDA_PREFIX/bin/nvcc"
+export CUDA_HOST_COMPILER="$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++"
+EOF
+
+mkdir -p $CONDA_PREFIX/etc/conda/deactivate.d
+cat > $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh << 'EOF'
+unset OPENMM_CUDA_COMPILER
+unset CUDA_HOST_COMPILER
+EOF
+
+conda activate base && conda activate robo_cuda13.0
+```
+
+Test the environment (CUDA):
+
+```bash
+bash envs/test.sh
+```
 
 If something goes wrong, delete this environment using:
 
 ```bash
 conda deactivate
-mamba env remove -n robo_XXX
+mamba env remove -n robo_cuda13.0
 ```
 
 ### Building Robosample
@@ -301,7 +329,7 @@ Build types: `debug`, `release`, `relwithdebinfo`, `pgo-train`, `pgo-use`.
 While in `robosample/`:
 
 ```bash
-conda activate robo_py312
+conda activate robo_XXX
 cmake --preset cuda-release
 cmake --build --preset cuda-release
 ```
@@ -317,7 +345,7 @@ python -m robosample.test_installation
 The development `conda` environment must be activate when starting Visual Studio Code:
 
 ```bash
-conda activate robo_py312
+conda activate robo_XXX
 code Robosample/
 ```
 

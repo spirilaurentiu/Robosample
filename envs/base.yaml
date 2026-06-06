@@ -1,4 +1,4 @@
-name: robo_py312
+name: robo_base
 channels:
   - conda-forge
   - nodefaults
