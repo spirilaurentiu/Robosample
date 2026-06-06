@@ -2949,13 +2949,10 @@ void Context::matchDefaultConfigurations(void){
 	}
 
 	// Helper function for calc MBAT determinant // TO BE DELETED
-	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
-
-		Topology& topology = topologies[molIx];
-
-		topology.loadTriples_SP_NEW();
-
-	}
+	// for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+	// 	Topology& topology = topologies[molIx];
+	// 	topology.loadTriples_SP_NEW();
+	// }
 
 	// Map of Compound atom indexes to Robosample atom indexes
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
@@ -6354,40 +6351,36 @@ void Context::runReplicaWorldRange(
 
 }
 
-/*!
- * <!-- Run replica exchange protocol -->
-*/
-void Context::RunREX(int equilRounds, int prodRounds, int nofREXes)
+void Context::setThermoStateTemperature(int thermoStateIx, SimTK::Real T){
+	ThermodynamicState& thermoState = thermodynamicStates[thermoStateIx];
+	thermoState.setTemperature(T);
+	std::vector<int>& thermoWorldIxs = thermoState.updWorldIndexes();
+	for(auto worldIx : thermoWorldIxs){
+		worlds[worldIx].updSampler(0)->setTemperature(T);
+	}
+}
+
+void Context::prepareREX(int equilRounds, int prodRounds, int nofREXes)
 {
-
 	#pragma region SHOULDNT_BELONG_HERE
-
 	// desk_mass_related
 	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
 		for (auto& atom : atoms) {
-			
 			World& currWorld = worlds[worldIx];
 			//SimTK::DuMMForceFieldSubsystem dumm = *(currWorld.forceField);
-
 			SimTK::DuMM::AtomIndex dAIx = atom.updDuMMAtomIndex();
 			SimTK::mdunits::Mass atomMass = atom.getMass();
-
 			currWorld.forceField->setDuMMAtomMass(dAIx, atomMass);
 		}	
 	}
-
 	// Is this necesary =======================================================
 	realizeTopology();
-	
 	// Allocate space for swap matrices
 	allocateSwapMatrices();
-
 	// Initialize replicas: set intial parameters
 	for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 		initializeReplica(replicaIx);
 	} // ======================================================================
-
-
 	// Allocate and calculate initial Q statistics for all thermodynamic states
 	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
 		ThermodynamicState& currThermoState = thermodynamicStates[thermoIx];
@@ -6397,16 +6390,13 @@ void Context::RunREX(int equilRounds, int prodRounds, int nofREXes)
 			currThermoState.calcQStats(worldIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
 		}
 	}
-
 	#pragma endregion SHOULDNT_BELONG_HERE
-
 	# pragma region SET_GLOBAL_ROLLS
 	worldsRolls.resize(worlds.size());
 	for(int wIx = 0; wIx < worlds.size(); wIx++){
 		worldsRolls[wIx] = worlds[wIx].getIsRoll();
 	}
 	#pragma endregion SET_GLOBAL_ROLLS
-
 	// Print a header =========================================================
 	#pragma region print_REX_header
 	std::stringstream rexOutput;
@@ -6418,6 +6408,60 @@ void Context::RunREX(int equilRounds, int prodRounds, int nofREXes)
 	std::cout << rexOutput.str() << std::endl;
 	#pragma endregion print_REX_header
 	// ------------------------------------------------------------------------
+}
+
+/*!
+ * <!-- Run replica exchange protocol -->
+*/
+void Context::RunREX(int equilRounds, int prodRounds, int nofREXes)
+{
+
+	// #pragma region SHOULDNT_BELONG_HERE
+	// // desk_mass_related
+	// for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
+	// 	for (auto& atom : atoms) {
+	// 		World& currWorld = worlds[worldIx];
+	// 		//SimTK::DuMMForceFieldSubsystem dumm = *(currWorld.forceField);
+	// 		SimTK::DuMM::AtomIndex dAIx = atom.updDuMMAtomIndex();
+	// 		SimTK::mdunits::Mass atomMass = atom.getMass();
+	// 		currWorld.forceField->setDuMMAtomMass(dAIx, atomMass);
+	// 	}	
+	// }
+	// // Is this necesary =======================================================
+	// realizeTopology();
+	// // Allocate space for swap matrices
+	// allocateSwapMatrices();
+	// // Initialize replicas: set intial parameters
+	// for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
+	// 	initializeReplica(replicaIx);
+	// } // ======================================================================
+	// // Allocate and calculate initial Q statistics for all thermodynamic states
+	// for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
+	// 	ThermodynamicState& currThermoState = thermodynamicStates[thermoIx];
+	// 	std::vector<int>& thermoWorldIxs = currThermoState.updWorldIndexes();
+	// 	for(auto worldIx : thermoWorldIxs){
+	// 		World& currWorld = worlds[worldIx];
+	// 		currThermoState.calcQStats(worldIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
+	// 	}
+	// }
+	// #pragma endregion SHOULDNT_BELONG_HERE
+	// # pragma region SET_GLOBAL_ROLLS
+	// worldsRolls.resize(worlds.size());
+	// for(int wIx = 0; wIx < worlds.size(); wIx++){
+	// 	worldsRolls[wIx] = worlds[wIx].getIsRoll();
+	// }
+	// #pragma endregion SET_GLOBAL_ROLLS
+	// // Print a header =========================================================
+	// #pragma region print_REX_header
+	// std::stringstream rexOutput;
+	// rexOutput.str("");
+	// rexOutput << "REX, " << "replicaIx" << ", " << "thermoIx" << ", " << "wIx" ;
+	// worlds[0].getSampler(0)->getMsg_Header(rexOutput);
+	// rexOutput << std::endl;
+	// getMsg_RexDetHeader(rexOutput);
+	// std::cout << rexOutput.str() << std::endl;
+	// #pragma endregion print_REX_header
+	// // ------------------------------------------------------------------------
 
 	// Useful vars
 	int nofMixes = requiredNofRounds;

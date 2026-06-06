@@ -788,6 +788,8 @@ public:
 	* @param nofREXes Number of replica exchange attempts
 	* @return
 	*/
+	void setThermoStateTemperature(int thermoStateIx, SimTK::Real T);
+	void prepareREX(int equilRounds, int prodRounds, int nofREXes);
 	void RunREX(int equilRounds, int prodRounds, int nofREXes);
 
 	void Run();
