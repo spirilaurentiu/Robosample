@@ -57,6 +57,7 @@ dependencies:
     - pytest
     - pytest-xdist
     - pytest-cov
+    - conda-merge
     - gcovr
     - coverage
     - anybadge

@@ -847,7 +847,9 @@ class Context(rb.Context):
             len(self.system_topology.harmonic_improper_torsions),
         )
 
-    def build_flexibilities(self, source: pd.DataFrame) -> list[rb.BondFlexibility]:
+    def build_flexibilities(
+        self, source: pd.DataFrame, mobility: rb.BondMobility, roll: bool
+    ) -> list[rb.BondFlexibility]:
         """
         [[rb.BondFlexibility(), rb.BondFlexibility(), ...], [...], ...]
         """
@@ -868,11 +870,14 @@ class Context(rb.Context):
                 flex.globalIndex2
             ].identity.unique_name
 
-            flex.mobility = rb.BondMobility.Torsion
+            flex.mobility = mobility
 
             flexibilities.append(flex)
 
-        return [flexibilities]
+        result = [flexibilities]
+        if roll:
+            result = [[item] for item in result[0]]
+        return result
 
     def create_torsional_bonds(
         self, bond_indices: list[tuple[int, int]]
@@ -964,7 +969,7 @@ class Context(rb.Context):
         self.worlds.append(w)
         return self.worlds[-1]
 
-    def add_torsional_world(
+    def add_robotic_world(
         self,
         torsional_bonds: list[rb.BondFlexibility],
         samplesperRound: int = 1,
