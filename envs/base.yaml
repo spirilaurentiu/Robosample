@@ -11,7 +11,7 @@ dependencies:
   - gxx_linux-64
 
   # Python
-  - python=3
+  - python=3.12
   - pip
 
   # Coding tools
@@ -30,9 +30,14 @@ dependencies:
 
   # Bioinformatics
   - openmm
+  - openmmtools
   - parmed
   - mdtraj
   - mdanalysis
+  - dacase::ambertools-dac=26
+  - salilab::modeller
+  - rdkit
+  - pymol-open-source
 
   # Scientific computing and data analysis
   - numpy
@@ -41,9 +46,13 @@ dependencies:
   - networkx
   - tqdm
   - hypothesis
+  - pandas
+  - matplotlib
+  - seaborn
 
   # Pip packages
   - pip:
+    - conda-merge
     - pybind11-stubgen
     - pytest
     - pytest-xdist
@@ -58,3 +67,6 @@ dependencies:
     - cmake-format
     - scikit-build-core
     - python-louvain
+    - openbabel-wheel
+    - rcsbsearchapi
+    - pdb2pqr

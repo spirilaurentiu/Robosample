@@ -1,15 +1,16 @@
 name: robo_cuda12.0
 channels:
+  - nvidia/label/cuda-12.0.1
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.11
+  - python=3.12
   - gcc_linux-64=12
   - gxx_linux-64=12
-  - cuda-version=12.0
-  - cuda-toolkit=12.0
+  - cuda-version
+  - cuda-toolkit
   - openmm=8.1
-  - pytorch-gpu=2.5
+  - pytorch-gpu=2.5.1=cuda120*
 variables:
   OPENMM_CUDA_COMPILER: $CONDA_PREFIX/bin/nvcc
   CUDA_HOST_COMPILER: $CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++
