@@ -34,15 +34,20 @@ dependencies:
   - parmed
   - mdtraj
   - mdanalysis
-  - dacase::ambertools-dac=26
   - salilab::modeller
   - rdkit
   - pymol-open-source
 
+  # AMBER tools
+  - dacase::ambertools-dac=26
+  - netcdf4=*=mpi_openmpi_py312*
+  - netcdf-fortran=*=mpi_openmpi*
+
   # Scientific computing and data analysis
   - numpy
   - scipy
-  - astropy
+  - pyerfa=*=py312*
+  - astropy=*=py312*
   - networkx
   - tqdm
   - hypothesis

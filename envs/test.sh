@@ -91,19 +91,21 @@ check "tleap"               tleap -h
 check "cpptraj"             cpptraj --version
 check "antechamber"         antechamber -h
 check "sqm"                 sqm -h
-check "pytraj+parmed"       python -c "import pytraj, parmed; print('ok')"
+check "pytraj"              python -c "import pytraj; print(pytraj.__version__)"
+check "parmed"              python -c "import parmed; print(parmed.__version__)"
+check "netcdf4"             python -c "import netCDF4; print(netCDF4.__version__)"
 
 echo ""
 echo "[ MD / Analysis ]"
 check "mdtraj"              python -c "import mdtraj; print(mdtraj.__version__)"
 check "MDAnalysis"          python -c "import MDAnalysis; print(MDAnalysis.__version__)"
-check "openmmtools"         python -c "import openmmtools; print('ok')"
+check "openmmtools"         python -c "import openmmtools; print(openmmtools.__version__)"
 
 echo ""
 echo "[ Cheminformatics ]"
-check "rdkit"               python -c "from rdkit import Chem; print('ok')"
-check "openbabel"           python -c "import openbabel; print('ok')"
-check "pdb2pqr"             python -c "from pdb2pqr import main; print('ok')"
+check "rdkit"               python -c "import rdkit; print(rdkit.__version__)"
+check "openbabel"           python -c "import openbabel; print(openbabel.__version__)"
+check "pdb2pqr"             python -c "import pdb2pqr; print(pdb2pqr.__version__)"
 check "pymol headless"      pymol -c
 
 echo ""
@@ -114,19 +116,25 @@ check "OPENMM_CUDA_COMPILER works"    bash -c "$OPENMM_CUDA_COMPILER --version"
 check "CUDA_HOST_COMPILER set"        bash -c "[ -n '$CUDA_HOST_COMPILER' ]"
 check "CUDA_HOST_COMPILER expanded"   bash -c "echo '$CUDA_HOST_COMPILER' | grep -qv '\$CONDA_PREFIX'"
 check "CUDA_HOST_COMPILER works"      bash -c "$CUDA_HOST_COMPILER --version"
-check "cmake"               cmake --version
-check "ninja"               ninja --version
-check "pybind11"            python -c "import pybind11; print(pybind11.get_include())"
+check "cmake"                         cmake --version
+check "ninja"                         ninja --version
+check "pybind11"                      python -c "import pybind11; print(pybind11.get_include())"
 
 echo ""
 echo "[ Science Stack ]"
-check "numpy+scipy+pandas+matplotlib+astropy+networkx+seaborn" \
-    python -c "import numpy, scipy, pandas, matplotlib, astropy, networkx, seaborn; print('ok')"
-check "sklearn"             python -c "import sklearn; print('ok')"
+check "numpy"           python -c "import numpy; print(numpy.__version__)" 
+check "scipy"           python -c "import scipy; print(scipy.__version__)"
+check "pandas"          python -c "import pandas; print(pandas.__version__)"
+check "matplotlib"      python -c "import matplotlib; print(matplotlib.__version__)"
+check "astropy"         python -c "import astropy; print(astropy.__version__)"
+check "networkx"        python -c "import networkx; print(networkx.__version__)"
+check "seaborn"         python -c "import seaborn; print(seaborn.__version__)"
+check "sklearn"         python -c "import sklearn; print(sklearn.__version__)"
+check "erfa"            python -c "import erfa; print(erfa.__version__)"
 
 echo ""
 echo "[ Modeller ]"
-check "modeller"            python -c "import modeller; print('ok')"
+check "modeller"        python -c "import modeller; print(modeller.__version__)"
 
 # Summary
 echo ""
