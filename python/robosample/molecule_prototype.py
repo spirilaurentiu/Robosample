@@ -1,3 +1,4 @@
+import warnings
 from dataclasses import dataclass, field
 from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple
 
@@ -117,12 +118,26 @@ class MoleculePrototype:
         # Find (parent, child) bonds in BFS order starting from root
         self.acyclic_graph, self.bonds = self._build_bonds_bfs(root)
 
+        # Authoritative set of ring-closing (cotree) bonds, orientation-independent.
+        # This is the *topological* fact (is this bond in the spanning tree or not),
+        # which is distinct from the *chemical* dihedral classification returned by
+        # get_standardized_dihedral_type(). A bond can be a chemically "ring" bond
+        # yet still be a tree edge (e.g. an inter-chain disulfide that is the only
+        # link between two chains and therefore cannot be cut without disconnecting
+        # the molecule). Downstream topology decisions must consult this set rather
+        # than substring-matching "ring" in the dihedral type.
+        self.ring_closing_bonds = {
+            frozenset((parent_local_index, child_local_index))
+            for parent_local_index, child_local_index, dihedral_type, _ in self.bonds
+            if dihedral_type == "ring-closing"
+        }
+
         # Create a mapping between the original indices and the BFS-explored indices
         # Again, Molmodel adds atoms via Molmodel via bondAtom(idx1, idx2)
         # Essentially, we create a mapping between the order in which atoms were added to  and their original indices
         self.nodes = [root]
         for parent_local_index, child_local_index, dihedral_type, resid in self.bonds:
-            if "ring" not in dihedral_type:
+            if not self._is_ring_closing(parent_local_index, child_local_index):
                 self.nodes.append(child_local_index)
 
         self.local_to_compound_atom_index_map = {}
@@ -196,7 +211,9 @@ class MoleculePrototype:
                     nominal_length_in_nm=bond.type.ureq.value_in_unit(
                         pmd.unit.nanometer
                     ),
-                    is_ring_closing=("ring" in dihedral_type),
+                    is_ring_closing=self._is_ring_closing(
+                        parent_local_index, child_local_index
+                    ),
                     dihedral_type=dihedral_type,
                 )
             )
@@ -328,6 +345,19 @@ class MoleculePrototype:
                 )
             )
 
+    def _is_ring_closing(self, a_local_index: int, b_local_index: int) -> bool:
+        """
+        Return True iff the bond between the two atoms is a ring-closing (cotree)
+        bond, i.e. a bond that was removed from the spanning tree to break a cycle.
+
+        This is a purely topological test based on the spanning tree computed in
+        _build_bonds_bfs, and is orientation-independent. It is deliberately NOT the
+        same as ``"ring" in self.get_standardized_dihedral_type(...)``: the latter is
+        a chemical classification, and a chemically-ring bond may still be a tree
+        edge (e.g. a disulfide that is the sole covalent link between two chains).
+        """
+        return frozenset((a_local_index, b_local_index)) in self.ring_closing_bonds
+
     def _local_to_compound_atom_index(self, local_index: int) -> int:
         """
         Map an Amber prmtop atom index [a, b] to the internal compound representation atom index [0, n-1] where n is the number of atoms in the compound.
@@ -402,48 +432,66 @@ class MoleculePrototype:
         Non-ring-closing bonds appear first in BFS traversal order. Ring-closing
         bonds are added afterward, respecting forbidden atom-type constraints.
 
-        Parameters
-        ----------
-        forbidden_atom_type_pairs : iterable of (str, str)
-            Atom types between which ring-closing bonds must be avoided.
-
-        Returns
-        -------
-        List of tuples:
-            (parent_local_index, child_local_index, is_ring_closing)
+        A bond is only treated as ring-closing if removing it keeps the graph
+        connected. Bonds whose removal would split the molecule (e.g. an inter-chain
+        disulfide that is the only link between two chains) are kept in the spanning
+        tree even when classified as ring-closing.
         """
-        # Acyclic graph
+        # Start from the FULL molecular graph, then carve out ring-closing bonds
+        # only where it is safe to do so.
         acyclic_graph = nx.Graph()
         acyclic_graph.add_nodes_from(atom.idx for atom in self.molecule.atoms)
+        for bond in self.molecule.bonds:
+            acyclic_graph.add_edge(bond.atom2.idx, bond.atom1.idx)
 
-        # Count how many ring closing bonds each atom is involved in to enforce the constraint that no atom can be involved in more than one ring closing bond
         ring_closing_bonds_involved: Dict[int, int] = {}
-
-        # Set of ring-closing bonds for quick lookup
         ring_closing_bonds: Set[Tuple[int, int]] = set()
+
+        def _can_cut(u: int, v: int) -> bool:
+            """Remove edge (u, v) iff the graph stays connected.
+
+            Returns True and leaves the edge removed if cutting is safe (the edge
+            lies on a cycle). Returns False and restores the edge if it is a bridge.
+            """
+            acyclic_graph.remove_edge(u, v)
+            if nx.has_path(acyclic_graph, u, v):
+                return True
+            acyclic_graph.add_edge(u, v)  # bridge: put it back
+            return False
 
         # First pass: identify standardized ring-closing dihedrals
         for bond in self.molecule.bonds:
             parent, child = bond.atom2, bond.atom1
             parent_idx, child_idx = parent.idx, child.idx
 
-            # Check if this is the middle bond of a standardized dihedral
-            # Non-standardized dihedral are None and we treat as non-ring-closing for now
+            # Non-standardized dihedrals are treated as non-ring-closing for now
             dihedral_type = self.get_standardized_dihedral_type(parent, child)
+            if "ring" not in dihedral_type:
+                continue
 
-            if "ring" in dihedral_type:
-                # Check rigid bond constraints
-                for idx in (parent_idx, child_idx):
-                    if ring_closing_bonds_involved.get(idx, 0) >= 1:
-                        raise ValueError(
-                            f"Atom {idx} involved in multiple rigid bonds."
-                        )
-                    ring_closing_bonds_involved[idx] = (
-                        ring_closing_bonds_involved.get(idx, 0) + 1
-                    )
-                ring_closing_bonds.add((parent_idx, child_idx))
-            else:
-                acyclic_graph.add_edge(parent_idx, child_idx)
+            # Enforce: no atom may participate in more than one ring-closing bond
+            if any(
+                ring_closing_bonds_involved.get(idx, 0) >= 1
+                for idx in (parent_idx, child_idx)
+            ):
+                raise ValueError(
+                    f"Atom {parent_idx} or {child_idx} involved in multiple rigid bonds."
+                )
+
+            # Only cut if both atoms remain connected through the rest of the graph.
+            if not _can_cut(parent_idx, child_idx):
+                warnings.warn(
+                    f"Bond {parent_idx}-{child_idx} is classified as ring-closing but "
+                    f"is a bridge (its removal would disconnect the molecule); keeping "
+                    f"it in the spanning tree to preserve connectivity."
+                )
+                continue
+
+            for idx in (parent_idx, child_idx):
+                ring_closing_bonds_involved[idx] = (
+                    ring_closing_bonds_involved.get(idx, 0) + 1
+                )
+            ring_closing_bonds.add((parent_idx, child_idx))
 
         # Compute forbidden bonds and distances
         forbidden_edges = self._find_forbidden_bonds(forbidden_atom_type_pairs)
@@ -486,26 +534,28 @@ class MoleculePrototype:
                 )
             )
 
-            # Pick first eligible bond
+            # Pick the first eligible bond: not already ring-closing, satisfies the
+            # one-ring-bond-per-atom constraint, and safe to cut (not a bridge).
+            chosen = None
             for bond in candidate_bonds:
                 u, v = bond.parent_atom_prmtop_index, bond.child_atom_prmtop_index
-                if (u, v) not in ring_closing_bonds and (
-                    v,
-                    u,
-                ) not in ring_closing_bonds:
-                    break
-            else:
-                continue  # no bond eligible
+                if (u, v) in ring_closing_bonds or (v, u) in ring_closing_bonds:
+                    continue
+                if any(ring_closing_bonds_involved.get(idx, 0) >= 1 for idx in (u, v)):
+                    continue
+                if not _can_cut(u, v):  # would disconnect the graph
+                    continue
+                chosen = (u, v)
+                break
 
-            # Check rigid bond constraints
+            if chosen is None:
+                continue  # no eligible bond for this cycle
+
+            u, v = chosen
             for idx in (u, v):
-                if ring_closing_bonds_involved.get(idx, 0) >= 1:
-                    raise ValueError(f"Atom {idx} involved in multiple rigid bonds.")
                 ring_closing_bonds_involved[idx] = (
                     ring_closing_bonds_involved.get(idx, 0) + 1
                 )
-
-            acyclic_graph.remove_edge(u, v)
             ring_closing_bonds.add((u, v))
 
         # Validation
@@ -541,8 +591,6 @@ class MoleculePrototype:
         if len(edges_with_flags) != len(self.molecule.bonds):
             raise ValueError("Mismatch in number of bonds after processing.")
 
-        # We are implicitly constructing a spanning tree used to define internal coordinates
-        # We need to validate parents have already been visited and children have not been visited yet
         GraphTraversalUtils.validate_bfs_parent_child_edges(
             acyclic_graph, root, edges_with_flags
         )
@@ -858,9 +906,7 @@ class MoleculePrototype:
             List of bonded atoms not involved in ring-closing bonds.
         """
         return [
-            a
-            for a in atom.bond_partners
-            if "ring" not in self.get_standardized_dihedral_type(atom, a)
+            a for a in atom.bond_partners if not self._is_ring_closing(atom.idx, a.idx)
         ]
 
     def _find_torsions(
