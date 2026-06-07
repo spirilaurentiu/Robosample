@@ -3,6 +3,7 @@ build
 build_debug
 buildpy
 buildpy_debug/
+buildpy/*
 buildpyvic
 doc/html
 doc/html/*
@@ -33,4 +34,10 @@ latex/*
 projman/*
 .qodo
 
-
+__pycache__/
+*.pyc
+*.pyo
+*.so
+*.o
+.ninja_deps
+.ninja_log
