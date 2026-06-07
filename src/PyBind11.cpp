@@ -832,6 +832,10 @@ PYBIND11_MODULE(MODULE_NAME, m) {
              py::arg("write_frequency"),
              py::arg("write_to_stdio"),
              "Run replica exchange.")
+        .def("set_world_temperatures",
+             &Context::setWorldTemperatures,
+             py::arg("world_temperatures_in_k"),
+             "Set the temperatures of the worlds in the context.")
         .def("setVerbose", &Context::setVerbose, "Control if you want extraneous output to cout.")
         .def("setPdbRestartFreq", &Context::setPdbRestartFreq, "Set the PDB restart frequency.")
         .def("setNonbonded", &Context::setNonbonded, "Set nonbonded method and cutoff.")

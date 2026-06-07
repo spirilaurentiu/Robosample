@@ -7,10 +7,12 @@
 #include "TopologyElements.hpp"
 #include "World.hpp"
 #include "bgeneral.hpp"
+#include "common.h"
 
 class Context {
     std::string baseName;
     bool verbose = false;
+    std::vector<SimTK::Real> worldTemperatures;
 
     public:
     // vector<vector<ATOM>> for each molecule
@@ -33,6 +35,10 @@ class Context {
             uint32_t swapFreq,
             uint32_t swapFixmanFreq,
             bool testing);
+
+    void setWorldTemperatures(const std::vector<SimTK::Real>& temperatures) {
+        this->worldTemperatures = temperatures;
+    }
 
     void setVerbose(bool verbose);
     void setGBSAOptions(bool useGBSAOBC2, SimTK::Real solventDielectric, SimTK::Real soluteDielectric);

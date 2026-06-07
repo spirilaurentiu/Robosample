@@ -374,6 +374,10 @@ class Context:
         """
         Control if you want extraneous output to cout.
         """
+    def set_world_temperatures(self, world_temperatures_in_k: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        """
+        Set the temperatures of the worlds in the context.
+        """
     def validate_context(self) -> bool:
         """
         Validates all worlds and replicas in the context.

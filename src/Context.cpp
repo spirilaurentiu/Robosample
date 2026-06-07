@@ -1768,11 +1768,17 @@ void Context::setReplicasWorldsParameters(int thisReplica, bool alwaysAccept, bo
     // Set temperature for all of this replica's worlds
     // Get thermodynamic state from map
     // =============
-    SimTK::Real T = thermodynamicStates[thisThermoStateIx].getTemperature();
+    SimTK::Real thermoStateTemperature = thermodynamicStates[thisThermoStateIx].getTemperature();
+    const bool hasCustomWorldTemperatures = !worldTemperatures.empty();
 
     for (std::size_t i = 0; i < replicaNofWorlds; i++) {
-        worlds[replicaWorldIxs[i]].setTemperature(T);
-        worlds[replicaWorldIxs[i]].setBoostTemperature(T);
+        if (hasCustomWorldTemperatures) {
+            worlds[replicaWorldIxs[i]].setTemperature(worldTemperatures[replicaWorldIxs[i]]);
+            worlds[replicaWorldIxs[i]].setBoostTemperature(worldTemperatures[replicaWorldIxs[i]]);
+        } else {
+            worlds[replicaWorldIxs[i]].setTemperature(thermoStateTemperature);
+            worlds[replicaWorldIxs[i]].setBoostTemperature(thermoStateTemperature);
+        }
     }
 
     // std::cout << "Temperature set to " << T << std::endl << std::flush;
@@ -1815,7 +1821,12 @@ void Context::setReplicasWorldsParameters(int thisReplica, bool alwaysAccept, bo
 
         worlds[replicaWorldIxs[i]].updSampler(0)->setAcceptRejectMode(acceptRejectMode);
         worlds[replicaWorldIxs[i]].updSampler(0)->setMDStepsPerSample(MDStepsPerSample);
-        worlds[replicaWorldIxs[i]].updSampler(0)->setTemperature(T);
+
+        if (hasCustomWorldTemperatures) {
+            worlds[replicaWorldIxs[i]].updSampler(0)->setTemperature(worldTemperatures[replicaWorldIxs[i]]);
+        } else {
+            worlds[replicaWorldIxs[i]].updSampler(0)->setTemperature(thermoStateTemperature);
+        }
 
         worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(timestep, adaptiveTimestep);
         if (worlds[replicaWorldIxs[i]].updSampler(0)->integratorType
@@ -2445,7 +2456,7 @@ void Context::RunReplicaWorldRange(int replicaIx,
             const auto stepSize = currWorld.getSampler(0)->getTimestep();
             const auto numSteps = currWorld.getSampler(0)->getMDStepsPerSample();
             const auto useNUTS = currWorld.getSampler(0)->useNUTS;
-            const auto temperature = thermodynamicStates[thermoIx].getTemperature();
+            const auto temperature = currWorld.getTemperature();
             const auto numDegreesOfFreedom = currWorld.getSampler(0)->getNumDegreesOfFreedom();
 
             std::cout << "\tRunning world " << worldIndex << " for replica " << replicaIx

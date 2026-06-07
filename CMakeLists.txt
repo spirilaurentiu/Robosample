@@ -48,8 +48,12 @@ endif()
 # Dependencies
 # =============================================================================
 
+# OpenBLAS should be the default BLAS implementation in the conda environment
+# However, pytorch will pull in MKL
+set(BLA_VENDOR OpenBLAS)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
+
 find_package(OpenMP REQUIRED)
 find_package(Threads REQUIRED)
 find_package(

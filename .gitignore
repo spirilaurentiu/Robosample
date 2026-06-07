@@ -6,11 +6,12 @@ doc/html
 profile-data
 
 # Development artifacts
-robo_py312.yaml
+robo_*.yaml
 *.dcd
 *.csv
 *.cif
 *.pdb
+*.dat
 
 # Python stuff
 .pytest_cache

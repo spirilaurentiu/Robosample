@@ -43,6 +43,7 @@ class World:
     is_cartesian: bool
     samplers: list[Sampler]
     want_spatial_force_history: bool
+    temperature: float
 
     def add_sampler(
         self,
@@ -972,6 +973,7 @@ class Context(rb.Context):
     def add_robotic_world(
         self,
         torsional_bonds: list[rb.BondFlexibility],
+        temperature: float = -1,
         samplesperRound: int = 1,
         want_spatial_force_history: bool = False,
     ):
@@ -995,6 +997,7 @@ class Context(rb.Context):
             is_cartesian=False,
             samplers=list[Sampler](),
             want_spatial_force_history=want_spatial_force_history,
+            temperature=temperature,
         )
         self.worlds.append(w)
 
@@ -1054,6 +1057,12 @@ class Context(rb.Context):
                 world.roll_flexibilities,
                 world.want_spatial_force_history,
             )
+
+        world_temperatures = [w.temperature for w in self.worlds]
+        if -1 in world_temperatures and any(t != -1 for t in world_temperatures):
+            raise ValueError("Cannot mix default (-1) and valid temperatures.")
+        if -1 not in world_temperatures:
+            super().set_world_temperatures(world_temperatures)
 
         # OpenMM must be initialized before adding samplers since they want to calculate energies when initializing
         ok = super().initialize_openmm()
