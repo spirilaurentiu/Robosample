@@ -942,7 +942,9 @@ class Context(rb.Context):
 
         return flexibilities
 
-    def add_cartesian_world(self, samplesPerRound: int = 1) -> World:
+    def add_cartesian_world(
+        self, samplesPerRound: int = 1, temperature: float = -1
+    ) -> World:
         flexibilities = []
         for bond in self.system_topology.bonds:
             if bond.ring_closing:
@@ -966,6 +968,7 @@ class Context(rb.Context):
             is_cartesian=True,
             samplers=list[Sampler](),
             want_spatial_force_history=False,
+            temperature=temperature,
         )
         self.worlds.append(w)
         return self.worlds[-1]
