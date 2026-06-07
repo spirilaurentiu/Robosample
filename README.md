@@ -135,15 +135,11 @@ Shutdown WSL from `Powershell` and restart (WSL does not have a real reboot). Up
 
 ## OpenCL
 
-OpenCL installation depends on the udnerlying hardware:
+OpenCL installation depends on the underlying hardware:
 
 * Nvidia GPU: already installed with the divers.
 
-* AMD GPU: `TODO`
-
-* Intel GPU/CPU: install `sudo apt-get install intel-opencl-icd`
-
-* AMD CPU: `TODO`
+* Intel GPU/CPU: install `sudo apt install intel-opencl-icd`
 
 Other dependencies will be installed via `conda` (see below).
 
@@ -195,7 +191,7 @@ pip install conda-merge zstandard
 
 ```bash
 sudo apt update
-sudo apt install ruby-github-linguist clang-tidy clang-tools
+sudo apt install ruby-github-linguist clang-tidy clang-tools clangd
 ```
 
 ## Installing Robosample
@@ -234,21 +230,21 @@ git push origin update --force
 
 While all environments install Python 3.12, CUDA introduces multiple version dependencies:
 
-| CUDA  | OpenMM | PyTorch |
-|-------|--------|---------|
-| 12.0  | 8.1.2  | 2.5.1   |
-| 12.1  | 8.1.2  | 2.5.1   |
-| 12.2  | 8.1.2  | 2.5.1   |
-| 12.3  | 8.1.2  | 2.5.1   |
-| 12.4  | 8.1.2  | 2.5.1   |
-| 12.5  | 8.1.2  | 2.5.1   |
-| 12.6  | 8.3.1  | 2.7.1   |
-| 12.8  | 8.3.1  | 2.7.1   |
-| 12.9  | 8.3.1  | 2.7.1   |
-| 13.0  | 8.5.1  | 2.11.0  |
-| 13.1  | 8.5.1  | 2.11.0  |
-| 13.2  | 8.5.1  | 2.11.0  |
-| 13.3  | 8.5.1  | 2.11.0  |
+| CUDA  | GCC | OpenMM | PyTorch |
+|-------|-----|--------|---------|
+| 12.0  | 12  | 8.1.2  | 2.5.1   |
+| 12.1  | 12  | 8.1.2  | 2.5.1   |
+| 12.2  | 12  | 8.1.2  | 2.5.1   |
+| 12.3  | 12  | 8.1.2  | 2.5.1   |
+| 12.4  | 12  | 8.1.2  | 2.5.1   |
+| 12.5  | 13  | 8.1.2  | 2.5.1   |
+| 12.6  | 13  | 8.3.1  | 2.7.1   |
+| 12.8  | 13  | 8.3.1  | 2.7.1   |
+| 12.9  | 14  | 8.3.1  | 2.7.1   |
+| 13.0  | 15  | 8.5.1  | 2.11.0  |
+| 13.1  | 15  | 8.5.1  | 2.11.0  |
+| 13.2  | 15  | 8.5.1  | 2.11.0  |
+| 13.3  | 15  | 8.5.1  | 2.11.0  |
 
 `cuBLAS` and `cuDNN` are requested and installed by PyTorch.
 
@@ -274,7 +270,7 @@ Set `modeller` key in:
 file $CONDA_PREFIX/lib/modeller-*/modlib/modeller/config.py
 ```
 
-If using CUDA, set up variables:
+We now need to set up environment variables. [MKL threading layer](https://www.intel.com/content/www/us/en/docs/onemkl/developer-guide-linux/2023-0/dynamic-select-the-interface-and-threading-layer.html) depends on the CPU type (`INTEL`/`GNU`).
 
 ```bash
 conda activate robo_cuda13.0
@@ -285,6 +281,7 @@ export OPENMM_CUDA_COMPILER="$CONDA_PREFIX/bin/nvcc"
 export CUDA_HOST_COMPILER="$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++"
 export OMPI_MCA_opal_cuda_support=true
 export UCX_MEMTYPE_CACHE=n
+export MKL_THREADING_LAYER=GNU
 EOF
 
 mkdir -p $CONDA_PREFIX/etc/conda/deactivate.d
@@ -293,6 +290,7 @@ unset OPENMM_CUDA_COMPILER
 unset CUDA_HOST_COMPILER
 unset OMPI_MCA_opal_cuda_support
 unset UCX_MEMTYPE_CACHE
+unset MKL_THREADING_LAYER
 EOF
 
 conda activate base && conda activate robo_cuda13.0
@@ -355,9 +353,9 @@ conda activate robo_XXX
 code Robosample/
 ```
 
-The repository comes with a nubmer of pre-configured settings:
+The repository comes with a number of pre-configured settings:
 
-* Extensions: Open the extensions tab and type `@recommended`. We recommend using `CodeLLDB` for a better debugging experience and `clangd` for faster code completion (notice that it requries a language server to be installed, so follow their project description).
+* Extensions: Open the extensions tab and type `@recommended`. We recommend using `CodeLLDB` for a better debugging experience and `clangd` for faster code completion (notice that it requires a language server to be installed, so follow their project description).
 
 * Build configurations: type `Left-Ctrl + Shift + P` and run `CMake: Select Configure Preset` and `CMake: Select Build Preset`, then press `F7`. Files will be automatically installed in `python/robosample/`.
 
