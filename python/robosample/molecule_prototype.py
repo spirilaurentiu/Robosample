@@ -469,14 +469,16 @@ class MoleculePrototype:
             if "ring" not in dihedral_type:
                 continue
 
-            # Enforce: no atom may participate in more than one ring-closing bond
+            # Prefer not to anchor two ring closures on the same atom. In fused
+            # polycyclic systems (e.g. cucurbituril) this is sometimes
+            # unavoidable, so we DEFER rather than force this bond here: leave it
+            # in the graph and let the spanning-tree step below break whatever
+            # cycle remains at the least-bad edge.
             if any(
                 ring_closing_bonds_involved.get(idx, 0) >= 1
                 for idx in (parent_idx, child_idx)
             ):
-                raise ValueError(
-                    f"Atom {parent_idx} or {child_idx} involved in multiple rigid bonds."
-                )
+                continue
 
             # Only cut if both atoms remain connected through the rest of the graph.
             if not _can_cut(parent_idx, child_idx):
@@ -502,61 +504,81 @@ class MoleculePrototype:
             else {}
         )
 
-        # Handle residual cycles
-        for cycle in sorted(nx.cycle_basis(acyclic_graph), key=len):
-            candidate_bonds: List[BondProperties] = []
-            n = len(cycle)
-            for i in range(n):
-                u, v = cycle[i], cycle[(i + 1) % n]
-                if frozenset((u, v)) in forbidden_edges:
-                    continue
+        # --- Reduce any residual cycles to a spanning forest ----------------
+        # Instead of greedily breaking cycle-basis loops one at a time (which
+        # dead-ends on heavily fused polycyclic systems such as cucurbiturils,
+        # where every edge of a small ring may already touch an existing
+        # ring-closing bond), choose the ring-closing bonds globally as the
+        # complement of a maximum-weight spanning tree. A spanning tree always
+        # exists for a connected graph, so this can never fail to find bonds to
+        # cut, and it removes exactly the minimal number of bonds (the circuit
+        # rank). Edges that are topologically bridges are guaranteed to remain
+        # in the tree, so connectivity is preserved automatically.
+        #
+        # "keep_weight" encodes the previous cut-preference order as a soft
+        # bias: a higher weight means the bond is more desirable to KEEP as a
+        # normal tree bond, so the lowest-weight edges are the ones turned into
+        # ring closures. Magnitudes are separated so the ordering is effectively
+        # lexicographic: forbidden > one-closure-per-atom > flexible-over-rigid
+        # > near-forbidden-atom > higher-degree.
+        def _keep_weight(u: int, v: int) -> float:
+            weight = 0.0
 
-                atom_u, atom_v = self.molecule[u], self.molecule[v]
-                degree_sum = acyclic_graph.degree[u] + acyclic_graph.degree[v]
-                is_rigid = is_rigid_bond(atom_u, atom_v)
+            # Forbidden bonds (e.g. SG-SG) should stay in the tree if possible.
+            if frozenset((u, v)) in forbidden_edges:
+                weight += 1e9
 
-                forbidden_distance = (
-                    max(forbidden_atom_dist.get(u, 0), forbidden_atom_dist.get(v, 0))
-                    if forbidden_atom_dist
-                    else None
-                )
+            # Soft "one ring-closing bond per atom" preference. Unavoidable in
+            # fused rings, hence a bias rather than a hard constraint.
+            if ring_closing_bonds_involved.get(u, 0) or ring_closing_bonds_involved.get(
+                v, 0
+            ):
+                weight += 1e6
 
-                candidate_bonds.append(
-                    BondProperties(u, v, is_rigid, forbidden_distance, degree_sum)
-                )
+            # Prefer to cut rigid bonds, i.e. keep flexible ones in the tree.
+            if not is_rigid_bond(self.molecule[u], self.molecule[v]):
+                weight += 1e3
 
-            # Sort bonds: rigid first, farthest from forbidden atoms, lowest degree sum
-            candidate_bonds.sort(
-                key=lambda b: (
-                    not b.is_rigid,
-                    -(b.sg_sg_bond_distance or -1),
-                    b.sum_of_degrees,
-                )
-            )
+            # Prefer to cut bonds far from forbidden atoms, i.e. keep near ones.
+            if forbidden_atom_dist:
+                dist = max(forbidden_atom_dist.get(u, 0), forbidden_atom_dist.get(v, 0))
+                weight += -0.1 * float(dist)
 
-            # Pick the first eligible bond: not already ring-closing, satisfies the
-            # one-ring-bond-per-atom constraint, and safe to cut (not a bridge).
-            chosen = None
-            for bond in candidate_bonds:
-                u, v = bond.parent_atom_prmtop_index, bond.child_atom_prmtop_index
-                if (u, v) in ring_closing_bonds or (v, u) in ring_closing_bonds:
-                    continue
-                if any(ring_closing_bonds_involved.get(idx, 0) >= 1 for idx in (u, v)):
-                    continue
-                if not _can_cut(u, v):  # would disconnect the graph
-                    continue
-                chosen = (u, v)
-                break
+            # Mild preference to keep higher-degree bonds in the tree.
+            weight += 1e-3 * (acyclic_graph.degree[u] + acyclic_graph.degree[v])
 
-            if chosen is None:
-                continue  # no eligible bond for this cycle
+            return weight
 
-            u, v = chosen
+        for u, v in acyclic_graph.edges:
+            acyclic_graph[u][v]["keep_weight"] = _keep_weight(u, v)
+
+        # Maximum spanning forest: kept edges form the tree, the rest close rings.
+        spanning = nx.maximum_spanning_tree(acyclic_graph, weight="keep_weight")
+        kept_edges = {frozenset(e) for e in spanning.edges}
+
+        for u, v in list(acyclic_graph.edges):
+            if frozenset((u, v)) in kept_edges:
+                continue
+            acyclic_graph.remove_edge(u, v)
+            ring_closing_bonds.add((u, v))
             for idx in (u, v):
                 ring_closing_bonds_involved[idx] = (
                     ring_closing_bonds_involved.get(idx, 0) + 1
                 )
-            ring_closing_bonds.add((u, v))
+
+        # Report (do not fail) when fused rings force an atom into >1 closure.
+        overloaded = sorted(
+            idx for idx, count in ring_closing_bonds_involved.items() if count > 1
+        )
+        if overloaded:
+            shown = ", ".join(map(str, overloaded[:10]))
+            warnings.warn(
+                f"{len(overloaded)} atom(s) participate in more than one "
+                f"ring-closing bond. This is expected for fused polycyclic "
+                f"systems (e.g. cucurbituril) and is treated as a soft "
+                f"preference rather than an error. Atoms: {shown}"
+                f"{', ...' if len(overloaded) > 10 else ''}."
+            )
 
         # Validation
         if acyclic_graph.number_of_nodes() != len(self.molecule.atoms):

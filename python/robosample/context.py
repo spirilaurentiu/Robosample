@@ -445,7 +445,7 @@ class Context(rb.Context):
                         continue
 
                     # Define standardized dihedral names
-                    if dihedral_type != "non-standard":
+                    if dihedral_type != "non-standard" or True:
                         new_dihedral_bond = {
                             "atom1_parmed_index": atom1_prmtop,
                             "atom2_parmed_index": atom2_prmtop,
@@ -463,14 +463,16 @@ class Context(rb.Context):
                             ignore_index=True,
                         )
 
-                        gparent, parent, child, gchild, _ = molecule_prototypes[
+                        value = molecule_prototypes[
                             prototype_index
                         ].get_standardized_dihedral_type_2(
                             self.parm.atoms[atom1_prmtop], self.parm.atoms[atom2_prmtop]
                         )
-                        self.standard_dihedral_atom_groups.append(
-                            (gparent.idx, parent.idx, child.idx, gchild.idx),
-                        )
+                        if value:
+                            gparent, parent, child, gchild, _ = value
+                            self.standard_dihedral_atom_groups.append(
+                                (gparent.idx, parent.idx, child.idx, gchild.idx),
+                            )
 
                 # Add angles
                 for angle in molecule_prototypes[prototype_index].angle_params:
@@ -854,6 +856,9 @@ class Context(rb.Context):
         """
         [[rb.BondFlexibility(), rb.BondFlexibility(), ...], [...], ...]
         """
+        if source is None:
+            return [[]]
+
         flexibilities = []
         for _, bond in source.iterrows():
             flex = rb.BondFlexibility()

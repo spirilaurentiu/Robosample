@@ -32,9 +32,7 @@ context = robosample.Context(
 # All molecule roots are `robosample.rb.RootMobility.Weld`
 # context.set_root_mobility(0, robosample.rb.RootMobility.Free)
 
-# All other molecules are lipids and solvent
-for mol_ix in range(3, context.get_num_molecules()):
-    context.set_root_mobility(mol_ix, robosample.rb.RootMobility.Free)
+context.set_root_mobility(0, robosample.rb.RootMobility.Weld)
 
 # context.add_cartesian_world().add_sampler(
 #     timeStep=0.001,
@@ -44,21 +42,14 @@ for mol_ix in range(3, context.get_num_molecules()):
 #     use_nuts=False,
 # )
 
-############### World 2a ###############
-resid = [103, 136, 173, 182, 190, 201, 232, 236, 243, 257, 275]
-dihs = ["chi1", "chi2", "chi3", "chi4", "chi5"]
 
-bonds = context.standard_dihedral_bonds.loc[
-    (context.standard_dihedral_bonds["resid"].isin(resid))
-    & (context.standard_dihedral_bonds["dihedral_type"].isin(dihs))
-    & (context.standard_dihedral_bonds["molecule_index"] == 0)
-]
-
-sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, False)
+sele = context.build_flexibilities(
+    context.standard_dihedral_bonds, robosample.rb.BondMobility.Torsion, False
+)
 context.add_robotic_world(sele).add_sampler(
-    timeStep=0.005,  # 5 fs
-    mdSteps=500,
-    boostMDSteps=500,
+    timeStep=0.010,  # 5 fs
+    mdSteps=10,
+    boostMDSteps=10,
     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
     use_nuts=False,
 )
@@ -66,4 +57,4 @@ context.add_robotic_world(sele).add_sampler(
 # Add replicas (geometric temperature ladder)
 context.initialize([300])
 
-context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, False)
+context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, True)

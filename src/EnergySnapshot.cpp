@@ -174,21 +174,29 @@ auto EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, Degrees
         valid = false;
     }
 
-    if (std::abs(kinetic) < 1e-6) {
-        std::cerr << "\t - [ERROR] Kinetic energy is suspiciously low: " << kinetic << '\n';
-        // valid = false;
-    } else if (std::abs(kinetic) > 1e6) {
-        std::cerr << "\t - [ERROR] Kinetic energy is suspiciously high: " << kinetic << '\n';
-        // valid = false;
-    } else if (std::abs(ref.kinetic) < 1e-6) {
-        std::cerr << "\t - [ERROR] Reference kinetic energy is suspiciously low: " << ref.kinetic << '\n';
-        // valid = false;
-    } else if (std::abs(ref.kinetic) > 1e6) {
-        std::cerr << "\t - [ERROR] Reference kinetic energy is suspiciously high: " << ref.kinetic << '\n';
-        // valid = false;
-    } else if (std::abs(kinetic / ref.kinetic) > 10) {
-        std::cerr << "\t - [ERROR] Kinetic energy jump: " << kinetic << " vs ref " << ref.kinetic << '\n';
-        // valid = false;
+    if (ndofs > DegreesOfFreedom(0)) {
+        if (std::abs(kinetic) < 1e-6) {
+            std::cerr << "\t - [ERROR] Kinetic energy is suspiciously low: " << kinetic << '\n';
+            valid = false;
+        } else if (std::abs(ref.kinetic) < 1e-6) {
+            std::cerr << "\t - [ERROR] Reference kinetic energy is suspiciously low: " << ref.kinetic << '\n';
+            valid = false;
+        } else if (std::abs(kinetic / ref.kinetic) > 10) {
+            std::cerr << "\t - [ERROR] Kinetic energy jump: " << kinetic << " vs ref " << ref.kinetic << '\n';
+            valid = false;
+        }
+    } else {
+        if (std::abs(kinetic) > 1e-6) {
+            std::cerr << "\t - [ERROR] Kinetic energy is suspiciously high: " << kinetic << '\n';
+            valid = false;
+        } else if (std::abs(ref.kinetic) > 1e6) {
+            std::cerr << "\t - [ERROR] Reference kinetic energy is suspiciously high: " << ref.kinetic
+                      << '\n';
+            valid = false;
+        } else if (std::abs(kinetic / ref.kinetic) > 10) {
+            std::cerr << "\t - [ERROR] Kinetic energy jump: " << kinetic << " vs ref " << ref.kinetic << '\n';
+            valid = false;
+        }
     }
 
     // // ── Category B: heuristic plausibility (advisory -- see class-level note) ──
