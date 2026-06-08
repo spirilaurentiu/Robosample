@@ -968,6 +968,8 @@ class World {
         SimTK::Compound::AtomIndex(SimTK::InvalidIndex)};
 
     std::reference_wrapper<const ZMatrix> zMatrix;
+    std::vector<ZMatrixRow> zMatrixReferenceRows;
+    std::vector<ZMatrixRow> zMatrixReferenceDihedralRows;
 
     SimTK::State worldState;
 

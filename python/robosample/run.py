@@ -45,13 +45,9 @@ for mol_ix in range(3, context.get_num_molecules()):
 # )
 
 ############### World 2a ###############
-resid = [103, 136, 173, 182, 190, 201, 232, 236, 243, 257, 275]
-dihs = ["chi1", "chi2", "chi3", "chi4", "chi5"]
-
+dihs = ["phi", "psi"]
 bonds = context.standard_dihedral_bonds.loc[
-    (context.standard_dihedral_bonds["resid"].isin(resid))
-    & (context.standard_dihedral_bonds["dihedral_type"].isin(dihs))
-    & (context.standard_dihedral_bonds["molecule_index"] == 0)
+    context.standard_dihedral_bonds["dihedral_type"].isin(dihs)
 ]
 
 sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, False)
@@ -63,7 +59,10 @@ context.add_robotic_world(sele).add_sampler(
     use_nuts=False,
 )
 
+for row in context.z_matrix:
+    print(row.global_indices)
+
 # Add replicas (geometric temperature ladder)
 context.initialize([300])
 
-context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, False)
+# context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, False)

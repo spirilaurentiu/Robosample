@@ -1,5 +1,4 @@
 import argparse
-import time
 
 import robosample
 
@@ -30,17 +29,18 @@ context = robosample.Context(
     testing=False,
 )
 
-context.add_cartesian_world(temperature=300).add_sampler(
-    timeStep=0.001,
-    mdSteps=500,
-    boostMDSteps=500,
-    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
-    use_nuts=False,
-)
+# context.add_cartesian_world(temperature=300).add_sampler(
+#     timeStep=0.001,
+#     mdSteps=500,
+#     boostMDSteps=500,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+#     use_nuts=False,
+# )
 
 mask_phi = context.standard_dihedral_bonds["dihedral_type"] == "phi"
 mask_psi = context.standard_dihedral_bonds["dihedral_type"] == "psi"
 bonds = context.standard_dihedral_bonds[mask_phi | mask_psi]
+# bonds = bonds.iloc[[0]]
 sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, False)
 context.add_robotic_world(sele, temperature=3000).add_sampler(
     timeStep=0.025,
@@ -50,14 +50,17 @@ context.add_robotic_world(sele, temperature=3000).add_sampler(
     use_nuts=False,
 )
 
+# for row in context.z_matrix:
+#     print(row.global_indices)
+
 context.initialize([300])
 
-# Run the simulation
-start_time = time.perf_counter()
+# # Run the simulation
+# start_time = time.perf_counter()
 
-context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, True)
+# context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, True)
 
-end_time = time.perf_counter()
-duration = end_time - start_time
+# end_time = time.perf_counter()
+# duration = end_time - start_time
 
-print(f"run_rex() took {duration:.4f} seconds")
+# print(f"run_rex() took {duration:.4f} seconds")

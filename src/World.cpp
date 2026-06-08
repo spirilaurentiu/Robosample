@@ -1,6 +1,8 @@
 #include "World.hpp"
 
+#include <cstdint>
 #include <stdexcept>
+#include <unordered_map>
 
 #include "Compound.h"
 #include "Constraint.h"
@@ -15,6 +17,23 @@ void World::setAtomTargetLocationsToState(
     // Update cache
     // TODO so far we only need to update the cache for testing purposes only
     atomTargetLocationsCache = atomTargets;
+
+    for (const auto& row : zMatrixReferenceRows) {
+        std::cout << "zMatrixReferenceRows" << row.compoundAtomIndices[0] << " " << row.compoundAtomIndices[1]
+                  << " " << row.compoundAtomIndices[2] << " " << row.compoundAtomIndices[3] << "\n";
+    }
+
+    for (const auto& row : zMatrixReferenceDihedralRows) {
+        std::cout << "zMatrixReferenceDihedralRows" << row.compoundAtomIndices[0] << " "
+                  << row.compoundAtomIndices[1] << " " << row.compoundAtomIndices[2] << " "
+                  << row.compoundAtomIndices[3] << "\n";
+    }
+
+    throw std::runtime_error(
+        "Done with setAtomTargetLocationsToState - remove this exception to proceed with testing");
+
+
+    std::cout << "Setting atom target locations to state...\n";
 
     // Match Compound and DuMM coordinates
     for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
@@ -289,6 +308,8 @@ void World::updateInboardAndOutboardFramesFromTopologies() {
             continue;
         }
 
+        std::cout << "parent cAIx: " << bond.parentCAIx << ", child cAIx: " << bond.childCAIx << "\n";
+
         // Get parent-child BondCenters relationship
         const auto X_parentBC_childBC =
             topology.getDefaultBondCenterFrameInOtherBondCenterFrame(bond.childCAIx, bond.parentCAIx);
@@ -304,6 +325,12 @@ void World::updateInboardAndOutboardFramesFromTopologies() {
 
         // Create transforms for child default inboard frame (XPF) and default outboard frame (XBM)
         switch (bond.mobility) {
+            /*
+            -1 0  0 L
+             0 c  s 0
+             0 s -c 0
+             0 0  0 1
+            */
             case SimTK::BondMobility::Mobility::AnglePin:
             case SimTK::BondMobility::Mobility::Slider:
             case SimTK::BondMobility::Mobility::BendStretch: {
@@ -315,10 +342,22 @@ void World::updateInboardAndOutboardFramesFromTopologies() {
                 break;
             }
 
+            /*
+             0 0 1 L
+             s c 0 0
+            -c s 0 0
+             0 0 0 1
+            */
             case SimTK::BondMobility::Mobility::Torsion:
             case SimTK::BondMobility::Mobility::Cylinder: {
                 const auto B_X_M_pin = X_parentBC_childBC * X_to_Z;
                 const auto P_X_F_pin = Proot_X_root * B_X_M_pin;
+
+                std::cout << "B_X_M_pin=" << B_X_M_pin << "\n";
+                std::cout << "Proot_X_root=" << P_X_F_pin << "\n";
+                std::cout << "P_X_F_pin=" << P_X_F_pin << "\n";
+                throw std::runtime_error("Torsion and Cylinder mobility types not supported yet in "
+                                         "World::setFramesFromTopologies().");
 
                 childAtomMobod.setDefaultInboardFrame(P_X_F_pin);  // X_PF
                 childAtomMobod.setDefaultOutboardFrame(B_X_M_pin); // X_BM
@@ -328,8 +367,9 @@ void World::updateInboardAndOutboardFramesFromTopologies() {
             case SimTK::BondMobility::Mobility::BallM:
             case SimTK::BondMobility::Mobility::Rigid:
             case SimTK::BondMobility::Mobility::Translation: {
-                const auto& B_X_M = X_to_Z; // Samuel Flores' terminology aka M_X_pin =
-                                            // SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis)
+                // Samuel Flores' terminology aka M_X_pin =
+                // SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis)
+                const auto& B_X_M = X_to_Z;
                 const auto P_X_F = Proot_X_root * B_X_M;
 
                 childAtomMobod.setDefaultInboardFrame(P_X_F);  // X_PF
@@ -1446,6 +1486,8 @@ void World::modelTopologies(const std::vector<SimTK::Compound::AtomTargetLocatio
 
     mbxRootCAIx.resize(matter->getNumBodies());
 
+    std::unordered_map<std::uint64_t, bool> bondPresent;
+
     // Fill in properties
     for (int topoIx = 0; topoIx < topologies.size(); topoIx++) {
         Topology& topology = topologies[topoIx];
@@ -1537,6 +1579,32 @@ void World::modelTopologies(const std::vector<SimTK::Compound::AtomTargetLocatio
                 continue;
             }
 
+            // Find the reference Z matrix row for this bond
+            // i, j, k, l -> gparent, parent, child, gchild
+            for (const auto& row : zMatrix.get()) {
+                // std::cout << "Comparing bond " << bond.globalIndices[0] << " - " << bond.globalIndices[1]
+                //           << " with Z-matrix row " << row.globalIndices[0] << " - " << row.globalIndices[1]
+                //           << " - " << row.globalIndices[2] << " - " << row.globalIndices[3] << std::endl;
+
+                const auto i = row.globalIndices[3];
+                const auto j = row.globalIndices[2];
+                const auto k = row.globalIndices[1];
+                const auto l = row.globalIndices[0];
+
+                // Match child
+                if (bond.globalIndices[1] != k) {
+                    continue;
+                }
+
+                // Match parent
+                if (bond.globalIndices[0] != j) {
+                    continue;
+                }
+
+                zMatrixReferenceRows.push_back(row);
+                break;
+            }
+
             // We only want flexible bonds
             if (bond.getBondMobility(ownWorldIndex) == SimTK::BondMobility::Mobility::Rigid) {
                 continue;
@@ -1574,6 +1642,33 @@ void World::modelTopologies(const std::vector<SimTK::Compound::AtomTargetLocatio
             }
 
             rigidBodyAtomBonds.push_back(rigidBodyAtomBond);
+
+            // Find the reference Z matrix row for this bond
+            // i, j, k, l -> gparent, parent, child, gchild
+            for (const auto& row : zMatrix.get()) {
+                // std::cout << "Comparing bond " << bond.globalIndices[0] << " - " << bond.globalIndices[1]
+                //           << " with Z-matrix row " << row.globalIndices[0] << " - " << row.globalIndices[1]
+                //           << " - " << row.globalIndices[2] << " - " << row.globalIndices[3] << std::endl;
+
+                const auto i = row.globalIndices[3];
+                const auto j = row.globalIndices[2];
+                const auto k = row.globalIndices[1];
+                const auto l = row.globalIndices[0];
+
+                // Match child
+                if (bond.globalIndices[1] != k) {
+                    continue;
+                }
+
+                // Match parent
+                if (bond.globalIndices[0] != j) {
+                    continue;
+                }
+
+                zMatrixReferenceDihedralRows.push_back(row);
+                break;
+            }
+
 
             interestingMobodIndices.insert(childMBIx);
             interestingMobodIndices.insert(parentMBIx);

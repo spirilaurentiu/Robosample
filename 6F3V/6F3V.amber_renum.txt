@@ -1,0 +1,9 @@
+ARG A     1    ARG     1
+PRO A     2    PRO     2
+PRO A     3    PRO     3
+GLY A     4    GLY     4
+PHE A     5    PHE     5
+SER A     6    SER     6
+PRO A     7    PRO     7
+PHE A     8    PHE     8
+ARG A     9    ARG     9
