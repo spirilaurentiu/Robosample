@@ -24,9 +24,9 @@
                 "PYTHONPATH": "${workspaceFolder}/python/robosample"
             },
             "args": [
-                "host",
-                "${workspaceFolder}/examples/host.prmtop",
-                "${workspaceFolder}/examples/host.rst7",
+                "host-guest",
+                "${workspaceFolder}/examples/host-guest.prmtop",
+                "${workspaceFolder}/examples/host-guest.rst7",
                 "6000",
                 "0",
                 "10",
@@ -41,9 +41,9 @@
             "program": "${command:python.interpreterPath}",
             "args": [
                 "${workspaceFolder}/python/robosample/run.py",
-                "host",
-                "${workspaceFolder}/examples/host.prmtop",
-                "${workspaceFolder}/examples/host.rst7",
+                "host-guest",
+                "${workspaceFolder}/examples/host-guest.prmtop",
+                "${workspaceFolder}/examples/host-guest.rst7",
                 "6000",
                 "0",
                 "10",
@@ -59,8 +59,9 @@
             "MIMode": "gdb",
             "setupCommands": [
                 { "text": "set auto-load safe-path /", "description": "let conda libstdc++ pretty-printers load" },
+                { "text": "set index-cache enabled on", "description": "cache indexes across runs" },
                 { "text": "-enable-pretty-printing", "ignoreFailures": true },
-                { "text": "set index-cache enabled on", "description": "cache indexes across runs" }
+                { "text": "python import sys, os, glob; env = os.path.dirname(os.path.dirname(r'${command:python.interpreterPath}')); sys.path[:0] = glob.glob(os.path.join(env, 'share', 'gcc-*', 'python')); from libstdcxx.v6.printers import register_libstdcxx_printers; register_libstdcxx_printers(None)", "description": "register STL pretty-printers; env derived from selected interpreter" }
             ]
         }
     ]

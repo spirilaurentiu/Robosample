@@ -32,7 +32,8 @@ context = robosample.Context(
 # All molecule roots are `robosample.rb.RootMobility.Weld`
 # context.set_root_mobility(0, robosample.rb.RootMobility.Free)
 
-context.set_root_mobility(0, robosample.rb.RootMobility.Weld)
+context.set_root_mobility(0, robosample.rb.RootMobility.Free)
+context.set_root_mobility(1, robosample.rb.RootMobility.Weld)
 
 # context.add_cartesian_world().add_sampler(
 #     timeStep=0.001,
@@ -43,11 +44,9 @@ context.set_root_mobility(0, robosample.rb.RootMobility.Weld)
 # )
 
 
-sele = context.build_flexibilities(
-    context.standard_dihedral_bonds, robosample.rb.BondMobility.Torsion, False
-)
+sele = context.build_flexibilities(None, robosample.rb.BondMobility.Torsion, False)
 context.add_robotic_world(sele).add_sampler(
-    timeStep=0.010,  # 5 fs
+    timeStep=0.25,  # 5 fs
     mdSteps=10,
     boostMDSteps=10,
     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
