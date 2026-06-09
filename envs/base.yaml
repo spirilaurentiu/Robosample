@@ -9,6 +9,8 @@ dependencies:
   - pkg-config
   - gcc_linux-64
   - gxx_linux-64
+  - ccache
+  - mold
 
   # Python
   - python=3.12

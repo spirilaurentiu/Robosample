@@ -7,20 +7,11 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": false,
+            "justMyCode": true,
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/python/robosample",
+                "PYTHONPATH": "${workspaceFolder}/python/robosample"
             },
-            "args": [
-                "host",
-                "${workspaceFolder}/examples/host.prmtop",
-                "${workspaceFolder}/examples/host.rst7",
-                "6000",
-                "0",
-                "10",
-                "1",
-            ],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}"
         },
         {
             "name": "Python: run.py",
@@ -28,9 +19,9 @@
             "request": "launch",
             "program": "${workspaceFolder}/python/robosample/run.py",
             "console": "integratedTerminal",
-            "justMyCode": false,
+            "justMyCode": true,
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/python/robosample",
+                "PYTHONPATH": "${workspaceFolder}/python/robosample"
             },
             "args": [
                 "host",
@@ -39,18 +30,15 @@
                 "6000",
                 "0",
                 "10",
-                "1",
+                "1"
             ],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}"
         },
         {
-            "name": "Python C++ Debug with CodeLLDB",
-            "type": "lldb",
+            "name": "C++ (gdb) run.py",
+            "type": "cppdbg",
             "request": "launch",
             "program": "${command:python.interpreterPath}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/python/robosample",
-            },
             "args": [
                 "${workspaceFolder}/python/robosample/run.py",
                 "host",
@@ -62,47 +50,18 @@
                 "1"
             ],
             "cwd": "${workspaceFolder}",
-        },
-        {
-            "name": "Python: run_2ala.py",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/python/robosample/run_2ala.py",
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/python/robosample",
-            },
-            "args": [
-                "ala-dipeptide",
-                "${workspaceFolder}/examples/ala-dipeptide.prmtop",
-                "${workspaceFolder}/examples/ala-dipeptide.rst7",
-                "6000",
-                "0",
-                "10",
-                "1",
+            "environment": [
+                {
+                    "name": "PYTHONPATH",
+                    "value": "${workspaceFolder}/python/robosample"
+                }
             ],
-            "cwd": "${workspaceFolder}",
-        },
-        {
-            "name": "Python C++ with run_2ala.py",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${command:python.interpreterPath}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/python/robosample",
-            },
-            "args": [
-                "${workspaceFolder}/python/robosample/run_2ala.py",
-                "ala-dipeptide",
-                "${workspaceFolder}/examples/ala-dipeptide.prmtop",
-                "${workspaceFolder}/examples/ala-dipeptide.rst7",
-                "6000",
-                "0",
-                "10",
-                "1"
-            ],
-            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "setupCommands": [
+                { "text": "set auto-load safe-path /", "description": "let conda libstdc++ pretty-printers load" },
+                { "text": "-enable-pretty-printing", "ignoreFailures": true },
+                { "text": "set index-cache enabled on", "description": "cache indexes across runs" }
+            ]
         }
     ]
 }
