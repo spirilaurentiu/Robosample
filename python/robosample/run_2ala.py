@@ -30,23 +30,23 @@ context = robosample.Context(
     testing=False,
 )
 
-context.add_cartesian_world(temperature=300).add_sampler(
-    timeStep=0.001,
-    mdSteps=500,
-    boostMDSteps=500,
-    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
-    use_nuts=False,
-)
+# context.addCartesianWorld().add_sampler(
+#     timeStep=0.001,
+#     mdSteps=500,
+#     boostMDSteps=500,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+#     use_nuts=False,
+# )
 
 mask_phi = context.standard_dihedral_bonds["dihedral_type"] == "phi"
 mask_psi = context.standard_dihedral_bonds["dihedral_type"] == "psi"
 bonds = context.standard_dihedral_bonds[mask_phi | mask_psi]
-sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, False)
-context.add_robotic_world(sele, temperature=3000).add_sampler(
+sele = context.build_flexibilities(bonds)
+context.add_torsional_world(sele).add_sampler(
     timeStep=0.025,
     mdSteps=20,  # ignored if using NUTS
     boostMDSteps=20,  # ignored if using NUTS
-    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+    acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
     use_nuts=False,
 )
 

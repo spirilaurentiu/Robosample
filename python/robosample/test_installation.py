@@ -9,20 +9,20 @@ def run_test():
     examples_dir = repo_root / "examples"
 
     # Create simulation
-    name = "ala-dipeptide.test.rigid"
+    name = "1APQ.test.rigid"
     seed = 42
-    prmtop = str(examples_dir / "ala-dipeptide.prmtop")
-    xyz = str(examples_dir / "ala-dipeptide.rst7")
-    write_freq = 1
-    equil_steps = 10
-    prod_steps = 10
+    prmtop = str(examples_dir / "1APQ.prmtop")
+    xyz = str(examples_dir / "1APQ.rst7")
+    write_freq = 0
+    equil_steps = 0
+    prod_steps = 0
     context = robosample.Context(
         name=name,
         seed=seed,
         prmtop=prmtop,
         inpcrd=xyz,
         write_freq=write_freq,
-        testing=False,
+        testing=True,
     )
 
     # Add cartesian world (will integrate with OpenMM)
@@ -30,28 +30,20 @@ def run_test():
         timeStep=0.001,
         mdSteps=10,
         boostMDSteps=10,
-        acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+        acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
     )
 
     # Add torsional world
-    dihs = ["phi", "psi"]
-    bonds = context.standard_dihedral_bonds.loc[
-        context.standard_dihedral_bonds["dihedral_type"].isin(dihs)
-    ]
-    sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, True)
-    context.add_robotic_world(sele).add_sampler(
-        timeStep=0.01,
-        mdSteps=10,
-        boostMDSteps=10,
-        acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
-        use_nuts=False,
+    sele = context.getDefaultBonds("standard")
+    context.add_torsional_world(sele).add_sampler(
+        timeStep=0.01, mdSteps=10, boostMDSteps=10
     )
 
     # Add one replica at 300 K
     context.initialize([300.0])
 
     # Run the simulation for no equilibration steps and 100 production steps totaling 100 ps of simulation time
-    context.run_rex(equil_steps, prod_steps, write_freq, True)
+    context.RunREX(equil_steps, prod_steps)
 
 
 if __name__ == "__main__":

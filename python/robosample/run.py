@@ -32,21 +32,23 @@ context = robosample.Context(
 # All molecule roots are `robosample.rb.RootMobility.Weld`
 # context.set_root_mobility(0, robosample.rb.RootMobility.Free)
 
-context.set_root_mobility(0, robosample.rb.RootMobility.Free)
-context.set_root_mobility(1, robosample.rb.RootMobility.Weld)
+# Host is welded to ground
+context.set_root_mobility(0, robosample.rb.RootMobility.Weld)
 
-# context.add_cartesian_world().add_sampler(
-#     timeStep=0.001,
-#     mdSteps=50_000,
-#     boostMDSteps=50_000,
-#     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
-#     use_nuts=False,
-# )
+# Guest is free to roam
+context.set_root_mobility(1, robosample.rb.RootMobility.Free)
 
+context.add_cartesian_world().add_sampler(
+    timeStep=0.001,
+    mdSteps=50_000,
+    boostMDSteps=50_000,
+    acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
+    use_nuts=False,
+)
 
 sele = context.build_flexibilities(None, robosample.rb.BondMobility.Torsion, False)
 context.add_robotic_world(sele).add_sampler(
-    timeStep=0.25,  # 5 fs
+    timeStep=0.25,
     mdSteps=10,
     boostMDSteps=10,
     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
