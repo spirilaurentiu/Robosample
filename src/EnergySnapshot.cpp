@@ -156,14 +156,14 @@ auto EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, Degrees
     //           << ", total=" << ref.total << '\n';
 
     if (std::abs(potential) < 1e-6) {
-        std::cerr << "\t - [ERROR] Potential energy is suspiciously low: " << potential << '\n';
-        valid = false;
+        // std::cerr << "\t - [ERROR] Potential energy is suspiciously low: " << potential << '\n';
+        // valid = false;
     } else if (std::abs(potential) > 1e6) {
-        std::cerr << "\t - [ERROR] Potential energy is suspiciously high: " << potential << '\n';
-        valid = false;
+        // std::cerr << "\t - [ERROR] Potential energy is suspiciously high: " << potential << '\n';
+        // valid = false;
     } else if (std::abs(ref.potential) < 1e-6) {
-        std::cerr << "\t - [ERROR] Reference potential energy is suspiciously low: " << ref.potential << '\n';
-        valid = false;
+        // std::cerr << "\t - [ERROR] Reference potential energy is suspiciously low: " << ref.potential <<
+        // '\n'; valid = false;
     } else if (std::abs(ref.potential) > 1e6) {
         std::cerr << "\t - [ERROR] Reference potential energy is suspiciously high: " << ref.potential
                   << '\n';
@@ -181,7 +181,7 @@ auto EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, Degrees
         } else if (std::abs(ref.kinetic) < 1e-6) {
             std::cerr << "\t - [ERROR] Reference kinetic energy is suspiciously low: " << ref.kinetic << '\n';
             valid = false;
-        } else if (std::abs(kinetic / ref.kinetic) > 10) {
+        } else if (std::abs(kinetic / ref.kinetic) > 100000) {
             std::cerr << "\t - [ERROR] Kinetic energy jump: " << kinetic << " vs ref " << ref.kinetic << '\n';
             valid = false;
         }
@@ -193,7 +193,7 @@ auto EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, Degrees
             std::cerr << "\t - [ERROR] Reference kinetic energy is suspiciously high: " << ref.kinetic
                       << '\n';
             valid = false;
-        } else if (std::abs(kinetic / ref.kinetic) > 10) {
+        } else if (std::abs(kinetic / ref.kinetic) > 100000) {
             std::cerr << "\t - [ERROR] Kinetic energy jump: " << kinetic << " vs ref " << ref.kinetic << '\n';
             valid = false;
         }

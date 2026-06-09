@@ -3389,7 +3389,17 @@ SimTK::Transform HMCSampler::getRandomFM(SimTK::State& someState, SimTK::Real mi
  * <!-- Docking search teleport-->
  */
 void HMCSampler::teleport(SimTK::State& someState) {
+    // for (int bIx = 0; bIx < matter.get().getNumBodies(); ++bIx) {
+    //     SimTK::MobilizedBody& currMobod = matter.get().updMobilizedBody(SimTK::MobilizedBodyIndex(bIx));
+    //     std::cout << "Mobod number" << bIx << " has " << currMobod.getNumQ(someState) << " mass "
+    //               << currMobod.getBody().getDefaultRigidBodyMassProperties().getMass() << " and "
+    //               << currMobod.getNumQ(someState) << " degrees of freedom." << "\n";
+    // }
+
+
     if (matter.get().getNumBodies() == 3) {
+        // std::cout << "Attempting to teleport ligand if distance is above threshold...\n";
+
         SimTK::MobilizedBody& lig_Mobod = matter.get().updMobilizedBody(SimTK::MobilizedBodyIndex(1));
         SimTK::MobilizedBody& rec_Mobod = matter.get().updMobilizedBody(SimTK::MobilizedBodyIndex(2));
 
@@ -3397,37 +3407,42 @@ void HMCSampler::teleport(SimTK::State& someState) {
 
         if (numQ == 7) { // Free body
 
-            SimTK::Real constantFromOutput = 4.5; // nm
-            SimTK::Real shellWidth = 0.5;
+            // std::cout << "Ligand is free body with 7 DOF. Checking distance...\n";
+
+            SimTK::Real constantFromOutput = 0.7; // nm
+            SimTK::Real shellWidth = 0.02;
             SimTK::Real minDist = constantFromOutput - shellWidth;
             SimTK::Real maxDist = constantFromOutput + shellWidth;
 
-            // const SimTK::Transform& X_FM = freeMobod.getMobilizerTransform(someState);
-            // const SimTK::Vector &stateQs = someState.getQ();
+            // const SimTK::Transform& X_FM = lig_Mobod.getMobilizerTransform(someState);
+            // const SimTK::Vector& stateQs = someState.getQ();
             // SimTK::QIndex first_qIx = lig_Mobod.getFirstQIndex(someState);
-            //  SimTK::Vector generalCoords = lig_Mobod.getQAsVector(someState);
-            //  SimTK::Real xCoord = generalCoords[4];
-            //  SimTK::Real yCoord = generalCoords[5];
-            //  SimTK::Real zCoord = generalCoords[6];
-            //  SimTK::Real distance = std::sqrt((xCoord*xCoord) + (yCoord*yCoord) + (zCoord*zCoord));
-            // std::cout << "\nteleport coords" <<" " << xCoord <<" " << yCoord <<" " << zCoord <<" " <<
-            // distance << std::endl;
+            // SimTK::Vector generalCoords = lig_Mobod.getQAsVector(someState);
+            // SimTK::Real xCoord = generalCoords[4];
+            // SimTK::Real yCoord = generalCoords[5];
+            // SimTK::Real zCoord = generalCoords[6];
+            // SimTK::Real distance = std::sqrt((xCoord * xCoord) + (yCoord * yCoord) + (zCoord * zCoord));
+            // std::cout << "\nteleport coords" << " " << xCoord << " " << yCoord << " " << zCoord << " "
+            //           << distance << std::endl;
 
             SimTK::Real distance = getComComDistance(someState,
                                                      rec_Mobod.getMobilizedBodyIndex(),
                                                      lig_Mobod.getMobilizedBodyIndex());
 
-            if (distance > constantFromOutput) {
-                // if(true){
+            std::cout << "\nteleport distance " << distance << std::endl;
 
-                // Move this
+            if (distance > constantFromOutput) {
+                // if (true) {
+                //  Move this
                 SimTK::Transform X_FM_new = getRandomFM(someState, minDist, maxDist);
 
-                // PrintTransform(X_FM_new, 3, "X_FM_new", "X_FM_new"); std::cout << std::flush;
+                // PrintTransform(X_FM_new, 3, "X_FM_new", "X_FM_new");
+                // std::cout << "X_FM_new" << X_FM_new << std::endl;
+                std::cout << std::flush;
 
                 lig_Mobod.setQToFitTransform(someState, X_FM_new);
 
-                // std::cout << "\nJUMPED\n";
+                std::cout << "\nJUMPED\n";
             }
 
             system.get().realize(someState, SimTK::Stage::Position);
@@ -3453,7 +3468,7 @@ void HMCSampler::perturb_Q_QDot_QDotDot(SimTK::State& someState
     // perturbForces(someState, forcesPerturbMethod());
 
     // Pentru_Victor
-    // teleport(someState);
+    teleport(someState);
 }
 
 void HMCSampler::printDrilling(SimTK::State& someState) {
@@ -3644,7 +3659,10 @@ auto HMCSampler::sampleIteration(
                     integrationSuccessful =
                         timeStepper.get().stepTo(state.getTime() + (timestep * MDStepsPerSample));
 
+                    perturb_Q_QDot_QDotDot(world.get().integrator->updAdvancedState());
+
                     const auto advancedState = world.get().integrator->updAdvancedState();
+
                     system.get().realize(advancedState, SimTK::Stage::Velocity);
 
                     result.proposedEnergy.potential =
