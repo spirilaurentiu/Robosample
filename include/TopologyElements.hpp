@@ -2,6 +2,7 @@
 
 #include <array>
 
+#include "Biotype.h"
 #include "CompoundSystem.h"
 #include "Molmodel.h"
 #include "Simbody.h"
@@ -78,6 +79,7 @@ struct SystemTopology {
     std::vector<int> exclusionBegin;
     std::vector<int> exclusionEnd;
     std::vector<int> atomsRootIndex;
+    std::vector<SimTK::RootMobility> rootMobilities;
 
     // -------------------------------------------------------------------------
     // Atom arrays  (BFS order, unit-converted)
@@ -91,7 +93,7 @@ struct SystemTopology {
     std::vector<int> atomsCompoundAtomIndex;    // SimTK::Compound::AtomIndex
     std::vector<int> atomsAtomClassIndex;       // SimTK::DuMM::AtomClassIndex
     std::vector<int> atomsChargedAtomTypeIndex; // SimTK::DuMM::ChargedAtomTypeIndex
-    std::vector<SimTK::Element> atomsElement;
+
     std::vector<std::string> atomsElementName;
     std::vector<std::string> atomsElementSymbol;
     std::vector<double> atomsMass;    ///< Mass.                               [daltons]
@@ -103,6 +105,10 @@ struct SystemTopology {
     std::vector<double> atomsX;       ///< x coordinate (reference structure). [nm]
     std::vector<double> atomsY;       ///< y coordinate (reference structure). [nm]
     std::vector<double> atomsZ;       ///< z coordinate (reference structure). [nm]
+    std::vector<int> atomsAtomicNumber;
+    std::vector<int> atomsNumBondsInvolved;
+
+    std::vector<SimTK::BiotypeIndex> biotypeIndices;
 
     // -------------------------------------------------------------------------
     // Bond arrays  (BFS order)

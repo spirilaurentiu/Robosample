@@ -13,7 +13,7 @@ from .amber_dihedral_classifier import AmberDihedralClassifier
 from .amber_dihedral_types import DihedralType
 from .molecule_prototype import MoleculePrototype
 from .robo_bindings import Context as _Context
-from .robo_bindings import SystemTopology
+from .robo_bindings import RootMobility, SystemTopology
 from .secondary_structure import DSSPCode
 
 
@@ -26,7 +26,7 @@ class RigidBodyAssignment:
     )  # (n_atoms,) bool   -- atom is inboard across a PIN joint
     atom_is_outboard: (
         np.ndarray
-    )  # (n_atoms,) bool   -- atom is outboard across a PIN joint
+    )  # (n_atoms,) bool   -- atom is outboard         across a PIN joint
     shake_pairs: list[tuple[int, int]] = field(default_factory=list)
 
 
@@ -148,6 +148,20 @@ class Context(_Context):
         acc.setdefault("atoms_unique_name", [])
         residue_off: int = 0
 
+        # Per-molecule arrays (one entry per instance, NOT per atom):
+        #   atoms_root_index : the root atom's index in the GLOBAL, BFS-ordered
+        #                      atoms vector.  The root is compound index 0 within
+        #                      its molecule, so its global index is just
+        #                      atom_off + atoms_root_compound_index (== atom_off).
+        #                      This is a compound/global index, never a prmtop one.
+        #   root_mobilities  : how each molecule's root body attaches to ground.
+        # POLICY: every molecule defaults to a freely-moving (6-DOF) root.  This
+        # is a simulation choice, not a property of the molecule -- adjust here
+        # (per molecule or per type) if some molecules should be welded/pinned.
+        acc.setdefault("atoms_root_index", [])
+        acc.setdefault("root_mobilities", [])
+        default_root_mobility = RootMobility.FREE
+
         for instance_idx, prototype_idx in self.molecules:
             proto: MoleculePrototype = molecule_prototypes[prototype_idx]
             atom_off: int = counters["num_atoms"]
@@ -155,6 +169,11 @@ class Context(_Context):
             # 1. Begin markers
             for spec in topology._RANGE_SPECS:
                 acc[spec.begin].append(counters[spec.counter])
+
+            # 1b. Per-molecule root: global index of this instance's root atom
+            #     (compound 0 of the molecule) and its root mobility.
+            acc["atoms_root_index"].append(atom_off + proto.atoms_root_compound_index)
+            acc["root_mobilities"].append(default_root_mobility)
 
             # 2. Field data (includes atoms_compound_atom_index,
             #    atoms_class_index, atoms_charged_atom_type_index once those are

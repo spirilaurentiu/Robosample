@@ -132,6 +132,11 @@ _FIELD_SPECS: tuple[_FieldSpec, ...] = (
     _FieldSpec("atoms_element_name", "atoms_element_name", atom_offset=False),
     _FieldSpec("atoms_element_symbol", "atoms_element_symbol", atom_offset=False),
     _FieldSpec("atoms_nonbonded_index", "atoms_nonbonded_index", atom_offset=False),
+    # Atomic number and full bond degree (per-atom counts, not atom indices).
+    _FieldSpec("atoms_atomic_number", "atoms_atomic_number", atom_offset=False),
+    _FieldSpec(
+        "atoms_num_bonds_involved", "atoms_num_bonds_involved", atom_offset=False
+    ),
     # NOTE: atoms_unique_name is intentionally NOT a field spec.  Its embedded
     # residue/atom numbers are GLOBAL (whole-system, prmtop) values that depend
     # on each molecule instance's position, which a per-prototype array cannot

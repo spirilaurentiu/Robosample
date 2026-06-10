@@ -152,6 +152,13 @@ class MoleculePrototype:
         # nb_idx is 1-based, hence the -1.  This indexes the LJ *type* table, not
         # the atom list, so it is never shifted by the atom offset.
         self.atoms_nonbonded_index: list[int] = [a.nb_idx - 1 for a in atoms]
+        # Atomic number (proton count), e.g. 6 for carbon.
+        self.atoms_atomic_number: list[int] = [a.atomic_number for a in atoms]
+        # Number of bonds the atom participates in (its degree in the full bond
+        # graph, INCLUDING ring-closing bonds, since those are real bonds).
+        # Matches the C++ connectivity.numBondsInvolved.  A per-atom count, not
+        # an atom index, so it receives no atom offset when flattened.
+        self.atoms_num_bonds_involved: list[int] = [len(a.bond_partners) for a in atoms]
 
         # NOTE: atoms_unique_name is deliberately NOT built here.  It embeds
         # GLOBAL, whole-system 1-based residue and prmtop atom numbers

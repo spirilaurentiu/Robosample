@@ -128,7 +128,7 @@ void HMCSampler::initialize() {
  */
 void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOutStream, bool verbose) {
     // Tell OpenMM what force group to use
-    OPENMM::get().setActiveForceGroup(world.get().getOwnIndex());
+    OpenMMContext::get().setActiveForceGroup(world.get().getOwnIndex());
 
     system.get().realize(state, SimTK::Stage::Position);
 
@@ -688,7 +688,7 @@ void HMCSampler::setVelocitiesToZero(SimTK::State& someState) {
     // Set velocities to 0
     if (this->integratorType == IntegratorType::OpenMMVelocityVerlet) {
         uint32_t seed = randomEngine() >> 32;
-        OPENMM::get().setVelocitiesToTemperature(0, seed);
+        OpenMMContext::get().setVelocitiesToTemperature(0, seed);
     } else {
         someState.updU() = 0;
     }
@@ -700,7 +700,7 @@ void HMCSampler::setVelocitiesToZero(SimTK::State& someState) {
 void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState) {
     if (this->integratorType == IntegratorType::OpenMMVelocityVerlet) {
         uint32_t seed = randomEngine() >> 32;
-        OPENMM::get().setVelocitiesToTemperature(this->boostT, seed);
+        OpenMMContext::get().setVelocitiesToTemperature(this->boostT, seed);
     } else {
         // __begin__ DRILLING //
         // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& SimTK::Vector
@@ -1574,7 +1574,7 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState) {
     RandomCache.generateGaussianVelocities();
 }
 
-inline auto dot(const std::vector<OpenMM::Vec3>& first, const std::vector<OpenMM::Vec3>& second)
+inline auto dot(const std::vector<OpenMMContext::Vec3>& first, const std::vector<OpenMMContext::Vec3>& second)
     -> SimTK::Real {
     // Ensure the vectors have matching dimensions
     if (first.size() != second.size()) {
@@ -1592,9 +1592,9 @@ inline auto dot(const std::vector<OpenMM::Vec3>& first, const std::vector<OpenMM
 }
 
 // /// Compute delta = q_fwd - q_bwd atom-wise.
-// auto deltaQ(const std::vector<OpenMM::Vec3>& q_fwd, const std::vector<OpenMM::Vec3>& q_bwd)
-//     -> std::vector<OpenMM::Vec3> {
-//     std::vector<OpenMM::Vec3> deltaQ(q_fwd.size());
+// auto deltaQ(const std::vector<OpenMMContext::Vec3>& q_fwd, const std::vector<OpenMMContext::Vec3>& q_bwd)
+//     -> std::vector<OpenMMContext::Vec3> {
+//     std::vector<OpenMMContext::Vec3> deltaQ(q_fwd.size());
 //     for (size_t i = 0; i < q_fwd.size(); ++i) {
 //         deltaQ[i] = q_fwd[i] - q_bwd[i];
 //     }
@@ -1606,8 +1606,8 @@ inline auto dot(const std::vector<OpenMM::Vec3>& first, const std::vector<OpenMM
 //     return (dot(dq, plus.momenta) < 0.0) || (dot(dq, minus.momenta) < 0.0);
 // }
 
-// auto HMCSampler::buildTreeWithOpenMM(std::vector<OpenMM::Vec3>& positions,
-//                                      std::vector<OpenMM::Vec3>& velocities,
+// auto HMCSampler::buildTreeWithOpenMM(std::vector<OpenMMContext::Vec3>& positions,
+//                                      std::vector<OpenMMContext::Vec3>& velocities,
 //                                      int depth,
 //                                      NUTSDirection direction,
 //                                      SimTK::Real logU,
@@ -1617,7 +1617,7 @@ inline auto dot(const std::vector<OpenMM::Vec3>& first, const std::vector<OpenMM
 //     if (depth == 0) {
 //         int velocitySign = (direction == NUTSDirection::Backward) ? -1 : 1;
 
-//         OPENMM::get().integrateTrajectory(positions,
+//         OpenMMContext::get().integrateTrajectory(positions,
 //                                           velocitySign,
 //                                           velocities,
 //                                           1,
@@ -1626,7 +1626,7 @@ inline auto dot(const std::vector<OpenMM::Vec3>& first, const std::vector<OpenMM
 //                                           node.proposedEnergy.kinetic);
 
 //         // Calculate momenta from velocities
-//         std::vector<OpenMM::Vec3> momenta(velocities.size());
+//         std::vector<OpenMMContext::Vec3> momenta(velocities.size());
 //         for (const auto& topology : topologies) {
 //             for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topology.getNumAtoms(); ++cAIx) {
 //                 const auto& atom = topology.getAtoms()[cAIx];
@@ -1736,7 +1736,7 @@ void HMCSampler::buildTreeWithSimbody(SimTK::State& state,
         copyVec(nodeOut.proposal_p, p_ptr, n);
 
         // Energies
-        nodeOut.proposedEnergy.potential = OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
+        nodeOut.proposedEnergy.potential = OpenMMContext::get().evaluatePotentialEnergyFromPositionsCache();
         nodeOut.proposedEnergy.kinetic =
             matter.get().calcKineticEnergy(state); // TODO * this->unboostKEFactor?
         if (useFixman) {
@@ -1826,10 +1826,10 @@ void HMCSampler::buildTreeWithSimbody(SimTK::State& state,
 
 //     // Initial boundary Setup
 //     dumm.get().updateOpenMMPositionsFromState(state);
-//     const auto initialPositions = OPENMM::get().getPositionsCache();
+//     const auto initialPositions = OpenMMContext::get().getPositionsCache();
 
-//     const auto& initialVelocities = OPENMM::get().getVelocitiesCache();
-//     std::vector<OpenMM::Vec3> initialMomenta(initialVelocities.size());
+//     const auto& initialVelocities = OpenMMContext::get().getVelocitiesCache();
+//     std::vector<OpenMMContext::Vec3> initialMomenta(initialVelocities.size());
 //     for (const auto& topology : topologies) {
 //         for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topology.getNumAtoms(); ++cAIx) {
 //             const auto& atom = topology.getAtoms()[cAIx];
@@ -1849,8 +1849,8 @@ void HMCSampler::buildTreeWithSimbody(SimTK::State& state,
 //     tree.numValidSlices = 1;
 
 //     // We need two states to track the "left-most" and "right-most" edges
-//     auto leftEdgePositions = OPENMM::get().getPositionsCache();
-//     auto leftEdgeVelocities = OPENMM::get().getVelocitiesCache();
+//     auto leftEdgePositions = OpenMMContext::get().getPositionsCache();
+//     auto leftEdgeVelocities = OpenMMContext::get().getVelocitiesCache();
 //     auto rightEdgePositions = leftEdgePositions;
 //     auto rightEdgeVelocities = leftEdgeVelocities;
 
@@ -1946,7 +1946,7 @@ void HMCSampler::buildTreeWithSimbody(SimTK::State& state,
 //         system.get().realize(state, SimTK::Stage::Position);
 
 //         // Set velocities
-//         std::vector<OpenMM::Vec3> finalVelocities(finalMomenta.size());
+//         std::vector<OpenMMContext::Vec3> finalVelocities(finalMomenta.size());
 //         for (const auto& topology : topologies) {
 //             for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topology.getNumAtoms(); ++cAIx) {
 //                 const auto& atom = topology.getAtoms()[cAIx];
@@ -2648,8 +2648,8 @@ void HMCSampler::integrateTrajectory_TaskSpace(SimTK::State& someState) {
 
 void HMCSampler::rebuildSimbodyTopologyFromOpenMMPositions(SimTK::State& someState) {
     // // Get a reference to OpenMM Cartesian positions (expressed in Ground)
-    // const auto& positions = OPENMM::get().getPositions();
-    // const auto& velocities = OPENMM::get().getVelocities();
+    // const auto& positions = OpenMMContext::get().getPositions();
+    // const auto& velocities = OpenMMContext::get().getVelocities();
 
     // // IMPORTANT:
     // // Although this may look like "updating positions in the State",
@@ -3641,13 +3641,13 @@ auto HMCSampler::sampleIteration(
                     dumm.get().updateOpenMMPositionsFromState(state);
                     // dumm.get().integrateTrajectoryWithOpenMM(MDStepsPerSample, timestep);
 
-                    OPENMM::get().integrateTrajectory(result.proposalOpenMM.positions,
-                                                      1,
-                                                      result.proposalOpenMM.momenta,
-                                                      MDStepsPerSample,
-                                                      timestep,
-                                                      result.proposedEnergy.potential,
-                                                      result.proposedEnergy.kinetic);
+                    OpenMMContext::get().integrateTrajectory(result.proposalOpenMM.positions,
+                                                             1,
+                                                             result.proposalOpenMM.momenta,
+                                                             MDStepsPerSample,
+                                                             timestep,
+                                                             result.proposedEnergy.potential,
+                                                             result.proposedEnergy.kinetic);
 
                     result.proposedEnergy.fixman = 0.0;
                     result.proposedEnergy.logSineSqrGamma2 = 0.0;
@@ -3669,7 +3669,7 @@ auto HMCSampler::sampleIteration(
                     system.get().realize(advancedState, SimTK::Stage::Velocity);
 
                     result.proposedEnergy.potential =
-                        OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
+                        OpenMMContext::get().evaluatePotentialEnergyFromPositionsCache();
                     result.proposedEnergy.kinetic =
                         this->unboostKEFactor * matter.get().calcKineticEnergy(advancedState);
                     if (useFixman) {
@@ -3845,8 +3845,8 @@ auto HMCSampler::integrateWithOpenMM(SimTK::State& state) -> NUTSResult {
     // dumm.get().updateOpenMMPositionsFromState(state);
     // dumm.get().integrateTrajectoryWithOpenMM(MDStepsPerSample, timestep);
 
-    // result.proposedEnergy.potential = OPENMM::get().getPotentialEnergy();
-    // result.proposedEnergy.kinetic = this->unboostKEFactor * OPENMM::get().getKineticEnergy();
+    // result.proposedEnergy.potential = OpenMMContext::get().getPotentialEnergy();
+    // result.proposedEnergy.kinetic = this->unboostKEFactor * OpenMMContext::get().getKineticEnergy();
     // result.proposedEnergy.fixman = 0.0;
     // result.proposedEnergy.logSineSqrGamma2 = 0.0;
     // result.proposedEnergy.total = result.proposedEnergy.potential + result.proposedEnergy.kinetic
@@ -3854,8 +3854,8 @@ auto HMCSampler::integrateWithOpenMM(SimTK::State& state) -> NUTSResult {
     //                               - (0.5 * RT * result.proposedEnergy.logSineSqrGamma2);
 
     // // Extract the proposed configuration from OpenMM
-    // const auto& finalPositions = OPENMM::get().getPositions();
-    // const auto& finalVelocities = OPENMM::get().getVelocities();
+    // const auto& finalPositions = OpenMMContext::get().getPositions();
+    // const auto& finalVelocities = OpenMMContext::get().getVelocities();
 
     // matter.get().invalidateSubsystemTopologyCache();
     // for (int i = 0; i < dumm.get().getNumAtoms(); i++) {

@@ -764,7 +764,7 @@ auto World::isOverconstrained() const -> bool {
 
     // Realize will calculate the forces and potential energy using OpenMM
     throw std::runtime_error("See line below.");
-    // OPENMM::get().setActiveForceGroup(world.getOwnIndex());
+    // OpenMMContext::get().setActiveForceGroup(world.getOwnIndex());
     compoundSystem->realize(state, SimTK::Stage::Acceleration);
 
     // Structure to hold mobilized bodies info
@@ -4018,7 +4018,8 @@ SimTK::Real World::findDecorrelationTime(const SimTK::State& state,
     // if (equilibrationSteps < 1) {
     //     throw std::invalid_argument("World::tuneOpenMM(): equilibrationSteps must be at least 1");
     // }
-    // OPENMM::get().integrateTrajectory(initialPositions, positions, true, equilibrationSteps, timestep);
+    // OpenMMContext::get().integrateTrajectory(initialPositions, positions, true, equilibrationSteps,
+    // timestep);
 
     // // Allocate memory
     // const int numRows = zMatrix.get().size() - 1;
@@ -4033,7 +4034,7 @@ SimTK::Real World::findDecorrelationTime(const SimTK::State& state,
 
     // // Run the trajectory and collect coordinate time series
     // for (int i = 0; i < tuneSteps; i++) {
-    //     OPENMM::get().integrateTrajectory(positions, positions, false, 1, timestep);
+    //     OpenMMContext::get().integrateTrajectory(positions, positions, false, 1, timestep);
 
     //     int coordinateIndex = 0;
 
@@ -4232,7 +4233,7 @@ auto World::generateSamples(int howManySamplesPerRound,
 
         // 	// const qualifier prevents us from reusing the same positions vector, so we need to copy it here
         // 	std::vector<SimTK::Vec3> positions(numAtoms);
-        // 	for (const auto& pos : OPENMM::get().getPositions()) {
+        // 	for (const auto& pos : OpenMMContext::get().getPositions()) {
         // 		positions.push_back(pos);
         // 	}
         // 	const bool resetPositions = false;
@@ -4245,11 +4246,12 @@ auto World::generateSamples(int howManySamplesPerRound,
         // 		std::uniform_int_distribution<> uniformIntDistribution(minSteps, maxSteps);
 
         // 		for (int i = 0; i < numAttempts; i++) {
-        // 			const SimTK::Real oldE = OPENMM::get().getPotentialEnergy() +
-        // OPENMM::get().getKineticEnergy(); 			OPENMM::get().integrateTrajectory(positions,
-        // positions, resetPositions, uniformIntDistribution(randomEngine), 0.002); 			const
-        // SimTK::Real newE = OPENMM::get().getPotentialEnergy() + OPENMM::get().getKineticEnergy();
-        // const SimTK::Real deltaE = newE - oldE; 			const SimTK::Real beta = 1.0 / (temperature *
+        // 			const SimTK::Real oldE = OpenMMContext::get().getPotentialEnergy() +
+        // OpenMMContext::get().getKineticEnergy();
+        // OpenMMContext::get().integrateTrajectory(positions, positions, resetPositions,
+        // uniformIntDistribution(randomEngine), 0.002); 			const SimTK::Real newE =
+        // OpenMMContext::get().getPotentialEnergy() + OpenMMContext::get().getKineticEnergy(); const
+        // SimTK::Real deltaE = newE - oldE; 			const SimTK::Real beta = 1.0 / (temperature *
         // SimTK_BOLTZMANN_CONSTANT_MD); 			const SimTK::Real metropolisCriterion = (deltaE < 0) ? 1.0
         // : std::exp(-1.0 * beta * deltaE);
 
@@ -4313,7 +4315,7 @@ auto World::generateSamples(int howManySamplesPerRound,
     }
 
     // if (testing && updSampler(0)->getIntegratorType() == IntegratorType::OMMVV) {
-    // 	const auto& positions = OPENMM::get().getPositions();
+    // 	const auto& positions = OpenMMContext::get().getPositions();
     // 	std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocationsFromOpenMM (topologies.size());
 
     // 	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
@@ -4520,31 +4522,31 @@ void World::printDrilling() {
         printf("\n");
     }
 
-    const std::vector<OpenMM::Vec3>& drl_bon_Forces = forceField->getForces_drl_bon();
+    const std::vector<OpenMMContext::Vec3>& drl_bon_Forces = forceField->getForces_drl_bon();
     printf("drl World::newFunction\n");
     for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx) {
-        const OpenMM::Vec3& ommForce = drl_bon_Forces[fIx];
+        const OpenMMContext::Vec3& ommForce = drl_bon_Forces[fIx];
         const SimTK::Vec3 simForce(ommForce[0], ommForce[1], ommForce[2]);
         printf("drl World bonF %f %f %f\n", ommForce[0], ommForce[1], ommForce[2]);
     }
-    const std::vector<OpenMM::Vec3>& drl_and_Forces = forceField->getForces_drl_and();
+    const std::vector<OpenMMContext::Vec3>& drl_and_Forces = forceField->getForces_drl_and();
     printf("drl World::newFunction\n");
     for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx) {
-        const OpenMM::Vec3& ommForce = drl_and_Forces[fIx];
+        const OpenMMContext::Vec3& ommForce = drl_and_Forces[fIx];
         const SimTK::Vec3 simForce(ommForce[0], ommForce[1], ommForce[2]);
         printf("drl World andF %f %f %f\n", ommForce[0], ommForce[1], ommForce[2]);
     }
-    const std::vector<OpenMM::Vec3>& drl_tor_Forces = forceField->getForces_drl_tor();
+    const std::vector<OpenMMContext::Vec3>& drl_tor_Forces = forceField->getForces_drl_tor();
     printf("drl World::newFunction\n");
     for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx) {
-        const OpenMM::Vec3& ommForce = drl_tor_Forces[fIx];
+        const OpenMMContext::Vec3& ommForce = drl_tor_Forces[fIx];
         const SimTK::Vec3 simForce(ommForce[0], ommForce[1], ommForce[2]);
         printf("drl World torF %f %f %f\n", ommForce[0], ommForce[1], ommForce[2]);
     }
-    const std::vector<OpenMM::Vec3>& drl_n14_Forces = forceField->getForces_drl_n14();
+    const std::vector<OpenMMContext::Vec3>& drl_n14_Forces = forceField->getForces_drl_n14();
     printf("drl World::newFunction\n");
     for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx) {
-        const OpenMM::Vec3& ommForce = drl_n14_Forces[fIx];
+        const OpenMMContext::Vec3& ommForce = drl_n14_Forces[fIx];
         const SimTK::Vec3 simForce(ommForce[0], ommForce[1], ommForce[2]);
         printf("drl OMMPlug n14F %f %f %f\n", ommForce[0], ommForce[1], ommForce[2]);
     }

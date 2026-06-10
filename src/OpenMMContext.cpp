@@ -16,10 +16,10 @@
 #    include "../openmm/platforms/cuda/include/CudaPlatform.h"
 #endif
 
-class MTSIntegrator : public OpenMM::CustomIntegrator {
+class MTSIntegrator : public OpenMMContext::CustomIntegrator {
     public:
     MTSIntegrator(double stepSize, std::vector<std::pair<int, int>> groups)
-        : OpenMM::CustomIntegrator(stepSize) {
+        : OpenMMContext::CustomIntegrator(stepSize) {
         if (groups.empty()) {
             throw std::invalid_argument("No force groups specified");
         }
@@ -80,7 +80,7 @@ auto OpenMMContext::initialize(const SystemTopology& systemTopology) -> bool {
     numAtoms = systemTopology.numAtoms;
 
     // Allocate OpenMM system and add particles to it
-    system = std::make_unique<OpenMM::System>();
+    system = std::make_unique<OpenMMContext::System>();
 
     for (int i = 0; i < systemTopology.numAtoms; ++i) {
         // const bool isRoot = atom.connectivity.root;
@@ -148,33 +148,33 @@ auto OpenMMContext::initialize(const SystemTopology& systemTopology) -> bool {
 
     // Create the integrator
     // std::vector<std::pair<int, int>> groups = {{SLOW_GROUP, 1}, {FAST_GROUP, 4}};
-    integrator = std::make_unique<OpenMM::VerletIntegrator>(0.001);
+    integrator = std::make_unique<OpenMMContext::VerletIntegrator>(0.001);
 
 #if USE_CPU
-    OpenMM::Platform* platform = new OpenMM::CpuPlatform();
-    OpenMM::Platform::registerPlatform(platform);
+    OpenMMContext::Platform* platform = new OpenMMContext::CpuPlatform();
+    OpenMMContext::Platform::registerPlatform(platform);
     constexpr auto PLATFORM_NAME = "CPU";
 
 #elif USE_REFERENCE
-    OpenMM::Platform* platform = new OpenMM::ReferencePlatform();
-    OpenMM::Platform::registerPlatform(platform);
+    OpenMMContext::Platform* platform = new OpenMMContext::ReferencePlatform();
+    OpenMMContext::Platform::registerPlatform(platform);
     constexpr auto PLATFORM_NAME = "Reference";
 
 #elif USE_OPENCL
-    OpenMM::Platform* platform = new OpenMM::OpenCLPlatform();
-    OpenMM::Platform::registerPlatform(platform);
+    OpenMMContext::Platform* platform = new OpenMMContext::OpenCLPlatform();
+    OpenMMContext::Platform::registerPlatform(platform);
     platform->setPropertyDefaultValue("Precision", "mixed");
     constexpr auto PLATFORM_NAME = "OpenCL";
 
 #elif USE_CUDA
-    OpenMM::Platform* platform = new OpenMM::CudaPlatform();
-    OpenMM::Platform::registerPlatform(platform);
+    OpenMMContext::Platform* platform = new OpenMMContext::CudaPlatform();
+    OpenMMContext::Platform::registerPlatform(platform);
     platform->setPropertyDefaultValue("Precision", "mixed");
     constexpr auto PLATFORM_NAME = "CUDA";
 #endif
 
     try {
-        context = std::make_unique<OpenMM::Context>(*system, *integrator, *platform);
+        context = std::make_unique<OpenMMContext::Context>(*system, *integrator, *platform);
 
         const double speed = context->getPlatform().getSpeed();
         std::cout << "Created OpenMM context with " << PLATFORM_NAME << " platform with relative speed "
@@ -212,9 +212,9 @@ auto OpenMMContext::integrateTrajectory(int steps, double timeStepInPicoseconds)
     }
 
     // Intentional value capture: relies on C++17 guaranteed copy elision.
-    const auto state =
-        context->getState(OpenMM::State::Positions | OpenMM::State::Energy | OpenMM::State::Velocities,
-                          enforcePeriodicBox);
+    const auto state = context->getState(OpenMMContext::State::Positions | OpenMMContext::State::Energy
+                                             | OpenMMContext::State::Velocities,
+                                         enforcePeriodicBox);
     const auto& positions = state.getPositions();
     const auto& velocities = state.getVelocities();
 
@@ -224,12 +224,12 @@ auto OpenMMContext::integrateTrajectory(int steps, double timeStepInPicoseconds)
     return success;
 }
 
-void OpenMMContext::evaluateForcesFromPositionsCache(const std::vector<OpenMM::Vec3>& positions,
-                                                     std::vector<OpenMM::Vec3>& outForces) const {
+void OpenMMContext::evaluateForcesFromPositionsCache(const std::vector<OpenMMContext::Vec3>& positions,
+                                                     std::vector<OpenMMContext::Vec3>& outForces) const {
     ensureInitialized();
 
     context->setPositions(positions);
-    const auto state = context->getState(OpenMM::State::Forces, enforcePeriodicBox);
+    const auto state = context->getState(OpenMMContext::State::Forces, enforcePeriodicBox);
     outForces = state.getForces();
 }
 
@@ -239,7 +239,7 @@ auto OpenMMContext::computePeriodicBoxVectors_Context(double a_length,
                                                       double alpha,
                                                       double beta,
                                                       double gamma)
-    -> std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> {
+    -> std::tuple<OpenMMContext::Vec3, OpenMMContext::Vec3, OpenMMContext::Vec3> {
     ensureInitialized();
 
     const double TOL = 1e-6;
@@ -250,15 +250,15 @@ auto OpenMMContext::computePeriodicBoxVectors_Context(double a_length,
     // gamma = SimTK::Deg2Rad * gamma;
 
     // Compute the box vectors
-    OpenMM::Vec3 a(a_length, 0.0, 0.0);
+    OpenMMContext::Vec3 a(a_length, 0.0, 0.0);
 
-    OpenMM::Vec3 b(b_length * std::cos(gamma), b_length * std::sin(gamma), 0.0);
+    OpenMMContext::Vec3 b(b_length * std::cos(gamma), b_length * std::sin(gamma), 0.0);
 
     double cx = c_length * std::cos(beta);
     double cy = c_length * (std::cos(alpha) - std::cos(beta) * std::cos(gamma)) / std::sin(gamma);
     double cz = std::sqrt(c_length * c_length - cx * cx - cy * cy);
 
-    OpenMM::Vec3 c(cx, cy, cz);
+    OpenMMContext::Vec3 c(cx, cy, cz);
 
     // Zero out small components
     for (int i = 0; i < 3; i++) {
@@ -287,17 +287,18 @@ auto OpenMMContext::computePeriodicBoxVectors_Context(double a_length,
     return std::make_tuple(a, b, c);
 }
 
-auto OpenMMContext::createNonbondedForce(const SystemTopology& systemTopology) -> OpenMM::NonbondedForce* {
-    auto* nonbondedForce = new OpenMM::NonbondedForce();
+auto OpenMMContext::createNonbondedForce(const SystemTopology& systemTopology)
+    -> OpenMMContext::NonbondedForce* {
+    auto* nonbondedForce = new OpenMMContext::NonbondedForce();
     nonbondedForce->setCutoffDistance(systemTopology.nonbondedCutoff);
 
     switch (systemTopology.nonbondedMethod) {
         case NonbondedMethod::NoCutoff:
-            nonbondedForce->setNonbondedMethod(OpenMM::NonbondedForce::NoCutoff);
+            nonbondedForce->setNonbondedMethod(OpenMMContext::NonbondedForce::NoCutoff);
             nonbondedForce->setUseDispersionCorrection(false);
             break;
         case NonbondedMethod::CutoffNonPeriodic:
-            nonbondedForce->setNonbondedMethod(OpenMM::NonbondedForce::CutoffNonPeriodic);
+            nonbondedForce->setNonbondedMethod(OpenMMContext::NonbondedForce::CutoffNonPeriodic);
             if (systemTopology.useGBSAOBC2) {
                 nonbondedForce->setReactionFieldDielectric(1.0);
                 nonbondedForce->setUseDispersionCorrection(false);
@@ -343,20 +344,20 @@ auto OpenMMContext::createNonbondedForce(const SystemTopology& systemTopology) -
     return nonbondedForce;
 }
 
-auto OpenMMContext::createGBSAOBCForce(const SystemTopology& systemTopology) -> OpenMM::GBSAOBCForce* {
-    OpenMM::GBSAOBCForce::NonbondedMethod gbsaForceMethod;
+auto OpenMMContext::createGBSAOBCForce(const SystemTopology& systemTopology) -> OpenMMContext::GBSAOBCForce* {
+    OpenMMContext::GBSAOBCForce::NonbondedMethod gbsaForceMethod;
     switch (systemTopology.nonbondedMethod) {
         case NonbondedMethod::NoCutoff:
-            gbsaForceMethod = OpenMM::GBSAOBCForce::NoCutoff;
+            gbsaForceMethod = OpenMMContext::GBSAOBCForce::NoCutoff;
             break;
         case NonbondedMethod::CutoffNonPeriodic:
-            gbsaForceMethod = OpenMM::GBSAOBCForce::CutoffNonPeriodic;
+            gbsaForceMethod = OpenMMContext::GBSAOBCForce::CutoffNonPeriodic;
             break;
         default:
             throw std::invalid_argument("Unsupported nonbonded method for GBSAOBCForce");
     }
 
-    auto* force = new OpenMM::GBSAOBCForce();
+    auto* force = new OpenMMContext::GBSAOBCForce();
 
     force->setSolventDielectric(systemTopology.gbsaSolventDielectric);
     force->setSoluteDielectric(systemTopology.gbsaSoluteDielectric);
@@ -373,18 +374,18 @@ auto OpenMMContext::createGBSAOBCForce(const SystemTopology& systemTopology) -> 
 }
 
 auto OpenMMContext::createCustomNonbondedForce(const SystemTopology& systemTopology)
-    -> OpenMM::CustomNonbondedForce* {
+    -> OpenMMContext::CustomNonbondedForce* {
     throw std::runtime_error("not implemented");
-    // -> OpenMM::CustomNonbondedForce* {
-    // auto* force = new OpenMM::CustomNonbondedForce(
+    // -> OpenMMContext::CustomNonbondedForce* {
+    // auto* force = new OpenMMContext::CustomNonbondedForce(
     //     "(a/r6)^2-b/r6; r6=r^6; a=acoef(type1, type2); b=bcoef(type1, type2);");
     // force->addTabulatedFunction(
     //     "acoef",
-    //     new OpenMM::Discrete2DFunction(systemTopology.numNBTypes, systemTopology.numNBTypes,
+    //     new OpenMMContext::Discrete2DFunction(systemTopology.numNBTypes, systemTopology.numNBTypes,
     //     systemTopology.aCoef));
     // force->addTabulatedFunction(
     //     "bcoef",
-    //     new OpenMM::Discrete2DFunction(systemTopology.numNBTypes, systemTopology.numNBTypes,
+    //     new OpenMMContext::Discrete2DFunction(systemTopology.numNBTypes, systemTopology.numNBTypes,
     //     systemTopology.bCoef));
     // force->addPerParticleParameter("type");
 
@@ -394,10 +395,10 @@ auto OpenMMContext::createCustomNonbondedForce(const SystemTopology& systemTopol
 
     // switch (systemTopology.nonbondedMethod) {
     //     case NonbondedMethod::NoCutoff:
-    //         force->setNonbondedMethod(OpenMM::CustomNonbondedForce::NoCutoff);
+    //         force->setNonbondedMethod(OpenMMContext::CustomNonbondedForce::NoCutoff);
     //         break;
     //     case NonbondedMethod::CutoffNonPeriodic:
-    //         force->setNonbondedMethod(OpenMM::CustomNonbondedForce::CutoffNonPeriodic);
+    //         force->setNonbondedMethod(OpenMMContext::CustomNonbondedForce::CutoffNonPeriodic);
     //         break;
     //     default:
     //         throw std::invalid_argument("Unsupported nonbonded method");
@@ -422,8 +423,8 @@ auto OpenMMContext::createCustomNonbondedForce(const SystemTopology& systemTopol
 }
 
 auto OpenMMContext::createHarmonicBondForce(const SystemTopology& systemTopology)
-    -> OpenMM::HarmonicBondForce* {
-    auto* force = new OpenMM::HarmonicBondForce();
+    -> OpenMMContext::HarmonicBondForce* {
+    auto* force = new OpenMMContext::HarmonicBondForce();
 
     for (int index = 0; index < systemTopology.numBonds; ++index) {
         const auto particle1 = systemTopology.bondsI[index];
@@ -442,8 +443,8 @@ auto OpenMMContext::createHarmonicBondForce(const SystemTopology& systemTopology
 }
 
 auto OpenMMContext::createHarmonicAngleForce(const SystemTopology& systemTopology)
-    -> OpenMM::HarmonicAngleForce* {
-    auto* force = new OpenMM::HarmonicAngleForce();
+    -> OpenMMContext::HarmonicAngleForce* {
+    auto* force = new OpenMMContext::HarmonicAngleForce();
 
     for (int index = 0; index < systemTopology.numAngles; ++index) {
         const auto particle1 = systemTopology.anglesI[index];
@@ -460,8 +461,8 @@ auto OpenMMContext::createHarmonicAngleForce(const SystemTopology& systemTopolog
 }
 
 auto OpenMMContext::createPeriodicTorsionForce(const SystemTopology& systemTopology)
-    -> OpenMM::PeriodicTorsionForce* {
-    auto* force = new OpenMM::PeriodicTorsionForce();
+    -> OpenMMContext::PeriodicTorsionForce* {
+    auto* force = new OpenMMContext::PeriodicTorsionForce();
 
     for (int index = 0; index < systemTopology.numPeriodicTorsions; ++index) {
         const auto particle1 = systemTopology.periodicTorsionsI[index];
@@ -479,7 +480,7 @@ auto OpenMMContext::createPeriodicTorsionForce(const SystemTopology& systemTopol
 }
 
 auto OpenMMContext::createImproperHarmonicTorsionForce(const SystemTopology& systemTopology)
-    -> OpenMM::CustomTorsionForce* {
+    -> OpenMMContext::CustomTorsionForce* {
     throw std::runtime_error("not implemented");
 
     // // Create force expression for harmonic improper torsions (CHARMM style)
@@ -487,7 +488,7 @@ auto OpenMMContext::createImproperHarmonicTorsionForce(const SystemTopology& sys
     // strStream << std::setprecision(17) << "k*min(dtheta, 2*" << SimTK::Pi
     //           << "-dtheta)^2; dtheta = abs(theta-theta0)";
 
-    // auto* force = new OpenMM::CustomTorsionForce(strStream.str());
+    // auto* force = new OpenMMContext::CustomTorsionForce(strStream.str());
     // force->addPerTorsionParameter("k");
     // force->addPerTorsionParameter("theta0");
 
@@ -505,10 +506,10 @@ auto OpenMMContext::createImproperHarmonicTorsionForce(const SystemTopology& sys
 }
 
 auto OpenMMContext::createCMAPTorsionForce(const SystemTopology& systemTopology)
-    -> OpenMM::CMAPTorsionForce* {
+    -> OpenMMContext::CMAPTorsionForce* {
     return nullptr;
 
-    // auto* force = new OpenMM::CMAPTorsionForce();
+    // auto* force = new OpenMMContext::CMAPTorsionForce();
     // force->setUsesPeriodicBoundaryConditions(enforcePeriodicBox);
 
     // for (int index = 0; index < systemTopology.cmapGridSize; ++index) {
@@ -531,8 +532,8 @@ auto OpenMMContext::createCMAPTorsionForce(const SystemTopology& systemTopology)
 }
 
 auto OpenMMContext::createUreyBradleyForce(const SystemTopology& systemTopology)
-    -> OpenMM::HarmonicBondForce* {
-    // auto* force = new OpenMM::HarmonicBondForce();
+    -> OpenMMContext::HarmonicBondForce* {
+    // auto* force = new OpenMMContext::HarmonicBondForce();
 
     // for (const auto& term : systemTopology.ureyBradleys) {
     //     force->addBond(term.atom1GlobalIndex,

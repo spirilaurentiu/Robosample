@@ -22,57 +22,11 @@ Contains a list of atoms bAtomList which consists of Atom
 objects **/
 class Topology : public SimTK::Compound {
     public:
-    Topology(const SimTK::Compound::Name& name,
+    Topology(const SystemTopology& systemTopology,
              SimTK::CompoundSystem::CompoundIndex compoundIndex,
-             int rootGlobalAtomIx,
              SimTK::RootMobility rootMobility);
 
     ~Topology() override = default;
-
-    void setAtoms(Span<RoboAtom> atoms);
-    [[nodiscard]] auto getAtoms() const -> Span<RoboAtom> {
-        return subAtomList;
-    }
-    [[nodiscard]] auto updAtoms() -> Span<RoboAtom> {
-        return subAtomList;
-    }
-
-    void setBonds(Span<RoboBond> bonds);
-    [[nodiscard]] auto getBonds() const -> Span<RoboBond> {
-        return subBondList;
-    }
-    [[nodiscard]] auto updBonds() -> Span<RoboBond> {
-        return subBondList;
-    }
-    auto getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const
-        -> const RoboBond&;
-
-    void setAngles(Span<RoboAngle> angles);
-    [[nodiscard]] auto getAngles() const -> Span<RoboAngle> {
-        return subAngleList;
-    }
-    [[nodiscard]] auto updAngles() -> Span<RoboAngle> {
-        return subAngleList;
-    }
-    auto getAngleByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0,
-                                     SimTK::Compound::AtomIndex cAIx1,
-                                     SimTK::Compound::AtomIndex cAIx2) const -> const RoboAngle&;
-
-    void setPeriodicTorsions(Span<RoboPeriodicTorsion> periodicTorsions);
-    [[nodiscard]] auto getPeriodicTorsions() const -> Span<RoboPeriodicTorsion> {
-        return subPeriodicTorsions;
-    }
-    [[nodiscard]] auto updPeriodicTorsions() -> Span<RoboPeriodicTorsion> {
-        return subPeriodicTorsions;
-    }
-
-    void setImproperHarmonicTorsions(Span<RoboHarmonicImproperTorsion> improperHarmonicTorsions);
-    [[nodiscard]] auto getImproperHarmonicTorsions() const -> Span<RoboHarmonicImproperTorsion> {
-        return subImproperHarmonicTorsions;
-    }
-    [[nodiscard]] auto updImproperHarmonicTorsions() -> Span<RoboHarmonicImproperTorsion> {
-        return subImproperHarmonicTorsions;
-    }
 
     [[nodiscard]] auto getRootMobility() const -> SimTK::RootMobility {
         return rootMobility;
@@ -110,26 +64,6 @@ class Topology : public SimTK::Compound {
     [[nodiscard]] auto calcLogSineSqrGamma2(const SimTK::State& quatState) const -> SimTK::Real;
 
     [[nodiscard]] auto calcLogDetMBATGamma2Contribution(const SimTK::State& quatState) const -> SimTK::Real;
-
-    /**
-     * @brief Get a reference to the atom object in the atom list of this Compound.
-     *
-     * @param cAIx Compound Atom Index. This is in range [0, num_atoms-1] for this Compound. Not to confuse
-     * with the global atom index.
-     * @return Reference to the Atom object.
-     */
-    [[nodiscard]] const RoboAtom& getAtom(SimTK::Compound::AtomIndex cAIx) const;
-
-    /**
-     * @brief Get a reference to the bond object in the bond list of this Compound.
-     *
-     * This is not the Compound Atom Index but the global atom index.
-     *
-     * @param aIx0 Global Atom Index of one atom in the bond.
-     * @param aIx1 Global Atom Index of the other atom in the bond.
-     * @return Reference to the BondLink object.
-     */
-    auto getBondByGlobalAtomIndex(int aIx0, int aIx1) const -> const RoboBond&;
 
     /**
      * @brief Get the bonded neighbor atom in the parent mobilized body.
@@ -212,12 +146,6 @@ class Topology : public SimTK::Compound {
     }
 
     private:
-    Span<RoboAtom> subAtomList;
-    Span<RoboBond> subBondList;
-    Span<RoboAngle> subAngleList;
-    Span<RoboPeriodicTorsion> subPeriodicTorsions;
-    Span<RoboHarmonicImproperTorsion> subImproperHarmonicTorsions;
-
     std::unordered_map<std::string, std::size_t> atomName2bond, atomName2angle;
 
     // Map aIx to its Transform Default top transform

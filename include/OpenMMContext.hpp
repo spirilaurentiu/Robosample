@@ -40,8 +40,8 @@ class OpenMMContext {
         return kineticEnergy;
     }
 
-    void evaluateForcesFromPositionsCache(const std::vector<OpenMM::Vec3>& positions,
-                                          std::vector<OpenMM::Vec3>& outForces) const;
+    void evaluateForcesFromPositionsCache(const std::vector<OpenMMContext::Vec3>& positions,
+                                          std::vector<OpenMMContext::Vec3>& outForces) const;
 
     auto integrateTrajectory(int steps, double timeStepInPicoseconds) -> bool;
 
@@ -51,41 +51,44 @@ class OpenMMContext {
                                            double alpha,
                                            double beta,
                                            double gamma)
-        -> std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3>;
+        -> std::tuple<OpenMMContext::Vec3, OpenMMContext::Vec3, OpenMMContext::Vec3>;
 
     private:
     OpenMMContext() = default;
 
     void ensureInitialized() const {
         if (!initialized) {
-            throw std::runtime_error("OPENMM subsystem not initialized. Call OPENMM::initialize() before "
-                                     "using any other functions.");
+            throw std::runtime_error(
+                "OPENMM subsystem not initialized. Call OpenMMContext::initialize() before "
+                "using any other functions.");
         }
     }
 
-    [[nodiscard]] auto createNonbondedForce(const SystemTopology& systemTopology) -> OpenMM::NonbondedForce*;
-    [[nodiscard]] auto createGBSAOBCForce(const SystemTopology& systemTopology) -> OpenMM::GBSAOBCForce*;
+    [[nodiscard]] auto createNonbondedForce(const SystemTopology& systemTopology)
+        -> OpenMMContext::NonbondedForce*;
+    [[nodiscard]] auto createGBSAOBCForce(const SystemTopology& systemTopology)
+        -> OpenMMContext::GBSAOBCForce*;
     [[nodiscard]] auto createCustomNonbondedForce(const SystemTopology& systemTopology)
-        -> OpenMM::CustomNonbondedForce*;
+        -> OpenMMContext::CustomNonbondedForce*;
     [[nodiscard]] auto createHarmonicBondForce(const SystemTopology& systemTopology)
-        -> OpenMM::HarmonicBondForce*;
+        -> OpenMMContext::HarmonicBondForce*;
     [[nodiscard]] auto createHarmonicAngleForce(const SystemTopology& systemTopology)
-        -> OpenMM::HarmonicAngleForce*;
+        -> OpenMMContext::HarmonicAngleForce*;
     [[nodiscard]] auto createPeriodicTorsionForce(const SystemTopology& systemTopology)
-        -> OpenMM::PeriodicTorsionForce*;
+        -> OpenMMContext::PeriodicTorsionForce*;
     [[nodiscard]] auto createImproperHarmonicTorsionForce(const SystemTopology& systemTopology)
-        -> OpenMM::CustomTorsionForce*;
+        -> OpenMMContext::CustomTorsionForce*;
     [[nodiscard]] auto createCMAPTorsionForce(const SystemTopology& systemTopology)
-        -> OpenMM::CMAPTorsionForce*;
+        -> OpenMMContext::CMAPTorsionForce*;
     [[nodiscard]] auto createUreyBradleyForce(const SystemTopology& systemTopology)
-        -> OpenMM::HarmonicBondForce*;
+        -> OpenMMContext::HarmonicBondForce*;
 
     std::vector<std::vector<int>> atomMbxByWorld;
     SystemTopology systemTopology;
 
-    std::unique_ptr<OpenMM::Context> context;
-    std::unique_ptr<OpenMM::System> system;
-    std::unique_ptr<OpenMM::Integrator> integrator;
+    std::unique_ptr<OpenMMContext::Context> context;
+    std::unique_ptr<OpenMMContext::System> system;
+    std::unique_ptr<OpenMMContext::Integrator> integrator;
 
     std::size_t numAtoms = 0;
     double potentialEnergy = 0, kineticEnergy = 0;

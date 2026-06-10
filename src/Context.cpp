@@ -3,6 +3,10 @@
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
 
+#include "Compound.h"
+#include "CompoundSystem.h"
+#include "Element.h"
+#include "SmallMatrix.h"
 #include "bgeneral.hpp"
 
 void transferCoordsFromWorldToWorld(const World& srcWorld, World& destWorld) {
@@ -73,104 +77,134 @@ void Context::setOutput(const std::string& outDir) {
     setOutputDir(outDir);
 }
 
-void Context::loadAmberSystem(const std::string& baseName, std::int32_t seed) {
+void Context::loadAmberSystem(const SystemTopology& systemTopology) {
     // Copy the data
     this->systemTopology = systemTopology;
 
-    numMolecules = static_cast<int>(systemTopology.rootAtomGlobalIndices.size());
-
     // Construct a Compound for every atom
-    // Since we iterate the list of atoms, we can also validate the global indices
-    // We expect them to be contiguous from 0 to N-1
-    int expectedGlobalIndex = 0;
-    for (auto& atom : this->systemTopology.atoms) {
-        // Create the SimTK::Compound
-        atom.createSingleAtom();
+    for (int i = 0; i < systemTopology.numAtoms; ++i) {
+        const auto element = SimTK::Element(systemTopology.atomsAtomicNumber[i],
+                                            systemTopology.atomsElementName[i],
+                                            systemTopology.atomsElementSymbol[i],
+                                            systemTopology.atomsMass[i]);
+        compoundAtoms[i] = new SimTK::Compound::SingleAtom(systemTopology.atomsUniqueName[i], element);
 
-        // Validate the continuity of the rest of the sequence
-        if (atom.identity.globalIndex != expectedGlobalIndex) {
-            std::string errorMsg = "Sequence Error: Global indices are not contiguous. "
-                                   + std::to_string(expectedGlobalIndex) + " expected, but found "
-                                   + std::to_string(atom.identity.globalIndex) + " for atom `"
-                                   + atom.identity.uniqueAtomName + "`.";
+        const SimTK::Angle TetrahedralAngle = 109.47 * SimTK::Deg2Rad; // radians
+        const SimTK::Real DefaultBondLength = 0.19;                    // nm
+        const SimTK::Real Cos120 = -0.5;                               // cos(120 degrees)
+        const SimTK::Real Sin120 = 0.866025;                           // sin(120 degrees)
 
-            SimTK_ASSERT_ALWAYS(false, errorMsg.c_str());
+        const auto numBondsInvolved = systemTopology.atomsNumBondsInvolved[i];
+        if (numBondsInvolved > 0) {
+            if (numBondsInvolved == 1) {
+                // For an atom with a single bond (e.g. hydrogen), define only one bond center.
+                compoundAtoms[i]->addFirstBondCenter("bond1", systemTopology.atomsUniqueName[i]);
+            } else {
+                // Tetrahedral bond angle (109.47 degrees) in radians.
+                // This is the ideal angle between bonds in sp3 hybridized atoms (like carbon).
+                SimTK::Angle TetrahedralAngle = 109.47 * SimTK::Deg2Rad;
+
+                // --- Step 1: Define the first two bonds ---
+                // addFirstTwoBondCenters places two bond centers in space relative to the atom.
+                // Here:
+                //   bond1 lies on the +X axis: (1, 0, 0)
+                //   bond2 lies rotated ~120 degrees in the XY plane: (-0.5, 0.866025, 0.0)
+                //
+                // Together, these form a "V" in the XY plane, like the two bonds in water.
+                compoundAtoms[i]->addFirstTwoBondCenters(
+                    "bond1",
+                    "bond2",
+                    systemTopology.atomsUniqueName[i],
+                    SimTK::UnitVec3(1, 0, 0),            // Along +X
+                    SimTK::UnitVec3(Cos120, Sin120, 0.0) // 120 degrees rotated in XY
+                );
+
+                // --- Step 2: Add third bond (if needed) ---
+                if (numBondsInvolved > 2) {
+                    // addLeftHandedBondCenter places the third bond center ABOVE the XY plane,
+                    // at tetrahedral angles to both bond1 and bond2.
+                    //
+                    // "Left-handed" means that if you curl your left hand from bond1 to bond2,
+                    // your thumb points in the direction of this bond. This sets a chirality.
+                    compoundAtoms[i]->addLeftHandedBondCenter("bond3",
+                                                              systemTopology.atomsUniqueName[i],
+                                                              TetrahedralAngle,
+                                                              TetrahedralAngle);
+                }
+
+                // --- Step 3: Add fourth bond (if needed) ---
+                if (numBondsInvolved > 3) {
+                    // addRightHandedBondCenter places the fourth bond BELOW the XY plane,
+                    // again at tetrahedral angles to bond1 and bond2.
+                    //
+                    // "Right-handed" is the mirror orientation: if you curl your right hand
+                    // from bond1 to bond2, your thumb points in this direction.
+                    //
+                    // Together, bond1-bond4 form a tetrahedron centered on the atom:
+                    // - bond1 and bond2 in XY plane
+                    // - bond3 pointing up (left-handed)
+                    // - bond4 pointing down (right-handed)
+                    compoundAtoms[i]->addRightHandedBondCenter("bond4",
+                                                               systemTopology.atomsUniqueName[i],
+                                                               TetrahedralAngle,
+                                                               TetrahedralAngle);
+                }
+            }
+
+            // The "inboard" bond is the one used to connect this atom into a larger structure.
+            // Here, bond1 is always chosen as the inboard bond center.
+            compoundAtoms[i]->setInboardBondCenter("bond1");
+
+            // Default length of this inboard bond (in nanometers, ~1.9 A).
+            compoundAtoms[i]->setDefaultInboardBondLength(DefaultBondLength);
         }
 
-        expectedGlobalIndex++;
+        // Give this SingleAtom a unique compound name within the molecule.
+        compoundAtoms[i]->setCompoundName(systemTopology.atomsUniqueName[i]);
     }
+
+    auto availableBonds = systemTopology.atomsNumBondsInvolved;
 
     // Add new topologies
     topologies.reserve(numMolecules);
-    for (std::size_t molIx = 0; molIx < systemTopology.rootAtomGlobalIndices.size(); ++molIx) {
+    for (std::size_t molIx = 0; molIx < systemTopology.numMolecules; ++molIx) {
         // New empty topology
         SimTK::Compound::Name name = "MOL_" + std::to_string(molIx);
-        Topology topology(name,
+        Topology topology(systemTopology,
                           SimTK::CompoundSystem::CompoundIndex(molIx),
-                          systemTopology.rootAtomGlobalIndices[molIx],
                           systemTopology.rootMobilities[molIx]);
-
-        // Set spans
-        const auto atomRangeBegin = systemTopology.atomsBegin[molIx];
-        const auto atomRangeEnd = systemTopology.atomsEnd[molIx];
-        topology.setAtoms(safe_subspan(this->systemTopology.atoms, atomRangeBegin, atomRangeEnd));
-
-        const auto bondRangeBegin =
-            systemTopology.topologyRanges[molIx].getRange(TopologyRangeType::Bond).first;
-        const auto bondRangeEnd =
-            systemTopology.topologyRanges[molIx].getRange(TopologyRangeType::Bond).second;
-        topology.setBonds(safe_subspan(this->systemTopology.bonds, bondRangeBegin, bondRangeEnd));
-
-        const auto angleRangeBegin =
-            systemTopology.topologyRanges[molIx].getRange(TopologyRangeType::Angle).first;
-        const auto angleRangeEnd =
-            systemTopology.topologyRanges[molIx].getRange(TopologyRangeType::Angle).second;
-        topology.setAngles(safe_subspan(this->systemTopology.angles, angleRangeBegin, angleRangeEnd));
-
-        const auto properPeriodicTorsionRangeBegin =
-            systemTopology.topologyRanges[molIx].getRange(TopologyRangeType::PeriodicTorsion).first;
-        const auto properPeriodicTorsionRangeEnd =
-            systemTopology.topologyRanges[molIx].getRange(TopologyRangeType::PeriodicTorsion).second;
-        topology.setPeriodicTorsions(safe_subspan(this->systemTopology.periodicTorsions,
-                                                  properPeriodicTorsionRangeBegin,
-                                                  properPeriodicTorsionRangeEnd));
-
-        const auto improperHarmonicTorsionRangeBegin =
-            systemTopology.topologyRanges[molIx].getRange(TopologyRangeType::ImproperHarmonicTorsion).first;
-        const auto improperHarmonicTorsionRangeEnd =
-            systemTopology.topologyRanges[molIx].getRange(TopologyRangeType::ImproperHarmonicTorsion).second;
-        topology.setImproperHarmonicTorsions(safe_subspan(this->systemTopology.harmonicImproperTorsions,
-                                                          improperHarmonicTorsionRangeBegin,
-                                                          improperHarmonicTorsionRangeEnd));
 
         // Set root atom
         // Its compound atom index is set inside the next loop
-        RoboAtom& rootAtom = this->systemTopology.atoms[systemTopology.rootAtomGlobalIndices[molIx]];
-        topology.setBaseAtom(*rootAtom.compoundSingleAtom, SimTK::Transform());
+        const auto rootAtomIndex = systemTopology.atomsRootIndex[molIx];
+        topology.setBaseAtom(compoundAtoms[rootAtomIndex], SimTK::Transform());
         topology.convertInboardBondCenterToOutboard();
 
         // Add non-ring closing bonds first
-        for (auto& bond : topology.updBonds()) {
-            if (bond.ringClosing) {
+        const auto bondsBegin = systemTopology.bondsBegin[molIx];
+        const auto bondsEnd = systemTopology.bondsEnd[molIx];
+        for (int bIx = bondsBegin; bIx < bondsEnd; ++bIx) {
+            if (systemTopology.bondsRingClosing[bIx]) {
                 continue;
             }
 
-            RoboAtom& parent = this->systemTopology.atoms[bond.globalIndices[0]];
-            RoboAtom& child = this->systemTopology.atoms[bond.globalIndices[1]];
+            const auto parentAtomIndex = systemTopology.bondsI[bIx];
+            const auto childAtomIndex = systemTopology.bondsJ[bIx];
 
             // Get next available bond center ID for the parent
-            const int parentNofBonds = parent.connectivity.numBondsInvolved;
-            const int parentNofFreebonds = parent.connectivity.numAvailableBonds;
+            const int parentNofBonds = systemTopology.atomsNumBondsInvolved[parentAtomIndex];
+            const int parentNofFreebonds = availableBonds[parentAtomIndex];
             const int parentNextAvailBondCenter = parentNofBonds - parentNofFreebonds + 1;
 
             // Cook the parentBondCenterPathName = RESNAME + RESID + _ATOMNAME + bond int(next)
             const SimTK::Compound::BondCenterPathName parentBondCenterPathName =
-                parent.identity.uniqueAtomName + "/bond" + std::to_string(parentNextAvailBondCenter);
+                systemTopology.atomsUniqueName[parentAtomIndex] + "/bond"
+                + std::to_string(parentNextAvailBondCenter);
 
             // Actual bonding with default mobility (torsion)
-            topology.bondAtom(*child.compoundSingleAtom,
+            topology.bondAtom(compoundAtoms[childAtomIndex],
                               parentBondCenterPathName,
-                              bond.nominalLengthInNm,
+                              systemTopology.bondsEquilibrium[bIx],
                               109.47 * SimTK::Deg2Rad,
                               SimTK::BondMobility::Default);
 
@@ -179,12 +213,16 @@ void Context::loadAmberSystem(const std::string& baseName, std::int32_t seed) {
             // SimTK::Compound::AtomIndex childCAIx =
             // topology.getBondAtomIndex(SimTK::Compound::BondIndex(topology.getNumBonds() - 1), 1);
             // child.setCompoundAtomIndex(childCAIx);
-            topology.setAtomMass(child.identity.compoundAtomIndex, child.physics.massInDaltons);
+            const auto childCAIx =
+                SimTK::Compound::AtomIndex(systemTopology.atomsCompoundAtomIndex[childAtomIndex]);
+            topology.setAtomMass(childCAIx, SimTK::mdunits::Mass(systemTopology.atomsMass[childAtomIndex]));
 
             // Set the local compound atom index for the parent if it is the root
-            if (bond.globalIndices[0] == systemTopology.rootAtomGlobalIndices[molIx]) {
-                // parent.setCompoundAtomIndex(parentCAIx);
-                topology.setAtomMass(parent.identity.compoundAtomIndex, parent.physics.massInDaltons);
+            if (parentAtomIndex == systemTopology.atomsRootIndex[molIx]) {
+                const auto parentCAIx =
+                    SimTK::Compound::AtomIndex(systemTopology.atomsCompoundAtomIndex[parentAtomIndex]);
+                topology.setAtomMass(parentCAIx,
+                                     SimTK::mdunits::Mass(systemTopology.atomsMass[parentAtomIndex]));
             }
 
             // // Handle ions
@@ -193,32 +231,34 @@ void Context::loadAmberSystem(const std::string& baseName, std::int32_t seed) {
             // 	atoms[internCoords.getRoot(molIx).first].setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
             // }
 
-            parent.connectivity.numAvailableBonds--;
-            child.connectivity.numAvailableBonds--;
+            availableBonds[childAtomIndex]--;
+            availableBonds[parentAtomIndex]--;
         }
 
         // Add ring closing bonds
-        for (const auto& bond : topology.updBonds()) {
-            if (!bond.ringClosing) {
+        for (int bIx = bondsBegin; bIx < bondsEnd; ++bIx) {
+            if (systemTopology.bondsRingClosing[bIx]) {
                 continue;
             }
 
-            RoboAtom& parent = this->systemTopology.atoms[bond.globalIndices[0]];
-            RoboAtom& child = this->systemTopology.atoms[bond.globalIndices[1]];
+            const auto parentAtomIndex = systemTopology.bondsI[bIx];
+            const auto childAtomIndex = systemTopology.bondsJ[bIx];
 
             // Molmodel expects bond center names to not have been taken yet
-            const int childNofBonds = child.connectivity.numBondsInvolved;
-            const int childNofFreebonds = child.connectivity.numAvailableBonds;
+            const int childNofBonds = systemTopology.atomsNumBondsInvolved[childAtomIndex];
+            const int childNofFreebonds = availableBonds[childAtomIndex];
             const int childNextAvailBondCenter = childNofBonds - childNofFreebonds + 1;
             const SimTK::Compound::BondCenterPathName bondCenterName1 =
-                child.identity.uniqueAtomName + "/bond" + std::to_string(childNextAvailBondCenter);
+                systemTopology.atomsUniqueName[childAtomIndex] + "/bond"
+                + std::to_string(childNextAvailBondCenter);
 
             // Molmodel expects bond center names to not have been taken yet
-            const int parentNofBonds = parent.connectivity.numBondsInvolved;
-            const int parentNofFreebonds = parent.connectivity.numAvailableBonds;
+            const int parentNofBonds = systemTopology.atomsNumBondsInvolved[parentAtomIndex];
+            const int parentNofFreebonds = systemTopology.atomsNumBondsInvolved[parentAtomIndex];
             const int parentNextAvailBondCenter = parentNofBonds - parentNofFreebonds + 1;
             const SimTK::Compound::BondCenterPathName bondCenterName2 =
-                parent.identity.uniqueAtomName + "/bond" + std::to_string(parentNextAvailBondCenter);
+                systemTopology.atomsUniqueName[parentAtomIndex] + "/bond"
+                + std::to_string(parentNextAvailBondCenter);
 
             // std::cout << cinf_prefix << "Adding ring closing bond between bond centers "
             // 		  << bondCenterName1 << " cAIx " << child.identity.compoundAtomIndex
@@ -228,37 +268,27 @@ void Context::loadAmberSystem(const std::string& baseName, std::int32_t seed) {
 
             topology.addRingClosingBond(bondCenterName1,
                                         bondCenterName2,
-                                        bond.nominalLengthInNm,
+                                        mdunits::Length(systemTopology.bondsEquilibrium[bIx]),
                                         109.47 * SimTK::Deg2Rad,
                                         SimTK::BondMobility::Rigid);
 
-            parent.connectivity.numAvailableBonds--;
-            child.connectivity.numAvailableBonds--;
+            availableBonds[parentAtomIndex]--;
+            availableBonds[childAtomIndex]--;
         }
 
         // Make sure all bonds have been used
         // Usually, it's from missing ring closing bonds
-        std::vector<std::size_t> unsatisfiedAtomsIndices;
-        for (auto& atom : topology.getAtoms()) {
-            if (atom.connectivity.numAvailableBonds != 0) {
-                unsatisfiedAtomsIndices.push_back(atom.identity.globalIndex);
+        for (int i = 0; i < systemTopology.numAtoms; ++i) {
+            if (availableBonds[i] != 0) {
+                throw std::runtime_error("Atom " + systemTopology.atomsUniqueName[i] + " has "
+                                         + std::to_string(availableBonds[i]) + " unsatisfied bonds. "
+                                         + "Please check if all bonds have been defined for molecule "
+                                         + std::to_string(molIx) + ".");
             }
-        }
-
-        if (!unsatisfiedAtomsIndices.empty()) {
-            std::string error_msg = "Not all bonds have been satisfied when building topology for molecule "
-                                    + std::to_string(molIx) + ". ";
-            for (const auto& atomIx : unsatisfiedAtomsIndices) {
-                const RoboAtom& atom = this->systemTopology.atoms[atomIx];
-                error_msg += "\tAtom " + atom.identity.uniqueAtomName + " has "
-                             + std::to_string(atom.connectivity.numAvailableBonds) + " unsatisfied bonds.";
-            }
-
-            SimTK_ASSERT_ALWAYS(unsatisfiedAtomsIndices.empty(), error_msg.c_str());
         }
 
         // Define the biotype of the atom
-        for (auto& atom : topology.getAtoms()) {
+        for (int i = 0; i < systemTopology.numAtoms; ++i) {
             // It calls SimTK::Biotype::defineBiotype and checks if it already exists
             // This expects three parameters: the unique name of the atom (combination of residue name,
             // residue id, force field atom type name and global id), the residue name and the force field
@@ -266,20 +296,22 @@ void Context::loadAmberSystem(const std::string& baseName, std::int32_t seed) {
             // different atoms because of the valence (N terminus vs backbone valence) Thus, we rely solely on
             // the unique atom name and a custom atom type name (see exactly in the Python wrapper how this is
             // set)
-            topology.setAtomBiotype(atom.identity.uniqueAtomName.c_str(),
+            topology.setAtomBiotype(systemTopology.atomsUniqueName[i].c_str(),
                                     "",
-                                    atom.identity.chargedAtomTypeName.c_str());
-            atom.biotypeIndex = topology.getAtomBiotypeIndex(atom.identity.compoundAtomIndex);
+                                    systemTopology.atomsChargedTypeNames[i].c_str());
+            const auto cAIx = SimTK::Compound::AtomIndex(systemTopology.atomsCompoundAtomIndex[i]);
+            this->systemTopology.biotypeIndices[i] = topology.getAtomBiotypeIndex(cAIx);
         }
 
         // Get coordinates
         SimTK::Compound::AtomTargetLocations atomTargets;
-        for (const auto& a : topology.getAtoms()) {
-            atomTargets.push_back(a.position);
+        for (int i = 0; i < systemTopology.numAtoms; ++i) {
+            atomTargets.push_back(
+                SimTK::Vec3(systemTopology.atomsX[i], systemTopology.atomsY[i], systemTopology.atomsZ[i]));
         }
         atomTargetLocationsCache.emplace_back(atomTargets);
 
-        topology.setTopLevelTransform(SimTK::Transform(SimTK::Rotation(), rootAtom.position));
+        topology.setTopLevelTransform(SimTK::Transform(SimTK::Rotation(), atomTargets[rootAtomIndex]));
 
         // Match the topology to the input coordinates
         topology.loadIndicesMaps(atomTargets);
@@ -294,23 +326,7 @@ bool Context::initializeOpenMM() {
         throw std::runtime_error("Cannot initialize OpenMM without any world. Please call addWorld() first.");
     }
 
-    // Build the rigid bodies list for each world
-    std::vector<std::vector<int>> worldsRigidBodies;
-
-    for (const auto& world : worlds) {
-        worldsRigidBodies.emplace_back(systemTopology.atoms.size());
-
-        for (const auto& topology : topologies) {
-            for (const auto& atom : topology.getAtoms()) {
-                const SimTK::MobilizedBodyIndex mbx =
-                    topology.getAtomMobilizedBodyIndexThroughDumm(atom.identity.compoundAtomIndex,
-                                                                  world.getForceField());
-                worldsRigidBodies.back()[atom.identity.globalIndex] = int(mbx);
-            }
-        }
-    }
-
-    return OPENMM::initialize(worldsRigidBodies, systemTopology, ffParams, simSettings);
+    return OpenMMContext::get().initialize(systemTopology);
 }
 
 SimTK::Real Context::calculatePotentialEnergy(int worldIndex) {
@@ -319,120 +335,13 @@ SimTK::Real Context::calculatePotentialEnergy(int worldIndex) {
             "Cannot calculate OpenMM energy without any world. Please call addWorld() first.");
     }
 
-    // OPENMM::get().setActiveForceGroup(worldIndex);
+    // OpenMMContext::get().setActiveForceGroup(worldIndex);
     auto& state = worlds[worldIndex].updIntegrator().updAdvancedState();
     std::stringstream nullStream;
     bool verbose = false;
 
     worlds[worldIndex].updSampler(0)->reinitialize(state, nullStream, verbose);
     return worlds[worldIndex].getSampler(worldIndex)->currentEnergy.potential;
-}
-
-/*! <!--  --> */
-auto Context::validateContext() -> bool {
-    constexpr SimTK::Real COORD_TRANSFER_TOL = 1e-6;
-    bool valid = true;
-
-    for (auto& world : worlds) {
-        if (world.isOverconstrained()) {
-            valid = false;
-            continue;
-        };
-
-        world.setAtomTargetLocationsToState(atomTargetLocationsCache);
-        const auto errors = world.checkCoordinateTransfer(atomTargetLocationsCache);
-
-        for (const auto& residual : errors.matchResiduals) {
-            if (residual > COORD_TRANSFER_TOL) {
-                std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex()
-                          << ": Match residual " << residual << " exceeds tolerance." << std::endl;
-                valid = false;
-            }
-        }
-        if (errors.cartesian > COORD_TRANSFER_TOL) {
-            std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex()
-                      << ": Cartesian residual " << errors.cartesian << " exceeds tolerance." << std::endl;
-            valid = false;
-        }
-        if (errors.cartesianMax > COORD_TRANSFER_TOL) {
-            std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex()
-                      << ": Cartesian max residual " << errors.cartesianMax << " exceeds tolerance."
-                      << std::endl;
-            valid = false;
-        }
-        if (errors.bonds > COORD_TRANSFER_TOL) {
-            std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex()
-                      << ": Bond residual " << errors.bonds << " exceeds tolerance." << std::endl;
-            valid = false;
-        }
-        if (errors.bondsMax > COORD_TRANSFER_TOL) {
-            std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex()
-                      << ": Bond max residual " << errors.bondsMax << " exceeds tolerance." << std::endl;
-            valid = false;
-        }
-        if (errors.angles > COORD_TRANSFER_TOL) {
-            std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex()
-                      << ": Angle residual " << errors.angles << " exceeds tolerance." << std::endl;
-            valid = false;
-        }
-        if (errors.anglesMax > COORD_TRANSFER_TOL) {
-            std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex()
-                      << ": Angle max residual " << errors.anglesMax << " exceeds tolerance." << std::endl;
-            valid = false;
-        }
-        if (errors.properDihedrals > COORD_TRANSFER_TOL) {
-            std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex()
-                      << ": Proper dihedral residual " << errors.properDihedrals << " exceeds tolerance."
-                      << std::endl;
-            valid = false;
-        }
-        if (errors.properDihedralsMax > COORD_TRANSFER_TOL) {
-            std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex()
-                      << ": Proper dihedral max residual " << errors.properDihedralsMax
-                      << " exceeds tolerance." << std::endl;
-            valid = false;
-        }
-        if (errors.improperDihedrals > COORD_TRANSFER_TOL) {
-            std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex()
-                      << ": Improper dihedral residual " << errors.improperDihedrals << " exceeds tolerance."
-                      << std::endl;
-            valid = false;
-        }
-        if (errors.improperDihedralsMax > COORD_TRANSFER_TOL) {
-            std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex()
-                      << ": Improper dihedral max residual " << errors.improperDihedralsMax
-                      << " exceeds tolerance." << std::endl;
-            valid = false;
-        }
-
-        if (world.hasRigidBodyViolations(0.001, 1)) {
-            valid = false;
-            continue;
-        }
-    }
-
-    return valid;
-
-    // // Initialize the Z matrix
-    // int firstWIx = 0;
-    // SimTK::State& lastAdvancedState = worlds[firstWIx].updIntegrator().updAdvancedState();
-
-    // // Get coordinates from source
-    // const auto& firstWorldsAtomsLocations = worlds[firstWIx].getAtomsLocationsInGround(lastAdvancedState);
-
-    // // Get Z-matrix indexes table
-    // calcZMatrixTable();
-    // PrintZMatrixTable();
-    // reallocZMatrixBAT();
-    // calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
-    // PrintZMatrixBAT();
-    // PrintZMatrixMobods(firstWIx, lastAdvancedState);
-
-    // for(int k = 0; k < nofReplicas; k++){
-    // 	replicas[k].reallocZMatrixBAT();
-    // 	replicas[k].calcZMatrixBAT(firstWorldsAtomsLocations);
-    // 	//replicas[k].PrintZMatrixBAT();
-    // }
 }
 
 /*!
@@ -510,9 +419,9 @@ void Context::addWorld(bool fixmanTorque,
                     std::cout << "\tWARNING: Custom bond mobility ("
                               << SimTK::BondMobility::getBondMobilityName(it->second.mobility)
                               << ") cannot be applied to the ring-closing bond between atoms "
-                              << systemTopology.atoms[p].identity.uniqueAtomName << " (index " << p
-                              << ") and " << systemTopology.atoms[c].identity.uniqueAtomName << " (index "
-                              << c << "). "
+                              << systemTopology.atoms[p].systemTopology.atomsUniqueName[i] << " (index " << p
+                              << ") and " << systemTopology.atoms[c].systemTopology.atomsUniqueName[i]
+                              << " (index " << c << "). "
                               << "Ring-closing bonds must be 'Rigid'; defaulting to Rigid mobility."
                               << std::endl;
                 } else {
@@ -530,8 +439,10 @@ void Context::addWorld(bool fixmanTorque,
             // Compound) to temporarily set the bond mobility in the topology Later, when we call
             // CompoundSystem::modelOneCompound, the bond mobilities are read from the topology and used to
             // build the robot accordingly
-            const SimTK::Compound::AtomName parentAtomName = systemTopology.atoms[p].identity.uniqueAtomName;
-            const SimTK::Compound::AtomName childAtomName = systemTopology.atoms[c].identity.uniqueAtomName;
+            const SimTK::Compound::AtomName parentAtomName =
+                systemTopology.atoms[p].systemTopology.atomsUniqueName[i];
+            const SimTK::Compound::AtomName childAtomName =
+                systemTopology.atoms[c].systemTopology.atomsUniqueName[i];
             topology.setBondMobility(mobility, parentAtomName, childAtomName);
 
             // Print status of bond flexibility setting
@@ -539,9 +450,9 @@ void Context::addWorld(bool fixmanTorque,
             if (verbose_local) {
                 const RoboAtom& parentAtom = systemTopology.atoms[p];
                 const RoboAtom& childAtom = systemTopology.atoms[c];
-                std::cout << "Setting bond flexibility for atoms " << parentAtom.identity.uniqueAtomName
-                          << " (BAT index " << p << ") and " << childAtom.identity.uniqueAtomName
-                          << " (BAT index " << c << ") to "
+                std::cout << "Setting bond flexibility for atoms "
+                          << parentAtom.systemTopology.atomsUniqueName[i] << " (BAT index " << p << ") and "
+                          << childAtom.systemTopology.atomsUniqueName[i] << " (BAT index " << c << ") to "
                           << SimTK::BondMobility::getBondMobilityName(mobility) << std::endl;
             }
         }
@@ -554,9 +465,9 @@ void Context::addWorld(bool fixmanTorque,
         if (!status.satisfied) {
             const std::pair<int, int>& indices = entry.first;
             std::string error_msg = "Error: User-specified bond flexibility for atoms "
-                                    + systemTopology.atoms[indices.first].identity.uniqueAtomName
+                                    + systemTopology.atoms[indices.first].systemTopology.atomsUniqueName[i]
                                     + " (BAT index " + std::to_string(indices.first) + ") and "
-                                    + systemTopology.atoms[indices.second].identity.uniqueAtomName
+                                    + systemTopology.atoms[indices.second].systemTopology.atomsUniqueName[i]
                                     + " (BAT index " + std::to_string(indices.second) + ") "
                                     + "was not found in the system.";
             throw std::runtime_error(error_msg);
@@ -582,10 +493,11 @@ void Context::addWorld(bool fixmanTorque,
             const auto topoIx2 = systemTopology.atoms[flex.globalIndex2].identity.moleculeIndex;
             if (topoIx1 != topoIx2) {
                 std::string error_msg =
-                    "Error: Atoms " + systemTopology.atoms[flex.globalIndex1].identity.uniqueAtomName
+                    "Error: Atoms "
+                    + systemTopology.atoms[flex.globalIndex1].systemTopology.atomsUniqueName[i]
                     + " (BAT index " + std::to_string(flex.globalIndex1) + ") and "
-                    + systemTopology.atoms[flex.globalIndex2].identity.uniqueAtomName + " (BAT index "
-                    + std::to_string(flex.globalIndex2) + ") "
+                    + systemTopology.atoms[flex.globalIndex2].systemTopology.atomsUniqueName[i]
+                    + " (BAT index " + std::to_string(flex.globalIndex2) + ") "
                     + "are in different molecules, but a bond flexibility was specified between them.";
                 throw std::runtime_error(error_msg);
             }
@@ -595,10 +507,11 @@ void Context::addWorld(bool fixmanTorque,
             const SimTK::MobilizedBodyIndex mbx2 = topologies[topoIx2].getAtomMobilizedBodyIndex(aIx2);
             if (mbx1 == mbx2) {
                 std::string error_msg =
-                    "Error: Atoms " + systemTopology.atoms[flex.globalIndex1].identity.uniqueAtomName
+                    "Error: Atoms "
+                    + systemTopology.atoms[flex.globalIndex1].systemTopology.atomsUniqueName[i]
                     + " (BAT index " + std::to_string(flex.globalIndex1) + ") and "
-                    + systemTopology.atoms[flex.globalIndex2].identity.uniqueAtomName + " (BAT index "
-                    + std::to_string(flex.globalIndex2) + ") "
+                    + systemTopology.atoms[flex.globalIndex2].systemTopology.atomsUniqueName[i]
+                    + " (BAT index " + std::to_string(flex.globalIndex2) + ") "
                     + "are in the same mobilized body, but a bond flexibility was specified between them.";
                 throw std::runtime_error(error_msg);
             }
@@ -849,7 +762,7 @@ void Context::addReplica() {
 
         if (std::fabs(diff) > 10e-9) {
             const std::string msg = "Global to prmtop index mapping is inconsistent for atom "
-                                    + atom.identity.uniqueAtomName + " (global index "
+                                    + atom.systemTopology.atomsUniqueName[i] + " (global index "
                                     + std::to_string(atom.identity.globalIndex) + ", prmtop index "
                                     + std::to_string(prmtopIndex) + "). ";
             throw std::runtime_error(msg);
@@ -2807,7 +2720,7 @@ void Context::RunREX(RunType runType,
         }
     }
 
-    OPENMM::get().shutdown();
+    OpenMMContext::get().shutdown();
 }
 
 void Context::initializeBinaryFile(const std::string& filename, uint32_t num_columns) {

@@ -15,6 +15,7 @@ class Context {
     std::string baseName;
     bool verbose = false;
     std::vector<SimTK::Real> worldTemperatures;
+    std::vector<SimTK::Compound::SingleAtom*> compoundAtoms;
 
     public:
     Context(const std::string& baseName, std::int32_t seed);
@@ -40,8 +41,6 @@ class Context {
     auto initializeOpenMM() -> bool;
 
     auto calculatePotentialEnergy(int worldIndex) -> SimTK::Real;
-
-    auto validateContext() -> bool;
 
     void addWorld(bool fixmanTorque,
                   int samplesPerRound,

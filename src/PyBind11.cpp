@@ -48,6 +48,7 @@ are modified using the reaction field method.
 )doc")
         .value("EWALD", NonbondedMethod::Ewald, R"doc(
 Periodic boundary conditions are used.
+                    dst.extend(x if x == ZM_SENTINEL else x + atom_off for x in src)
 
 Ewald summation is used to compute the interaction
 of each particle with all periodic copies of every
@@ -141,9 +142,6 @@ copies of every other particle.
         .def("addThermodynamicState",
              &Context::addThermodynamicState,
              "Add an empty themodynamic state to the context.")
-        .def("validate_context",
-             &Context::validateContext,
-             "Validates all worlds and replicas in the context.")
         .def("run_rex",
              &Context::RunREX,
              py::arg("run_type"),
@@ -321,6 +319,17 @@ copies of every other particle.
         .def_readwrite("atoms_z",
                        &SystemTopology::atomsZ,
                        "z coordinate of the reference structure in nanometers [nm].")
+        .def_readwrite("atoms_atomic_number",
+                       &SystemTopology::atomsAtomicNumber,
+                       "Atomic number (number of protons in the nucleus) for each atom.")
+        .def_readwrite(
+            "atoms_num_bonds_involved",
+            &SystemTopology::atomsNumBondsInvolved,
+            "Number of bonds this atom is involved in (used for determining terminal vs. internal atoms).")
+        .def_readwrite("root_mobilities",
+                       &SystemTopology::rootMobilities,
+                       "Root mobility for each molecule, used to determine the mobility of the root atom in "
+                       "each molecule.")
 
         // -------------------------------------------------------------------------
         // Bond arrays

@@ -325,8 +325,8 @@ class HMCSampler : virtual public Sampler {
     void integrateVariableTrajectory(SimTK::State& someState);
 
     auto isUTurnOpenMM(const PhasePointOpenMM& minus, const PhasePointOpenMM& plus) -> bool;
-    auto buildTreeWithOpenMM(std::vector<OpenMM::Vec3>& positions,
-                             std::vector<OpenMM::Vec3>& velocities,
+    auto buildTreeWithOpenMM(std::vector<OpenMMContext::Vec3>& positions,
+                             std::vector<OpenMMContext::Vec3>& velocities,
                              int depth,
                              NUTSDirection direction,
                              SimTK::Real logU,
