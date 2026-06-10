@@ -23,8 +23,8 @@ enum class NUTSCoordinates : std::uint8_t {
 };
 
 struct PhasePointOpenMM {
-    std::vector<OpenMMContext::Vec3> positions;
-    std::vector<OpenMMContext::Vec3> momenta;
+    std::vector<OpenMM::Vec3> positions;
+    std::vector<OpenMM::Vec3> momenta;
 };
 
 struct PhasePointSimbody {

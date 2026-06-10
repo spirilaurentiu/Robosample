@@ -19,35 +19,42 @@ parser.add_argument("write_freq", type=int, help="CSV and DCD write frequency.")
 # Parse the arguments
 args = parser.parse_args()
 
-# Create robosample context
-dih_classifier = robosample.AmberDihedralClassifier()
-context = robosample.Context(args.name, args.seed, dih_classifier)
-context.load_amber(args.prmtop, args.inpcrd)
+# create robosample context
+context = robosample.Context(
+    name=args.name,
+    seed=args.seed,
+    prmtop=args.prmtop,
+    inpcrd=args.inpcrd,
+    write_freq=args.write_freq,
+    testing=False,
+)
 
 # All molecule roots are `robosample.rb.RootMobility.Weld`
 # context.set_root_mobility(0, robosample.rb.RootMobility.Free)
 
-# Host is welded to ground
-context.set_root_mobility(0, robosample.rb.RootMobility.Weld)
+context.set_root_mobility(0, robosample.rb.RootMobility.Free)
+context.set_root_mobility(1, robosample.rb.RootMobility.Weld)
 
-# Guest is free to roam
-context.set_root_mobility(1, robosample.rb.RootMobility.Free)
+# Ligand:   topology 0, mbx 1
+# Receptor: topology 1, mbx 2
 
-context.add_cartesian_world().add_sampler(
-    timeStep=0.001,
-    mdSteps=50_000,
-    boostMDSteps=50_000,
-    acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
-    use_nuts=False,
-)
+# context.add_cartesian_world().add_sampler(
+#     timeStep=0.001,
+#     mdSteps=50_000,
+#     boostMDSteps=50_000,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
+#     use_nuts=False,
+# )
+
 
 sele = context.build_flexibilities(None, robosample.rb.BondMobility.Torsion, False)
 context.add_robotic_world(sele).add_sampler(
-    timeStep=0.25,
-    mdSteps=10,
-    boostMDSteps=10,
+    timeStep=0.025,  # 5 fs
+    mdSteps=100,
+    boostMDSteps=100,
     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
     use_nuts=False,
+    integratorType=robosample.rb.IntegratorType.BOUND_HMC,
 )
 
 # Add replicas (geometric temperature ladder)

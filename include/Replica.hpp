@@ -2,72 +2,48 @@
 
 #include <vector>
 
+#include "Simbody.h"
+#include "Topology.hpp"
 #include "TopologyElements.hpp"
 
 class Replica {
     public:
-    Replica(const SystemTopology& systemTopology, int replicaIndex) {
-        myIndex = replicaIndex;
+    Replica(int index,
+            std::vector<RoboAtom>& atoms_,
+            std::vector<int>& roots_,
+            Span<Topology> topologies_,
+            std::vector<std::vector<int>>& zMatrixTable_)
+        : atoms(atoms_)
+        , roots(roots_)
+        , topologies(topologies_)
+        // , internCoords(internCoords_)
+        , zMatrixTable(zMatrixTable_)
+        , zMatrixBAT() {
     }
 
-    [[nodiscard]] auto getAtomsLocationsInGround() const
-        -> const std::vector<SimTK::Compound::AtomTargetLocations>& {
-        return atomsLocations;
-    }
-
-    [[nodiscard]] auto get_WORK_AtomsLocationsInGround() const
-        -> const std::vector<SimTK::Compound::AtomTargetLocations>& {
-        return WORK_atomsLocations;
-    }
+    const std::vector<SimTK::Compound::AtomTargetLocations>& getAtomsLocationsInGround() const;
+    const std::vector<SimTK::Compound::AtomTargetLocations>& get_WORK_AtomsLocationsInGround() const;
 
     // Reserve memory and set values
     void setAtomsLocationsInGround(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 
     // Reserve memory and set values
     void
-    set_WORK_AtomsLocationsInGround(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) {
-        WORK_atomsLocations = atomTargets;
-    }
+    set_WORK_AtomsLocationsInGround(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 
     // Transfers work coordinates into regular coordinates
     void updAtomsLocationsInGround_FromWORK();
 
     void
-    upd_WORK_AtomsLocationsInGround(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) {
-        WORK_atomsLocations = atomTargets;
-    }
+    upd_WORK_AtomsLocationsInGround(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 
-    [[nodiscard]] auto get_WORK_PotentialEnergy_New() const -> SimTK::Real {
-        return this->WORK_potential;
-    }
 
-    void set_WORK_PotentialEnergy_New(SimTK::Real somePotential) {
-        WORK_potential = somePotential;
-    }
+    SimTK::Real get_WORK_Jacobian() const;
+    SimTK::Real& upd_WORK_Jacobian();
 
-    [[nodiscard]] auto get_WORK_ReferencePotentialEnergy_New() const -> SimTK::Real {
-        return this->referenceWORK_potential;
-    }
+    void set_WORK_Jacobian(SimTK::Real);
 
-    void set_WORK_ReferencePotentialEnergy_New(SimTK::Real somePotential) {
-        referenceWORK_potential = somePotential;
-    }
-
-    [[nodiscard]] auto get_WORK_Jacobian() const -> SimTK::Real {
-        return this->workJacobiansContributions;
-    }
-
-    auto upd_WORK_Jacobian() -> SimTK::Real& {
-        return this->workJacobiansContributions;
-    }
-
-    void set_WORK_Jacobian(SimTK::Real inpJac) {
-        this->workJacobiansContributions = inpJac;
-    }
-
-    void setPotentialEnergy_FromWORK() {
-        this->potential = this->WORK_potential;
-    }
+    void setPotentialEnergy_FromWORK();
 
     // Load atomLocations coordinates into the front world
     void restoreCoordinates();
@@ -75,86 +51,112 @@ class Replica {
     // Stores coordinates from front world into atomsLocations
     void storeCoordinates();
 
-    [[nodiscard]] auto getPotentialEnergy() const -> SimTK::Real {
-        return potential;
-    }
+    SimTK::Real getPotentialEnergy() const;
+    void setPotentialEnergy(SimTK::Real somePotential);
 
-    void setPotentialEnergy(SimTK::Real somePotential) {
-        potential = somePotential;
-    }
+    SimTK::Real getReferencePotentialEnergy() const;
+    void setReferencePotentialEnergy(SimTK::Real somePotential);
 
-    [[nodiscard]] auto getReferencePotentialEnergy() const -> SimTK::Real {
-        return referencePotential;
-    }
+    SimTK::Real getWORK() const;
+    void setWORK(SimTK::Real workArg);
+    SimTK::Real& updWORK();
 
-    void setReferencePotentialEnergy(SimTK::Real somePotential) {
-        referencePotential = somePotential;
-    }
+    SimTK::Real get_WORK_PotentialEnergy_New() const;
+    void set_WORK_PotentialEnergy_New(SimTK::Real somePotential);
 
-    [[nodiscard]] auto getWORK() const -> SimTK::Real {
-        return WORK;
-    }
+    SimTK::Real get_WORK_ReferencePotentialEnergy_New() const;
+    void set_WORK_ReferencePotentialEnergy_New(SimTK::Real somePotential);
 
-    auto updWORK() -> SimTK::Real& {
-        return WORK;
-    }
+    // void set_WORK_LastPotentialEnergy(SimTK::Real wpArg);
 
-    void setWORK(SimTK::Real workArg) {
-        this->WORK = workArg;
-    }
+    SimTK::Real getFixman() const;
+    void setFixman(SimTK::Real somePotential);
 
-    [[nodiscard]] auto getFixman() const -> SimTK::Real {
-        return FixmanPotential;
-    }
-
-    void setFixman(SimTK::Real somePotential) {
-        FixmanPotential = somePotential;
-    }
-
-    [[nodiscard]] auto get_WORK_Fixman() const -> SimTK::Real {
-        return this->WORK_FixmanPotential;
-    }
-
-    void set_WORK_Fixman(SimTK::Real somePotential) {
-        this->WORK_FixmanPotential = somePotential;
-    }
+    SimTK::Real get_WORK_Fixman() const;
+    void set_WORK_Fixman(SimTK::Real somePotential);
 
     void Print() const;
     void PrintCoordinates() const;
     void Print_WORK_Coordinates() const;
 
-    [[nodiscard]] auto getX() const -> const std::vector<SimTK::Real>& {
+    const std::vector<SimTK::Real>& getX() const {
         return x;
     }
-    [[nodiscard]] auto getY() const -> const std::vector<SimTK::Real>& {
+    const std::vector<SimTK::Real>& getY() const {
         return y;
     }
-    [[nodiscard]] auto getZ() const -> const std::vector<SimTK::Real>& {
+    const std::vector<SimTK::Real>& getZ() const {
         return z;
     }
 
     void PrintRst7() const;
-    void WriteRst7(const std::string& fileName) const;
+    void WriteRst7(std::string FN) const;
+
+    /** @name Z Matrix and BAT functions
+     */
+
+    /**@{**/
+
+    //////////////////////////////////
+    /////      Z Matrix BAT      /////
+    //////////////////////////////////
+
+    // Function to find and return the value for a given AtomIndex
+    SimTK::Vec3 findAtomTarget(const SimTK::Compound::AtomTargetLocations& atomTargets,
+                               SimTK::Compound::AtomIndex searchIndex) const;
+
+    void setZMatrixTable(const std::vector<std::vector<int>>& newZMatrixTable);
+
+    // zmatrixbat_ Setter for a specific entry
+    void setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value);
+
+    // zmatrixbat_ Function to get a given row
+    const std::vector<SimTK::Real>& getZMatrixBATRow(size_t rowIndex) const;
+
+    // zmatrixbat_ Function to get a given row
+    std::vector<SimTK::Real>& updZMatrixBATRow(size_t rowIndex);
+
+    // Allocate Z Matrix BAT
+    void reallocZMatrixBAT();
+
+    // zmatrixbat_
+    void calcZMatrixBAT(
+        const std::vector<std::vector<std::pair<RoboAtom*, SimTK::Vec3>>>& otherWorldsAtomsLocations);
+
+    void calcZMatrixBAT_WORK();
+
+    // zmatrixbat_ Function to get the value for a given row and column in zMatrixBAT
+    SimTK::Real getZMatrixBATValue(size_t rowIndex, size_t colIndex) const;
+
+    // zmatrixbat_ Function to print the zMatrixBAT
+    void PrintZMatrixBAT() const;
+
+    // zmatrixbat_  Function to add a new row to the zMatrixBAT
+    void addZMatrixBATRow(const std::vector<SimTK::Real>& newRow);
 
     /**
      * @brief zmatrixbat_ Get log of the Cartesian->BAT Jacobian
      * @param
      */
-    auto calcInternalBATJacobianLog() -> SimTK::Real;
+    SimTK::Real calcInternalBATJacobianLog();
 
     // Incrementer function for nofSamples
-    void incrementWorldsNofSamples() {
-        ++allWorldsNofSamples;
-    }
-    void incrementWorldsNofSamples(int howMany) {
-        allWorldsNofSamples += howMany;
-    }
+    void incrementWorldsNofSamples();
+    void incrementWorldsNofSamples(int howMany);
     void incrementNofSamples() {
         nofSamples++;
     }
     void incrementNofSamples(int howMany) {
         nofSamples += howMany;
     }
+
+    std::vector<std::vector<SimTK::Real>>& getZMatrixBATPointer() {
+        return (zMatrixBAT);
+    }
+
+    //////////////////////////////////
+    /////      Z Matrix BAT      /////
+    //////////////////////////////////
 
     /**@}**/
 
@@ -180,13 +182,21 @@ class Replica {
 
     std::vector<SimTK::Real> x, y, z;
 
-    // //////////////////////////////////
-    // /////      Z Matrix BAT      /////
-    // //////////////////////////////////
+    //////////////////////////////////
+    /////      Z Matrix BAT      /////
+    //////////////////////////////////
+    std::vector<RoboAtom>& atoms;
+
+    std::vector<int>& roots;
+    Span<Topology> topologies;
+    // InternalCoordinates& internCoords;
 
     std::vector<std::vector<int>>& zMatrixTable;
     std::vector<std::vector<SimTK::Real>> zMatrixBAT;
 
+    // std::vector<SimTK::QIndex> QIxs;
+
+    // BAT
     int allWorldsNofSamples = 0;
     int nofSamples = 0;
 };

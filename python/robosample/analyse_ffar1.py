@@ -1,5 +1,5 @@
 """
-analyze_worldD_poster.py  -  FFAR1 World-D  |  poster-quality figures
+analyze_worldD_poster.py  –  FFAR1 World-D  |  poster-quality figures
 ======================================================================
 Fixes vs previous version
 --------------------------
@@ -28,7 +28,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from scipy import signal, stats
 
-# -- global poster style -------------------------------------------------------
+# ── global poster style ───────────────────────────────────────────────────────
 plt.rcParams.update(
     {
         "font.size": 13,
@@ -47,7 +47,7 @@ plt.rcParams.update(
     }
 )
 
-# -- identity ------------------------------------------------------------------
+# ── identity ──────────────────────────────────────────────────────────────────
 DIAG_RESID = [14, 37, 41, 62, 86, 110, 130, 146, 182, 209, 223, 238, 247, 257, 290]
 HELIX_LABEL = [
     "TM1-N",
@@ -100,7 +100,7 @@ def _c(tm):
     return TM_COLOR.get(tm.split("-")[0], "gray")
 
 
-# -- load / aggregate ----------------------------------------------------------
+# ── load / aggregate ──────────────────────────────────────────────────────────
 def load_vectors(path):
     df = pd.read_csv(
         path,
@@ -124,7 +124,7 @@ def load_vectors(path):
     raw_unique = df.frame.nunique()
     rows_per_block = (df.frame == df.frame.iloc[0]).sum()
 
-    # -- Auto-detect whether "frame" col is really a pair index ---------------
+    # ── Auto-detect whether "frame" col is really a pair index ───────────────
     # Signature: small number of unique values (≈ n_pairs) that repeat
     # throughout the file, rather than a monotonically advancing frame counter.
     expected_frames = len(df) // rows_per_block
@@ -142,7 +142,7 @@ def load_vectors(path):
     else:
         print(f"  ✓  frame column looks correct: {raw_unique} unique frames")
 
-    # -- Helix label mapping ---------------------------------------------------
+    # ── Helix label mapping ───────────────────────────────────────────────────
     idx_order = df[df.frame == df.frame.iloc[0]]["inboard_idx"].tolist()
     df["helix"] = df["inboard_idx"].map(
         {idx: HELIX_LABEL[i] for i, idx in enumerate(idx_order[: len(HELIX_LABEL)])}
@@ -193,7 +193,7 @@ def decompose_wrt_normal(df, geo_df):
             {"nx": 0.0, "ny": 0.0, "nz": 1.0}
         )
 
-    # -- Force decomposition ---------------------------------------------------
+    # ── Force decomposition ───────────────────────────────────────────────────
     # scalar projection onto normal: F · n̂
     df["F_axial_signed"] = df.fx * df.nx + df.fy * df.ny + df.fz * df.nz
     df["F_axial"] = df["F_axial_signed"].abs()
@@ -204,7 +204,7 @@ def decompose_wrt_normal(df, geo_df):
     df["_flz"] = df.fz - df.F_axial_signed * df.nz
     df["F_lat"] = np.sqrt(df._flx**2 + df._fly**2 + df._flz**2)
 
-    # -- Torque decomposition (same logic) ------------------------------------
+    # ── Torque decomposition (same logic) ────────────────────────────────────
     df["T_axial_signed"] = df.tx * df.nx + df.ty * df.ny + df.tz * df.nz
     df["T_axial"] = df["T_axial_signed"].abs()
 
@@ -244,9 +244,9 @@ def aggregate_by_tm(df):
     return pd.concat(rows, ignore_index=True)
 
 
-# -----------------------------------------------------------------------------
-# Fig 1 - Force & torque decomposition (bar chart)
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+# Fig 1 – Force & torque decomposition (bar chart)
+# ─────────────────────────────────────────────────────────────────────────────
 def fig1_force_decomposition(df, tm_df, out="fig1_force_decomposition.png"):
     grp = tm_df.groupby("helix")[["F_lat", "F_axial", "T_mag"]]
     means = grp.mean().reindex(TM_LIST)
@@ -280,7 +280,7 @@ def fig1_force_decomposition(df, tm_df, out="fig1_force_decomposition.png"):
     ax.set_xticklabels(TM_LIST)
     ax.set_ylabel("Mean magnitude  (kcal mol⁻¹ Å⁻¹)")
     ax.set_title(
-        "Fig 1 - Mechanical loading at each transmembrane helix\n"
+        "Fig 1 – Mechanical loading at each transmembrane helix\n"
         "(force decomposed relative to membrane normal)"
     )
     ax.legend(loc="upper right", fontsize=9)
@@ -291,9 +291,9 @@ def fig1_force_decomposition(df, tm_df, out="fig1_force_decomposition.png"):
     return means, stds
 
 
-# -----------------------------------------------------------------------------
-# Fig 2 - Helix tilt + unwrapped rotation
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+# Fig 2 – Helix tilt + unwrapped rotation
+# ─────────────────────────────────────────────────────────────────────────────
 def _delta_tilt(series):
     """Tilt relative to frame 0. No unwrapping needed — tilt has no periodicity."""
     vals = series.values.copy()
@@ -322,12 +322,12 @@ def fig2_helix_tilt(geo_df, out="fig2_helix_tilt.png"):
 
     axes[0].set_ylabel("ΔTilt  (°, relative to frame 0)")
     axes[0].set_xlabel("Frame")
-    axes[0].set_title("Fig 2a - Relative helix tilt vs membrane normal")
+    axes[0].set_title("Fig 2a – Relative helix tilt vs membrane normal")
     axes[0].axhline(0, color="k", lw=0.5, ls="--")  # reference line
 
     axes[1].set_ylabel("ΔRotation  (°, relative to frame 0)")
     axes[1].set_xlabel("Frame")
-    axes[1].set_title("Fig 2b - Relative helix rotation in membrane plane")
+    axes[1].set_title("Fig 2b – Relative helix rotation in membrane plane")
     axes[1].axhline(0, color="k", lw=0.5, ls="--")
 
     for ax in axes:
@@ -339,9 +339,9 @@ def fig2_helix_tilt(geo_df, out="fig2_helix_tilt.png"):
     print(f"Saved {out}")
 
 
-# -----------------------------------------------------------------------------
-# Fig 3 - Force, torque, u, uDot heatmaps (4 panels, shared x-axis)
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+# Fig 3 – Force, torque, u, uDot heatmaps (4 panels, shared x-axis)
+# ─────────────────────────────────────────────────────────────────────────────
 def fig3_heatmap_combined(tm_df, out="fig3_heatmap_combined.png"):
     """
     Five stacked heatmaps sharing a common frame axis:
@@ -357,35 +357,35 @@ def fig3_heatmap_combined(tm_df, out="fig3_heatmap_combined.png"):
     panels = [
         (
             "F_lat",
-            "Fig 3a - Lateral force (in membrane plane) per helix",
+            "Fig 3a – Lateral force (in membrane plane) per helix",
             "|F_lat|  (kcal mol⁻¹ Å⁻¹)",
             CMAP_SEQ,
             False,
         ),
         (
             "F_axial",
-            "Fig 3b - Axial force (along membrane normal) per helix",
+            "Fig 3b – Axial force (along membrane normal) per helix",
             "|F_axial|  (kcal mol⁻¹ Å⁻¹)",
             CMAP_SEQ,
             False,
         ),
         (
             "T_mag",
-            "Fig 3c - Torque magnitude |τ| per helix",
+            "Fig 3c – Torque magnitude |τ| per helix",
             "|τ|  (kcal mol⁻¹)",
             CMAP_SEQ,
             False,
         ),
         (
             "u",
-            "Fig 3d - Generalised coordinate u (φ dihedral, mean per TM)",
+            "Fig 3d – Generalised coordinate u (φ dihedral, mean per TM)",
             "u  (rad)",
             CMAP_DIV,
             True,
         ),
         (
             "uDot",
-            "Fig 3e - Generalised velocity u̇ (mean per TM)",
+            "Fig 3e – Generalised velocity u̇ (mean per TM)",
             "u̇  (rad ps⁻¹)",
             CMAP_DIV,
             True,
@@ -425,9 +425,9 @@ def fig3_heatmap_combined(tm_df, out="fig3_heatmap_combined.png"):
     print(f"Saved {out}")
 
 
-# -----------------------------------------------------------------------------
-# Fig 5 - Cross-correlation |F| ↔ u  (summary heatmap of peak lag + r)
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+# Fig 5 – Cross-correlation |F| ↔ u  (summary heatmap of peak lag + r)
+# ─────────────────────────────────────────────────────────────────────────────
 def fig5_xcorr_summary(
     tm_df,
     out_detail="fig5a_xcorr_detail.png",
@@ -474,7 +474,7 @@ def fig5_xcorr_summary(
         ax.set_ylim(-1.05, 1.05)
     axes[-1].set_xlabel("Lag (frames)  — positive: |F| leads u")
     fig.suptitle(
-        "Fig 5a - Cross-correlation  |F| ↔ u  per TM helix", y=1.002, fontsize=13
+        "Fig 5a – Cross-correlation  |F| ↔ u  per TM helix", y=1.002, fontsize=13
     )
     plt.tight_layout()
     plt.savefig(out_detail, dpi=200, bbox_inches="tight")
@@ -496,7 +496,7 @@ def fig5_xcorr_summary(
         plt.colorbar(im, ax=ax, fraction=0.06, pad=0.04)
         for j, v in enumerate(data[0]):
             ax.text(j, 0, f"{v:.2f}", ha="center", va="center", fontsize=10, color="k")
-    fig.suptitle("Fig 5b - Cross-correlation summary: peak lag and peak r", fontsize=13)
+    fig.suptitle("Fig 5b – Cross-correlation summary: peak lag and peak r", fontsize=13)
     plt.tight_layout()
     plt.savefig(out_summary, dpi=200)
     plt.close()
@@ -504,9 +504,9 @@ def fig5_xcorr_summary(
     return peak_lag, peak_r
 
 
-# -----------------------------------------------------------------------------
-# Fig 6 - Force vs tilt scatter
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+# Fig 6 – Force vs tilt scatter
+# ─────────────────────────────────────────────────────────────────────────────
 def fig6_force_vs_tilt(tm_df, geo_df, out="fig6_force_vs_tilt.png"):
     ncols = 4
     nrows = 2
@@ -536,7 +536,7 @@ def fig6_force_vs_tilt(tm_df, geo_df, out="fig6_force_vs_tilt.png"):
     for j in range(i + 1, len(axes)):
         axes[j].set_visible(False)
     fig.suptitle(
-        "Fig 6 - Mean boundary force vs helix tilt  (mechanical-geometric coupling)",
+        "Fig 6 – Mean boundary force vs helix tilt  (mechanical–geometric coupling)",
         fontsize=13,
     )
     plt.tight_layout()
@@ -546,9 +546,9 @@ def fig6_force_vs_tilt(tm_df, geo_df, out="fig6_force_vs_tilt.png"):
     return results
 
 
-# -----------------------------------------------------------------------------
-# Fig 7 - Interhelical distances
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+# Fig 7 – Interhelical distances
+# ─────────────────────────────────────────────────────────────────────────────
 PAIRS = [
     ("TM3", "TM5"),
     ("TM3", "TM6"),
@@ -593,7 +593,7 @@ def fig7_interhelical(geo_df, out="fig7_interhelical.png"):
             alpha=0.15,
             color=COLOR,
         )
-        ax.set_title(f"{h1}-{h2}")
+        ax.set_title(f"{h1}–{h2}")
         ax.set_ylabel("Distance  (Å)")
         ax.legend(fontsize=8)
         stats_rows.append(
@@ -608,7 +608,7 @@ def fig7_interhelical(geo_df, out="fig7_interhelical.png"):
 
     axes[-1].set_xlabel("Frame")
     axes[-2].set_xlabel("Frame")
-    fig.suptitle("Fig 5 - Inter-helix centroid distances", fontsize=13)
+    fig.suptitle("Fig 5 – Inter-helix centroid distances", fontsize=13)
     plt.tight_layout()
     plt.savefig(out, dpi=200)
     plt.close()
@@ -616,9 +616,9 @@ def fig7_interhelical(geo_df, out="fig7_interhelical.png"):
     return pd.DataFrame(stats_rows)
 
 
-# -----------------------------------------------------------------------------
-# Fig 8 - RMSD in internal coordinates (u)
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+# Fig 8 – RMSD in internal coordinates (u)
+# ─────────────────────────────────────────────────────────────────────────────
 def fig8_internal_rmsd(df, out="fig8_internal_rmsd.png"):
     """
     For each TM: RMSD of u relative to frame-0 value.
@@ -643,7 +643,7 @@ def fig8_internal_rmsd(df, out="fig8_internal_rmsd.png"):
 
     ax.set_xlabel("Frame")
     ax.set_ylabel("RMSD  u  (rad)")
-    ax.set_title("Fig 8 - Internal-coordinate RMSD  (φ dihedral drift per TM helix)")
+    ax.set_title("Fig 8 – Internal-coordinate RMSD  (φ dihedral drift per TM helix)")
     ax.legend(ncol=4)
     plt.tight_layout()
     plt.savefig(out, dpi=200)
@@ -651,9 +651,9 @@ def fig8_internal_rmsd(df, out="fig8_internal_rmsd.png"):
     print(f"Saved {out}")
 
 
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 # Statistics summary
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 def compute_statistics(tm_df):
     cols = ["F_mag", "F_lat", "F_axial", "T_mag", "u", "uDot"]
     rows = []
@@ -670,9 +670,9 @@ def compute_statistics(tm_df):
     return sdf
 
 
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 # Helix geometry (MDTraj) — dynamic membrane normal from phosphate COMs
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 def _membrane_normal(xyz_all, p_indices, p_upper_mask):
@@ -794,14 +794,14 @@ def compute_helix_geometry(
         print("MDTraj not found — pip install mdtraj")
         return None
 
-    # -- Load topology --------------------------------------------------------
+    # ── Load topology ────────────────────────────────────────────────────────
     try:
         top_obj = md.load_topology(top)
     except Exception as e:
         print(f"Topology load failed: {e}")
         return None
 
-    # -- Collect Cα indices per TM helix --------------------------------------
+    # ── Collect Cα indices per TM helix ──────────────────────────────────────
     ca_indices = {}
     for tm, (r0, r1) in HELIX_RANGES.items():
         idx = [
@@ -814,7 +814,7 @@ def compute_helix_geometry(
         else:
             print(f"  Warning: {tm} has only {len(idx)} Cα — skipped.")
 
-    # -- Collect phosphorus indices --------------------------------------------
+    # ── Collect phosphorus indices ────────────────────────────────────────────
     p_indices = np.array(
         [
             a.index
@@ -829,7 +829,7 @@ def compute_helix_geometry(
         )
     print(f"Found {len(p_indices)} phosphorus atoms for membrane normal.")
 
-    # -- Atom indices to load (Cα + P) ----------------------------------------
+    # ── Atom indices to load (Cα + P) ────────────────────────────────────────
     all_ca = np.unique(np.concatenate(list(ca_indices.values())))
     all_load = np.unique(np.concatenate([all_ca, p_indices]))
 
@@ -837,7 +837,7 @@ def compute_helix_geometry(
     ca_local = {tm: np.searchsorted(all_load, ca_indices[tm]) for tm in ca_indices}
     p_local = np.searchsorted(all_load, p_indices)
 
-    # -- Leaflet assignment from first chunk -----------------------------------
+    # ── Leaflet assignment from first chunk ───────────────────────────────────
     first_chunk = next(
         iter(
             md.iterload(
@@ -847,7 +847,7 @@ def compute_helix_geometry(
     )
     upper_mask = _assign_leaflets_first_frame(first_chunk, p_local)
 
-    # -- Main trajectory loop --------------------------------------------------
+    # ── Main trajectory loop ──────────────────────────────────────────────────
     records, frame_counter = [], 0
 
     for chunk in md.iterload(traj, top=top_obj, stride=stride, atom_indices=all_load):
@@ -893,9 +893,9 @@ def compute_helix_geometry(
     return geo_df
 
 
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 # Write interpretations + data file
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 
 # Section explanations (static) -----------------------------------------------
 _SECTION_TEXT = {
@@ -905,18 +905,18 @@ All numerical values rounded to 2 decimal places.
 Columns in data tables separated by tabs.
 This file is intended to be read by an AI for automatic interpretation.
 """,
-    "fig1": """Fig 1 - Force & torque decomposition
+    "fig1": """Fig 1 – Force & torque decomposition
 =====================================
 What is plotted
   Three grouped bars per TM helix (mean +/- 1 SD over all frames):
-    Lateral |F|  - force in the membrane plane (xy). Drives in-plane translation/tilt.
-    Axial   |Fz| - force along membrane normal (z). Drives insertion/extraction.
-    Torque  |t|  - rotational moment around the inboard bond. Drives helix spin.
+    Lateral |F|  – force in the membrane plane (xy). Drives in-plane translation/tilt.
+    Axial   |Fz| – force along membrane normal (z). Drives insertion/extraction.
+    Torque  |t|  – rotational moment around the inboard bond. Drives helix spin.
   Large SD = dynamic fluctuating load. Small SD = steady persistent load.
   High lateral + low torque = helix pushed sideways by lipid/neighbour.
   High torque = twisting drive (relevant for TM5/TM6 activation rotation).
 """,
-    "fig2": """Fig 2 - Helix tilt and unwrapped azimuthal rotation
+    "fig2": """Fig 2 – Helix tilt and unwrapped azimuthal rotation
 =====================================================
 What is plotted
   Tilt     = angle between helix principal axis (Ca PCA) and membrane normal z (degrees).
@@ -926,7 +926,7 @@ What is plotted
   Monotone rotation drift = sustained spin. Oscillation = restoring torque at preferred register.
   Large TM6 rotation is associated with DRY-motif exposure and G-protein coupling.
 """,
-    "fig3": """Fig 3 - Force / torque time series (per TM helix, per frame)
+    "fig3": """Fig 3 – Force / torque time series (per TM helix, per frame)
 =============================================================
 What is plotted
   |F| = total force magnitude (kcal/mol/Ang). |T| = torque magnitude (kcal/mol).
@@ -935,7 +935,7 @@ What is plotted
   Transient spikes = conformational events (lipid rearrangement, water ingress, transition).
   Correlated spikes across multiple helices = collective bundle rearrangement.
 """,
-    "fig4": """Fig 4 - Generalised coordinate u and velocity uDot (per TM helix, per frame)
+    "fig4": """Fig 4 – Generalised coordinate u and velocity uDot (per TM helix, per frame)
 =============================================================================
 What is plotted
   u    = mean phi dihedral at helix boundaries (radians).
@@ -944,7 +944,7 @@ What is plotted
   High |uDot| = dynamically active pivot point.
   Rapid sign alternation in uDot = high-frequency local oscillation (not rigid-body motion).
 """,
-    "fig5": """Fig 5 - Cross-correlation |F| vs u per TM helix
+    "fig5": """Fig 5 – Cross-correlation |F| vs u per TM helix
 ================================================
 What is plotted
   Normalised cross-correlation between |F(t)| and u(t). Lag in frames.
@@ -953,7 +953,7 @@ What is plotted
   Zero lag peak: simultaneous coupling (underdamped oscillator).
   95% CI for white noise shown as reference.
 """,
-    "fig6": """Fig 6 - Mean boundary force vs helix tilt (scatter)
+    "fig6": """Fig 6 – Mean boundary force vs helix tilt (scatter)
 ====================================================
 What is plotted
   X = mean |F| at TM boundary residues. Y = helix tilt (degrees). One point per frame.
@@ -963,7 +963,7 @@ What is plotted
   Slope = compliance: delta-tilt per unit force.
   n.s.: force and tilt decoupled at this timescale.
 """,
-    "fig7": """Fig 7 - Inter-helix centroid distances
+    "fig7": """Fig 7 – Inter-helix centroid distances
 =======================================
 What is plotted
   Euclidean distance between Ca centroids of selected TM helix pairs (Angstrom).
@@ -975,7 +975,7 @@ What is plotted
   Increasing TM3-TM6 = TM6 outward swing (G-protein coupling geometry).
   Delta_mean > 1.5 Ang with reduced SD = significant ligand effect.
 """,
-    "fig8": """Fig 8 - Internal-coordinate RMSD (phi dihedral drift per TM helix)
+    "fig8": """Fig 8 – Internal-coordinate RMSD (phi dihedral drift per TM helix)
 ===================================================================
 What is plotted
   RMSD of u relative to frame 0, averaged over boundary residues per TM helix (radians).
@@ -1104,7 +1104,7 @@ def write_interpretations(
     S = _SECTION_TEXT
     lines = [S["header"]]
 
-    # -- Fig 1 --
+    # ── Fig 1 ──
     lines += [S["fig1"]]
     if tm_df is not None:
         lines += ["DATA (mean per TM per frame, tab-separated):"]
@@ -1116,7 +1116,7 @@ def write_interpretations(
             piv = tm_df.pivot(index="frame", columns="helix", values=col)[TM_LIST]
             lines += [f"  {label}:", _ts_block(piv), ""]
 
-    # -- Fig 2 --
+    # ── Fig 2 ──
     lines += [S["fig2"]]
     if geo_df is not None:
         for col, label in [
@@ -1131,26 +1131,26 @@ def write_interpretations(
             piv = sub.pivot(index="frame", columns="helix", values=col)[TM_LIST]
             lines += [f"  {label}:", _ts_block(piv), ""]
 
-    # -- Fig 3 --
+    # ── Fig 3 ──
     lines += [S["fig3"]]
     if tm_df is not None:
         for col, label in [("F_mag", "|F|"), ("T_mag", "|T|")]:
             piv = tm_df.pivot(index="frame", columns="helix", values=col)[TM_LIST]
             lines += [f"  {label}:", _ts_block(piv), ""]
 
-    # -- Fig 4 --
+    # ── Fig 4 ──
     lines += [S["fig4"]]
     if tm_df is not None:
         for col, label in [("u", "u_rad"), ("uDot", "uDot_rad_per_ps")]:
             piv = tm_df.pivot(index="frame", columns="helix", values=col)[TM_LIST]
             lines += [f"  {label}:", _ts_block(piv), ""]
 
-    # -- Fig 5 --
+    # ── Fig 5 ──
     lines += [S["fig5"]]
     if peak_lag is not None and peak_r is not None:
         lines += [S["xcorr_note"], _xcorr_block(peak_lag, peak_r), ""]
 
-    # -- Fig 6 --
+    # ── Fig 6 ──
     lines += [S["fig6"]]
     if tm_df is not None and geo_df is not None:
         lines += ["  DATA (mean |F| per TM per frame):"]
@@ -1160,19 +1160,19 @@ def write_interpretations(
         piv2 = geo_df.pivot(index="frame", columns="helix", values="tilt")[TM_LIST]
         lines += [_ts_block(piv2), ""]
 
-    # -- Fig 7 --
+    # ── Fig 7 ──
     lines += [S["fig7"]]
     if geo_df is not None:
         lines += ["  DATA (centroid distances in Ang, tab-separated):"]
         lines += [_dist_block(geo_df, PAIRS), ""]
 
-    # -- Fig 8 --
+    # ── Fig 8 ──
     lines += [S["fig8"]]
     if df is not None:
         lines += ["  DATA (internal-coordinate RMSD, radians):"]
         lines += [_rmsd_block(df), ""]
 
-    # -- Statistics --
+    # ── Statistics ──
     lines += [S["stats_note"]]
     if stats_df is not None:
         lines += [_stat_block(stats_df.round(2)), ""]
@@ -1182,9 +1182,9 @@ def write_interpretations(
     print(f"Saved {path}")
 
 
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 # MAIN
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     vec_path = "vmd/vectors.dat"
     top_path = "examples/ffar1.prmtop"

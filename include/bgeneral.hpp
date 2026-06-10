@@ -83,12 +83,21 @@ enum class ReplicaMixingScheme : std::uint8_t {
     Neighboring = 1
 };
 
-enum class RunType : std::uint8_t {
+enum class RUN_TYPE : std::uint8_t {
     Default = 0,
     REMC,      // Replica Exchange Monte Carlo
     RENEMC,    // Replica Exchange Non-Equilibrium Monte Carlo
     RENE,      // Replica Exchange Non-Equilibrium
     REBASONTOP // Replica
+};
+
+enum class TopologyRangeType : std::uint8_t {
+    Atom = 0,
+    Bond,
+    Angle,
+    PeriodicTorsion,
+    ImproperHarmonicTorsion,
+    NofTopologyRangeTypes
 };
 
 /*

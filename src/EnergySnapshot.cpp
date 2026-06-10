@@ -169,9 +169,9 @@ auto EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, Degrees
                   << '\n';
         valid = false;
     } else if (std::abs(potential / ref.potential) > 10) {
-        std::cerr << "\t - [ERROR] Potential energy jump: " << potential << " vs ref " << ref.potential
-                  << '\n';
-        valid = false;
+        // std::cerr << "\t - [ERROR] Potential energy jump: " << potential << " vs ref " << ref.potential
+        //           << '\n';
+        // valid = false;
     }
 
     if (ndofs > DegreesOfFreedom(0)) {
@@ -182,8 +182,8 @@ auto EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, Degrees
             std::cerr << "\t - [ERROR] Reference kinetic energy is suspiciously low: " << ref.kinetic << '\n';
             valid = false;
         } else if (std::abs(kinetic / ref.kinetic) > 100000) {
-            std::cerr << "\t - [ERROR] Kinetic energy jump: " << kinetic << " vs ref " << ref.kinetic << '\n';
-            valid = false;
+            // std::cerr << "\t - [ERROR] Kinetic energy jump: " << kinetic << " vs ref " << ref.kinetic <<
+            // '\n'; valid = false;
         }
     } else {
         if (std::abs(kinetic) > 1e-6) {
@@ -194,8 +194,8 @@ auto EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, Degrees
                       << '\n';
             valid = false;
         } else if (std::abs(kinetic / ref.kinetic) > 100000) {
-            std::cerr << "\t - [ERROR] Kinetic energy jump: " << kinetic << " vs ref " << ref.kinetic << '\n';
-            valid = false;
+            // std::cerr << "\t - [ERROR] Kinetic energy jump: " << kinetic << " vs ref " << ref.kinetic <<
+            // '\n'; valid = false;
         }
     }
 

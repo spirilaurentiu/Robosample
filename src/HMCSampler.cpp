@@ -25,7 +25,7 @@
 #include "MassProperties.h"
 #include "Mat.h"
 #include "MobilizedBody.h"
-#include "OpenMMContext.hpp"
+#include "OpenMM.hpp"
 #include "SmallMatrixMixed.h"
 #include "Stage.h"
 #include "State.h"
@@ -128,7 +128,7 @@ void HMCSampler::initialize() {
  */
 void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOutStream, bool verbose) {
     // Tell OpenMM what force group to use
-    OpenMMContext::get().setActiveForceGroup(world.get().getOwnIndex());
+    OPENMM::get().setActiveForceGroup(world.get().getOwnIndex());
 
     system.get().realize(state, SimTK::Stage::Position);
 
@@ -688,7 +688,7 @@ void HMCSampler::setVelocitiesToZero(SimTK::State& someState) {
     // Set velocities to 0
     if (this->integratorType == IntegratorType::OpenMMVelocityVerlet) {
         uint32_t seed = randomEngine() >> 32;
-        OpenMMContext::get().setVelocitiesToTemperature(0, seed);
+        OPENMM::get().setVelocitiesToTemperature(0, seed);
     } else {
         someState.updU() = 0;
     }
@@ -700,7 +700,7 @@ void HMCSampler::setVelocitiesToZero(SimTK::State& someState) {
 void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState) {
     if (this->integratorType == IntegratorType::OpenMMVelocityVerlet) {
         uint32_t seed = randomEngine() >> 32;
-        OpenMMContext::get().setVelocitiesToTemperature(this->boostT, seed);
+        OPENMM::get().setVelocitiesToTemperature(this->boostT, seed);
     } else {
         // __begin__ DRILLING //
         // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& SimTK::Vector
@@ -1574,7 +1574,7 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState) {
     RandomCache.generateGaussianVelocities();
 }
 
-inline auto dot(const std::vector<OpenMMContext::Vec3>& first, const std::vector<OpenMMContext::Vec3>& second)
+inline auto dot(const std::vector<OpenMM::Vec3>& first, const std::vector<OpenMM::Vec3>& second)
     -> SimTK::Real {
     // Ensure the vectors have matching dimensions
     if (first.size() != second.size()) {
@@ -1592,9 +1592,9 @@ inline auto dot(const std::vector<OpenMMContext::Vec3>& first, const std::vector
 }
 
 // /// Compute delta = q_fwd - q_bwd atom-wise.
-// auto deltaQ(const std::vector<OpenMMContext::Vec3>& q_fwd, const std::vector<OpenMMContext::Vec3>& q_bwd)
-//     -> std::vector<OpenMMContext::Vec3> {
-//     std::vector<OpenMMContext::Vec3> deltaQ(q_fwd.size());
+// auto deltaQ(const std::vector<OpenMM::Vec3>& q_fwd, const std::vector<OpenMM::Vec3>& q_bwd)
+//     -> std::vector<OpenMM::Vec3> {
+//     std::vector<OpenMM::Vec3> deltaQ(q_fwd.size());
 //     for (size_t i = 0; i < q_fwd.size(); ++i) {
 //         deltaQ[i] = q_fwd[i] - q_bwd[i];
 //     }
@@ -1606,8 +1606,8 @@ inline auto dot(const std::vector<OpenMMContext::Vec3>& first, const std::vector
 //     return (dot(dq, plus.momenta) < 0.0) || (dot(dq, minus.momenta) < 0.0);
 // }
 
-// auto HMCSampler::buildTreeWithOpenMM(std::vector<OpenMMContext::Vec3>& positions,
-//                                      std::vector<OpenMMContext::Vec3>& velocities,
+// auto HMCSampler::buildTreeWithOpenMM(std::vector<OpenMM::Vec3>& positions,
+//                                      std::vector<OpenMM::Vec3>& velocities,
 //                                      int depth,
 //                                      NUTSDirection direction,
 //                                      SimTK::Real logU,
@@ -1617,7 +1617,7 @@ inline auto dot(const std::vector<OpenMMContext::Vec3>& first, const std::vector
 //     if (depth == 0) {
 //         int velocitySign = (direction == NUTSDirection::Backward) ? -1 : 1;
 
-//         OpenMMContext::get().integrateTrajectory(positions,
+//         OPENMM::get().integrateTrajectory(positions,
 //                                           velocitySign,
 //                                           velocities,
 //                                           1,
@@ -1626,7 +1626,7 @@ inline auto dot(const std::vector<OpenMMContext::Vec3>& first, const std::vector
 //                                           node.proposedEnergy.kinetic);
 
 //         // Calculate momenta from velocities
-//         std::vector<OpenMMContext::Vec3> momenta(velocities.size());
+//         std::vector<OpenMM::Vec3> momenta(velocities.size());
 //         for (const auto& topology : topologies) {
 //             for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topology.getNumAtoms(); ++cAIx) {
 //                 const auto& atom = topology.getAtoms()[cAIx];
@@ -1736,7 +1736,7 @@ void HMCSampler::buildTreeWithSimbody(SimTK::State& state,
         copyVec(nodeOut.proposal_p, p_ptr, n);
 
         // Energies
-        nodeOut.proposedEnergy.potential = OpenMMContext::get().evaluatePotentialEnergyFromPositionsCache();
+        nodeOut.proposedEnergy.potential = OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
         nodeOut.proposedEnergy.kinetic =
             matter.get().calcKineticEnergy(state); // TODO * this->unboostKEFactor?
         if (useFixman) {
@@ -1826,10 +1826,10 @@ void HMCSampler::buildTreeWithSimbody(SimTK::State& state,
 
 //     // Initial boundary Setup
 //     dumm.get().updateOpenMMPositionsFromState(state);
-//     const auto initialPositions = OpenMMContext::get().getPositionsCache();
+//     const auto initialPositions = OPENMM::get().getPositionsCache();
 
-//     const auto& initialVelocities = OpenMMContext::get().getVelocitiesCache();
-//     std::vector<OpenMMContext::Vec3> initialMomenta(initialVelocities.size());
+//     const auto& initialVelocities = OPENMM::get().getVelocitiesCache();
+//     std::vector<OpenMM::Vec3> initialMomenta(initialVelocities.size());
 //     for (const auto& topology : topologies) {
 //         for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topology.getNumAtoms(); ++cAIx) {
 //             const auto& atom = topology.getAtoms()[cAIx];
@@ -1849,8 +1849,8 @@ void HMCSampler::buildTreeWithSimbody(SimTK::State& state,
 //     tree.numValidSlices = 1;
 
 //     // We need two states to track the "left-most" and "right-most" edges
-//     auto leftEdgePositions = OpenMMContext::get().getPositionsCache();
-//     auto leftEdgeVelocities = OpenMMContext::get().getVelocitiesCache();
+//     auto leftEdgePositions = OPENMM::get().getPositionsCache();
+//     auto leftEdgeVelocities = OPENMM::get().getVelocitiesCache();
 //     auto rightEdgePositions = leftEdgePositions;
 //     auto rightEdgeVelocities = leftEdgeVelocities;
 
@@ -1946,7 +1946,7 @@ void HMCSampler::buildTreeWithSimbody(SimTK::State& state,
 //         system.get().realize(state, SimTK::Stage::Position);
 
 //         // Set velocities
-//         std::vector<OpenMMContext::Vec3> finalVelocities(finalMomenta.size());
+//         std::vector<OpenMM::Vec3> finalVelocities(finalMomenta.size());
 //         for (const auto& topology : topologies) {
 //             for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topology.getNumAtoms(); ++cAIx) {
 //                 const auto& atom = topology.getAtoms()[cAIx];
@@ -2434,26 +2434,44 @@ void HMCSampler::integrateTrajectory_Bounded(SimTK::State& someState) {
  * spherical distribution and HMC
  */
 void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
-    throw std::runtime_error("HMCSampler::integrateTrajectory_BoundHMC not implemented yet.");
-
-    std::cout << "Propose: BOUND_HMC integrator" << std::endl;
+    std::cout << "Propose: BOUND_HMC integrator\n";
     if (topologies.size() < 2) {
         std::cout << "BOUND integrators should only be used over many molecules\n";
     }
 
-    // Get the binding site center
+    const int LIGAND_TOPO_IX = 0;
+    const SimTK::MobilizedBodyIndex LIGAND_MBX = SimTK::MobilizedBodyIndex(1);
 
-    SimTK::Vec3 geometricCenter = world.get().getGeometricCenterOfSelection(someState);
+    const int RECEPTOR_TOPO_IX = 1;
+    const SimTK::MobilizedBodyIndex RECEPTOR_MBX = SimTK::MobilizedBodyIndex(2);
+
+    // Get the binding site center
+    // const SimTK::Vec3 geometricCenter = world.get().getGeometricCenterOfSelection(someState);
+
+    // Get binding site
+    std::vector<SimTK::Vec3> atomPositions;
+    for (const auto& atom : topologies[RECEPTOR_TOPO_IX].getAtoms()) {
+        const auto atomIx = atom.identity.compoundAtomIndex;
+        const auto atomPos = topologies[RECEPTOR_TOPO_IX].calcAtomLocationInGroundFrame(someState, atomIx);
+        atomPositions.push_back(atomPos);
+    }
+
+    SimTK::Vec3 geometricCenter{0, 0, 0};
+    for (const auto& pos : atomPositions) {
+        geometricCenter += pos;
+    }
+    geometricCenter /= atomPositions.size();
 
     // We *assume* the last molecule is the ligand.
     const int nOfBodies = matter.get().getNumBodies();
 
     // Print the geometric center (for debugging purposes)
-    std::cout << "HMCSampler Binding Site Center: \t" << geometricCenter << std::endl;
+    sphereRadius = 0.25;
+    std::cout << "HMCSampler Binding Site Center: \t" << geometricCenter << "\n";
     std::cout << "HMCSampler Binding Site Sphere Radius: \t" << sphereRadius << " nm\n";
 
     // Ligand
-    const SimTK::MobilizedBody& mobod_L = matter.get().getMobilizedBody(SimTK::MobilizedBodyIndex(2));
+    const SimTK::MobilizedBody& mobod_L = matter.get().getMobilizedBody(LIGAND_MBX);
     const SimTK::Vec3 COM_L = mobod_L.getBodyMassCenterStation(someState);
     const SimTK::Vec3 COM_G = mobod_L.findMassCenterLocationInGround(someState);
     const SimTK::Transform& X_FM = mobod_L.getMobilizerTransform(someState);
@@ -2464,9 +2482,9 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
     // includes rotation.
 
     // Determine the distance between center of mass of ligand and geometricCenter
-    SimTK::Vec3 ligandToSite = geometricCenter - COM_G;
+    const SimTK::Vec3 ligandToSite = geometricCenter - COM_G;
     std::cout << "ligandToSite(kick): " << ligandToSite << " ligandToSite Norm: " << ligandToSite.norm()
-              << std::endl;
+              << "\n";
 
     // If ligand is too far reposition on a sphere centered on the last body
     // center of mass
@@ -2474,11 +2492,10 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
         // if (1){
 
         std::cout << "Ligand too far from center (" << ligandToSite.norm() << "), repositioning...\n";
-        SimTK::Vec3 BR = {0, 0, 0};
 
         // Sample a random vector centered in 0 and expressed in G
         SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
-        SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
+        SimTK::Real phi = std::acos((2.0 * uniformRealDistribution(randomEngine)) - 1.0);
         SimTK::Vec3 randVec = {0, 0, 0};
 
         randVec[0] = sphereRadius * std::cos(theta) * std::sin(phi);
@@ -2487,13 +2504,10 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
         randVec *= uniformRealDistribution(randomEngine);
 
         // Move it in BindingSiteCenter (BS)
-        SimTK::Vec3 GR;
-        GR = randVec + (geometricCenter - X_PF.p());
-
-        BR = mobod_L.expressGroundVectorInBodyFrame(someState, GR);
+        const SimTK::Vec3 GR = randVec + (geometricCenter - X_PF.p());
 
         // Account for COM_L
-        BR = BR - COM_L;
+        SimTK::Vec3 BR = mobod_L.expressGroundVectorInBodyFrame(someState, GR) - COM_L;
 
         // Express BR in F
         BR = X_FM.R() * BR;
@@ -2521,8 +2535,8 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
         // Get distance between water and ligand
 
         const SimTK::Vec3 WL = mobod_W.findStationLocationInAnotherBody(someState, COM_W, mobod_L_PostTP);
-        std::cout << "COM_L: " << COM_G << " COM_GW: " << COM_GW << std::endl;
-        std::cout << "WL: " << WL << " WL_NORM: " << WL.norm() << std::endl;
+        std::cout << "COM_L: " << COM_G << " COM_GW: " << COM_GW << "\n";
+        std::cout << "WL: " << WL << " WL_NORM: " << WL.norm() << "\n";
 
         // If water is too far from ligand reposition on a sphere centered on the
         // ligand center of mass
@@ -2531,14 +2545,14 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
             // if (1){
 
             std::cout << "Water (" << waterIx << ") too far from ligand (" << WL.norm()
-                      << "),repositioning...\n ";
+                      << "), repositioning...\n ";
             SimTK::Vec3 BR = {0, 0, 0};
 
             // Sample a random vector centered in 0 and expressed in G
-            SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
-            SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
-            SimTK::Vec3 randVec = {0, 0, 0};
+            const SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
+            const SimTK::Real phi = std::acos((2.0 * uniformRealDistribution(randomEngine)) - 1.0);
 
+            SimTK::Vec3 randVec;
             randVec[0] = waterSphere * std::cos(theta) * std::sin(phi);
             randVec[1] = waterSphere * std::sin(theta) * std::sin(phi);
             randVec[2] = waterSphere * std::cos(phi);
@@ -2565,19 +2579,21 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
     }
     system.get().realize(someState, SimTK::Stage::Dynamics);
 
+    // Else, if not repositioned, integrate trajectory.
+    if (ligandToSite.norm() <= sphereRadius) {
+        perturbVelocities(someState);
 
-    throw std::runtime_error(
-        "HMCSampler::integrateTrajectory_BoundHMC not implemented yet. The next step would be to perturb "
-        "velocities, calculate energies and integrate the trajectory.");
+        currentEnergy.kinetic = matter.get().calcKineticEnergy(someState);
+        if (useFixman) {
+            currentEnergy.fixman = calcFixman(someState);
+            currentEnergy.logSineSqrGamma2 = (rootTopology)->calcLogSineSqrGamma2(someState);
+        } else {
+            currentEnergy.fixman = 0.0;
+            currentEnergy.logSineSqrGamma2 = 0.0;
+        }
 
-    // // Else, if not repositioned, integrate trajectory.
-    // if (ligandToSite.norm() <= sphereRadius) {
-    //     perturbVelocities(someState);
-    //     calcProposedKineticAndTotalEnergyOld(someState);
-
-    //     integrateTrajectory(someState, true);
-    //     system.get().realize(someState, SimTK::Stage::Dynamics);
-    // }
+        system.get().realize(someState, SimTK::Stage::Dynamics);
+    }
 }
 
 /** Integrate trajectory using task space forces */
@@ -2648,8 +2664,8 @@ void HMCSampler::integrateTrajectory_TaskSpace(SimTK::State& someState) {
 
 void HMCSampler::rebuildSimbodyTopologyFromOpenMMPositions(SimTK::State& someState) {
     // // Get a reference to OpenMM Cartesian positions (expressed in Ground)
-    // const auto& positions = OpenMMContext::get().getPositions();
-    // const auto& velocities = OpenMMContext::get().getVelocities();
+    // const auto& positions = OPENMM::get().getPositions();
+    // const auto& velocities = OPENMM::get().getVelocities();
 
     // // IMPORTANT:
     // // Although this may look like "updating positions in the State",
@@ -3471,7 +3487,8 @@ void HMCSampler::perturb_Q_QDot_QDotDot(SimTK::State& someState
     // perturbForces(someState, forcesPerturbMethod());
 
     // Pentru_Victor
-    teleport(someState);
+    // teleport(someState);
+    integrateTrajectory_BoundHMC(someState);
 }
 
 void HMCSampler::printDrilling(SimTK::State& someState) {
@@ -3641,13 +3658,13 @@ auto HMCSampler::sampleIteration(
                     dumm.get().updateOpenMMPositionsFromState(state);
                     // dumm.get().integrateTrajectoryWithOpenMM(MDStepsPerSample, timestep);
 
-                    OpenMMContext::get().integrateTrajectory(result.proposalOpenMM.positions,
-                                                             1,
-                                                             result.proposalOpenMM.momenta,
-                                                             MDStepsPerSample,
-                                                             timestep,
-                                                             result.proposedEnergy.potential,
-                                                             result.proposedEnergy.kinetic);
+                    OPENMM::get().integrateTrajectory(result.proposalOpenMM.positions,
+                                                      1,
+                                                      result.proposalOpenMM.momenta,
+                                                      MDStepsPerSample,
+                                                      timestep,
+                                                      result.proposedEnergy.potential,
+                                                      result.proposedEnergy.kinetic);
 
                     result.proposedEnergy.fixman = 0.0;
                     result.proposedEnergy.logSineSqrGamma2 = 0.0;
@@ -3662,14 +3679,11 @@ auto HMCSampler::sampleIteration(
                     integrationSuccessful =
                         timeStepper.get().stepTo(state.getTime() + (timestep * MDStepsPerSample));
 
-                    perturb_Q_QDot_QDotDot(world.get().integrator->updAdvancedState());
-
                     const auto advancedState = world.get().integrator->updAdvancedState();
-
                     system.get().realize(advancedState, SimTK::Stage::Velocity);
 
                     result.proposedEnergy.potential =
-                        OpenMMContext::get().evaluatePotentialEnergyFromPositionsCache();
+                        OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
                     result.proposedEnergy.kinetic =
                         this->unboostKEFactor * matter.get().calcKineticEnergy(advancedState);
                     if (useFixman) {
@@ -3688,6 +3702,34 @@ auto HMCSampler::sampleIteration(
                     result.depth = -1;
                 }
                 break;
+            case IntegratorType::BoundHMC: {
+                integrationSuccessful =
+                    timeStepper.get().stepTo(state.getTime() + (timestep * MDStepsPerSample));
+
+                perturb_Q_QDot_QDotDot(state);
+
+                const auto advancedState = world.get().integrator->updAdvancedState();
+                system.get().realize(advancedState, SimTK::Stage::Velocity);
+
+                result.proposedEnergy.potential = OPENMM::get().evaluatePotentialEnergyFromPositionsCache();
+                result.proposedEnergy.kinetic =
+                    this->unboostKEFactor * matter.get().calcKineticEnergy(advancedState);
+                if (useFixman) {
+                    result.proposedEnergy.fixman = calcFixman(advancedState);
+                    result.proposedEnergy.logSineSqrGamma2 =
+                        (rootTopology)->calcLogSineSqrGamma2(advancedState);
+                }
+                result.proposedEnergy.total = result.proposedEnergy.potential + result.proposedEnergy.kinetic
+                                              + result.proposedEnergy.fixman
+                                              - (0.5 * RT * result.proposedEnergy.logSineSqrGamma2);
+
+                result.proposalSimbody.q = advancedState.getQ();
+                result.proposalSimbody.p = advancedState.getU();
+
+                result.stopReason = StopReason::NotUsingNUTS;
+                result.depth = -1;
+                break;
+            }
             default:
                 throw std::runtime_error("Integrator type not implemented!");
         }
@@ -3845,8 +3887,8 @@ auto HMCSampler::integrateWithOpenMM(SimTK::State& state) -> NUTSResult {
     // dumm.get().updateOpenMMPositionsFromState(state);
     // dumm.get().integrateTrajectoryWithOpenMM(MDStepsPerSample, timestep);
 
-    // result.proposedEnergy.potential = OpenMMContext::get().getPotentialEnergy();
-    // result.proposedEnergy.kinetic = this->unboostKEFactor * OpenMMContext::get().getKineticEnergy();
+    // result.proposedEnergy.potential = OPENMM::get().getPotentialEnergy();
+    // result.proposedEnergy.kinetic = this->unboostKEFactor * OPENMM::get().getKineticEnergy();
     // result.proposedEnergy.fixman = 0.0;
     // result.proposedEnergy.logSineSqrGamma2 = 0.0;
     // result.proposedEnergy.total = result.proposedEnergy.potential + result.proposedEnergy.kinetic
@@ -3854,8 +3896,8 @@ auto HMCSampler::integrateWithOpenMM(SimTK::State& state) -> NUTSResult {
     //                               - (0.5 * RT * result.proposedEnergy.logSineSqrGamma2);
 
     // // Extract the proposed configuration from OpenMM
-    // const auto& finalPositions = OpenMMContext::get().getPositions();
-    // const auto& finalVelocities = OpenMMContext::get().getVelocities();
+    // const auto& finalPositions = OPENMM::get().getPositions();
+    // const auto& finalVelocities = OPENMM::get().getVelocities();
 
     // matter.get().invalidateSubsystemTopologyCache();
     // for (int i = 0; i < dumm.get().getNumAtoms(); i++) {

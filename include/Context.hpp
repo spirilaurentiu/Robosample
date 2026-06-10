@@ -1,8 +1,6 @@
 #pragma once
 
-#include <cstdint>
-
-#include "OpenMMContext.hpp"
+#include "OpenMM.hpp"
 #include "Replica.hpp"
 #include "Sampler.hpp"
 #include "ThermodynamicState.hpp"
@@ -15,14 +13,28 @@ class Context {
     std::string baseName;
     bool verbose = false;
     std::vector<SimTK::Real> worldTemperatures;
-    std::vector<SimTK::Compound::SingleAtom*> compoundAtoms;
 
     public:
-    Context(const std::string& baseName, std::int32_t seed);
+    // vector<vector<ATOM>> for each molecule
+    // void createSystem(std::vector<ATOM> atoms, std::vector<BOND> bonds);
 
-    void setTesting(bool testing) {
-        this->testing = testing;
-    }
+    /**
+     * @brief Initialize simulation variables.
+     * @param baseName Base name for output files.
+     * @param Ti Initial temperature. Cannot be 0.
+     * @param Tf Final temperature. Cannot be 0. Must be greater than Ti.
+     * @param seed Seed to use for random number generation. If 0, a random seed is used.
+     * @param threads Number of threads to use.
+     * @param nofRoundsTillReblock Number of rounds until reblocking.
+     * @param runType Type of simulation to run.
+     */
+    Context(const std::string& baseName,
+            uint32_t seed,
+            uint32_t nofRoundsTillReblock,
+            RUN_TYPE runType,
+            uint32_t swapFreq,
+            uint32_t swapFixmanFreq,
+            bool testing);
 
     void setWorldTemperatures(const std::vector<SimTK::Real>& temperatures) {
         this->worldTemperatures = temperatures;
@@ -30,17 +42,31 @@ class Context {
 
     void setVerbose(bool verbose);
     void setGBSAOptions(bool useGBSAOBC2, SimTK::Real solventDielectric, SimTK::Real soluteDielectric);
-    void setOutput(const std::string& outDir);
+    bool setOutput(const std::string& outDir);
 
     void setNofRoundsTillReblock(int nofRoundsTillReblock);
     void setRequiredNofRounds(int argNofRounds);
 
     void setNonbonded(NonbondedMethod method, SimTK::Real cutoffInNm);
 
-    void loadAmberSystem(const SystemTopology& systemTopology);
+    void loadAmberSystem(const SystemTopology& systemTopology,
+                         const ForceFieldParams& ffParams,
+                         const SimulationSettings& simSettings,
+                         const ZMatrix& zMatrix);
     auto initializeOpenMM() -> bool;
 
-    auto calculatePotentialEnergy(int worldIndex) -> SimTK::Real;
+    SimTK::Real calculatePotentialEnergy(int worldIndex);
+
+    auto getAtomNameByPrmtopIndex(int prmtopIndex) const -> const std::string& {
+        for (const auto& atom : systemTopology.atoms) {
+            if (atom.identity.prmtopIndex == prmtopIndex) {
+                return atom.identity.uniqueAtomName;
+            }
+        }
+        throw std::runtime_error("Atom with specified prmtop index not found.");
+    }
+
+    auto validateContext() -> bool;
 
     void addWorld(bool fixmanTorque,
                   int samplesPerRound,
@@ -54,6 +80,10 @@ class Context {
     void addConstraints();
 
     void passTopologiesToNewWorld(int newWorldIx);
+
+    // --- Simulation parameters ---
+
+    //------------
 
     // --- Mixing parameters ---
     // Another way to do it is setting the number of rounds
@@ -304,11 +334,7 @@ class Context {
      * @param
      * @return
      */
-    void RunREX(RunType runType,
-                int numEquilibrationRounds,
-                int numProductionRounds,
-                int writeFrequency,
-                bool writeToStdio);
+    void RunREX(int numEquilibrationRounds, int numProductionRounds, int writeFrequency, bool writeToStdio);
 
     void setSubZmatrixBATStatsToSamplers(int thermoIx, int worldCnt);
 
@@ -411,10 +437,13 @@ class Context {
     std::string cwar_prefix = "[WARNING] ";
     std::string cinf_prefix = "[INFO] ";
 
-    RunType runType = RunType::Default;
+    RUN_TYPE runType = RUN_TYPE::Default;
     SimTK::Real tempIni = 0, tempFin = 0;
 
     SystemTopology systemTopology;
+    ForceFieldParams ffParams;
+    SimulationSettings simSettings;
+    ZMatrix zMatrix;
 
     int numMolecules = 0;
 
@@ -528,13 +557,13 @@ class Context {
     std::vector<SimTK::Real>& updZMatrixBATRow(size_t rowIndex);
 
 
-    // /**
-    //  * @brief
-    //  * @param
-    //  */
-    // void calcZMatrixBAT(
-    //     int wIx,
-    //     const std::vector<std::vector<std::pair<RoboAtom*, SimTK::Vec3>>>& otherWorldsAtomsLocations);
+    /**
+     * @brief
+     * @param
+     */
+    void calcZMatrixBAT(
+        int wIx,
+        const std::vector<std::vector<std::pair<RoboAtom*, SimTK::Vec3>>>& otherWorldsAtomsLocations);
 
     /**
      * @brief Function to get the value for a given row and column in zMatrixBAT

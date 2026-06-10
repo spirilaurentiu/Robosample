@@ -92,11 +92,11 @@ def extract_dihedrals(universe, dihedral_atom_groups):
     angles_rad : (T, N)   raw angles in radians
     X          : (T, 2N)  sin/cos torus embedding
     """
-    atom_groups = [
+    ags = [
         mda.AtomGroup(universe.atoms[[gp, p, c, gc]])
         for gp, p, c, gc in dihedral_atom_groups
     ]
-    angles_deg = mda_dihedrals.Dihedral(atom_groups).run().angles  # (T, N)
+    angles_deg = mda_dihedrals.Dihedral(ags).run().angles  # (T, N)
     angles_rad = np.deg2rad(angles_deg).astype(np.float64)
     X = np.concatenate([np.sin(angles_rad), np.cos(angles_rad)], axis=1)
     return angles_rad, X
@@ -652,7 +652,7 @@ for cycle in range(10):
             bonds = context.standard_dihedral_bonds.loc[block]
 
             sele = context.build_flexibilities(bonds)
-            context.add_torsional_world(sele).add_sampler(
+            context.add_robotic_world(sele).add_sampler(
                 timeStep=0.025,
                 mdSteps=2000,  # ignored if using NUTS
                 boostMDSteps=2000,  # ignored if using NUTS

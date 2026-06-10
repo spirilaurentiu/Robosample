@@ -29,7 +29,7 @@
                 "${workspaceFolder}/examples/host-guest.rst7",
                 "6000",
                 "0",
-                "10",
+                "100",
                 "1"
             ],
             "cwd": "${workspaceFolder}"
@@ -46,7 +46,7 @@
                 "${workspaceFolder}/examples/host-guest.rst7",
                 "6000",
                 "0",
-                "10",
+                "100",
                 "1"
             ],
             "cwd": "${workspaceFolder}",
