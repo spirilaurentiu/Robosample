@@ -38,83 +38,44 @@ void transferCoordsFromWorldToReplica(const World& srcWorld, Replica& destReplic
 /*!
  * <!-- Constructor: sets temperatures, random engine and checks for CUDA_ROOT -->
  */
-Context::Context(const std::string& baseName_arg,
-                 uint32_t seed,
-                 uint32_t nofRoundsTillReblock,
-                 RUN_TYPE runType,
-                 uint32_t swapFreq,
-                 uint32_t swapFixmanFreq,
-                 bool testing) {
+Context::Context(const std::string& baseName, std::int32_t seed) {
     // Set the base name of the simulation
-    std::cout << "Context with base name: " << baseName + "_" + std::to_string(seed) << std::endl
-              << std::flush;
-    this->baseName = baseName_arg + "_" + std::to_string(seed);
+    std::cout << "Context with base name: " << baseName + "_" + std::to_string(seed) << "\n";
 
-    // Use a random seed if none is provided
-    if (seed == 0) {
-        std::random_device rd;
-        this->seed = rd();
-    } else {
-        this->seed = seed;
-    }
+    this->baseName = baseName + "_" + std::to_string(seed);
 
     // Set the random seed
     randomEngine = buildRandom32(seed);
-
-    this->roundsTillReblock = nofRoundsTillReblock;
-    this->runType = runType;
-    this->swapEvery = swapFreq;
-    this->swapFixman = swapFixmanFreq;
-
-    // foutU = std::string(baseName + "_U.bin");
-    // foutUDot = std::string(baseName + "_U_dot.bin");
-    // foutTorque = std::string(baseName + "_torque.bin");
-
-    // Run in testing mode
-    this->testing = testing;
 }
 
 void Context::setVerbose(bool verbose) {
     this->verbose = verbose;
 }
 
-/*!
- * <!--  -->
- */
-bool Context::setOutput(const std::string& outDir) {
+void Context::setOutput(const std::string& outDir) {
     // Set the log filename
     std::string logFilename = outDir + "/log." + std::to_string(seed);
 
     // Open the log file
     logFile = std::ofstream(logFilename);
     if (!logFile.is_open()) {
-        std::cerr << cerr_prefix << "Failed to open log file " << logFilename << "." << std::endl;
-        return false;
+        throw std::runtime_error("Failed to open log file " + logFilename);
     }
 
     // Set the directory where the logs and the trajectories are stored
     if (!SimTK::Pathname::fileExists(outDir + "/pdbs")) {
         const int err = mkdir((outDir + "/pdbs").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
         if (err == -1) {
-            std::cerr << cerr_prefix << "Failed to create " << outDir + "/pdbs" << "." << std::endl;
-            return false;
+            throw std::runtime_error("Failed to create output directory " + outDir + "/pdbs");
         }
     }
 
     setOutputDir(outDir);
-
-    return true;
 }
 
-void Context::loadAmberSystem(const SystemTopology& systemTopology,
-                              const ForceFieldParams& ffParams,
-                              const SimulationSettings& simSettings,
-                              const ZMatrix& zMatrix) {
+void Context::loadAmberSystem(const std::string& baseName, std::int32_t seed) {
     // Copy the data
     this->systemTopology = systemTopology;
-    this->ffParams = ffParams;
-    this->simSettings = simSettings;
-    this->zMatrix = zMatrix;
 
     numMolecules = static_cast<int>(systemTopology.rootAtomGlobalIndices.size());
 
@@ -150,10 +111,8 @@ void Context::loadAmberSystem(const SystemTopology& systemTopology,
                           systemTopology.rootMobilities[molIx]);
 
         // Set spans
-        const auto atomRangeBegin =
-            systemTopology.topologyRanges[molIx].getRange(TopologyRangeType::Atom).first;
-        const auto atomRangeEnd =
-            systemTopology.topologyRanges[molIx].getRange(TopologyRangeType::Atom).second;
+        const auto atomRangeBegin = systemTopology.atomsBegin[molIx];
+        const auto atomRangeEnd = systemTopology.atomsEnd[molIx];
         topology.setAtoms(safe_subspan(this->systemTopology.atoms, atomRangeBegin, atomRangeEnd));
 
         const auto bondRangeBegin =
@@ -190,10 +149,6 @@ void Context::loadAmberSystem(const SystemTopology& systemTopology,
         topology.setBaseAtom(*rootAtom.compoundSingleAtom, SimTK::Transform());
         topology.convertInboardBondCenterToOutboard();
 
-        // std::cout << cinf_prefix << "Set root atom " << rootAtom.identity.uniqueAtomName
-        // 		  << " for molecule " << molIx
-        // 		  << std::endl << std::flush;
-
         // Add non-ring closing bonds first
         for (auto& bond : topology.updBonds()) {
             if (bond.ringClosing) {
@@ -211,13 +166,6 @@ void Context::loadAmberSystem(const SystemTopology& systemTopology,
             // Cook the parentBondCenterPathName = RESNAME + RESID + _ATOMNAME + bond int(next)
             const SimTK::Compound::BondCenterPathName parentBondCenterPathName =
                 parent.identity.uniqueAtomName + "/bond" + std::to_string(parentNextAvailBondCenter);
-
-            // std::cout << cinf_prefix << "Bonding child atom " << child.identity.uniqueAtomName << " cAIx "
-            // << child.identity.compoundAtomIndex
-            // 		  << " to parent bond center " << parentBondCenterPathName << " cAIx " <<
-            // parent.identity.compoundAtomIndex
-            // 		  << " for molecule " << molIx
-            // 		  << std::endl << std::flush;
 
             // Actual bonding with default mobility (torsion)
             topology.bondAtom(*child.compoundSingleAtom,
@@ -1322,11 +1270,11 @@ bool Context::attemptREXSwap(int thermoState_C, int thermoState_H) {
     SimTK::Real log_p_accept = 1.0;
 
     // Calculate log_p_accept
-    if (runType == RUN_TYPE::REMC) {
+    if (runType == RunType::REMC) {
         log_p_accept = ETerm_equal;
-    } else if (runType == RUN_TYPE::RENEMC) {
+    } else if (runType == RunType::RENEMC) {
         log_p_accept = ETerm_nonequil + std::log(correctionTerm);
-    } else if (runType == RUN_TYPE::RENE || runType == RUN_TYPE::REBASONTOP) {
+    } else if (runType == RunType::RENE || runType == RunType::REBASONTOP) {
         log_p_accept = WTerm + std::log(correctionTerm);
     }
 
@@ -1354,7 +1302,7 @@ bool Context::attemptREXSwap(int thermoState_C, int thermoState_H) {
 
     // Accept
     if (log_p_accept >= 0.0 || unifSample < std::exp(log_p_accept)) {
-        if (runType == RUN_TYPE::RENE || runType == RUN_TYPE::REBASONTOP) {
+        if (runType == RunType::RENE || runType == RunType::REBASONTOP) {
             replicas[replica_X].incrementWorldsNofSamples();
             replicas[replica_Y].incrementWorldsNofSamples();
             thermodynamicStates[thermoState_C].incrementWorldsNofSamples();
@@ -1486,7 +1434,7 @@ void Context::mixReplicas(int mixi, int oddity) {
 
     // 1. Unified Guard Clause
     // If it's DEFAULT, we don't mix. If it's only 1 replica, we can't mix.
-    if (runType == RUN_TYPE::Default || nofReplicas <= 1) {
+    if (runType == RunType::Default || nofReplicas <= 1) {
         return;
     }
 
@@ -2564,10 +2512,13 @@ void Context::writeDCD(int replicaIx) {
 /*!
  * <!-- Run replica exchange protocol -->
  */
-void Context::RunREX(int numEquilibrationRounds,
+void Context::RunREX(RunType runType,
+                     int numEquilibrationRounds,
                      int numProductionRounds,
                      int writeFrequency,
                      bool writeToStdio) {
+    this->runType = runType;
+
     // They all start with replica 0 coordinates
     // TODO does not work in debug
     for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {

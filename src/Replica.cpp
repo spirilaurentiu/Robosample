@@ -2,16 +2,6 @@
 
 #include "Compound.h"
 
-// Get coordinates from this replica
-const std::vector<SimTK::Compound::AtomTargetLocations>& Replica::getAtomsLocationsInGround() const {
-    return atomsLocations;
-}
-
-// Get coordinates from this replica
-const std::vector<SimTK::Compound::AtomTargetLocations>& Replica::get_WORK_AtomsLocationsInGround() const {
-    return WORK_atomsLocations;
-}
-
 // Set the coordinates of this replica
 void Replica::setAtomsLocationsInGround(
     const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) {
@@ -40,13 +30,6 @@ void Replica::setAtomsLocationsInGround(
     }
 }
 
-// Set the coordinates of this replica
-// Also allocate memory
-void Replica::set_WORK_AtomsLocationsInGround(
-    const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) {
-    WORK_atomsLocations = atomTargets;
-}
-
 void Replica::updAtomsLocationsInGround_FromWORK() {
     atomsLocations = WORK_atomsLocations;
 
@@ -73,43 +56,6 @@ void Replica::updAtomsLocationsInGround_FromWORK() {
     }
 }
 
-// Update the coordinates of this replica
-void Replica::upd_WORK_AtomsLocationsInGround(
-    const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) {
-    WORK_atomsLocations = atomTargets;
-}
-
-SimTK::Real Replica::get_WORK_PotentialEnergy_New() const {
-    return this->WORK_potential;
-}
-
-void Replica::set_WORK_PotentialEnergy_New(SimTK::Real somePotential) {
-    WORK_potential = somePotential;
-}
-
-SimTK::Real Replica::get_WORK_ReferencePotentialEnergy_New() const {
-    return this->referenceWORK_potential;
-}
-
-void Replica::set_WORK_ReferencePotentialEnergy_New(SimTK::Real somePotential) {
-    referenceWORK_potential = somePotential;
-}
-
-SimTK::Real Replica::get_WORK_Jacobian() const {
-    return this->workJacobiansContributions;
-}
-
-SimTK::Real& Replica::upd_WORK_Jacobian() {
-    return this->workJacobiansContributions;
-}
-
-void Replica::set_WORK_Jacobian(SimTK::Real inpJac) {
-    this->workJacobiansContributions = inpJac;
-}
-
-void Replica::setPotentialEnergy_FromWORK() {
-    this->potential = this->WORK_potential;
-}
 
 // Load atomLocations coordinates into the front world
 void Replica::restoreCoordinates() {
@@ -117,54 +63,6 @@ void Replica::restoreCoordinates() {
 
 // Stores coordinates from front world into atomsLocations
 void Replica::storeCoordinates() {
-}
-
-SimTK::Real Replica::getPotentialEnergy() const {
-    return potential;
-}
-
-void Replica::setPotentialEnergy(SimTK::Real somePotential) {
-    potential = somePotential;
-}
-
-SimTK::Real Replica::getReferencePotentialEnergy() const {
-    return referencePotential;
-}
-
-void Replica::setReferencePotentialEnergy(SimTK::Real somePotential) {
-    referencePotential = somePotential;
-}
-
-SimTK::Real Replica::getWORK() const {
-    return WORK;
-}
-
-SimTK::Real& Replica::updWORK() {
-    return WORK;
-}
-
-void Replica::setWORK(SimTK::Real workArg) {
-    this->WORK = workArg;
-}
-
-// void Replica::set_WORK_LastPotentialEnergy(SimTK::Real wpArg) {
-//     this->WORK_potential = wpArg;
-// }
-
-SimTK::Real Replica::getFixman() const {
-    return FixmanPotential;
-}
-
-void Replica::setFixman(SimTK::Real somePotential) {
-    FixmanPotential = somePotential;
-}
-
-SimTK::Real Replica::get_WORK_Fixman() const {
-    return this->WORK_FixmanPotential;
-}
-
-void Replica::set_WORK_Fixman(SimTK::Real somePotential) {
-    this->WORK_FixmanPotential = somePotential;
 }
 
 void Replica::Print() const {
@@ -204,10 +102,10 @@ void Replica::Print_WORK_Coordinates() const {
 /**
  * Write coordinates to a rst7 file
  */
-void Replica::WriteRst7(std::string FN) const {
+void Replica::WriteRst7(const std::string& fileName) const {
     SimTK_ASSERT_ALWAYS(false, "Replica::WriteRst7 not implemented yet.");
 
-    // FILE *File = fopen(FN.c_str(), "w+");
+    // FILE *File = fopen(fileName.c_str(), "w+");
 
     // int Natoms = 0;
     // for(auto& topology : atomsLocations){
@@ -276,293 +174,10 @@ void Replica::PrintRst7() const {
     // }
 }
 
-// ===========================================================================
-// ===========================================================================
-// ZMatrix BAT
-// ===========================================================================
-// ===========================================================================
-
-/*!
- * <!--	zmatrixbat_ Function to find and return the value for a given
- * AtomIndex -->
- */
-SimTK::Vec3 Replica::findAtomTarget(const SimTK::Compound::AtomTargetLocations& atomTargets,
-                                    SimTK::Compound::AtomIndex searchIndex) const {
-    SimTK_ASSERT_ALWAYS(false, "Replica::findAtomTarget not implemented yet.");
-
-    // auto it = atomTargets.find(searchIndex);
-
-    // if (it != atomTargets.end()) {
-    // 	return it->second;
-    // } else {
-    // 	return SimTK::Vec3(SimTK::NaN);
-    // }
-}
-
-void Replica::setZMatrixTable(const std::vector<std::vector<int>>& newZMatrixTable) {
-    SimTK_ASSERT_ALWAYS(false, "Replica::setZMatrixTable not implemented yet.");
-
-    // zMatrixTable = newZMatrixTable;
-}
-
-/*!
- * <!--	zmatrixbat_ -->
- */
-void Replica::setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value) {
-    SimTK_ASSERT_ALWAYS(false, "Replica::setZMatrixBATValue not implemented yet.");
-
-    // // Set the value at the specified position
-    // zMatrixBAT[rowIndex][colIndex] = value;
-}
-
-/*!
- * <!--	zmatrixbat_ -->
- */
-const std::vector<SimTK::Real>& Replica::getZMatrixBATRow(size_t rowIndex) const {
-    SimTK_ASSERT_ALWAYS(false, "Replica::getZMatrixBATRow not implemented yet.");
-
-    // assert(rowIndex >= 0);
-    // assert(rowIndex < static_cast<int>(zMatrixBAT.size()));
-
-    // Check if the indices are within bounds
-    return zMatrixBAT[rowIndex];
-}
-
-/*!
- * <!--	zmatrixbat_ -->
- */
-std::vector<SimTK::Real>& Replica::updZMatrixBATRow(size_t rowIndex) {
-    SimTK_ASSERT_ALWAYS(false, "Replica::updZMatrixBATRow not implemented yet.");
-
-    // assert(rowIndex >= 0);
-    // assert(rowIndex < static_cast<int>(zMatrixBAT.size()));
-
-    // Check if the indices are within bounds
-    return zMatrixBAT[rowIndex];
-}
-
-/*!
- * <!--	zmatrixbat_ -->
- */
-
-/*!
- * <!-- zmatrixbat_ Allocate Z Matrix BAT -->
- */
-void Replica::reallocZMatrixBAT() {
-    SimTK_ASSERT_ALWAYS(false, "Replica::reallocZMatrixBAT not implemented yet.");
-
-    // zMatrixBAT.resize(zMatrixTable.size());
-    // for (auto& row : zMatrixBAT) {
-    // 	row.resize(3, SimTK::NaN);
-    // }
-}
-
-/*!
- * <!-- zmatrixbat_ Calculate Z-matrix -->
- */
-void Replica::calcZMatrixBAT_WORK() {
-    SimTK_ASSERT_ALWAYS(false, "Replica::calcZMatrixBAT_WORK not implemented yet.");
-
-    // // Iterate molecules
-    // int allCnt = 0;
-
-    // int topoIx = 0;
-
-    // // Get locations of this molecule
-    // const std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets =
-    // get_WORK_AtomsLocationsInGround();
-
-    // int rowCnt = 0;
-    // SimTK::Real bondLength, bondBend, bondTorsion;
-    // for (const auto& row : zMatrixTable) {
-
-    // 	bondLength = SimTK::NaN;
-    // 	bondBend = SimTK::NaN;
-    // 	bondTorsion = SimTK::NaN;
-
-    // 	SimTK::Compound::AtomIndex a0_cAIx, a1_cAIx;
-
-    // 	// Calculate bond length
-    // 	a0_cAIx = atoms[row[0]].identity.compoundAtomIndex;
-    // 	a1_cAIx = atoms[row[1]].identity.compoundAtomIndex;
-    // 	SimTK::Vec3 a0loc = findAtomTarget(atomTargets, a0_cAIx);
-    // 	SimTK::Vec3 a1loc = findAtomTarget(atomTargets, a1_cAIx);
-
-    // 	SimTK::Vec3 v_a0a1 = a0loc - a1loc;
-    // 	SimTK::Real bondLength = std::sqrt(SimTK::dot(v_a0a1, v_a0a1));
-
-    // 	if(row[2] >= 0){
-
-    // 		SimTK::Compound::AtomIndex a2_cAIx;
-    // 		a2_cAIx = atoms[row[2]].identity.compoundAtomIndex;
-    // 		SimTK::Vec3 a2loc = findAtomTarget(atomTargets, a2_cAIx);
-
-    // 		// Calculate angle
-    // 		SimTK::UnitVec3 v1(v_a0a1);
-    // 		SimTK::UnitVec3 v2(a2loc - a1loc);
-
-    // 		SimTK::Real dotProduct = SimTK::dot(v1, v2);
-    // 		assert(dotProduct < 1.1);
-    // 		assert(dotProduct > -1.1);
-    // 		if (dotProduct > 1.0) dotProduct = 1.0;
-    // 		if (dotProduct < -1.0) dotProduct = -1.0;
-    // 		bondBend = std::acos(dotProduct);
-
-    // 		if(row[3] >= 0){
-    // 			SimTK::Compound::AtomIndex
-    // 				a3_cAIx = atoms[row[3]].identity.compoundAtomIndex;
-    // 			SimTK::Vec3 a3loc = findAtomTarget(atomTargets, a3_cAIx);
-
-    // 			bondTorsion = bDihedral(a0loc, a1loc, a2loc, a3loc);
-    // 		}
-
-    // 	} // angle
-
-    // 	setZMatrixBATValue(rowCnt, 0, bondLength);
-    // 	setZMatrixBATValue(rowCnt, 1, bondBend);
-    // 	setZMatrixBATValue(rowCnt, 2, bondTorsion);
-
-    // 	if(row[3] == -2){
-    // 		topoIx++;
-    // 	}
-
-    // 	rowCnt++;
-
-    // } // every zMatrix row
-}
-
-/*!
- * <!-- zmatrixbat_ Calculate Z-matrix -->
- */
-void Replica::calcZMatrixBAT(
-    const std::vector<std::vector<std::pair<RoboAtom*, SimTK::Vec3>>>& otherWorldsAtomsLocations) {
-    SimTK_ASSERT_ALWAYS(false, "Replica::calcZMatrixBAT not implemented yet.");
-
-    // // Iterate molecules
-    // int allCnt = 0;
-
-    // int topoIx = 0;
-
-    // // Get locations of this molecule
-    // std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
-    // for (int i = 0; i < topologies.size(); i++) {
-    // 	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> temp;
-    // 	extractAtomTargets(i, otherWorldsAtomsLocations, temp);
-    // 	atomTargets.insert(temp.begin(), temp.end());
-    // }
-
-    // int rowCnt = 0;
-    // SimTK::Real bondLength, bondBend, bondTorsion;
-    // for (const auto& row : zMatrixTable) {
-
-    // 	bondLength = SimTK::NaN;
-    // 	bondBend = SimTK::NaN;
-    // 	bondTorsion = SimTK::NaN;
-
-    // 	SimTK::Compound::AtomIndex a0_cAIx, a1_cAIx;
-
-    // 	// Calculate bond length
-    // 	a0_cAIx = atoms[row[0]].identity.compoundAtomIndex;
-    // 	a1_cAIx = atoms[row[1]].identity.compoundAtomIndex;
-    // 	SimTK::Vec3 a0loc = findAtomTarget(atomTargets, a0_cAIx);
-    // 	SimTK::Vec3 a1loc = findAtomTarget(atomTargets, a1_cAIx);
-
-    // 	SimTK::Vec3 v_a0a1 = a0loc - a1loc;
-    // 	SimTK::Real bondLength = std::sqrt(SimTK::dot(v_a0a1, v_a0a1));
-
-    // 	if(row[2] >= 0){
-
-    // 		SimTK::Compound::AtomIndex a2_cAIx;
-    // 		a2_cAIx = atoms[row[2]].identity.compoundAtomIndex;
-    // 		SimTK::Vec3 a2loc = findAtomTarget(atomTargets, a2_cAIx);
-
-    // 		// Calculate angle
-    // 		SimTK::UnitVec3 v1(v_a0a1);
-    // 		SimTK::UnitVec3 v2(a2loc - a1loc);
-
-    // 		SimTK::Real dotProduct = SimTK::dot(v1, v2);
-    // 		assert(dotProduct < 1.1);
-    // 		assert(dotProduct > -1.1);
-    // 		if (dotProduct > 1.0) dotProduct = 1.0;
-    // 		if (dotProduct < -1.0) dotProduct = -1.0;
-    // 		bondBend = std::acos(dotProduct);
-
-    // 		if(row[3] >= 0){
-    // 			SimTK::Compound::AtomIndex
-    // 				a3_cAIx = atoms[row[3]].identity.compoundAtomIndex;
-    // 			SimTK::Vec3 a3loc = findAtomTarget(atomTargets, a3_cAIx);
-
-    // 			bondTorsion = bDihedral(a0loc, a1loc, a2loc, a3loc);
-    // 		}
-
-    // 	} // angle
-
-    // 	setZMatrixBATValue(rowCnt, 0, bondLength);
-    // 	setZMatrixBATValue(rowCnt, 1, bondBend);
-    // 	setZMatrixBATValue(rowCnt, 2, bondTorsion);
-
-    // 	if(row[3] == -2){
-    // 		topoIx++;
-    // 	}
-
-    // 	rowCnt++;
-
-    // } // every zMatrix row
-}
-
-/*!
- * <!--	zmatrixbat_ -->
- */
-SimTK::Real Replica::getZMatrixBATValue(size_t rowIndex, size_t colIndex) const {
-    // // Check if the indices are within bounds
-    // if (rowIndex < zMatrixBAT.size() && colIndex < zMatrixBAT[0].size()) {
-    // 	// Return the value at the specified position
-    // 	return zMatrixBAT[rowIndex][colIndex];
-    // } else {
-    // 	// Indices are out of bounds, handle this case accordingly
-    // 	return SimTK::NaN;
-    // }
-
-    return -1;
-}
-
-/*!
- * <!--	zmatrixbat_ -->
- */
-void Replica::PrintZMatrixBAT() const {
-    SimTK_ASSERT_ALWAYS(false, "Replica::PrintZMatrixBAT not implemented yet.");
-
-    // int bati = 0;
-    // for (const auto& row : zMatrixBAT) {
-
-    // 	scout("zm ") ; // indicator
-
-    // 	for(const auto tabValue : zMatrixTable[bati]){
-    // 		std::cout << tabValue << " ";
-    // 	}
-
-    // 	for (SimTK::Real value : row) {
-    // 		std::cout << std::setw(9) << value << " ";
-    // 	}
-    // 	std::cout << "\n";
-
-    // 	bati++;
-    // }
-}
-
-/*!
- * <!--	zmatrixbat_ -->
- */
-void Replica::addZMatrixBATRow(const std::vector<SimTK::Real>& newRow) {
-    SimTK_ASSERT_ALWAYS(false, "Replica::addZMatrixBATRow not implemented yet.");
-
-    // zMatrixBAT.push_back(newRow);
-}
-
 /*!
  * <!-- zmatrixbat_ BAT JAcobian -->
  */
-SimTK::Real Replica::calcInternalBATJacobianLog() {
+auto Replica::calcInternalBATJacobianLog() -> SimTK::Real {
     // Get log of the Cartesian->BAT Jacobian
     SimTK::Real logJacBAT = 0.0;
 
@@ -584,23 +199,3 @@ SimTK::Real Replica::calcInternalBATJacobianLog() {
 
     return logJacBAT;
 }
-
-/*!
- * <!--	zmatrixbat_ Incrementer function implementation -->
- */
-void Replica::incrementWorldsNofSamples() {
-    ++allWorldsNofSamples;
-}
-
-/*!
- * <!--	zmatrixbat_ Incrementer function implementation -->
- */
-void Replica::incrementWorldsNofSamples(int howMany) {
-    allWorldsNofSamples += howMany;
-}
-
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-// ZMatrix BAT
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------

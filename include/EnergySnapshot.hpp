@@ -3,7 +3,7 @@
  * @brief Energy bookkeeping and validation for HMC/Gibbs sampling, supporting
  *        both internal-coordinate (Simbody) and Cartesian (OpenMM) backends.
  *
- * ── Scientific context ────────────────────────────────────────────────────────
+ * -- Scientific context --------------------------------------------------------
  *
  * This struct supports Hybrid (Hamiltonian) Monte Carlo (HMC) coupled with
  * Gibbs sampling.  Two integration backends are supported:
@@ -31,7 +31,7 @@
  *     Use EnergySnapshot::cartesian() to construct this case; it enforces the
  *     zero values explicitly and avoids any accidental NaN in those fields.
  *
- * ── Validation philosophy ─────────────────────────────────────────────────────
+ * -- Validation philosophy -----------------------------------------------------
  *
  * The checks in this file serve TWO conceptually distinct purposes.
  * Conflating them is the root cause of the conformational-transition
@@ -50,7 +50,7 @@
  *     before the Metropolis step silently discards samples the chain needs for
  *     ergodicity, biasing the ensemble.
  *
- * ── The conformational-transition rejection bug ───────────────────────────────
+ * -- The conformational-transition rejection bug -------------------------------
  *
  * The symptom — legitimate conformational transitions being rejected — is
  * caused by Category B checks (checkTermStability and hamiltonianDrift) being
@@ -111,7 +111,7 @@ enum class DegreesOfFreedom : int {
 // =============================================================================
 
 struct EnergySnapshot {
-    // ── Data members ──────────────────────────────────────────────────────────
+    // -- Data members ----------------------------------------------------------
     //
     // All fields default to NaN so that any use of an uninitialised snapshot
     // is caught immediately by finite().
@@ -142,7 +142,7 @@ struct EnergySnapshot {
     ///< Reduces to H = V + K for the Cartesian backend.
     ///< Stored explicitly so checkTotal() can detect bookkeeping bugs.
 
-    // ── Class constants ───────────────────────────────────────────────────────
+    // -- Class constants -------------------------------------------------------
 
     /**
      * Modified-relative-change threshold for checkTermStability().
@@ -170,7 +170,7 @@ struct EnergySnapshot {
      */
     static constexpr SimTK::Real GEOMETRIC_LIMIT = 1e3;
 
-    // ── Factory methods ───────────────────────────────────────────────────────
+    // -- Factory methods -------------------------------------------------------
 
     /**
      * @brief Construct a snapshot for Cartesian (OpenMM) integration.
@@ -226,7 +226,7 @@ struct EnergySnapshot {
         return s;
     }
 
-    // ── Category A: numerical sanity (unconditional rejection) ────────────────
+    // -- Category A: numerical sanity (unconditional rejection) ----------------
 
     /**
      * @brief Returns true iff every energy field is finite (non-NaN, non-Inf).
@@ -267,7 +267,7 @@ struct EnergySnapshot {
      */
     [[nodiscard]] auto checkKinetic() const -> bool;
 
-    // ── Category B: physical-plausibility heuristics (advisory) ──────────────
+    // -- Category B: physical-plausibility heuristics (advisory) --------------
 
     /**
      * @brief Returns true iff no individual energy term changed by more than
@@ -324,7 +324,7 @@ struct EnergySnapshot {
      * proposals should reach Metropolis and be accepted with probability
      * exp(-beta DeltaH), not be silently discarded here.
      *
-     * ── Swappable-parameters fix ─────────────────────────────────────────────
+     * -- Swappable-parameters fix ---------------------------------------------
      * The original signature placed a `SimTK::Real beta` and a `std::size_t
      * ndofs` adjacently.  clang-tidy flagged this because both types are
      * implicitly inter-convertible; a transposed call compiles silently and

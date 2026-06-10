@@ -68,7 +68,7 @@ One iteration must include:
 
 #include "EnergySnapshot.hpp"
 #include "NUTS.hpp"
-#include "OpenMM.hpp"
+#include "OpenMMContext.hpp"
 #include "Sampler.hpp"
 #include "State.h"
 #include "Vec3.h"

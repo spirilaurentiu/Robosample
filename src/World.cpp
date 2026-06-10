@@ -4,7 +4,7 @@
 
 #include "Compound.h"
 #include "Constraint.h"
-#include "OpenMM.hpp"
+#include "OpenMMContext.hpp"
 #include "Sampler.hpp"
 #include "TopologyElements.hpp"
 #include "bgeneral.hpp"

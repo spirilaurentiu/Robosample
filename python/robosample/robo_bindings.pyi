@@ -6,7 +6,7 @@ import collections.abc
 import numpy
 import numpy.typing
 import typing
-__all__: list[str] = ['AcceptRejectMode', 'AtomClassIndex', 'BondCenterChirality', 'BondFlexibility', 'BondMobility', 'CMAPGrid', 'CMAPTorsion', 'ChargedAtomTypeIndex', 'CompoundAtomIndex', 'Context', 'CoordinateTransferError', 'CutoffNonPeriodic', 'Exclusion', 'ForceFieldParams', 'IntegratorType', 'NoCutoff', 'NonbondedMethod', 'ReferenceIndices', 'RoboAngle', 'RoboAtom', 'RoboAtomConnectivity', 'RoboAtomElement', 'RoboAtomIdentity', 'RoboAtomPhysics', 'RoboBond', 'RoboHarmonicImproperTorsion', 'RoboPeriodicTorsion', 'RoboPeriodicTorsionTerm', 'RootMobility', 'RunType', 'SamplerName', 'Scaling14', 'SimulationSettings', 'SystemTopology', 'ThermostatName', 'TopologyRange', 'TopologyRangeType', 'UreyBradley', 'Vec3', 'VectorCMAPGrid', 'VectorCMAPTorsion', 'VectorExclusion', 'VectorInt', 'VectorRoboAngle', 'VectorRoboAtom', 'VectorRoboBond', 'VectorRoboHarmonicImproperTorsion', 'VectorRoboPeriodicTorsion', 'VectorRootMobility', 'VectorScaling14', 'VectorTopologyRange', 'VectorUreyBradley', 'World', 'ZMatrixRow', 'align_flip_and_translate_frame_along_x_axis', 'calculate_angle_in_rad', 'calculate_dihedral_in_rad', 'calculate_log_sum_exp2', 'calculate_mag_sq', 'multiply_by_scalar', 'normalize_in_place', 'safe_log_sine_sqr']
+__all__: list[str] = ['AcceptRejectMode', 'AtomClassIndex', 'BondCenterChirality', 'BondFlexibility', 'BondMobility', 'CMAPGrid', 'CMAPTorsion', 'ChargedAtomTypeIndex', 'CompoundAtomIndex', 'Context', 'CoordinateTransferError', 'CutoffNonPeriodic', 'Exclusion', 'ForceFieldParams', 'IntegratorType', 'NoCutoff', 'NonbondedMethod', 'ReferenceIndices', 'RoboAngle', 'RoboAtom', 'RoboAtomConnectivity', 'RoboAtomElement', 'RoboAtomIdentity', 'RoboAtomPhysics', 'RoboBond', 'RoboHarmonicImproperTorsion', 'RoboPeriodicTorsion', 'RoboPeriodicTorsionTerm', 'RootMobility', 'RunType', 'SamplerName', 'Scaling14', 'SimulationSettings', 'SystemTopology', 'SystemTopology_NEW', 'ThermostatName', 'TopologyRange', 'TopologyRangeType', 'UreyBradley', 'Vec3', 'VectorCMAPGrid', 'VectorCMAPTorsion', 'VectorExclusion', 'VectorInt', 'VectorRoboAngle', 'VectorRoboAtom', 'VectorRoboBond', 'VectorRoboHarmonicImproperTorsion', 'VectorRoboPeriodicTorsion', 'VectorRootMobility', 'VectorScaling14', 'VectorTopologyRange', 'VectorUreyBradley', 'World', 'ZMatrixRow', 'align_flip_and_translate_frame_along_x_axis', 'calculate_angle_in_rad', 'calculate_dihedral_in_rad', 'calculate_log_sum_exp2', 'calculate_mag_sq', 'multiply_by_scalar', 'normalize_in_place', 'safe_log_sine_sqr']
 class AcceptRejectMode:
     """
     Members:
@@ -315,7 +315,7 @@ class CompoundAtomIndex:
     def __repr__(self) -> str:
         ...
 class Context:
-    def __init__(self, arg0: str, arg1: typing.SupportsInt | typing.SupportsIndex, arg2: typing.SupportsInt | typing.SupportsIndex, arg3: RunType, arg4: typing.SupportsInt | typing.SupportsIndex, arg5: typing.SupportsInt | typing.SupportsIndex, arg6: bool) -> None:
+    def __init__(self, base_name: str, seed: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     def addReplica(self) -> None:
         """
@@ -354,7 +354,7 @@ class Context:
         """
         Load an AMBER system.
         """
-    def run_rex(self, num_equilibration_rounds: typing.SupportsInt | typing.SupportsIndex, num_production_rounds: typing.SupportsInt | typing.SupportsIndex, write_frequency: typing.SupportsInt | typing.SupportsIndex, write_to_stdio: bool) -> None:
+    def run_rex(self, run_type: RunType, num_equilibration_rounds: typing.SupportsInt | typing.SupportsIndex, num_production_rounds: typing.SupportsInt | typing.SupportsIndex, write_frequency: typing.SupportsInt | typing.SupportsIndex, write_to_stdio: bool) -> None:
         """
         Run replica exchange.
         """
@@ -1193,6 +1193,889 @@ class SystemTopology:
         ...
     @typing.overload
     def __init__(self, root_atom_global_indices: robo_bindings.VectorInt | None = None, topology_ranges: robo_bindings.VectorTopologyRange | None = None, atoms: robo_bindings.VectorRoboAtom | None = None, bonds: robo_bindings.VectorRoboBond | None = None, angles: robo_bindings.VectorRoboAngle | None = None, periodic_torsions: robo_bindings.VectorRoboPeriodicTorsion | None = None, harmonic_improper_torsions: robo_bindings.VectorRoboHarmonicImproperTorsion | None = None, cmap_grids: robo_bindings.VectorCMAPGrid | None = None, cmap_torsions: robo_bindings.VectorCMAPTorsion | None = None, urey_bradleys: robo_bindings.VectorUreyBradley | None = None, scaling14s: robo_bindings.VectorScaling14 | None = None, exclusions: robo_bindings.VectorExclusion | None = None, root_mobilities: robo_bindings.VectorRootMobility | None = None) -> None:
+        ...
+class SystemTopology_NEW:
+    def __init__(self) -> None:
+        ...
+    @property
+    def a_coef(self) -> list[float]:
+        """
+        Lennard-Jones A coefficients (repulsive term) for each type pair, stored as a flat upper-triangular matrix in kJ/mol*nm^12.
+        """
+    @a_coef.setter
+    def a_coef(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def angles_begin(self) -> VectorInt:
+        """
+        Begin index into angles arrays for each molecule.
+        """
+    @angles_begin.setter
+    def angles_begin(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def angles_end(self) -> VectorInt:
+        """
+        End index (exclusive) into angles arrays for each molecule.
+        """
+    @angles_end.setter
+    def angles_end(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def angles_equilibrium(self) -> list[float]:
+        """
+        Equilibrium bond angle in radians [rad].
+        """
+    @angles_equilibrium.setter
+    def angles_equilibrium(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def angles_i(self) -> VectorInt:
+        """
+        Global index of angle atom 1 (outer).
+        """
+    @angles_i.setter
+    def angles_i(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def angles_j(self) -> VectorInt:
+        """
+        Global index of angle atom 2 (central).
+        """
+    @angles_j.setter
+    def angles_j(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def angles_k(self) -> VectorInt:
+        """
+        Global index of angle atom 3 (outer).
+        """
+    @angles_k.setter
+    def angles_k(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def angles_stiffness(self) -> list[float]:
+        """
+        Harmonic angle force constant in kilojoules per mole per radian squared [kJ/mol/rad^2].
+        """
+    @angles_stiffness.setter
+    def angles_stiffness(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def atoms_begin(self) -> VectorInt:
+        """
+        Begin index into atoms arrays for each molecule. Length equals num_molecules.
+        """
+    @atoms_begin.setter
+    def atoms_begin(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def atoms_charge(self) -> list[float]:
+        """
+        Partial charge in units of the proton charge [e].
+        """
+    @atoms_charge.setter
+    def atoms_charge(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def atoms_charged_atom_type_index(self) -> VectorInt:
+        """
+        Index into the nonbonded parameter table for this atom's charged type.
+        """
+    @atoms_charged_atom_type_index.setter
+    def atoms_charged_atom_type_index(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def atoms_charged_type_names(self) -> list[str]:
+        """
+        Charged atom type name for each atom.
+        """
+    @atoms_charged_type_names.setter
+    def atoms_charged_type_names(self, arg0: collections.abc.Sequence[str]) -> None:
+        ...
+    @property
+    def atoms_class_index(self) -> VectorInt:
+        """
+        Index into the nonbonded parameter table for this atom's class.
+        """
+    @atoms_class_index.setter
+    def atoms_class_index(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def atoms_class_names(self) -> list[str]:
+        """
+        Force-field atom class name for each atom.
+        """
+    @atoms_class_names.setter
+    def atoms_class_names(self, arg0: collections.abc.Sequence[str]) -> None:
+        ...
+    @property
+    def atoms_compound_atom_index(self) -> VectorInt:
+        """
+        Index of the atom within its compound (residue) for each atom.
+        """
+    @atoms_compound_atom_index.setter
+    def atoms_compound_atom_index(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def atoms_element_name(self) -> list[str]:
+        """
+        Full element name string (e.g. "Carbon").
+        """
+    @atoms_element_name.setter
+    def atoms_element_name(self, arg0: collections.abc.Sequence[str]) -> None:
+        ...
+    @property
+    def atoms_element_symbol(self) -> list[str]:
+        """
+        Element symbol string (e.g. "C").
+        """
+    @atoms_element_symbol.setter
+    def atoms_element_symbol(self, arg0: collections.abc.Sequence[str]) -> None:
+        ...
+    @property
+    def atoms_end(self) -> VectorInt:
+        """
+        End index (exclusive) into atoms arrays for each molecule.
+        """
+    @atoms_end.setter
+    def atoms_end(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def atoms_epsilon(self) -> list[float]:
+        """
+        Lennard-Jones epsilon (well depth) in kilojoules per mole [kJ/mol].
+        """
+    @atoms_epsilon.setter
+    def atoms_epsilon(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def atoms_mass(self) -> list[float]:
+        """
+        Mass in daltons [Da].
+        """
+    @atoms_mass.setter
+    def atoms_mass(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def atoms_nonbonded_index(self) -> VectorInt:
+        """
+        Index into the nonbonded parameter table for this atom.
+        """
+    @atoms_nonbonded_index.setter
+    def atoms_nonbonded_index(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def atoms_radius(self) -> list[float]:
+        """
+        GBSA implicit-solvent radius in nanometers [nm].
+        """
+    @atoms_radius.setter
+    def atoms_radius(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def atoms_root_index(self) -> VectorInt:
+        """
+        Per-molecule index of the root atom for Z-matrix tree traversal.
+        """
+    @atoms_root_index.setter
+    def atoms_root_index(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def atoms_screen(self) -> list[float]:
+        """
+        OBC screening factor (dimensionless).
+        """
+    @atoms_screen.setter
+    def atoms_screen(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def atoms_sigma(self) -> list[float]:
+        """
+        Lennard-Jones sigma (van der Waals radius) in nanometers [nm].
+        """
+    @atoms_sigma.setter
+    def atoms_sigma(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def atoms_unique_name(self) -> list[str]:
+        """
+        Unique atom name string (e.g. "ALA1_CA_3").
+        """
+    @atoms_unique_name.setter
+    def atoms_unique_name(self, arg0: collections.abc.Sequence[str]) -> None:
+        ...
+    @property
+    def atoms_x(self) -> list[float]:
+        """
+        x coordinate of the reference structure in nanometers [nm].
+        """
+    @atoms_x.setter
+    def atoms_x(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def atoms_y(self) -> list[float]:
+        """
+        y coordinate of the reference structure in nanometers [nm].
+        """
+    @atoms_y.setter
+    def atoms_y(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def atoms_z(self) -> list[float]:
+        """
+        z coordinate of the reference structure in nanometers [nm].
+        """
+    @atoms_z.setter
+    def atoms_z(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def b_coef(self) -> list[float]:
+        """
+        Lennard-Jones B coefficients (attractive term) for each type pair, stored as a flat upper-triangular matrix in kJ/mol*nm^6.
+        """
+    @b_coef.setter
+    def b_coef(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def bonds_begin(self) -> VectorInt:
+        """
+        Begin index into bonds arrays for each molecule.
+        """
+    @bonds_begin.setter
+    def bonds_begin(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def bonds_end(self) -> VectorInt:
+        """
+        End index (exclusive) into bonds arrays for each molecule.
+        """
+    @bonds_end.setter
+    def bonds_end(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def bonds_equilibrium(self) -> list[float]:
+        """
+        Equilibrium bond length in nanometers [nm].
+        """
+    @bonds_equilibrium.setter
+    def bonds_equilibrium(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def bonds_i(self) -> VectorInt:
+        """
+        BFS index of bond endpoint atom 1.
+        """
+    @bonds_i.setter
+    def bonds_i(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def bonds_j(self) -> VectorInt:
+        """
+        BFS index of bond endpoint atom 2.
+        """
+    @bonds_j.setter
+    def bonds_j(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def bonds_molecule_index(self) -> VectorInt:
+        """
+        Index of the molecule this bond belongs to.
+        """
+    @bonds_molecule_index.setter
+    def bonds_molecule_index(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def bonds_ring_closing(self) -> list[bool]:
+        """
+        True if this bond closes a ring (i.e. is not a tree bond).
+        """
+    @bonds_ring_closing.setter
+    def bonds_ring_closing(self, arg0: collections.abc.Sequence[bool]) -> None:
+        ...
+    @property
+    def bonds_stiffness(self) -> list[float]:
+        """
+        Harmonic bond force constant in kilojoules per mole per nanometer squared [kJ/mol/nm^2].
+        """
+    @bonds_stiffness.setter
+    def bonds_stiffness(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def cmap_grid_energy(self) -> list[float]:
+        """
+        Flattened CMAP energy grid in row-major order in kilojoules per mole [kJ/mol].
+        """
+    @cmap_grid_energy.setter
+    def cmap_grid_energy(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def cmap_grid_size(self) -> int:
+        """
+        Dimension of each CMAP grid (grid has cmap_grid_size x cmap_grid_size points).
+        """
+    @cmap_grid_size.setter
+    def cmap_grid_size(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def cmap_torsion_a1(self) -> VectorInt:
+        """
+        Global index of torsion A atom 1.
+        """
+    @cmap_torsion_a1.setter
+    def cmap_torsion_a1(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def cmap_torsion_a2(self) -> VectorInt:
+        """
+        Global index of torsion A atom 2.
+        """
+    @cmap_torsion_a2.setter
+    def cmap_torsion_a2(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def cmap_torsion_a3(self) -> VectorInt:
+        """
+        Global index of torsion A atom 3.
+        """
+    @cmap_torsion_a3.setter
+    def cmap_torsion_a3(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def cmap_torsion_a4(self) -> VectorInt:
+        """
+        Global index of torsion A atom 4.
+        """
+    @cmap_torsion_a4.setter
+    def cmap_torsion_a4(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def cmap_torsion_b1(self) -> VectorInt:
+        """
+        Global index of torsion B atom 1.
+        """
+    @cmap_torsion_b1.setter
+    def cmap_torsion_b1(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def cmap_torsion_b2(self) -> VectorInt:
+        """
+        Global index of torsion B atom 2.
+        """
+    @cmap_torsion_b2.setter
+    def cmap_torsion_b2(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def cmap_torsion_b3(self) -> VectorInt:
+        """
+        Global index of torsion B atom 3.
+        """
+    @cmap_torsion_b3.setter
+    def cmap_torsion_b3(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def cmap_torsion_b4(self) -> VectorInt:
+        """
+        Global index of torsion B atom 4.
+        """
+    @cmap_torsion_b4.setter
+    def cmap_torsion_b4(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def cmap_torsion_map_index(self) -> VectorInt:
+        """
+        Index into the CMAP grid table for each torsion pair.
+        """
+    @cmap_torsion_map_index.setter
+    def cmap_torsion_map_index(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def collision_frequency(self) -> float:
+        """
+        Langevin collision frequency (friction coefficient) in inverse picoseconds [ps^-1].
+        """
+    @collision_frequency.setter
+    def collision_frequency(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def exclusion_begin(self) -> VectorInt:
+        """
+        Begin index into exclusions arrays for each molecule.
+        """
+    @exclusion_begin.setter
+    def exclusion_begin(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def exclusion_end(self) -> VectorInt:
+        """
+        End index (exclusive) into exclusions arrays for each molecule.
+        """
+    @exclusion_end.setter
+    def exclusion_end(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def exclusion_i(self) -> VectorInt:
+        """
+        Global index of atom 1 of the excluded pair.
+        """
+    @exclusion_i.setter
+    def exclusion_i(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def exclusion_j(self) -> VectorInt:
+        """
+        Global index of atom 2 of the excluded pair.
+        """
+    @exclusion_j.setter
+    def exclusion_j(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def gbsa_solute_dielectric(self) -> float:
+        """
+        Relative dielectric constant of the solute interior (dimensionless). Default 1.0.
+        """
+    @gbsa_solute_dielectric.setter
+    def gbsa_solute_dielectric(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def gbsa_solvent_dielectric(self) -> float:
+        """
+        Relative dielectric constant of the solvent (dimensionless). Default 78.5 (water at 298 K).
+        """
+    @gbsa_solvent_dielectric.setter
+    def gbsa_solvent_dielectric(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def harmonic_torsions_begin(self) -> VectorInt:
+        """
+        Begin index into harmonic torsions arrays for each molecule.
+        """
+    @harmonic_torsions_begin.setter
+    def harmonic_torsions_begin(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def harmonic_torsions_end(self) -> VectorInt:
+        """
+        End index (exclusive) into harmonic torsions arrays for each molecule.
+        """
+    @harmonic_torsions_end.setter
+    def harmonic_torsions_end(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def harmonic_torsions_i(self) -> VectorInt:
+        """
+        Global index of torsion atom 1.
+        """
+    @harmonic_torsions_i.setter
+    def harmonic_torsions_i(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def harmonic_torsions_j(self) -> VectorInt:
+        """
+        Global index of torsion atom 2.
+        """
+    @harmonic_torsions_j.setter
+    def harmonic_torsions_j(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def harmonic_torsions_k(self) -> VectorInt:
+        """
+        Global index of torsion atom 3.
+        """
+    @harmonic_torsions_k.setter
+    def harmonic_torsions_k(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def harmonic_torsions_l(self) -> VectorInt:
+        """
+        Global index of torsion atom 4.
+        """
+    @harmonic_torsions_l.setter
+    def harmonic_torsions_l(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def harmonic_torsions_phase(self) -> list[float]:
+        """
+        Equilibrium dihedral angle in radians [rad].
+        """
+    @harmonic_torsions_phase.setter
+    def harmonic_torsions_phase(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def harmonic_torsions_stiffness(self) -> list[float]:
+        """
+        Force constant in kilojoules per mole [kJ/mol].
+        """
+    @harmonic_torsions_stiffness.setter
+    def harmonic_torsions_stiffness(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def has_nbfix(self) -> bool:
+        """
+        True if NBfix pairwise corrections are present.
+        """
+    @has_nbfix.setter
+    def has_nbfix(self, arg0: bool) -> None:
+        ...
+    @property
+    def nonbonded_cutoff(self) -> float:
+        """
+        Distance cutoff for nonbonded interactions in nanometers [nm].
+        """
+    @nonbonded_cutoff.setter
+    def nonbonded_cutoff(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def nonbonded_method(self) -> NonbondedMethod:
+        """
+        Algorithm used to evaluate nonbonded interactions.
+        """
+    @nonbonded_method.setter
+    def nonbonded_method(self, arg0: NonbondedMethod) -> None:
+        ...
+    @property
+    def num_angles(self) -> int:
+        """
+        Total number of angles.
+        """
+    @num_angles.setter
+    def num_angles(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def num_atoms(self) -> int:
+        """
+        Total number of atoms.
+        """
+    @num_atoms.setter
+    def num_atoms(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def num_bonds(self) -> int:
+        """
+        Total number of bonds (tree bonds plus ring-closing bonds).
+        """
+    @num_bonds.setter
+    def num_bonds(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def num_exclusions(self) -> int:
+        """
+        Total number of non-bonded exclusion pairs.
+        """
+    @num_exclusions.setter
+    def num_exclusions(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def num_harmonic_torsions(self) -> int:
+        """
+        Total number of harmonic torsion terms.
+        """
+    @num_harmonic_torsions.setter
+    def num_harmonic_torsions(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def num_molecules(self) -> int:
+        """
+        Total number of molecules.
+        """
+    @num_molecules.setter
+    def num_molecules(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def num_nb_types(self) -> int:
+        """
+        Number of distinct nonbonded atom types.
+        """
+    @num_nb_types.setter
+    def num_nb_types(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def num_periodic_torsions(self) -> int:
+        """
+        Total number of periodic torsion terms.
+        """
+    @num_periodic_torsions.setter
+    def num_periodic_torsions(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def num_scaling14(self) -> int:
+        """
+        Total number of 1-4 pair scaling terms.
+        """
+    @num_scaling14.setter
+    def num_scaling14(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def num_urey_bradley(self) -> int:
+        """
+        Total number of Urey-Bradley 1-3 terms.
+        """
+    @num_urey_bradley.setter
+    def num_urey_bradley(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def num_z_matrix_rows(self) -> int:
+        """
+        Number of Z-matrix rows (equals number of atoms).
+        """
+    @num_z_matrix_rows.setter
+    def num_z_matrix_rows(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def periodic_torsions_begin(self) -> VectorInt:
+        """
+        Begin index into periodic torsions arrays for each molecule.
+        """
+    @periodic_torsions_begin.setter
+    def periodic_torsions_begin(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def periodic_torsions_end(self) -> VectorInt:
+        """
+        End index (exclusive) into periodic torsions arrays for each molecule.
+        """
+    @periodic_torsions_end.setter
+    def periodic_torsions_end(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def periodic_torsions_i(self) -> VectorInt:
+        """
+        Global index of torsion atom 1.
+        """
+    @periodic_torsions_i.setter
+    def periodic_torsions_i(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def periodic_torsions_improper(self) -> list[bool]:
+        """
+        True if the torsion is an improper (out-of-plane) term.
+        """
+    @periodic_torsions_improper.setter
+    def periodic_torsions_improper(self, arg0: collections.abc.Sequence[bool]) -> None:
+        ...
+    @property
+    def periodic_torsions_j(self) -> VectorInt:
+        """
+        Global index of torsion atom 2.
+        """
+    @periodic_torsions_j.setter
+    def periodic_torsions_j(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def periodic_torsions_k(self) -> VectorInt:
+        """
+        Global index of torsion atom 3.
+        """
+    @periodic_torsions_k.setter
+    def periodic_torsions_k(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def periodic_torsions_l(self) -> VectorInt:
+        """
+        Global index of torsion atom 4.
+        """
+    @periodic_torsions_l.setter
+    def periodic_torsions_l(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def periodic_torsions_n(self) -> VectorInt:
+        """
+        Torsion periodicity (integer, dimensionless).
+        """
+    @periodic_torsions_n.setter
+    def periodic_torsions_n(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def periodic_torsions_phase(self) -> list[float]:
+        """
+        Phase offset in radians [rad].
+        """
+    @periodic_torsions_phase.setter
+    def periodic_torsions_phase(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def periodic_torsions_stiffness(self) -> list[float]:
+        """
+        Force constant in kilojoules per mole [kJ/mol].
+        """
+    @periodic_torsions_stiffness.setter
+    def periodic_torsions_stiffness(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def scaling14_begin(self) -> VectorInt:
+        """
+        Begin index into 1-4 scaling arrays for each molecule.
+        """
+    @scaling14_begin.setter
+    def scaling14_begin(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def scaling14_charge_product(self) -> list[float]:
+        """
+        q1 times q4 pre-scaled by the 1-4 electrostatic factor, in units of proton charge squared [e^2].
+        """
+    @scaling14_charge_product.setter
+    def scaling14_charge_product(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def scaling14_end(self) -> VectorInt:
+        """
+        End index (exclusive) into 1-4 scaling arrays for each molecule.
+        """
+    @scaling14_end.setter
+    def scaling14_end(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def scaling14_epsilon(self) -> list[float]:
+        """
+        Combined Lennard-Jones well depth in kilojoules per mole [kJ/mol].
+        """
+    @scaling14_epsilon.setter
+    def scaling14_epsilon(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def scaling14_i(self) -> VectorInt:
+        """
+        Global index of atom 1 (first atom of dihedral i-j-k-l).
+        """
+    @scaling14_i.setter
+    def scaling14_i(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def scaling14_l(self) -> VectorInt:
+        """
+        Global index of atom 4 (last atom of dihedral i-j-k-l).
+        """
+    @scaling14_l.setter
+    def scaling14_l(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def scaling14_sigma(self) -> list[float]:
+        """
+        Combined Lennard-Jones radius in nanometers [nm].
+        """
+    @scaling14_sigma.setter
+    def scaling14_sigma(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def seed(self) -> int:
+        """
+        Random number seed for the integrator. 0 means system-generated.
+        """
+    @seed.setter
+    def seed(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def thermostat_temperature(self) -> float:
+        """
+        Target temperature for the Langevin thermostat in Kelvin [K].
+        """
+    @thermostat_temperature.setter
+    def thermostat_temperature(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def urey_bradley_begin(self) -> VectorInt:
+        """
+        Begin index into Urey-Bradley arrays for each molecule.
+        """
+    @urey_bradley_begin.setter
+    def urey_bradley_begin(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def urey_bradley_end(self) -> VectorInt:
+        """
+        End index (exclusive) into Urey-Bradley arrays for each molecule.
+        """
+    @urey_bradley_end.setter
+    def urey_bradley_end(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def urey_bradley_equilibrium(self) -> list[float]:
+        """
+        Nominal 1-3 distance in nanometers [nm].
+        """
+    @urey_bradley_equilibrium.setter
+    def urey_bradley_equilibrium(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def urey_bradley_i(self) -> VectorInt:
+        """
+        Global index of atom 1 (outer atom of angle i-j-k).
+        """
+    @urey_bradley_i.setter
+    def urey_bradley_i(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def urey_bradley_k(self) -> VectorInt:
+        """
+        Global index of atom 3 (outer atom of angle i-j-k).
+        """
+    @urey_bradley_k.setter
+    def urey_bradley_k(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def urey_bradley_stiffness(self) -> list[float]:
+        """
+        Harmonic force constant in kilojoules per mole per nanometer squared [kJ/mol/nm^2].
+        """
+    @urey_bradley_stiffness.setter
+    def urey_bradley_stiffness(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def use_gbsa_obc2(self) -> bool:
+        """
+        True if the GBSA OBC2 implicit solvent model is active.
+        """
+    @use_gbsa_obc2.setter
+    def use_gbsa_obc2(self, arg0: bool) -> None:
+        ...
+    @property
+    def z_matrix_begin(self) -> VectorInt:
+        """
+        Begin index into Z-matrix arrays for each molecule.
+        """
+    @z_matrix_begin.setter
+    def z_matrix_begin(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def z_matrix_end(self) -> VectorInt:
+        """
+        End index (exclusive) into Z-matrix arrays for each molecule.
+        """
+    @z_matrix_end.setter
+    def z_matrix_end(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def z_matrix_i(self) -> VectorInt:
+        """
+        Global atom index of the atom placed at row r.
+        """
+    @z_matrix_i.setter
+    def z_matrix_i(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def z_matrix_j(self) -> VectorInt:
+        """
+        Bond-length reference atom at row r. Row 0 holds sentinel -1 (root has no bond reference).
+        """
+    @z_matrix_j.setter
+    def z_matrix_j(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def z_matrix_k(self) -> VectorInt:
+        """
+        Bond-angle reference atom at row r. Rows 0-1 hold sentinel -1.
+        """
+    @z_matrix_k.setter
+    def z_matrix_k(self, arg0: VectorInt) -> None:
+        ...
+    @property
+    def z_matrix_l(self) -> VectorInt:
+        """
+        Dihedral reference atom at row r. Rows 0-2 hold sentinel -1.
+        """
+    @z_matrix_l.setter
+    def z_matrix_l(self, arg0: VectorInt) -> None:
         ...
 class ThermostatName:
     """

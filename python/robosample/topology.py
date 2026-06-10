@@ -1,3 +1,7 @@
+"""
+topology.py
+"""
+
 from typing import NamedTuple
 
 from attr import dataclass
@@ -21,16 +25,11 @@ class _FieldSpec:
         When True every element is shifted by the cumulative atom count at the
         start of the current molecule instance.  Set this for every field that
         stores atom indices (bonds, angles, torsions, z-matrix, ...).
-    skip_sentinel : bool
-        Meaningful only when atom_offset is True.  When True, elements equal to
-        _ZM_SENTINEL (-1) are left unchanged instead of being shifted.  Required
-        for z_matrix_j / k / l which use -1 as a padding sentinel.
     """
 
     proto_attr: str
     sys_attr: str
     atom_offset: bool = False
-    skip_sentinel: bool = False
 
 
 class _RangeSpec(NamedTuple):
@@ -104,6 +103,39 @@ _FIELD_SPECS: tuple[_FieldSpec, ...] = (
     _FieldSpec("atoms_x", "atoms_x"),
     _FieldSpec("atoms_y", "atoms_y"),
     _FieldSpec("atoms_z", "atoms_z"),
+    # -- Atom topology indices (compound-local / table indices; NO offset) ----
+    # atoms_compound_atom_index is the SimTK Compound::AtomIndex (0..n-1 within
+    # the compound) and is provided by MoleculePrototype directly.
+    # atoms_class_index / atoms_charged_atom_type_index are stamped onto each
+    # prototype by Context.load_amber before the flattening loop runs.  All
+    # three are table/compound-local indices, NOT system atom indices, so they
+    # must NOT receive the atom offset.
+    _FieldSpec(
+        "atoms_compound_atom_index", "atoms_compound_atom_index", atom_offset=False
+    ),
+    _FieldSpec("atoms_class_index", "atoms_class_index", atom_offset=False),
+    _FieldSpec(
+        "atoms_charged_atom_type_index",
+        "atoms_charged_atom_type_index",
+        atom_offset=False,
+    ),
+    # Parallel per-atom NAME strings for the class / charged-type tables.
+    # These let the consumer build the DuMM class & charged-atom-type registries
+    # (unique index -> name); strings, so no offset.
+    _FieldSpec("atoms_class_names", "atoms_class_names", atom_offset=False),
+    _FieldSpec(
+        "atoms_charged_type_names", "atoms_charged_type_names", atom_offset=False
+    ),
+    # Element labels and 0-based non-bonded (LJ) TYPE index.  element_* are
+    # strings; nonbonded_index is a per-type index, not an atom index -- none
+    # receive the atom offset.
+    _FieldSpec("atoms_element_name", "atoms_element_name", atom_offset=False),
+    _FieldSpec("atoms_element_symbol", "atoms_element_symbol", atom_offset=False),
+    _FieldSpec("atoms_nonbonded_index", "atoms_nonbonded_index", atom_offset=False),
+    # NOTE: atoms_unique_name is intentionally NOT a field spec.  Its embedded
+    # residue/atom numbers are GLOBAL (whole-system, prmtop) values that depend
+    # on each molecule instance's position, which a per-prototype array cannot
+    # encode, so Context.load_amber assembles it directly in the flattening loop.
     # -- Bonds (i / j are atom indices; stiffness / equilibrium are scalars) --
     _FieldSpec("bonds_i", "bonds_i", atom_offset=True),
     _FieldSpec("bonds_j", "bonds_j", atom_offset=True),
@@ -152,7 +184,7 @@ _FIELD_SPECS: tuple[_FieldSpec, ...] = (
     # z_matrix_j / k / l use -1 as a sentinel for root-triplet padding rows;
     # those entries must be left at -1 and NOT shifted.
     _FieldSpec("z_matrix_i", "z_matrix_i", atom_offset=True),
-    _FieldSpec("z_matrix_j", "z_matrix_j", atom_offset=True, skip_sentinel=True),
-    _FieldSpec("z_matrix_k", "z_matrix_k", atom_offset=True, skip_sentinel=True),
-    _FieldSpec("z_matrix_l", "z_matrix_l", atom_offset=True, skip_sentinel=True),
+    _FieldSpec("z_matrix_j", "z_matrix_j", atom_offset=True),
+    _FieldSpec("z_matrix_k", "z_matrix_k", atom_offset=True),
+    _FieldSpec("z_matrix_l", "z_matrix_l", atom_offset=True),
 )

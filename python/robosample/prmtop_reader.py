@@ -1,4 +1,6 @@
 """
+prmtop_reader.py
+
 Utilities for reading AMBER prmtop topology files and detecting NBFIX
 non-standard Lennard-Jones pair interactions.
 
@@ -12,6 +14,7 @@ AMBER file format specification:
 import logging
 import os
 import re
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
@@ -588,3 +591,195 @@ def load_cmap(
         "cmap_torsion_b4": atoms[:, 4].tolist(),
         "cmap_torsion_map_index": map_indices.tolist(),
     }
+
+
+# ====================================================================== #
+# 1-4 scaling pairs and explicit non-bonded exclusions
+#
+# These sections are not exposed on the high-level ParmEd Structure API and
+# must be reconstructed from the raw prmtop dihedral pointer list and the
+# excluded-atoms list.  Records are returned in *local* (ParmEd) atom indices;
+# orientation into closest->farthest order and remapping to compound indices is
+# the caller's responsibility (see MoleculePrototype).
+# ====================================================================== #
+
+# Mathematical constant relating the AMBER r_min (equilibrium pair distance) to
+# the Lennard-Jones sigma:  sigma = r_min / 2^(1/6).
+_SIGMA_SCALE: float = 2.0 ** (-1.0 / 6.0)
+
+
+@dataclass(slots=True)
+class Scaling14Record:
+    """One unique 1-4 non-bonded pair, in local atom indices."""
+
+    i_local: int
+    l_local: int
+    charge_product: float
+    """q_i * q_l / scee, proton-charge^2 (SCEE already absorbed)."""
+    epsilon: float
+    """Combined LJ well depth / scnb, kJ/mol (SCNB already absorbed)."""
+    sigma: float
+    """Combined LJ sigma, nm."""
+
+
+@dataclass(slots=True)
+class ExclusionRecord:
+    """One explicit non-bonded exclusion pair (not already a 1-4 pair), local indices."""
+
+    i_local: int
+    j_local: int
+
+
+@dataclass(slots=True)
+class NonbondedTables:
+    """1-4 scaling pairs and explicit exclusions parsed from a prmtop."""
+
+    scaling14: list[Scaling14Record] = field(default_factory=list)
+    exclusions: list[ExclusionRecord] = field(default_factory=list)
+
+
+def load_nonbonded_exceptions(
+    parm_data: dict,
+    parm: pmd.amber.AmberParm,
+    ene_conv: float = pmd.unit.kilocalories_per_mole.conversion_factor_to(
+        pmd.unit.kilojoules_per_mole
+    ),
+    length_conv: float = pmd.unit.angstroms.conversion_factor_to(pmd.unit.nanometers),
+) -> NonbondedTables:
+    """Parse 1-4 scaling pairs and explicit exclusions from an AMBER prmtop.
+
+    Companion to :func:`load_lj_coefs` / :func:`load_cmap`: where those handle
+    the full LJ table and the CMAP grids, this reconstructs the per-pair 1-4
+    scaled interactions and the explicit exclusion list.
+
+    The 1-4 pairs are read from the dihedral pointer quintuples
+    (``DIHEDRALS_INC_HYDROGEN`` + ``DIHEDRALS_WITHOUT_HYDROGEN``): the 3rd
+    pointer < 0 marks a suppressed 1-4 interaction (skipped) and the 4th < 0
+    marks an improper (skipped).  ``SCEE`` and ``SCNB`` factors are absorbed
+    into the returned charge product and epsilon respectively.  Pairs already
+    accounted for as 1-4 interactions are removed from the exclusion list so
+    each pair appears in exactly one table.
+
+    Parameters
+    ----------
+    parm_data : dict
+        Raw section data: either ``parm.parm_data`` or the ``raw_data`` dict
+        from :func:`parse_prmtop`.  Must contain the LJ 1-4 (or plain LJ)
+        coefficient tables, ``NONBONDED_PARM_INDEX``, ``SCEE_SCALE_FACTOR``,
+        ``SCNB_SCALE_FACTOR``, the dihedral pointer lists, and the
+        excluded-atom lists.
+    parm : pmd.amber.AmberParm
+        Loaded structure; supplies per-atom charge / ``nb_idx`` / ``idx`` and
+        the ``NTYPES`` pointer, mirroring :func:`load_cmap`'s use of *parm*.
+    ene_conv : float, optional
+        kcal mol⁻¹ -> target energy unit factor (default: kcal -> kJ).
+    length_conv : float, optional
+        Å -> target length unit factor (default: Å -> nm).
+
+    Returns
+    -------
+    NonbondedTables
+        ``scaling14`` and ``exclusions`` record lists, in local atom indices.
+    """
+    num_types: int = parm.ptr("NTYPES")
+    atom_by_idx: dict[int, pmd.Atom] = {a.idx: a for a in parm.atoms}
+
+    lj14_a = parm_data.get("LENNARD_JONES_14_ACOEF")
+    if lj14_a is None:
+        lj14_a = parm_data["LENNARD_JONES_ACOEF"]
+    lj14_b = parm_data.get("LENNARD_JONES_14_BCOEF")
+    if lj14_b is None:
+        lj14_b = parm_data["LENNARD_JONES_BCOEF"]
+    nb_index = parm_data["NONBONDED_PARM_INDEX"]
+    scee_factors = parm_data["SCEE_SCALE_FACTOR"]
+    scnb_factors = parm_data["SCNB_SCALE_FACTOR"]
+
+    tables = NonbondedTables()
+    seen_14: set[tuple[int, int]] = set()
+
+    # list(...) + list(...) so this works whether the sections are Python
+    # lists (parm.parm_data) or numpy arrays (parse_prmtop raw_data); '+' on
+    # numpy arrays would element-wise add rather than concatenate.
+    dihedral_ptrs = list(parm_data["DIHEDRALS_INC_HYDROGEN"]) + list(
+        parm_data["DIHEDRALS_WITHOUT_HYDROGEN"]
+    )
+
+    for ii in range(0, len(dihedral_ptrs), 5):
+        i_raw, _j_raw, k_raw, l_raw, dtype_idx = dihedral_ptrs[ii : ii + 5]
+
+        if k_raw < 0:  # 1-4 interaction suppressed
+            continue
+        if l_raw < 0:  # improper dihedral
+            continue
+
+        atom_i_idx = int(i_raw) // 3
+        atom_l_idx = int(l_raw) // 3
+
+        if atom_i_idx not in atom_by_idx or atom_l_idx not in atom_by_idx:
+            continue
+
+        atom_i = atom_by_idx[atom_i_idx]
+        atom_l = atom_by_idx[atom_l_idx]
+
+        key = (min(atom_i_idx, atom_l_idx), max(atom_i_idx, atom_l_idx))
+        if key in seen_14:
+            continue
+
+        nb_i = atom_i.nb_idx - 1  # ParmEd nb_idx is 1-based
+        nb_l = atom_l.nb_idx - 1
+        pair_idx = int(nb_index[nb_i * num_types + nb_l]) - 1
+        if pair_idx < 0:
+            continue
+
+        acoef = lj14_a[pair_idx]
+        bcoef = lj14_b[pair_idx]
+
+        if acoef != 0.0 and bcoef != 0.0:
+            epsilon_kcal = (bcoef**2) / (4.0 * acoef)
+            r_min_ang = (2.0 * acoef / bcoef) ** (1.0 / 6.0)
+            epsilon_kj = epsilon_kcal * ene_conv
+            sigma_nm = r_min_ang * length_conv * _SIGMA_SCALE
+        else:
+            epsilon_kj = 0.0
+            sigma_nm = 1.0 * length_conv  # placeholder; epsilon is 0
+
+        scee = scee_factors[int(dtype_idx) - 1]
+        scnb = scnb_factors[int(dtype_idx) - 1]
+
+        seen_14.add(key)
+        tables.scaling14.append(
+            Scaling14Record(
+                i_local=key[0],
+                l_local=key[1],
+                charge_product=atom_i.charge * atom_l.charge / scee,
+                epsilon=epsilon_kj / scnb,
+                sigma=sigma_nm,
+            )
+        )
+
+    logger.debug("Parsed %d 1-4 scaling pairs from prmtop.", len(tables.scaling14))
+
+    # ---- Explicit exclusions -------------------------------------------- #
+    n_excluded_list = parm_data["NUMBER_EXCLUDED_ATOMS"]
+    excluded_atoms = parm_data["EXCLUDED_ATOMS_LIST"]
+
+    seen_excl: set[tuple[int, int]] = set(seen_14)
+    offset = 0
+    for i_atom in range(len(parm.atoms)):
+        n = int(n_excluded_list[i_atom])
+        for j_atom_1based in excluded_atoms[offset : offset + n]:
+            j = int(j_atom_1based)
+            if j <= 0:
+                continue  # j=0 placeholder for atoms with no exclusions
+            j_idx = j - 1  # prmtop is 1-based
+            if j_idx not in atom_by_idx:
+                continue
+            key = (min(i_atom, j_idx), max(i_atom, j_idx))
+            if key in seen_excl:
+                continue
+            seen_excl.add(key)
+            tables.exclusions.append(ExclusionRecord(i_local=key[0], j_local=key[1]))
+        offset += n
+
+    logger.debug("Parsed %d exclusions from prmtop.", len(tables.exclusions))
+    return tables

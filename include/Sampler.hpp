@@ -65,8 +65,7 @@ class Sampler {
     // Draws X from von Mises-Fisher distribution with concentration
     // parameter k TODO: reference to the algorithm
     // X vector has the dimensions of the ndofs
-    [[nodiscard]] auto generateVonMisesFisherSample(std::vector<SimTK::Real>& X, SimTK::Real k)
-        -> std::vector<SimTK::Real>&;
+    void generateVonMisesFisherSample(std::vector<SimTK::Real>& X, SimTK::Real k);
 
     // Draws from chi distribution
     [[nodiscard]] auto generateChiSample() -> SimTK::Real;

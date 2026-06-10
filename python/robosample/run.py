@@ -19,15 +19,10 @@ parser.add_argument("write_freq", type=int, help="CSV and DCD write frequency.")
 # Parse the arguments
 args = parser.parse_args()
 
-# create robosample context
-context = robosample.Context(
-    name=args.name,
-    seed=args.seed,
-    prmtop=args.prmtop,
-    inpcrd=args.inpcrd,
-    write_freq=args.write_freq,
-    testing=False,
-)
+# Create robosample context
+dih_classifier = robosample.AmberDihedralClassifier()
+context = robosample.Context(args.name, args.seed, dih_classifier)
+context.load_amber(args.prmtop, args.inpcrd)
 
 # All molecule roots are `robosample.rb.RootMobility.Weld`
 # context.set_root_mobility(0, robosample.rb.RootMobility.Free)

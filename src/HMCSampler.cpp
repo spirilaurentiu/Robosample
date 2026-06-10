@@ -25,7 +25,7 @@
 #include "MassProperties.h"
 #include "Mat.h"
 #include "MobilizedBody.h"
-#include "OpenMM.hpp"
+#include "OpenMMContext.hpp"
 #include "SmallMatrixMixed.h"
 #include "Stage.h"
 #include "State.h"
@@ -2531,11 +2531,11 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
             // if (1){
 
             std::cout << "Water (" << waterIx << ") too far from ligand (" << WL.norm()
-                      << "),
-                repositioning...\n "; 		SimTK::Vec3 BR={0,0,0};
+                      << "),repositioning...\n ";
+            SimTK::Vec3 BR = {0, 0, 0};
 
-                // Sample a random vector centered in 0 and expressed in G
-                SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
+            // Sample a random vector centered in 0 and expressed in G
+            SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
             SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
             SimTK::Vec3 randVec = {0, 0, 0};
 
@@ -2565,14 +2565,19 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
     }
     system.get().realize(someState, SimTK::Stage::Dynamics);
 
-    // Else, if not repositioned, integrate trajectory.
-    if (ligandToSite.norm() <= sphereRadius) {
-        perturbVelocities(someState);
-        calcProposedKineticAndTotalEnergyOld(someState);
 
-        integrateTrajectory(someState, true);
-        system.get().realize(someState, SimTK::Stage::Dynamics);
-    }
+    throw std::runtime_error(
+        "HMCSampler::integrateTrajectory_BoundHMC not implemented yet. The next step would be to perturb "
+        "velocities, calculate energies and integrate the trajectory.");
+
+    // // Else, if not repositioned, integrate trajectory.
+    // if (ligandToSite.norm() <= sphereRadius) {
+    //     perturbVelocities(someState);
+    //     calcProposedKineticAndTotalEnergyOld(someState);
+
+    //     integrateTrajectory(someState, true);
+    //     system.get().realize(someState, SimTK::Stage::Dynamics);
+    // }
 }
 
 /** Integrate trajectory using task space forces */
