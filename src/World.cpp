@@ -4283,17 +4283,17 @@ auto World::generateSamples(int howManySamplesPerRound,
     } else {
         // Simbody supports locking mobilizers
         for (const auto& mobodLock : mobodLocks) {
-            for (const auto mbx : mobodLock) {
-                const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-                mobod.lock(worldState);
-            }
+            // for (const auto mbx : mobodLock) {
+            //     const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+            //     mobod.lock(worldState);
+            // }
 
             // Sample
             for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
                 validated &=
                     updSampler(0)->sampleIteration(worldState, atomTargetLocationsCache, shouldPrint);
                 if (!validated) {
-                    continue;
+                    break;
                 }
             }
 
@@ -4301,10 +4301,10 @@ auto World::generateSamples(int howManySamplesPerRound,
                 break;
             }
 
-            for (const auto mbx : mobodLock) {
-                const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-                mobod.unlock(worldState);
-            }
+            // for (const auto mbx : mobodLock) {
+            //     const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+            //     mobod.unlock(worldState);
+            // }
         }
 
         // // TODO the above will lock literally everything, so it won't simulate anything
