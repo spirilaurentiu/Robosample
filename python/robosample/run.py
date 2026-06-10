@@ -35,6 +35,9 @@ context = robosample.Context(
 context.set_root_mobility(0, robosample.rb.RootMobility.Free)
 context.set_root_mobility(1, robosample.rb.RootMobility.Weld)
 
+# Ligand:   topology 0, mbx 1
+# Receptor: topology 1, mbx 2
+
 # context.add_cartesian_world().add_sampler(
 #     timeStep=0.001,
 #     mdSteps=50_000,
@@ -46,11 +49,12 @@ context.set_root_mobility(1, robosample.rb.RootMobility.Weld)
 
 sele = context.build_flexibilities(None, robosample.rb.BondMobility.Torsion, False)
 context.add_robotic_world(sele).add_sampler(
-    timeStep=0.25,  # 5 fs
-    mdSteps=10,
-    boostMDSteps=10,
+    timeStep=0.025,  # 5 fs
+    mdSteps=100,
+    boostMDSteps=100,
     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
     use_nuts=False,
+    integratorType=robosample.rb.IntegratorType.BOUND_HMC,
 )
 
 # Add replicas (geometric temperature ladder)
