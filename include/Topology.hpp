@@ -22,6 +22,9 @@ Contains a list of atoms bAtomList which consists of Atom
 objects **/
 class Topology : public SimTK::Compound {
     public:
+    // Map aIx to its Transform Default top transform
+    std::vector<SimTK::Transform> aIx2TopTransform;
+
     Topology(const SimTK::Compound::Name& name,
              SimTK::CompoundSystem::CompoundIndex compoundIndex,
              int rootGlobalAtomIx,
@@ -120,16 +123,16 @@ class Topology : public SimTK::Compound {
      */
     [[nodiscard]] const RoboAtom& getAtom(SimTK::Compound::AtomIndex cAIx) const;
 
-    /**
-     * @brief Get a reference to the bond object in the bond list of this Compound.
-     *
-     * This is not the Compound Atom Index but the global atom index.
-     *
-     * @param aIx0 Global Atom Index of one atom in the bond.
-     * @param aIx1 Global Atom Index of the other atom in the bond.
-     * @return Reference to the BondLink object.
-     */
-    auto getBondByGlobalAtomIndex(int aIx0, int aIx1) const -> const RoboBond&;
+    // /**
+    //  * @brief Get a reference to the bond object in the bond list of this Compound.
+    //  *
+    //  * This is not the Compound Atom Index but the global atom index.
+    //  *
+    //  * @param aIx0 Global Atom Index of one atom in the bond.
+    //  * @param aIx1 Global Atom Index of the other atom in the bond.
+    //  * @return Reference to the BondLink object.
+    //  */
+    // auto getBondByGlobalAtomIndex(int aIx0, int aIx1) const -> const RoboBond&;
 
     /**
      * @brief Get the bonded neighbor atom in the parent mobilized body.
@@ -141,27 +144,29 @@ class Topology : public SimTK::Compound {
                                           const SimTK::DuMMForceFieldSubsystem& dumm) const
         -> SimTK::Compound::AtomIndex;
 
-    /**
-     * @brief Calculate all atom frames in top frame. It avoids calling
-     * calcDefaultAtomFrameInCompoundFrame multiple times. This has to be called
-     * every time the coordinates change though.
-     * @param :
-     * @return
-     */
-    void calcAtomsTopTransforms();
+    // /**
+    //  * @brief Calculate all atom frames in top frame. It avoids calling
+    //  * calcDefaultAtomFrameInCompoundFrame multiple times. This has to be called
+    //  * every time the coordinates change though.
+    //  * @param :
+    //  * @return
+    //  */
+    // void calcAtomsTopTransforms();
 
-    /**
-     * @brief
-     * @return
-     */
-    void printTopTransforms();
+    // /**
+    //  * @brief
+    //  * @return
+    //  */
+    // void printTopTransforms();
 
     /**
      * @brief Get atom Top level transform from the existing Topology map
      * @param cAIx: atom Compound AtomIndex
      * @return Atom's Top level transform
      */
-    auto getTopTransform(SimTK::Compound::AtomIndex cAIx) const -> const SimTK::Transform&;
+    auto getTopTransform(SimTK::Compound::AtomIndex cAIx) const -> const SimTK::Transform& {
+        return aIx2TopTransform[cAIx];
+    }
 
     // Return mbx by calling DuMM functions
     auto getAtomMobilizedBodyIndexThroughDumm(SimTK::Compound::AtomIndex aIx,
@@ -178,8 +183,8 @@ class Topology : public SimTK::Compound {
                                                      const SimTK::SimbodyMatterSubsystem& matter,
                                                      const SimTK::State& someState) const -> SimTK::Vec3;
 
-    auto matchAtomTargetLocations(const SimTK::Compound::AtomTargetLocations& atomTargets)
-        -> SimTK::Transform;
+    // auto matchAtomTargetLocations(const SimTK::Compound::AtomTargetLocations& atomTargets)
+    //     -> SimTK::Transform;
     auto getMatchError(const SimTK::Compound::AtomTargetLocations& atomTargets) -> SimTK::Real;
 
     void writeAtomListPdb(std::string dirname,
@@ -220,8 +225,6 @@ class Topology : public SimTK::Compound {
 
     std::unordered_map<std::string, std::size_t> atomName2bond, atomName2angle;
 
-    // Map aIx to its Transform Default top transform
-    std::vector<SimTK::Transform> aIx2TopTransform;
 
     // Map Atom number to aIx
     std::vector<int> compound2GlobalAtomIndex;

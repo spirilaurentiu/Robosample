@@ -24,6 +24,7 @@
 #include "DuMMForceFieldSubsystem.h"
 #include "FixmanTorque.hpp"
 #include "TopologyElements.hpp"
+#include "Transform.h"
 #include "common.h"
 
 #ifndef BaseSampler
@@ -330,7 +331,8 @@ class HarmonicImproperTorsionForce : public SimTK::DuMM::CustomBondTorsion {
 class World {
     public:
     void setAtomTargetLocationsToState(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
-    void updateInboardAndOutboardFramesFromTopologies();
+    void updateInboardAndOutboardFramesFromTopologies(
+        const std::vector<std::vector<SimTK::Transform>>& atomFrameCache);
 
     explicit World(int worldIndex,
                    Span<Topology> topo,
@@ -465,17 +467,17 @@ class World {
     SimTK::BondMobility::Mobility determineMobilityFrom_H(SimTK::MobilizedBodyIndex mbx,
                                                           SimTK::State& someState);
 
-    /**
-     *
-     */
-    SimTK::Real
-    getRootAngle(Topology& topology, SimTK::Compound::AtomIndex rootAIx, const SimTK::State& someState);
+    // /**
+    //  *
+    //  */
+    // SimTK::Real
+    // getRootAngle(Topology& topology, SimTK::Compound::AtomIndex rootAIx, const SimTK::State& someState);
 
-    /**
-     * Calc X_FM transforms for reconstruction
-     */
-    SimTK::Transform
-    calcX_FMTransforms(Topology& topology, SimTK::Compound::AtomIndex aIx, const SimTK::State& someState);
+    // /**
+    //  * Calc X_FM transforms for reconstruction
+    //  */
+    // SimTK::Transform
+    // calcX_FMTransforms(Topology& topology, SimTK::Compound::AtomIndex aIx, const SimTK::State& someState);
 
     /** Update Gmolmodel Atom Cartesian coordinates according to
     Molmodel Compound which in turn relizes Position and uses matter

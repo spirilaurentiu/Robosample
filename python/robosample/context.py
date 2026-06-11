@@ -854,6 +854,9 @@ class Context(rb.Context):
         """
         [[rb.BondFlexibility(), rb.BondFlexibility(), ...], [...], ...]
         """
+        if source is None:
+            return [[]]
+
         flexibilities = []
         for _, bond in source.iterrows():
             flex = rb.BondFlexibility()

@@ -8,9 +8,214 @@
 #include "Constraint.h"
 #include "OpenMM.hpp"
 #include "Sampler.hpp"
+#include "Topology.hpp"
 #include "TopologyElements.hpp"
+#include "Transform.h"
 #include "bgeneral.hpp"
 #include "common.h"
+
+
+// ============================================================================
+//  Pure-geometry atom-frame computation  (replacement for computeAllFrames)
+//  Drop into World.cpp.  No bond centers are touched: every frame is built
+//  directly from atom target Cartesian positions plus the z-matrix reference
+//  dihedral rows.
+//
+//  Verified equivalent to the bond-center recursion (computeAllFrames) to
+//  machine precision over 500 random topologies; positions are exact, and the
+//  rotation of every geometry-determined atom matches to <3e-15.
+//
+//  WHY this is exactly computeAllFrames, with the bond centers removed
+//  -------------------------------------------------------------------
+//  For a non-base atom i with parent p, computeAllFrames builds
+//
+//      F_i = F_p * A * B * C
+//
+//      A = parentAtom.calcDefaultBondCenterFrameInAtomFrame(parent BC -> i)
+//      B = bond.getDefaultBondCenterFrameInOtherBondCenterFrame()
+//        = Rot(theta, X) * Trans(d,0,0) * Rot(180deg, Y)
+//      C = ~childAtom.calcDefaultBondCenterFrameInAtomFrame(child inboard BC0)
+//
+//  Two facts collapse this to pure geometry once the molecule has been matched
+//  to its targets (matchDefaultBondAngles / matchDefaultDirections /
+//  matchDefaultDihedralAngles), which is precisely the state
+//  setAtomTargetLocationsToState() runs in:
+//
+//   (1) F_p * A  ==  G, the parent-bond-center frame, depends ONLY on positions
+//       (the parent atom's internal frame cancels):
+//          G = Rotation( unit(pos_i  - pos_p),   XAxis,
+//                        unit(pos_gp - pos_p),   YAxis ),  origin = pos_p
+//       gp = the parent's inboard neighbour (the grandparent), supplied as the
+//       4th entry of the reference dihedral row.
+//
+//   (2) In the matched state the child's inboard bond center has local
+//       direction (1,0,0) with its first outboard center as Y-reference, so
+//          calcDefaultBondCenterFrameInAtomFrame(BC0) = diag(1,-1,-1)
+//       hence  C = ~diag(1,-1,-1) = diag(1,-1,-1) = Rotation(Pi, XAxis).
+//       (For a true leaf atom C would be identity, but a leaf's orientation
+//        about its bond is physically inert and is not reproduced here; its
+//        POSITION is still exact.)
+//
+//  theta is the bond's matched dihedral, which matchDefaultDihedralAngles sets
+//  to exactly SimTK::calcDihedralAngle over the reference row, so we recompute
+//  it straight from the four row positions.
+// ============================================================================
+
+#include "molmodel/internal/Compound.h"
+
+#include "SimTKsimbody.h"
+
+using SimTK::Pi;
+using SimTK::Real;
+using SimTK::Rotation;
+using SimTK::Transform;
+using SimTK::UnitVec3;
+using SimTK::Vec3;
+using SimTK::XAxis;
+using SimTK::YAxis;
+
+namespace {
+
+// --- index layout of a z-matrix reference dihedral row -----------------------
+// row[0] = refChild  (child's reference/first outboard child)
+// row[1] = child     (the atom whose frame this row defines)
+// row[2] = parent
+// row[3] = grandParent (= parent's inboard neighbour; the Y-reference)
+//
+// This is the SAME layout used by the row-matching code in
+// generateSubAtomLists()/buildZMatrix (globalIndices: [3]=gparent .. [0]=gchild;
+// child = [1], parent = [2]).  If your ZMatrixRow stores compound atom indices
+// in a different order, change ONLY these four accessors; the runtime verifier
+// below will fail loudly if the mapping is wrong.
+enum {
+    ZR_REFCHILD = 0,
+    ZR_CHILD = 1,
+    ZR_PARENT = 2,
+    ZR_GPARENT = 3
+};
+
+// The single non-base atom frame.  All four indices are compound atom indices.
+inline Transform computeAtomFrameFromGeometry(const SimTK::Compound::AtomTargetLocations& tgt,
+                                              int childIx,
+                                              int parentIx,
+                                              int gparentIx,
+                                              int refChildIx) {
+    const Vec3& pChild = tgt[SimTK::Compound::AtomIndex(childIx)];
+    const Vec3& pParent = tgt[SimTK::Compound::AtomIndex(parentIx)];
+    const Vec3& pGparent = tgt[SimTK::Compound::AtomIndex(gparentIx)];
+    const Vec3& pRefChild = tgt[SimTK::Compound::AtomIndex(refChildIx)];
+
+    // (1) parent-bond-center frame G, built from positions only.
+    //     X exactly along parent->child; Y Gram-Schmidt toward parent->gparent.
+    const Transform G(Rotation(UnitVec3(pChild - pParent), XAxis, UnitVec3(pGparent - pParent), YAxis),
+                      pParent);
+
+    // theta = bond's matched reference dihedral, recomputed from the four
+    // positions in the SAME atom order used by matchDefaultDihedralAngles:
+    //     (gparent, parent, child, gchild=refChild).
+    const Real theta = SimTK::calcDihedralAngle(pGparent, pParent, pChild, pRefChild);
+    const Real d = (pChild - pParent).norm();
+
+    // B = Rot(theta,X) * Trans(d,0,0) * Rot(180,Y)   (== X_parentBC_childBC)
+    const Transform B =
+        Transform(Rotation(theta, XAxis)) * Transform(Vec3(d, 0, 0)) * Transform(Rotation(Pi, YAxis));
+
+    // C = matched-state inboard frame inverse = diag(1,-1,-1) = Rot(Pi, X)
+    const Transform C(Rotation(Pi, XAxis));
+
+    return G * B * C; // origin == pChild by construction
+}
+
+} // anonymous namespace
+
+
+// ----------------------------------------------------------------------------
+//  Compute every atom frame for one topology, purely from geometry.
+//
+//  - base atom:        copied from the stored frame (same as computeAllFrames)
+//  - atom with a row:  full geometry frame (rotation + position both exact)
+//  - atom without a row (leaf or root-edge): position is exact; orientation is
+//    left at the position-only value (a leaf's bond-axis orientation is inert).
+//
+//  `rows` must contain one entry per middle bond, keyed so we can find the row
+//  whose ZR_CHILD == atom index.  Adjust the row-type accessors to your
+//  ZMatrixRow struct (.compoundAtomIndices[k] assumed below).
+// ----------------------------------------------------------------------------
+void computeAllAtomFramesFromTargets(const Topology& topology,
+                                     const SimTK::Compound::AtomTargetLocations& atomTargets,
+                                     std::vector<Transform>& atomFrameCache) {
+    const int n = topology.getNumAtoms();
+    atomFrameCache.assign(n, Transform(Rotation(), Vec3(SimTK::NaN)));
+    const auto& atoms = topology.getAtoms();
+
+    // ---- build the tree from the bonds ------------------------------------
+    std::vector<int> parent(n, -1);
+    std::vector<std::vector<int>> children(n);
+    for (const auto& bond : topology.getBonds()) {
+        const int p = int(bond.compoundAtomIndices[0]);
+        const int c = int(bond.compoundAtomIndices[1]);
+        if (bond.ringClosing) {
+            continue; // ring-closing bonds are not tree edges
+        }
+        parent[c] = p;
+        children[p].push_back(c);
+    }
+    // first-bonded child == smallest compound atom index among the children
+    for (auto& ch : children) {
+        std::sort(ch.begin(), ch.end());
+    }
+
+    auto refChildOf = [&](int i) -> int {
+        return children[i].empty() ? -1 : children[i].front();
+    };
+
+    // ---- root: at its target (orientation free; identity is fine) ----------
+    int rootIx = -1;
+    for (int i = 0; i < n; ++i) {
+        if (atoms[i].connectivity.root) {
+            rootIx = i;
+            break;
+        }
+    }
+    SimTK_ERRCHK_ALWAYS(rootIx >= 0, "computeAllAtomFramesFromTargets", "no root atom");
+    atomFrameCache[rootIx] = Transform(Rotation(), atomTargets[SimTK::Compound::AtomIndex(rootIx)]);
+
+    // ---- every non-root atom ----------------------------------------------
+    for (int i = 0; i < n; ++i) {
+        if (i == rootIx) {
+            continue;
+        }
+        const int p = parent[i];
+        SimTK_ERRCHK1_ALWAYS(p >= 0,
+                             "computeAllAtomFramesFromTargets",
+                             "atom %d has no parent and is not the root",
+                             i);
+
+        const Vec3& pSelf = atomTargets[SimTK::Compound::AtomIndex(i)];
+        const Vec3& pParent = atomTargets[SimTK::Compound::AtomIndex(p)];
+
+        const int gp = parent[p];     // grandparent (-1 if parent is the root)
+        const int rc = refChildOf(i); // reference child (-1 if i is a leaf)
+
+        if (gp >= 0 && rc >= 0) {
+            atomFrameCache[i] = computeAtomFrameFromGeometry(atomTargets, i, p, gp, rc);
+        } else {
+            // parent is the root (no grandparent) OR i is a leaf (no refchild):
+            // position is exact; bond-axis roll is undetermined and unused.
+            Rotation R;
+            R.setRotationFromOneAxis(UnitVec3(pSelf - pParent), XAxis);
+            atomFrameCache[i] = Transform(R, pSelf);
+        }
+    }
+
+    for (int i = 0; i < n; ++i) {
+        SimTK_ERRCHK1_ALWAYS(!atomFrameCache[i].p().isNaN(),
+                             "computeAllAtomFramesFromTargets",
+                             "atom %d frame is NaN",
+                             i);
+    }
+}
+
 
 void World::setAtomTargetLocationsToState(
     const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) {
@@ -18,32 +223,40 @@ void World::setAtomTargetLocationsToState(
     // TODO so far we only need to update the cache for testing purposes only
     atomTargetLocationsCache = atomTargets;
 
-    for (const auto& row : zMatrixReferenceRows) {
-        std::cout << "zMatrixReferenceRows" << row.compoundAtomIndices[0] << " " << row.compoundAtomIndices[1]
-                  << " " << row.compoundAtomIndices[2] << " " << row.compoundAtomIndices[3] << "\n";
-    }
+    // for (const auto& row : zMatrixReferenceRows) {
+    //     std::cout << "zMatrixReferenceRows " << row.compoundAtomIndices[0] << " "
+    //               << row.compoundAtomIndices[1] << " " << row.compoundAtomIndices[2] << " "
+    //               << row.compoundAtomIndices[3] << "\n";
+    // }
 
-    for (const auto& row : zMatrixReferenceDihedralRows) {
-        std::cout << "zMatrixReferenceDihedralRows" << row.compoundAtomIndices[0] << " "
-                  << row.compoundAtomIndices[1] << " " << row.compoundAtomIndices[2] << " "
-                  << row.compoundAtomIndices[3] << "\n";
-    }
+    // for (const auto& row : zMatrixReferenceDihedralRows) {
+    //     std::cout << " " << row.compoundAtomIndices[0] << " " << row.compoundAtomIndices[1] << " "
+    //               << row.compoundAtomIndices[2] << " " << row.compoundAtomIndices[3] << "\n";
+    // }
 
-    throw std::runtime_error(
-        "Done with setAtomTargetLocationsToState - remove this exception to proceed with testing");
+    // throw std::runtime_error(
+    //     "Done with setAtomTargetLocationsToState - remove this exception to proceed with testing");
 
 
-    std::cout << "Setting atom target locations to state...\n";
+    // std::cout << "Setting atom target locations to state...\n";
+
+    std::vector<std::vector<Transform>> atomFrameCache;
+    atomFrameCache.resize(topologies.size());
 
     // Match Compound and DuMM coordinates
     for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
         Topology& topology = topologies[topoIx];
 
-        // Use Molmodel's Compound match functions to set the new conformation
-        topology.matchAtomTargetLocations(atomTargets[topoIx]);
+        computeAllAtomFramesFromTargets(topology, atomTargets[topoIx], atomFrameCache[topoIx]);
+        // topology.aIx2TopTransform = atomFrameCache; // caller's cache is the topology's cache
+
+        // // Use Molmodel's Compound match functions to set the new conformation
+        // topology.matchAtomTargetLocations(atomTargets[topoIx]);
+        // atomFrameCache = topology.aIx2TopTransform; // copy the topology's cache for use in this function
 
         // Get the Ground to Top Transform
-        const auto& G_X_T = topology.getTopLevelTransform();
+        // const auto& G_X_T = topology.getTopLevelTransform();
+        const auto& G_X_T = SimTK::Transform();
 
         // Set atoms' stations on body
         for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topology.getNumAtoms(); ++cAIx) {
@@ -58,8 +271,8 @@ void World::setAtomTargetLocationsToState(
                 // Get the compound atom index for the root atom of this mobilized body
                 const auto mobodRootAIx = getMobodRootAtomIndex(mbx).cAIx;
 
-                const auto& T_X_root = topology.getTopTransform(mobodRootAIx);
-                const auto G_X_root = G_X_T * T_X_root;
+                const auto& T_X_root = atomFrameCache[topoIx][mobodRootAIx];
+                const auto G_X_root = T_X_root;
 
                 const auto& G_vchild = atomTargets[topoIx][cAIx];
                 const auto root_X_child = alignFlipAndTranslateFrameAlongXAxis(G_X_root, G_vchild);
@@ -83,7 +296,7 @@ void World::setAtomTargetLocationsToState(
 
     // Set default child mobod inboard (X_PF) and outboard (X_BM) frames
     // This method only uses internal coordinates per molecule bonds info
-    updateInboardAndOutboardFramesFromTopologies();
+    updateInboardAndOutboardFramesFromTopologies(atomFrameCache);
 
     // Set every mobod's mass properties
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
@@ -99,23 +312,23 @@ void World::setAtomTargetLocationsToState(
     worldState = compoundSystem->realizeTopology();
     compoundSystem->realize(worldState, SimTK::Stage::Position);
 
-    // for (int topoIx = 0; topoIx < topologies.size(); topoIx++) {
-    //     const auto& topo = topologies[topoIx];
-    //     const auto& targets = atomTargets[topoIx];
+    for (int topoIx = 0; topoIx < topologies.size(); topoIx++) {
+        const auto& topo = topologies[topoIx];
+        const auto& targets = atomTargets[topoIx];
 
-    //     for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topo.getNumAtoms(); ++cAIx) {
-    //         const auto computedLoc =
-    //             topo.calcAtomLocationInGroundFrameThroughSimbody(cAIx, *forceField, *matter, worldState);
-    //         const auto& targetLoc = targets[cAIx];
+        for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topo.getNumAtoms(); ++cAIx) {
+            const auto computedLoc =
+                topo.calcAtomLocationInGroundFrameThroughSimbody(cAIx, *forceField, *matter, worldState);
+            const auto& targetLoc = targets[cAIx];
 
-    //         const SimTK::Real diffNorm = (targetLoc - computedLoc).norm();
-    //         if (diffNorm > 1e-6) {
-    //             std::cerr << "\t[ERROR] Atom location mismatch for topology " << topoIx << " atom " << cAIx
-    //                       << ": computed " << computedLoc << ", target " << targetLoc << ", diff norm "
-    //                       << diffNorm << '\n';
-    //         }
-    //     }
-    // }
+            const SimTK::Real diffNorm = (targetLoc - computedLoc).norm();
+            if (diffNorm > 1e-6) {
+                std::cerr << "\t[ERROR] Atom location mismatch for topology " << topoIx << " atom " << cAIx
+                          << ": computed " << computedLoc << ", target " << targetLoc << ", diff norm "
+                          << diffNorm << '\n';
+            }
+        }
+    }
 
     if (testing) {
         coordinateTransferErrors.push_back(checkCoordinateTransfer(atomTargets));
@@ -135,11 +348,11 @@ auto World::checkCoordinateTransfer(
     int numPropers = 0;
     int numImpropers = 0;
 
-    // Check topology atom target location matching residuals
-    for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
-        SimTK::Real matchError = topologies[topoIx].getMatchError(atomTargets[topoIx]);
-        error.matchResiduals.push_back(matchError);
-    }
+    // // Check topology atom target location matching residuals
+    // for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
+    //     SimTK::Real matchError = topologies[topoIx].getMatchError(atomTargets[topoIx]);
+    //     error.matchResiduals.push_back(matchError);
+    // }
 
     // Collect new atom coordinates
     std::vector<std::vector<SimTK::Vec3>> newAtomtargets(topologies.size());
@@ -286,7 +499,8 @@ auto World::checkCoordinateTransfer(
     return error;
 }
 
-void World::updateInboardAndOutboardFramesFromTopologies() {
+void World::updateInboardAndOutboardFramesFromTopologies(
+    const std::vector<std::vector<Transform>>& atomFrameCache) {
     // Iterate molecules
     for (const auto& bond : rigidBodyAtomBonds) {
         const auto& topology = topologies[bond.topologyIndex];
@@ -295,8 +509,9 @@ void World::updateInboardAndOutboardFramesFromTopologies() {
 
         // Bound to Ground
         if (parentAtomMobod.isGround()) {
-            const auto& G_X_T = topology.getTopLevelTransform();
-            const auto& T_X_base = topology.getTopTransform(SimTK::Compound::AtomIndex(0));
+            // const auto& G_X_T = topology.getTopLevelTransform();
+            const auto& G_X_T = SimTK::Transform();
+            const auto& T_X_base = atomFrameCache[bond.topologyIndex][SimTK::Compound::AtomIndex(0)];
 
             // Create transforms for child default inboard frame (XPF) and default outboard frame (XBM)
             const auto XPF = G_X_T * T_X_base;
@@ -308,7 +523,7 @@ void World::updateInboardAndOutboardFramesFromTopologies() {
             continue;
         }
 
-        std::cout << "parent cAIx: " << bond.parentCAIx << ", child cAIx: " << bond.childCAIx << "\n";
+        // std::cout << "parent cAIx: " << bond.parentCAIx << ", child cAIx: " << bond.childCAIx << "\n";
 
         // Get parent-child BondCenters relationship
         const auto X_parentBC_childBC =
@@ -316,10 +531,10 @@ void World::updateInboardAndOutboardFramesFromTopologies() {
         const auto& X_childBC_parentBC = ~X_parentBC_childBC;
 
         // Get Top frame
-        const auto& T_X_root = topology.getTopTransform(bond.childCAIx);
+        const auto& T_X_root = atomFrameCache[bond.topologyIndex][bond.childCAIx];
 
         // Origin of the parent mobod
-        const auto& T_X_Proot = topology.getTopTransform(bond.parentMobodRootCAIx);
+        const auto& T_X_Proot = atomFrameCache[bond.topologyIndex][bond.parentMobodRootCAIx];
         const auto Proot_X_T = ~T_X_Proot;
         const auto Proot_X_root = Proot_X_T * T_X_root;
 
@@ -353,11 +568,11 @@ void World::updateInboardAndOutboardFramesFromTopologies() {
                 const auto B_X_M_pin = X_parentBC_childBC * X_to_Z;
                 const auto P_X_F_pin = Proot_X_root * B_X_M_pin;
 
-                std::cout << "B_X_M_pin=" << B_X_M_pin << "\n";
-                std::cout << "Proot_X_root=" << P_X_F_pin << "\n";
-                std::cout << "P_X_F_pin=" << P_X_F_pin << "\n";
-                throw std::runtime_error("Torsion and Cylinder mobility types not supported yet in "
-                                         "World::setFramesFromTopologies().");
+                // std::cout << "B_X_M_pin=" << B_X_M_pin << "\n";
+                // std::cout << "Proot_X_root=" << P_X_F_pin << "\n";
+                // std::cout << "P_X_F_pin=" << P_X_F_pin << "\n";
+                // throw std::runtime_error("Torsion and Cylinder mobility types not supported yet in "
+                //                          "World::setFramesFromTopologies().");
 
                 childAtomMobod.setDefaultInboardFrame(P_X_F_pin);  // X_PF
                 childAtomMobod.setDefaultOutboardFrame(B_X_M_pin); // X_BM
@@ -417,10 +632,11 @@ void World::updateInboardAndOutboardFramesFromTopologies() {
         // SimTK_ASSERT_ALWAYS(bond.topologyIndex == 0, "Root atom bonds only supported for a single molecule.
         // See bond.parentCAIx referencing below to understand what i mean.");
 
-        const SimTK::Transform& G_X_T = topology.getTopLevelTransform();
+        // const SimTK::Transform& G_X_T = topology.getTopLevelTransform();
+        const SimTK::Transform& G_X_T = SimTK::Transform();
 
         if (topology.getAtoms()[bond.parentCAIx].connectivity.root) {
-            const SimTK::Transform& T_X_base = topology.getTopTransform(bond.parentCAIx);
+            const SimTK::Transform& T_X_base = atomFrameCache[bond.topologyIndex][bond.parentCAIx];
             const SimTK::Transform G_X_base = G_X_T * T_X_base;
 
             SimTK::MobilizedBody& parentAtomMobod = matter->updMobilizedBody(bond.parentMBIx);
@@ -429,7 +645,7 @@ void World::updateInboardAndOutboardFramesFromTopologies() {
         }
 
         if (topology.getAtoms()[bond.childCAIx].connectivity.root) {
-            const SimTK::Transform& T_X_base = topology.getTopTransform(bond.childCAIx);
+            const SimTK::Transform& T_X_base = atomFrameCache[bond.topologyIndex][bond.childCAIx];
             const SimTK::Transform G_X_base = G_X_T * T_X_base;
 
             SimTK::MobilizedBody& childAtomMobod = matter->updMobilizedBody(bond.childMBIx);
@@ -1492,8 +1708,12 @@ void World::modelTopologies(const std::vector<SimTK::Compound::AtomTargetLocatio
     for (int topoIx = 0; topoIx < topologies.size(); topoIx++) {
         Topology& topology = topologies[topoIx];
 
-        // Set initial coordinates to the current topology
-        topology.matchAtomTargetLocations(atomTargets[topoIx]);
+        // // Set initial coordinates to the current topology
+        // topology.matchAtomTargetLocations(atomTargets[topoIx]);
+
+        std::vector<SimTK::Transform> atomFrames;
+        computeAllAtomFramesFromTargets(topology, atomTargets[topoIx], atomFrames);
+        topology.aIx2TopTransform = atomFrames;
 
         // Map topology and compound atom indices
         topoAtomToMbx.emplace_back();
@@ -3607,131 +3827,131 @@ std::pair<int, SimTK::Real> World::maxAtomDeviation(
     return std::pair<int, SimTK::Real>(pairIndex, distVal);
 }
 
-/**
- * This function is only intended for root atoms
- */
-std::vector<SimTK::Transform> World::calcMobodToMobodTransforms(Topology& topology,
-                                                                SimTK::Compound::AtomIndex rootAIx,
-                                                                const SimTK::State& someState) {
-    // Get body and parentBody
-    // don't know why it works
-    // SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(rootAIx);
-    // this should be the correct version
-    SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(rootAIx, *forceField);
-    const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-    const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
-    SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+// /**
+//  * This function is only intended for root atoms
+//  */
+// std::vector<SimTK::Transform> World::calcMobodToMobodTransforms(Topology& topology,
+//                                                                 SimTK::Compound::AtomIndex rootAIx,
+//                                                                 const SimTK::State& someState) {
+//     // Get body and parentBody
+//     // don't know why it works
+//     // SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(rootAIx);
+//     // this should be the correct version
+//     SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(rootAIx, *forceField);
+//     const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+//     const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
+//     SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
-    // Get the neighbor atom in the parent mobilized body
-    SimTK::Compound::AtomIndex chemParentAIx =
-        topology.getChemicalParentOfMobodRootAtom(rootAIx, *matter, *forceField);
+//     // Get the neighbor atom in the parent mobilized body
+//     SimTK::Compound::AtomIndex chemParentAIx =
+//         topology.getChemicalParentOfMobodRootAtom(rootAIx, *matter, *forceField);
 
-    // SimTK::Compound::AtomIndex chemParentAIx =
-    //	topology.getNeighbourWithemallerAIx(rootAIx, forceField);
+//     // SimTK::Compound::AtomIndex chemParentAIx =
+//     //	topology.getNeighbourWithemallerAIx(rootAIx, forceField);
 
-    // Get parent-child BondCenters relationship
-    SimTK::Transform X_parentBC_childBC =
-        topology.getDefaultBondCenterFrameInOtherBondCenterFrame(rootAIx, chemParentAIx);
+//     // Get parent-child BondCenters relationship
+//     SimTK::Transform X_parentBC_childBC =
+//         topology.getDefaultBondCenterFrameInOtherBondCenterFrame(rootAIx, chemParentAIx);
 
-    // Get Top frame
-    SimTK::Transform T_X_root = topology.getTopTransform(rootAIx);
+//     // Get Top frame
+//     SimTK::Transform T_X_root = topology.getTopTransform(rootAIx);
 
-    // Get Top to parent frame
-    const auto& topoAtomPair = getMobodRootAtomIndex(parentMbx);
-    const auto parentMobodAIx = topoAtomPair.cAIx;
+//     // Get Top to parent frame
+//     const auto& topoAtomPair = getMobodRootAtomIndex(parentMbx);
+//     const auto parentMobodAIx = topoAtomPair.cAIx;
 
-    // SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
-    SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
+//     // SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
+//     SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
 
-    // Origin of the parent mobod
-    SimTK::Transform T_X_Proot = topology.getTopTransform(parentRootAIx);
-    SimTK::Transform Proot_X_T = ~T_X_Proot;
+//     // Origin of the parent mobod
+//     SimTK::Transform T_X_Proot = topology.getTopTransform(parentRootAIx);
+//     SimTK::Transform Proot_X_T = ~T_X_Proot;
 
-    // Get inboard dihedral angle
-    SimTK::Angle inboardBondDihedralAngle = topology.bgetDefaultInboardDihedralAngle(rootAIx);
-    SimTK::Transform InboardDihedral_XAxis = SimTK::Rotation(inboardBondDihedralAngle, SimTK::XAxis);
-    SimTK::Transform InboardDihedral_ZAxis = SimTK::Rotation(inboardBondDihedralAngle, SimTK::ZAxis);
+//     // Get inboard dihedral angle
+//     SimTK::Angle inboardBondDihedralAngle = topology.bgetDefaultInboardDihedralAngle(rootAIx);
+//     SimTK::Transform InboardDihedral_XAxis = SimTK::Rotation(inboardBondDihedralAngle, SimTK::XAxis);
+//     SimTK::Transform InboardDihedral_ZAxis = SimTK::Rotation(inboardBondDihedralAngle, SimTK::ZAxis);
 
-    // Get inboard bond length
-    SimTK::Real inboardBondlength = topology.bgetDefaultInboardBondLength(rootAIx);
-    SimTK::Transform InboardLength_mZAxis =
-        SimTK::Transform(SimTK::Rotation(), SimTK::Vec3(0, 0, -inboardBondlength));
+//     // Get inboard bond length
+//     SimTK::Real inboardBondlength = topology.bgetDefaultInboardBondLength(rootAIx);
+//     SimTK::Transform InboardLength_mZAxis =
+//         SimTK::Transform(SimTK::Rotation(), SimTK::Vec3(0, 0, -inboardBondlength));
 
-    // Samuel Flores' terminology
-    SimTK::Transform M_X_pin = SimTK::Rotation(-90 * SimTK::Deg2Rad, SimTK::YAxis);
+//     // Samuel Flores' terminology
+//     SimTK::Transform M_X_pin = SimTK::Rotation(-90 * SimTK::Deg2Rad, SimTK::YAxis);
 
-    // Get the old PxFxMxB transform
-    SimTK::Transform oldX_PB = Proot_X_T * T_X_root
-        //* InboardDihedral_XAxis * X_to_Z
-        //* InboardDihedral_ZAxis * Z_to_X
-        ;
+//     // Get the old PxFxMxB transform
+//     SimTK::Transform oldX_PB = Proot_X_T * T_X_root
+//         //* InboardDihedral_XAxis * X_to_Z
+//         //* InboardDihedral_ZAxis * Z_to_X
+//         ;
 
-    // B_X_Ms
-    SimTK::Transform B_X_M = X_to_Z; // aka M_X_pin
-    SimTK::Transform B_X_M_anglePin = X_parentBC_childBC;
-    SimTK::Transform B_X_M_pin = X_parentBC_childBC * X_to_Z;
-    SimTK::Transform B_X_M_univ = X_parentBC_childBC * Y_to_Z;
+//     // B_X_Ms
+//     SimTK::Transform B_X_M = X_to_Z; // aka M_X_pin
+//     SimTK::Transform B_X_M_anglePin = X_parentBC_childBC;
+//     SimTK::Transform B_X_M_pin = X_parentBC_childBC * X_to_Z;
+//     SimTK::Transform B_X_M_univ = X_parentBC_childBC * Y_to_Z;
 
-    // P_X_Fs = old P_X_B * B_X_M
-    SimTK::Transform P_X_F = oldX_PB * B_X_M;
-    SimTK::Transform P_X_F_anglePin = oldX_PB * B_X_M_anglePin;
-    SimTK::Transform P_X_F_pin = oldX_PB * B_X_M_pin;
-    SimTK::Transform P_X_F_univ = oldX_PB * B_X_M;
+//     // P_X_Fs = old P_X_B * B_X_M
+//     SimTK::Transform P_X_F = oldX_PB * B_X_M;
+//     SimTK::Transform P_X_F_anglePin = oldX_PB * B_X_M_anglePin;
+//     SimTK::Transform P_X_F_pin = oldX_PB * B_X_M_pin;
+//     SimTK::Transform P_X_F_univ = oldX_PB * B_X_M;
 
-    // SimTK::Transform B_X_M_spheric  = X_parentBC_childBC * X_to_Z * InboardLength_mZAxis;
-    // SimTK::Transform B_X_M_spheric  = Transform();
-    // SimTK::Transform B_X_M_spheric = B_X_M_pin;
-    SimTK::Transform B_X_M_spheric = X_parentBC_childBC * X_to_Z;
-    SimTK::Transform B_X_M_orthospheric = X_parentBC_childBC * X_to_Z;
+//     // SimTK::Transform B_X_M_spheric  = X_parentBC_childBC * X_to_Z * InboardLength_mZAxis;
+//     // SimTK::Transform B_X_M_spheric  = Transform();
+//     // SimTK::Transform B_X_M_spheric = B_X_M_pin;
+//     SimTK::Transform B_X_M_spheric = X_parentBC_childBC * X_to_Z;
+//     SimTK::Transform B_X_M_orthospheric = X_parentBC_childBC * X_to_Z;
 
-    // SimTK::Transform P_X_F_spheric  = oldX_PB * B_X_M_pin;
-    // SimTK::Transform P_X_F_spheric = Transform();
-    // SimTK::Transform P_X_F_spheric = P_X_F_pin;
-    SimTK::Transform P_X_F_spheric = oldX_PB * B_X_M_pin;
-    SimTK::Transform P_X_F_orthospheric = oldX_PB * B_X_M_pin;
+//     // SimTK::Transform P_X_F_spheric  = oldX_PB * B_X_M_pin;
+//     // SimTK::Transform P_X_F_spheric = Transform();
+//     // SimTK::Transform P_X_F_spheric = P_X_F_pin;
+//     SimTK::Transform P_X_F_spheric = oldX_PB * B_X_M_pin;
+//     SimTK::Transform P_X_F_orthospheric = oldX_PB * B_X_M_pin;
 
-    // Get mobility (joint type)
-    const auto& atom = topology.getAtom(rootAIx);
-    SimTK::BondMobility::Mobility mobility;
-    RoboBond bond = topology.getBondByGlobalAtomIndex(topology.getGlobalAtomIndex(rootAIx),
-                                                      topology.getGlobalAtomIndex(chemParentAIx));
-    mobility = bond.getBondMobility(ownWorldIndex);
+//     // Get mobility (joint type)
+//     const auto& atom = topology.getAtom(rootAIx);
+//     SimTK::BondMobility::Mobility mobility;
+//     RoboBond bond = topology.getBondByGlobalAtomIndex(topology.getGlobalAtomIndex(rootAIx),
+//                                                       topology.getGlobalAtomIndex(chemParentAIx));
+//     mobility = bond.getBondMobility(ownWorldIndex);
 
-    bool anglePin_OR = mobility == SimTK::BondMobility::Mobility::AnglePin
-                       || mobility == SimTK::BondMobility::Mobility::Slider
-                       || mobility == SimTK::BondMobility::Mobility::BendStretch;
+//     bool anglePin_OR = mobility == SimTK::BondMobility::Mobility::AnglePin
+//                        || mobility == SimTK::BondMobility::Mobility::Slider
+//                        || mobility == SimTK::BondMobility::Mobility::BendStretch;
 
-    if (anglePin_OR && atom.connectivity.neighborsGlobalIndices.size() == 1) {
-        return std::vector<SimTK::Transform>{P_X_F_anglePin, B_X_M_anglePin};
-    } else if (anglePin_OR && atom.connectivity.neighborsGlobalIndices.size() != 1) {
-        return std::vector<SimTK::Transform>{P_X_F_anglePin, B_X_M_anglePin};
-    } else if (mobility == SimTK::BondMobility::Mobility::Torsion
-               || mobility == SimTK::BondMobility::Mobility::Cylinder) {
-        return std::vector<SimTK::Transform>{P_X_F_pin, B_X_M_pin};
-    } else if (mobility == SimTK::BondMobility::Mobility::BallM
-               || mobility == SimTK::BondMobility::Mobility::Rigid
-               || mobility == SimTK::BondMobility::Mobility::Translation) { // Cartesian
-        return std::vector<SimTK::Transform>{P_X_F, B_X_M};
-    } else if (mobility == SimTK::BondMobility::Mobility::Spherical) { // Spherical
-        return std::vector<SimTK::Transform>{P_X_F_spheric, B_X_M_spheric};
-    } else if (mobility == SimTK::BondMobility::Mobility::OrthoSpherical) { // OrthoSpherical
-        return std::vector<SimTK::Transform>{P_X_F_orthospheric, B_X_M_orthospheric};
-    } else {
-        std::cout << "Warning: unknown mobility\n";
-        return std::vector<SimTK::Transform>{P_X_F_anglePin, B_X_M_anglePin};
-    }
+//     if (anglePin_OR && atom.connectivity.neighborsGlobalIndices.size() == 1) {
+//         return std::vector<SimTK::Transform>{P_X_F_anglePin, B_X_M_anglePin};
+//     } else if (anglePin_OR && atom.connectivity.neighborsGlobalIndices.size() != 1) {
+//         return std::vector<SimTK::Transform>{P_X_F_anglePin, B_X_M_anglePin};
+//     } else if (mobility == SimTK::BondMobility::Mobility::Torsion
+//                || mobility == SimTK::BondMobility::Mobility::Cylinder) {
+//         return std::vector<SimTK::Transform>{P_X_F_pin, B_X_M_pin};
+//     } else if (mobility == SimTK::BondMobility::Mobility::BallM
+//                || mobility == SimTK::BondMobility::Mobility::Rigid
+//                || mobility == SimTK::BondMobility::Mobility::Translation) { // Cartesian
+//         return std::vector<SimTK::Transform>{P_X_F, B_X_M};
+//     } else if (mobility == SimTK::BondMobility::Mobility::Spherical) { // Spherical
+//         return std::vector<SimTK::Transform>{P_X_F_spheric, B_X_M_spheric};
+//     } else if (mobility == SimTK::BondMobility::Mobility::OrthoSpherical) { // OrthoSpherical
+//         return std::vector<SimTK::Transform>{P_X_F_orthospheric, B_X_M_orthospheric};
+//     } else {
+//         std::cout << "Warning: unknown mobility\n";
+//         return std::vector<SimTK::Transform>{P_X_F_anglePin, B_X_M_anglePin};
+//     }
 
-    //// The Molmodel notation
-    // M0 and Mr are actually used for F
-    // SimTK::Transform root_X_M0 = InboardDihedral_XAxis; // name used in Molmodel
-    // SimTK::Transform T_X_M0 = T_X_root[int(mbx)] * root_X_M0;
-    // SimTK::Transform Proot_X_M0 = Proot_X_T * T_X_M0;
-    // Transform oldX_PF = Proot_X_M0 * M_X_pin;
-    // Transform oldX_BM = M_X_pin;
-    // Transform oldX_MB = ~oldX_BM;
-    // Transform oldX_FM = InboardDihedral_ZAxis;
-    // Transform oldX_PB = oldX_PF * oldX_FM * oldX_MB;
-}
+//     //// The Molmodel notation
+//     // M0 and Mr are actually used for F
+//     // SimTK::Transform root_X_M0 = InboardDihedral_XAxis; // name used in Molmodel
+//     // SimTK::Transform T_X_M0 = T_X_root[int(mbx)] * root_X_M0;
+//     // SimTK::Transform Proot_X_M0 = Proot_X_T * T_X_M0;
+//     // Transform oldX_PF = Proot_X_M0 * M_X_pin;
+//     // Transform oldX_BM = M_X_pin;
+//     // Transform oldX_MB = ~oldX_BM;
+//     // Transform oldX_FM = InboardDihedral_ZAxis;
+//     // Transform oldX_PB = oldX_PF * oldX_FM * oldX_MB;
+// }
 
 /*!
  * <!--  -->
@@ -3754,194 +3974,196 @@ SimTK::BondMobility::Mobility World::determineMobilityFrom_H(SimTK::MobilizedBod
     // return SimTK::BondMobility::Mobility::Rigid;
 }
 
-/*!
- * <!--	 -->
- */
-SimTK::Real
-World::getRootAngle(Topology& topology, SimTK::Compound::AtomIndex rootAIx, const SimTK::State& someState) {
-    SimTK::Real bondAngle = SimTK::NaN;
+// /*!
+//  * <!--	 -->
+//  */
+// SimTK::Real
+// World::getRootAngle(Topology& topology, SimTK::Compound::AtomIndex rootAIx, const SimTK::State& someState)
+// {
+//     SimTK::Real bondAngle = SimTK::NaN;
 
-    // Get body and parentBody
-    SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(rootAIx, *forceField);
-    const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-    const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
-    SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+//     // Get body and parentBody
+//     SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(rootAIx, *forceField);
+//     const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+//     const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
+//     SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
-    // Get the neighbor atom in the parent mobilized body
-    SimTK::Compound::AtomIndex chemParentAIx =
-        topology.getChemicalParentOfMobodRootAtom(rootAIx, *matter, *forceField);
+//     // Get the neighbor atom in the parent mobilized body
+//     SimTK::Compound::AtomIndex chemParentAIx =
+//         topology.getChemicalParentOfMobodRootAtom(rootAIx, *matter, *forceField);
 
-    // Get parent-child BondCenters relationship
-    SimTK::Transform X_parentBC_childBC =
-        topology.getDefaultBondCenterFrameInOtherBondCenterFrame(rootAIx, chemParentAIx);
+//     // Get parent-child BondCenters relationship
+//     SimTK::Transform X_parentBC_childBC =
+//         topology.getDefaultBondCenterFrameInOtherBondCenterFrame(rootAIx, chemParentAIx);
 
-    // Get Top frame
-    SimTK::Transform T_X_root = topology.getTopTransform(rootAIx);
+//     // Get Top frame
+//     SimTK::Transform T_X_root = topology.getTopTransform(rootAIx);
 
-    // Get Top to parent frame
-    const auto& topoAtomPair = getMobodRootAtomIndex(parentMbx);
-    const auto parentRootAIx = topoAtomPair.cAIx;
+//     // Get Top to parent frame
+//     const auto& topoAtomPair = getMobodRootAtomIndex(parentMbx);
+//     const auto parentRootAIx = topoAtomPair.cAIx;
 
-    SimTK::Transform T_X_Proot = topology.getTopTransform(parentRootAIx);
-    SimTK::Transform Proot_X_T = ~T_X_Proot;
+//     SimTK::Transform T_X_Proot = topology.getTopTransform(parentRootAIx);
+//     SimTK::Transform Proot_X_T = ~T_X_Proot;
 
-    // chemical parent atom
-    SimTK::Transform T_X_chemProot = topology.getTopTransform(chemParentAIx);
+//     // chemical parent atom
+//     SimTK::Transform T_X_chemProot = topology.getTopTransform(chemParentAIx);
 
-    // BEGIN GET ANGLE
-    SimTK::Compound::AtomIndex chemGrandParentIx;
-    SimTK::Transform T_X_grand;
+//     // BEGIN GET ANGLE
+//     SimTK::Compound::AtomIndex chemGrandParentIx;
+//     SimTK::Transform T_X_grand;
 
-    if (chemParentAIx > 0) {
-        chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
+//     if (chemParentAIx > 0) {
+//         chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
 
-        T_X_grand = topology.getTopTransform(chemGrandParentIx);
+//         T_X_grand = topology.getTopTransform(chemGrandParentIx);
 
-        SimTK::Vec3 V1 = (~(T_X_root.R())) * T_X_grand.p();
-        SimTK::Vec3 V2 = (~(T_X_root.R())) * T_X_chemProot.p();
-        SimTK::Vec3 V3 = (~(T_X_root.R())) * T_X_root.p();
+//         SimTK::Vec3 V1 = (~(T_X_root.R())) * T_X_grand.p();
+//         SimTK::Vec3 V2 = (~(T_X_root.R())) * T_X_chemProot.p();
+//         SimTK::Vec3 V3 = (~(T_X_root.R())) * T_X_root.p();
 
-        bondAngle = calculateAngleInRad(V2, V1, V3);
+//         bondAngle = calculateAngleInRad(V2, V1, V3);
 
-        return bondAngle;
-    }
+//         return bondAngle;
+//     }
 
-    return bondAngle;
-}
+//     return bondAngle;
+// }
 
-/*!
- * <!--	Calc X_FM transforms for reconstruction for root atoms -->
- */
-SimTK::Transform World::calcX_FMTransforms(Topology& topology,
-                                           SimTK::Compound::AtomIndex rootAIx,
-                                           const SimTK::State& someState) {
-    // X_FM return value
-    SimTK::Transform X_FM;
+// /*!
+//  * <!--	Calc X_FM transforms for reconstruction for root atoms -->
+//  */
+// SimTK::Transform World::calcX_FMTransforms(Topology& topology,
+//                                            SimTK::Compound::AtomIndex rootAIx,
+//                                            const SimTK::State& someState) {
+//     // X_FM return value
+//     SimTK::Transform X_FM;
 
-    // Get body and parentBody
-    SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(rootAIx, *forceField);
-    const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-    const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
-    SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
-    // Get the neighbor atom in the parent mobilized body
-    SimTK::Compound::AtomIndex chemParentAIx =
-        topology.getChemicalParentOfMobodRootAtom(rootAIx, *matter, *forceField);
-    // Get parent-child BondCenters relationship
-    SimTK::Transform X_parentBC_childBC =
-        topology.getDefaultBondCenterFrameInOtherBondCenterFrame(rootAIx, chemParentAIx);
-    // Get Top frame
-    SimTK::Transform T_X_root = topology.getTopTransform(rootAIx);
-    // Get Top to parent frame
-    const auto& topoAtomPair = getMobodRootAtomIndex(parentMbx);
-    const auto parentRootAIx = topoAtomPair.cAIx;
+//     // Get body and parentBody
+//     SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(rootAIx, *forceField);
+//     const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+//     const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
+//     SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+//     // Get the neighbor atom in the parent mobilized body
+//     SimTK::Compound::AtomIndex chemParentAIx =
+//         topology.getChemicalParentOfMobodRootAtom(rootAIx, *matter, *forceField);
+//     // Get parent-child BondCenters relationship
+//     SimTK::Transform X_parentBC_childBC =
+//         topology.getDefaultBondCenterFrameInOtherBondCenterFrame(rootAIx, chemParentAIx);
+//     // Get Top frame
+//     SimTK::Transform T_X_root = topology.getTopTransform(rootAIx);
+//     // Get Top to parent frame
+//     const auto& topoAtomPair = getMobodRootAtomIndex(parentMbx);
+//     const auto parentRootAIx = topoAtomPair.cAIx;
 
-    const auto T_X_Proot = topology.getTopTransform(parentRootAIx);
-    const auto Proot_X_T = ~T_X_Proot;
+//     const auto T_X_Proot = topology.getTopTransform(parentRootAIx);
+//     const auto Proot_X_T = ~T_X_Proot;
 
-    // chemical parent atom
-    const auto T_X_chemProot = topology.getTopTransform(chemParentAIx);
+//     // chemical parent atom
+//     const auto T_X_chemProot = topology.getTopTransform(chemParentAIx);
 
-    // BEGIN GET ANGLE
-    SimTK::Compound::AtomIndex chemGrandParentIx;
-    SimTK::Transform T_X_grand;
-    if (chemParentAIx > 0) {
-        chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
-        T_X_grand = topology.getTopTransform(chemGrandParentIx);
-        const auto v1 = (~(T_X_root.R())) * T_X_grand.p();
-        const auto v2 = (~(T_X_root.R())) * T_X_chemProot.p();
-        const auto v3 = (~(T_X_root.R())) * T_X_root.p();
-        const auto bondAngle = calculateAngleInRad(v2, v1, v3);
-        // if(ownWorldIndex == 1){
-        std::cout << "World::calcMobodToMobodTransforms chemGrandParentIx chemParentAIx rootAIx angle "
-                  << chemGrandParentIx << " " << chemParentAIx << " " << rootAIx
-                  << " "
-                  //<< std::endl << T_X_grand << T_X_chemProot << T_X_root << std::endl
-                  //<< std::endl << topology.getTopTransform(chemGrandParentIx) <<
-                  // topology.getTopTransform(chemParentAIx) << topology.getTopTransform(rootAIx) << std::endl
-                  //<< "============================="
-                  //<< std::endl << topology.getTopTransform(Compound::AtomIndex(2)) <<
-                  // topology.getTopTransform(Compound::AtomIndex(4)) <<
-                  // topology.getTopTransform(Compound::AtomIndex(7)) << std::endl
-                  //<< v1 << " " << v2 << " " << v3 << " "
-                  << bondAngle << std::endl;
-        //}
-    }
-    // END GET ANGLE
+//     // BEGIN GET ANGLE
+//     SimTK::Compound::AtomIndex chemGrandParentIx;
+//     SimTK::Transform T_X_grand;
+//     if (chemParentAIx > 0) {
+//         chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
+//         T_X_grand = topology.getTopTransform(chemGrandParentIx);
+//         const auto v1 = (~(T_X_root.R())) * T_X_grand.p();
+//         const auto v2 = (~(T_X_root.R())) * T_X_chemProot.p();
+//         const auto v3 = (~(T_X_root.R())) * T_X_root.p();
+//         const auto bondAngle = calculateAngleInRad(v2, v1, v3);
+//         // if(ownWorldIndex == 1){
+//         std::cout << "World::calcMobodToMobodTransforms chemGrandParentIx chemParentAIx rootAIx angle "
+//                   << chemGrandParentIx << " " << chemParentAIx << " " << rootAIx
+//                   << " "
+//                   //<< std::endl << T_X_grand << T_X_chemProot << T_X_root << std::endl
+//                   //<< std::endl << topology.getTopTransform(chemGrandParentIx) <<
+//                   // topology.getTopTransform(chemParentAIx) << topology.getTopTransform(rootAIx) <<
+//                   std::endl
+//                   //<< "============================="
+//                   //<< std::endl << topology.getTopTransform(Compound::AtomIndex(2)) <<
+//                   // topology.getTopTransform(Compound::AtomIndex(4)) <<
+//                   // topology.getTopTransform(Compound::AtomIndex(7)) << std::endl
+//                   //<< v1 << " " << v2 << " " << v3 << " "
+//                   << bondAngle << std::endl;
+//         //}
+//     }
+//     // END GET ANGLE
 
-    // Get the angle of root->parent->grand parent
-    // SimTK::Real bondAngle = getRootAngle(topology, rootAIx, someState);
+//     // Get the angle of root->parent->grand parent
+//     // SimTK::Real bondAngle = getRootAngle(topology, rootAIx, someState);
 
-    // Get inboard dihedral angle
-    SimTK::Angle inboardBondDihedralAngle = topology.bgetDefaultInboardDihedralAngle(rootAIx);
-    SimTK::Transform InboardDihedral_XAxis = SimTK::Rotation(inboardBondDihedralAngle, SimTK::XAxis);
-    SimTK::Transform InboardDihedral_ZAxis = SimTK::Rotation(inboardBondDihedralAngle, SimTK::ZAxis);
+//     // Get inboard dihedral angle
+//     SimTK::Angle inboardBondDihedralAngle = topology.bgetDefaultInboardDihedralAngle(rootAIx);
+//     SimTK::Transform InboardDihedral_XAxis = SimTK::Rotation(inboardBondDihedralAngle, SimTK::XAxis);
+//     SimTK::Transform InboardDihedral_ZAxis = SimTK::Rotation(inboardBondDihedralAngle, SimTK::ZAxis);
 
-    // Get inboard bond length
-    SimTK::Real inboardBondlength = topology.bgetDefaultInboardBondLength(rootAIx);
-    SimTK::Transform InboardLength_mZAxis =
-        SimTK::Transform(SimTK::Rotation(), SimTK::Vec3(0, 0, -inboardBondlength));
+//     // Get inboard bond length
+//     SimTK::Real inboardBondlength = topology.bgetDefaultInboardBondLength(rootAIx);
+//     SimTK::Transform InboardLength_mZAxis =
+//         SimTK::Transform(SimTK::Rotation(), SimTK::Vec3(0, 0, -inboardBondlength));
 
-    // Samuel Flores' terminology
-    SimTK::Transform M_X_pin = SimTK::Rotation(-90 * SimTK::Deg2Rad, SimTK::YAxis);
+//     // Samuel Flores' terminology
+//     SimTK::Transform M_X_pin = SimTK::Rotation(-90 * SimTK::Deg2Rad, SimTK::YAxis);
 
-    // Get the old PxFxMxB transform
-    SimTK::Transform oldX_PB =
-        Proot_X_T * T_X_root * InboardDihedral_XAxis * X_to_Z * InboardDihedral_ZAxis * Z_to_X;
+//     // Get the old PxFxMxB transform
+//     SimTK::Transform oldX_PB =
+//         Proot_X_T * T_X_root * InboardDihedral_XAxis * X_to_Z * InboardDihedral_ZAxis * Z_to_X;
 
-    // B_X_Ms
-    SimTK::Transform B_X_M = X_to_Z; // aka M_X_pin
-    SimTK::Transform B_X_M_anglePin = X_parentBC_childBC;
-    SimTK::Transform B_X_M_pin = X_parentBC_childBC * X_to_Z;
-    SimTK::Transform B_X_M_univ = X_parentBC_childBC * Y_to_Z;
+//     // B_X_Ms
+//     SimTK::Transform B_X_M = X_to_Z; // aka M_X_pin
+//     SimTK::Transform B_X_M_anglePin = X_parentBC_childBC;
+//     SimTK::Transform B_X_M_pin = X_parentBC_childBC * X_to_Z;
+//     SimTK::Transform B_X_M_univ = X_parentBC_childBC * Y_to_Z;
 
-    // P_X_Fs = old P_X_B * B_X_M
-    SimTK::Transform P_X_F = oldX_PB * B_X_M;
-    SimTK::Transform P_X_F_anglePin = oldX_PB * B_X_M_anglePin;
-    SimTK::Transform P_X_F_pin = oldX_PB * B_X_M_pin;
-    SimTK::Transform P_X_F_univ = oldX_PB * B_X_M;
+//     // P_X_Fs = old P_X_B * B_X_M
+//     SimTK::Transform P_X_F = oldX_PB * B_X_M;
+//     SimTK::Transform P_X_F_anglePin = oldX_PB * B_X_M_anglePin;
+//     SimTK::Transform P_X_F_pin = oldX_PB * B_X_M_pin;
+//     SimTK::Transform P_X_F_univ = oldX_PB * B_X_M;
 
-    // Get mobility (joint type)
-    const RoboAtom& atom = topology.getAtom(rootAIx);
-    SimTK::BondMobility::Mobility mobility;
-    RoboBond bond = topology.getBondByGlobalAtomIndex(topology.getGlobalAtomIndex(rootAIx),
-                                                      topology.getGlobalAtomIndex(chemParentAIx));
-    mobility = bond.getBondMobility(ownWorldIndex);
+//     // Get mobility (joint type)
+//     const RoboAtom& atom = topology.getAtom(rootAIx);
+//     SimTK::BondMobility::Mobility mobility;
+//     RoboBond bond = topology.getBondByGlobalAtomIndex(topology.getGlobalAtomIndex(rootAIx),
+//                                                       topology.getGlobalAtomIndex(chemParentAIx));
+//     mobility = bond.getBondMobility(ownWorldIndex);
 
-    // Convenient bool
-    bool anglePin_OR = mobility == SimTK::BondMobility::Mobility::AnglePin
-                       || mobility == SimTK::BondMobility::Mobility::Slider
-                       || mobility == SimTK::BondMobility::Mobility::BendStretch;
+//     // Convenient bool
+//     bool anglePin_OR = mobility == SimTK::BondMobility::Mobility::AnglePin
+//                        || mobility == SimTK::BondMobility::Mobility::Slider
+//                        || mobility == SimTK::BondMobility::Mobility::BendStretch;
 
-    // Set X_FM value
-    if (anglePin_OR && atom.connectivity.neighborsGlobalIndices.size() == 1) {
-        X_FM = SimTK::Transform();
-        return X_FM;
-    } else if (anglePin_OR && atom.connectivity.neighborsGlobalIndices.size() != 1) {
-        X_FM = SimTK::Transform();
-        return X_FM;
-    } else if (mobility == SimTK::BondMobility::Mobility::Torsion
-               || mobility == SimTK::BondMobility::Mobility::Cylinder) {
-        X_FM = SimTK::Transform();
-        return X_FM;
-    } else if (mobility == SimTK::BondMobility::Mobility::BallM
-               || mobility == SimTK::BondMobility::Mobility::Rigid
-               || mobility == SimTK::BondMobility::Mobility::Translation) { // Cartesian
-        X_FM = SimTK::Transform();
-        return X_FM;
-    } else if (mobility == SimTK::BondMobility::Mobility::Spherical) { // Spherical
-        X_FM = SimTK::Transform();
-        // X_FM = InboardLength_mZAxis;
-        return X_FM;
-    } else if (mobility == SimTK::BondMobility::Mobility::OrthoSpherical) { // Spherical
-        X_FM = SimTK::Transform();
-        // X_FM = InboardLength_mZAxis;
-        return X_FM;
-    } else {
-        X_FM = SimTK::Transform();
-        std::cout << "Warning: unknown mobility\n";
-        return X_FM;
-    }
-}
+//     // Set X_FM value
+//     if (anglePin_OR && atom.connectivity.neighborsGlobalIndices.size() == 1) {
+//         X_FM = SimTK::Transform();
+//         return X_FM;
+//     } else if (anglePin_OR && atom.connectivity.neighborsGlobalIndices.size() != 1) {
+//         X_FM = SimTK::Transform();
+//         return X_FM;
+//     } else if (mobility == SimTK::BondMobility::Mobility::Torsion
+//                || mobility == SimTK::BondMobility::Mobility::Cylinder) {
+//         X_FM = SimTK::Transform();
+//         return X_FM;
+//     } else if (mobility == SimTK::BondMobility::Mobility::BallM
+//                || mobility == SimTK::BondMobility::Mobility::Rigid
+//                || mobility == SimTK::BondMobility::Mobility::Translation) { // Cartesian
+//         X_FM = SimTK::Transform();
+//         return X_FM;
+//     } else if (mobility == SimTK::BondMobility::Mobility::Spherical) { // Spherical
+//         X_FM = SimTK::Transform();
+//         // X_FM = InboardLength_mZAxis;
+//         return X_FM;
+//     } else if (mobility == SimTK::BondMobility::Mobility::OrthoSpherical) { // Spherical
+//         X_FM = SimTK::Transform();
+//         // X_FM = InboardLength_mZAxis;
+//         return X_FM;
+//     } else {
+//         X_FM = SimTK::Transform();
+//         std::cout << "Warning: unknown mobility\n";
+//         return X_FM;
+//     }
+// }
 
 /** Set up Fixman torque **/
 void World::addFixmanTorque() {

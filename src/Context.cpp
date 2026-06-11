@@ -190,9 +190,8 @@ void Context::loadAmberSystem(const SystemTopology& systemTopology,
         topology.setBaseAtom(*rootAtom.compoundSingleAtom, SimTK::Transform());
         topology.convertInboardBondCenterToOutboard();
 
-        // std::cout << cinf_prefix << "Set root atom " << rootAtom.identity.uniqueAtomName
-        // 		  << " for molecule " << molIx
-        // 		  << std::endl << std::flush;
+        // std::cout << "Set root atom " << rootAtom.identity.uniqueAtomName << " for molecule " << molIx
+        //           << "\n";
 
         // Add non-ring closing bonds first
         for (auto& bond : topology.updBonds()) {
@@ -212,12 +211,10 @@ void Context::loadAmberSystem(const SystemTopology& systemTopology,
             const SimTK::Compound::BondCenterPathName parentBondCenterPathName =
                 parent.identity.uniqueAtomName + "/bond" + std::to_string(parentNextAvailBondCenter);
 
-            // std::cout << cinf_prefix << "Bonding child atom " << child.identity.uniqueAtomName << " cAIx "
-            // << child.identity.compoundAtomIndex
-            // 		  << " to parent bond center " << parentBondCenterPathName << " cAIx " <<
-            // parent.identity.compoundAtomIndex
-            // 		  << " for molecule " << molIx
-            // 		  << std::endl << std::flush;
+            // std::cout << "Bonding child atom " << child.identity.uniqueAtomName
+            //           << " cAIx=" << child.identity.compoundAtomIndex << " to parent bond center "
+            //           << parentBondCenterPathName << " cAIx=" << parent.identity.compoundAtomIndex
+            //           << " for molecule " << molIx << "\n";
 
             // Actual bonding with default mobility (torsion)
             topology.bondAtom(*child.compoundSingleAtom,
@@ -272,11 +269,10 @@ void Context::loadAmberSystem(const SystemTopology& systemTopology,
             const SimTK::Compound::BondCenterPathName bondCenterName2 =
                 parent.identity.uniqueAtomName + "/bond" + std::to_string(parentNextAvailBondCenter);
 
-            // std::cout << cinf_prefix << "Adding ring closing bond between bond centers "
-            // 		  << bondCenterName1 << " cAIx " << child.identity.compoundAtomIndex
-            // 		  << " and " << bondCenterName2 << " cAIx " << parent.identity.compoundAtomIndex
-            // 		  << " for molecule " << molIx
-            // 		  << std::endl << std::flush;
+            // std::cout << "Adding ring closing bond between bond centers " << bondCenterName1
+            //           << " cAIx=" << child.identity.compoundAtomIndex << " and " << bondCenterName2
+            //           << " cAIx=" << parent.identity.compoundAtomIndex << " for molecule " << molIx <<
+            //           "\n";
 
             topology.addRingClosingBond(bondCenterName1,
                                         bondCenterName2,
@@ -335,7 +331,7 @@ void Context::loadAmberSystem(const SystemTopology& systemTopology,
 
         // Match the topology to the input coordinates
         topology.loadIndicesMaps(atomTargets);
-        topology.matchAtomTargetLocations(atomTargets);
+        // topology.matchAtomTargetLocations(atomTargets);
 
         topologies.push_back(topology);
     }

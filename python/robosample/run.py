@@ -4,6 +4,9 @@ import robosample
 
 # python3 python/robosample/run.py example examples/example.prmtop examples/example.rst7 6000 0 1 1
 
+# python3 python/robosample/run.py 1APQ examples/1APQ.prmtop examples/1APQ.rst7 6000 0 1 1
+# python3 python/robosample/run.py 2M6A examples/2M6A.prmtop examples/2M6A.rst7 6000 0 1 1
+
 # Create the parser
 parser = argparse.ArgumentParser(description="Process PDB code and seed.")
 
@@ -32,10 +35,6 @@ context = robosample.Context(
 # All molecule roots are `robosample.rb.RootMobility.Weld`
 # context.set_root_mobility(0, robosample.rb.RootMobility.Free)
 
-# All other molecules are lipids and solvent
-for mol_ix in range(3, context.get_num_molecules()):
-    context.set_root_mobility(mol_ix, robosample.rb.RootMobility.Free)
-
 # context.add_cartesian_world().add_sampler(
 #     timeStep=0.001,
 #     mdSteps=50_000,
@@ -50,6 +49,8 @@ bonds = context.standard_dihedral_bonds.loc[
     context.standard_dihedral_bonds["dihedral_type"].isin(dihs)
 ]
 
+# bonds = None
+
 sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, False)
 context.add_robotic_world(sele).add_sampler(
     timeStep=0.005,  # 5 fs
@@ -59,10 +60,10 @@ context.add_robotic_world(sele).add_sampler(
     use_nuts=False,
 )
 
-for row in context.z_matrix:
-    print(row.global_indices)
+# for row in context.z_matrix:
+#     print(row.global_indices)
 
 # Add replicas (geometric temperature ladder)
 context.initialize([300])
 
-# context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, False)
+context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, True)
