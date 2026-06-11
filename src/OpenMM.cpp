@@ -9,7 +9,6 @@
 #include "TopologyElements.hpp"
 
 #if USE_CPU
-#    include "../Molmodel/src/gbsa/cpuObcInterface.h"
 #    include "../openmm/platforms/cpu/include/CpuPlatform.h"
 #elif USE_REFERENCE
 #    include "../openmm/platforms/reference/include/ReferencePlatform.h"

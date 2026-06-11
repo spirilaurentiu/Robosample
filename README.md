@@ -274,7 +274,11 @@ We now need to set up environment variables. [MKL threading layer](https://www.i
 
 ```bash
 conda activate robo_cuda13.0
+```
 
+On activation:
+
+```bash
 mkdir -p $CONDA_PREFIX/etc/conda/activate.d
 cat > $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh << 'EOF'
 export OPENMM_CUDA_COMPILER="$CONDA_PREFIX/bin/nvcc"
@@ -283,7 +287,11 @@ export OMPI_MCA_opal_cuda_support=true
 export UCX_MEMTYPE_CACHE=n
 export MKL_THREADING_LAYER=GNU
 EOF
+```
 
+On deactivation:
+
+```bash
 mkdir -p $CONDA_PREFIX/etc/conda/deactivate.d
 cat > $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh << 'EOF'
 unset OPENMM_CUDA_COMPILER
@@ -292,7 +300,9 @@ unset OMPI_MCA_opal_cuda_support
 unset UCX_MEMTYPE_CACHE
 unset MKL_THREADING_LAYER
 EOF
+```
 
+```bash
 conda activate base && conda activate robo_cuda13.0
 ```
 
@@ -333,9 +343,15 @@ Build types: `debug`, `release`, `relwithdebinfo`, `pgo-train`, `pgo-use`.
 While in `robosample/`:
 
 ```bash
-conda activate robo_XXX
+conda activate robo_cuda13.0
 cmake --preset cuda-release
 cmake --build --preset cuda-release
+```
+
+If the compilation fails with `x86_64-conda-linux-gnu-c++: fatal error: Killed signal terminated program cc1plus`, then the compiler is using too many resources on your machine (Ninja launches one `cc1plus` per core). To fix this, try limiting the number of cores:
+
+```bash
+cmake --build --preset cuda-release -j 1
 ```
 
 ### Test installation
@@ -349,7 +365,7 @@ python -m robosample.test_installation
 The development `conda` environment must be activate when starting Visual Studio Code:
 
 ```bash
-conda activate robo_XXX
+conda activate robo_cuda13.0
 code Robosample/
 ```
 

@@ -3499,68 +3499,67 @@ SimTK::Vec3 World::getGeometricCenterOfSelection(const SimTK::State& state
                                                  // const std::vector<int>& topologyIx,
                                                  // const std::vector<std::vector<int>>& amberAtomList
 ) {
-    SimTK_ASSERT_ALWAYS(false, "World::getGeometricCenterOfSelection not implemented yet");
-    return SimTK::Vec3(0, 0, 0);
+    // return Vec3
+    SimTK::Vec3 geometricCenter = {0, 0, 0};
+    // We could just divide by the size of amberAtomList
+    // but this works even if the user *mistakenly* repeats
+    // indices
+    int nOfPoints = 0;
 
-    // 	// return Vec3
-    // 	SimTK::Vec3 geometricCenter={0,0,0};
-    // 	// We could just divide by the size of amberAtomList
-    // 	// but this works even if the user *mistakenly* repeats
-    // 	// indices
-    // 	int nOfPoints=0;
+    // Just a quick check, to skip unnecessary computation in case of
+    // user error.
+    if (amberAtomIXs.size() == 0) {
+        std::cerr << "Warning: getGeometricCenterOfSelection called with amberAtomList of size 0"
+                  << std::endl;
+        return geometricCenter;
+    }
 
-    // 	// Just a quick check, to skip unnecessary computation in case of
-    // 	// user error.
-    // 	if (amberAtomIXs.size() == 0) {
-    // 		std::cerr << "Warning: getGeometricCenterOfSelection called with amberAtomList of size 0" <<
-    // std::endl; 		return geometricCenter;
-    // 	}
+    std::cout << "topologies atoms size " << topologyIXs.size() << " " << topologyIXs.size() << std::endl;
 
-    // 	std::cout << "topologies atoms size " << topologyIXs.size() << " " << topologyIXs.size() << std::endl;
+    for (int i = 0; i < topologyIXs.size(); i++) {
+        const auto& topology = topologies[topologyIXs[i]];
+        const auto& atoms = amberAtomIXs[i];
 
-    // 	for (int i = 0; i < topologyIXs.size(); i++) {
-    // 		const auto& topology = topologies[topologyIXs[i]];
-    // 		const auto& atoms = amberAtomIXs[i];
+        int amberIx = 0;
 
-    // 		int amberIx=0;
+        // Iterate through atoms in said topology and check
+        // if they are in the list
+        for (auto& atom : topology.getAtoms()) {
+            if (std::find(atoms.begin(), atoms.end(), amberIx) != atoms.end()) {
+                // found
+                // Get Compound atom index
+                auto compoundAtomIndex = atom.identity.compoundAtomIndex;
+                // Get DuMM atom index
+                const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
+                // Get Mobilized Body index
+                const SimTK::MobilizedBodyIndex mobilizedBodyIndex = forceField->getAtomBody(dAIx);
+                // Get DuMM Atom Station on its body.
+                const SimTK::Vec3 dAS_B = forceField->getAtomStationOnBody(dAIx);
+                // Re-Express in G
+                const SimTK::MobilizedBody& mobod_A = matter->getMobilizedBody(mobilizedBodyIndex);
+                const SimTK::Vec3 dAS_G = mobod_A.findStationLocationInGround(state, dAS_B);
+                /* const SimTK::Transform& X_GP = mobod_A.getBodyTransform(state);
+                const SimTK::Vec3 dAS_G = X_GP*dAS_B; */
+                geometricCenter += dAS_G;
+                nOfPoints += 1;
 
-    // 		// Iterate through atoms in said topology and check
-    // 		// if they are in the list
-    // 		for (auto& atom : topology.subAtomList) {
-    // 			if (std::find(atoms.begin(), atoms.end(), amberIx) != atoms.end()){
-    // 				// found
-    // 				// Get Compound atom index
-    // 				auto compoundAtomIndex = atom.identity.compoundAtomIndex;
-    // 				// Get DuMM atom index
-    // 				const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
-    // 				// Get Mobilized Body index
-    // 				const MobilizedBodyIndex mobilizedBodyIndex = forceField->getAtomBody(dAIx);
-    // 				// Get DuMM Atom Station on its body.
-    // 				const Vec3 dAS_B = forceField->getAtomStationOnBody(dAIx);
-    // 				// Re-Express in G
-    // 				const SimTK::MobilizedBody& mobod_A = matter->getMobilizedBody(mobilizedBodyIndex);
-    // 				const SimTK::Vec3 dAS_G = mobod_A.findStationLocationInGround(state, dAS_B);
-    // 				/* const SimTK::Transform& X_GP = mobod_A.getBodyTransform(state);
-    // 				const SimTK::Vec3 dAS_G = X_GP*dAS_B; */
-    // 				geometricCenter += dAS_G;
-    // 				nOfPoints += 1;
+                /* 				std::cout << "amberIx: " << amberIx << " dAIx: " << dAIx
+                                << " MobilizedBodyIndex: " << mobilizedBodyIndex
+                                << " dAS_G: " << dAS_G << " nOfPoints: " << nOfPoints
+                                << std::endl; */
+            }
 
-    // /* 				std::cout << "amberIx: " << amberIx << " dAIx: " << dAIx
-    // 				<< " MobilizedBodyIndex: " << mobilizedBodyIndex
-    // 				<< " dAS_G: " << dAS_G << " nOfPoints: " << nOfPoints
-    // 				<< std::endl; */
-    // 			}
+            amberIx += 1;
+        }
+    }
 
-    // 			amberIx += 1;
-    // 		}
-    // 	}
+    // This can probably be done better, but is it clearer?
+    for (int i = 0; i < 3; ++i) {
+        geometricCenter[i] = geometricCenter[i] / nOfPoints;
+    }
+    std::cout << "geometricCenter : " << geometricCenter << "\n";
 
-    // 	// This can probably be done better, but is it clearer?
-    // 	for(int i=0;i<3;++i)
-    // 		geometricCenter[i] = geometricCenter[i] / nOfPoints;
-    // 	std::cout << "geometricCenter : " << geometricCenter << std::endl;
-
-    // 	return geometricCenter;
+    return geometricCenter;
 }
 
 /** Nice print helper for get/setAtomsLocations */
@@ -4601,17 +4600,17 @@ auto World::generateSamples(int howManySamplesPerRound,
     } else {
         // Simbody supports locking mobilizers
         for (const auto& mobodLock : mobodLocks) {
-            for (const auto mbx : mobodLock) {
-                const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-                mobod.lock(worldState);
-            }
+            // for (const auto mbx : mobodLock) {
+            //     const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+            //     mobod.lock(worldState);
+            // }
 
             // Sample
             for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
                 validated &=
                     updSampler(0)->sampleIteration(worldState, atomTargetLocationsCache, shouldPrint);
                 if (!validated) {
-                    continue;
+                    break;
                 }
             }
 
@@ -4619,10 +4618,10 @@ auto World::generateSamples(int howManySamplesPerRound,
                 break;
             }
 
-            for (const auto mbx : mobodLock) {
-                const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-                mobod.unlock(worldState);
-            }
+            // for (const auto mbx : mobodLock) {
+            //     const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+            //     mobod.unlock(worldState);
+            // }
         }
 
         // // TODO the above will lock literally everything, so it won't simulate anything

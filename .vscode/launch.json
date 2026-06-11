@@ -7,20 +7,11 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": false,
+            "justMyCode": true,
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/python/robosample",
+                "PYTHONPATH": "${workspaceFolder}/python/robosample"
             },
-            "args": [
-                "ffar1",
-                "${workspaceFolder}/examples/ffar1.prmtop",
-                "${workspaceFolder}/examples/ffar1.rst7",
-                "6000",
-                "0",
-                "10",
-                "1",
-            ],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}"
         },
         {
             "name": "Python: run.py",
@@ -28,40 +19,50 @@
             "request": "launch",
             "program": "${workspaceFolder}/python/robosample/run.py",
             "console": "integratedTerminal",
-            "justMyCode": false,
+            "justMyCode": true,
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/python/robosample",
+                "PYTHONPATH": "${workspaceFolder}/python/robosample"
             },
             "args": [
-                "ffar1",
-                "${workspaceFolder}/examples/ffar1.prmtop",
-                "${workspaceFolder}/examples/ffar1.rst7",
+                "ala-dipeptide",
+                "${workspaceFolder}/examples/ala-dipeptide.prmtop",
+                "${workspaceFolder}/examples/ala-dipeptide.rst7",
                 "6000",
                 "0",
                 "10",
-                "1",
+                "1"
             ],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}"
         },
         {
-            "name": "Python C++ Debug with CodeLLDB",
-            "type": "lldb",
+            "name": "C++ (gdb) run.py",
+            "type": "cppdbg",
             "request": "launch",
             "program": "${command:python.interpreterPath}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/python/robosample",
-            },
             "args": [
                 "${workspaceFolder}/python/robosample/run.py",
-                "ffar1",
-                "${workspaceFolder}/examples/ffar1.prmtop",
-                "${workspaceFolder}/examples/ffar1.rst7",
+                "ala-dipeptide",
+                "${workspaceFolder}/examples/ala-dipeptide.prmtop",
+                "${workspaceFolder}/examples/ala-dipeptide.rst7",
                 "6000",
                 "0",
                 "10",
                 "1"
             ],
             "cwd": "${workspaceFolder}",
-        },
+            "environment": [
+                {
+                    "name": "PYTHONPATH",
+                    "value": "${workspaceFolder}/python/robosample"
+                }
+            ],
+            "MIMode": "gdb",
+            "setupCommands": [
+                { "text": "set auto-load safe-path /", "description": "let conda libstdc++ pretty-printers load" },
+                { "text": "set index-cache enabled on", "description": "cache indexes across runs" },
+                { "text": "-enable-pretty-printing", "ignoreFailures": true },
+                { "text": "python import sys, os, glob; env = os.path.dirname(os.path.dirname(r'${command:python.interpreterPath}')); sys.path[:0] = glob.glob(os.path.join(env, 'share', 'gcc-*', 'python')); from libstdcxx.v6.printers import register_libstdcxx_printers; register_libstdcxx_printers(None)", "description": "register STL pretty-printers; env derived from selected interpreter" }
+            ]
+        }
     ]
 }
