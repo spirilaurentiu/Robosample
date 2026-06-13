@@ -50,8 +50,7 @@ const SimTK::UnitVec3 kUnitX{1.0, 0.0, 0.0};
  *
  * This is a rigid-body alignment operation combining translation + rotation.
  */
-[[nodiscard]] auto alignFlipAndTranslateFrameAlongXAxis(const SimTK::Transform& gTransform_F1,
-                                                        const SimTK::Vec3& gPoint_v1) -> SimTK::Transform {
+[[nodiscard]] auto alignFlipAndTranslateFrameAlongXAxis(const SimTK::Transform& gTransform_F1, const SimTK::Vec3& gPoint_v1) -> SimTK::Transform {
     // Vector from F1 origin to v1, expressed in G
     const SimTK::Vec3 gVec_F1ToV1 = (gPoint_v1 - gTransform_F1.p());
 
@@ -99,8 +98,23 @@ void PrintMat33(const SimTK::Mat33& matrix, int decimalPlaces, const std::string
     std::cout << header << "\n";
     std::cout << std::setw(6 + decimalPlaces) << std::fixed << std::setprecision(decimalPlaces);
     for (int i = 0; i < 3; i++) {
+        std::cout << header << " ";
         for (int k = 0; k < 3; k++) {
             std::cout << matrix(i, k) << " ";
+        }
+        std::cout << "\n";
+    }
+}
+
+void PrintTransform(const SimTK::Transform& transform, int decimalPlaces, const std::string& header) {
+    const auto transformMat44 = transform.toMat44();
+
+    std::cout << header << "\n";
+    std::cout << std::setw(6 + decimalPlaces) << std::fixed << std::setprecision(decimalPlaces);
+    for (int i = 0; i < 4; i++) {
+        std::cout << header << " ";
+        for (int k = 0; k < 4; k++) {
+            std::cout << transformMat44(i, k) << " ";
         }
         std::cout << "\n";
     }
@@ -110,9 +124,7 @@ void PrintMat33(const SimTK::Mat33& matrix, int decimalPlaces, const std::string
  * @brief Calculates the angle in radians between vectors (pos1-pos0) and (pos2-pos0).
  * Uses std::clamp to prevent NaN results from floating-point drift.
  */
-[[nodiscard]] auto calculateAngleInRad(const SimTK::Vec3& pos0,
-                                       const SimTK::Vec3& pos1,
-                                       const SimTK::Vec3& pos2) -> SimTK::Real {
+[[nodiscard]] auto calculateAngleInRad(const SimTK::Vec3& pos0, const SimTK::Vec3& pos1, const SimTK::Vec3& pos2) -> SimTK::Real {
     const SimTK::Vec3 vec10 = pos1 - pos0;
     const SimTK::Vec3 vec20 = pos2 - pos0;
 
@@ -135,10 +147,7 @@ void PrintMat33(const SimTK::Mat33& matrix, int decimalPlaces, const std::string
  * * Uses the Praxeolitic formula for high numerical stability.
  * Formula: atan2( |b1| * b0 * (b1 x b2), (b0 x b1) * (b1 x b2) )
  */
-[[nodiscard]] auto calculateDihedralInRad(const SimTK::Vec3& pos0,
-                                          const SimTK::Vec3& pos1,
-                                          const SimTK::Vec3& pos2,
-                                          const SimTK::Vec3& pos3) -> SimTK::Real {
+[[nodiscard]] auto calculateDihedralInRad(const SimTK::Vec3& pos0, const SimTK::Vec3& pos1, const SimTK::Vec3& pos2, const SimTK::Vec3& pos3) -> SimTK::Real {
     // Vector segments between the four points
     const SimTK::Vec3 vec10 = pos1 - pos0;
     const SimTK::Vec3 vec21 = pos2 - pos1;
@@ -179,25 +188,17 @@ void PrintMat33(const SimTK::Mat33& matrix, int decimalPlaces, const std::string
  */
 void normalizeInPlace(std::vector<SimTK::Real>& inputVector) {
     // C++17 transform_reduce is faster and more precise than a manual loop
-    const SimTK::Real normSquared = std::transform_reduce(std::execution::unseq,
-                                                          inputVector.begin(),
-                                                          inputVector.end(),
-                                                          0.0,
-                                                          std::plus<>(),
-                                                          [](const SimTK::Real value) -> SimTK::Real {
-                                                              return value * value;
-                                                          });
+    const SimTK::Real normSquared = std::transform_reduce(std::execution::unseq, inputVector.begin(), inputVector.end(), 0.0, std::plus<>(), [](const SimTK::Real value) -> SimTK::Real {
+        return value * value;
+    });
 
     const SimTK::Real magnitude = std::sqrt(normSquared);
 
     if (magnitude > 1e-15) { // Check against a small epsilon
         const SimTK::Real inverseMagnitude = 1.0 / magnitude;
-        std::for_each(std::execution::unseq,
-                      inputVector.begin(),
-                      inputVector.end(),
-                      [inverseMagnitude](SimTK::Real& value) {
-                          value *= inverseMagnitude;
-                      });
+        std::for_each(std::execution::unseq, inputVector.begin(), inputVector.end(), [inverseMagnitude](SimTK::Real& value) {
+            value *= inverseMagnitude;
+        });
     }
 }
 
@@ -205,21 +206,15 @@ void normalizeInPlace(std::vector<SimTK::Real>& inputVector) {
  * @brief Multiplies a source vector by a scalar and stores the result in the destination.
  * Clang-Tidy: Avoids swapping by clearly distinguishing 'source' and 'destination'.
  */
-void multiplyByScalar(const std::vector<SimTK::Real>& sourceVector,
-                      SimTK::Real scalarValue,
-                      std::vector<SimTK::Real>& destinationVector) {
+void multiplyByScalar(const std::vector<SimTK::Real>& sourceVector, SimTK::Real scalarValue, std::vector<SimTK::Real>& destinationVector) {
     // Ensure the destination is the correct size before operating
     if (destinationVector.size() != sourceVector.size()) {
         destinationVector.resize(sourceVector.size());
     }
 
-    std::transform(std::execution::unseq,
-                   sourceVector.begin(),
-                   sourceVector.end(),
-                   destinationVector.begin(),
-                   [scalarValue](const SimTK::Real value) -> SimTK::Real {
-                       return value * scalarValue;
-                   });
+    std::transform(std::execution::unseq, sourceVector.begin(), sourceVector.end(), destinationVector.begin(), [scalarValue](const SimTK::Real value) -> SimTK::Real {
+        return value * scalarValue;
+    });
 }
 
 /**

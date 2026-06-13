@@ -352,6 +352,7 @@ class HMCSampler : virtual public Sampler {
     void integrateTrajectory_Bounded(SimTK::State& someState);
 
     /** BOUND HMC */
+    SimTK::Vec3 sampleRandomVectorOnSphere(SimTK::Real radius);
     void integrateTrajectory_BoundHMC(SimTK::State& someState);
 
     /** Integrate trajectory using task space forces */

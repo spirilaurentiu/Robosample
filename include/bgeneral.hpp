@@ -234,27 +234,24 @@ struct BondFlexibility {
  *
  * This is a rigid-body alignment operation combining translation + rotation.
  */
-[[nodiscard]] auto alignFlipAndTranslateFrameAlongXAxis(const SimTK::Transform& gTransform_F1,
-                                                        const SimTK::Vec3& gPoint_v1) -> SimTK::Transform;
+[[nodiscard]] auto alignFlipAndTranslateFrameAlongXAxis(const SimTK::Transform& gTransform_F1, const SimTK::Vec3& gPoint_v1) -> SimTK::Transform;
 
 void PrintMat33(const SimTK::Mat33& matrix, int decimalPlaces, const std::string& header = "unknown");
+
+void PrintTransform(const SimTK::Transform& transform, int decimalPlaces, const std::string& header = "unknown");
 
 /**
  * @brief Calculates the angle in radians between vectors (pos1-pos0) and (pos2-pos0).
  * Uses std::clamp to prevent NaN results from floating-point drift.
  */
-[[nodiscard]] auto
-calculateAngleInRad(const SimTK::Vec3& pos0, const SimTK::Vec3& pos1, const SimTK::Vec3& pos2) -> SimTK::Real;
+[[nodiscard]] auto calculateAngleInRad(const SimTK::Vec3& pos0, const SimTK::Vec3& pos1, const SimTK::Vec3& pos2) -> SimTK::Real;
 
 /**
  * @brief Calculates the dihedral angle in radians between four positions.
  * * Uses the Praxeolitic formula for high numerical stability.
  * Formula: atan2( |b1| * b0 · (b1 × b2), (b0 × b1) · (b1 × b2) )
  */
-[[nodiscard]] auto calculateDihedralInRad(const SimTK::Vec3& pos0,
-                                          const SimTK::Vec3& pos1,
-                                          const SimTK::Vec3& pos2,
-                                          const SimTK::Vec3& pos3) -> SimTK::Real;
+[[nodiscard]] auto calculateDihedralInRad(const SimTK::Vec3& pos0, const SimTK::Vec3& pos1, const SimTK::Vec3& pos2, const SimTK::Vec3& pos3) -> SimTK::Real;
 
 /** * @brief Squared magnitude of a vector.
  * Uses std::transform_reduce for better compiler optimization/vectorization.
@@ -271,9 +268,7 @@ void normalizeInPlace(std::vector<SimTK::Real>& inputVector);
  * @brief Multiplies a source vector by a scalar and stores the result in the destination.
  * Clang-Tidy: Avoids swapping by clearly distinguishing 'source' and 'destination'.
  */
-void multiplyByScalar(const std::vector<SimTK::Real>& sourceVector,
-                      SimTK::Real scalarValue,
-                      std::vector<SimTK::Real>& destinationVector);
+void multiplyByScalar(const std::vector<SimTK::Real>& sourceVector, SimTK::Real scalarValue, std::vector<SimTK::Real>& destinationVector);
 
 /**
  * @brief Numerically stable computation of log(sin^2(pitch))
