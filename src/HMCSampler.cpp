@@ -2477,7 +2477,8 @@ SimTK::Vec3 HMCSampler::sampleRandomVectorOnSphere(SimTK::Real radius) {
 void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
     std::cout << "Propose: BOUND_HMC integrator\n";
 
-    setSphereRadius(1.5); // Default radius, can be overridden by user input
+    // setSphereRadius(2); // Host guest
+    setSphereRadius(4); // 2rw9
 
     if (topologies.size() < 2) {
         std::cerr << "BOUND_HMC requires at least ligand + receptor topologies.\n";
@@ -2524,13 +2525,17 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
     const SimTK::Transform& receptor_X_MB = ~(mobod_R.getOutboardFrame(someState));
     const SimTK::Vec3 recCOM_G = mobod_R.findMassCenterLocationInGround(someState);
 
-    // Check boundary constraint (or keep 'true' for forced relocation testing)
-    SimTK::Vec3 ligCOM_To_recSite_G = recSitePos_G - ligCOM_G;
-    std::cout << "Ligand to site vector: " << ligCOM_To_recSite_G << " (Norm: " << ligCOM_To_recSite_G.norm() << ")\n";
 
-    // if (ligandToSite.normSqr() > activeSphereRadius * activeSphereRadius) {
+    // Give a random kick
+    if (numSamples == 0) {
+        std::cout << "Giving a random kick to the ligand\n";
+    }
+
+    // Bring back on the sphere if too far
+    SimTK::Vec3 ligCOM_To_recSite_G = recSitePos_G - ligCOM_G;
+    // if (ligCOM_To_recSite_G.normSqr() > activeSphereRadius * activeSphereRadius) {
     if (true) {
-        // std::cout << "Ligand outside boundary (" << ligCOM_To_recSite_G.norm() << " nm), repositioning...\n";
+        std::cout << "JUMPED at " << ligCOM_To_recSite_G.norm() << "\n";
         SimTK::Vec3 randVecOnSphere_G = sampleRandomVectorOnSphere(activeSphereRadius);
         // Equation (1) from notes: t_G = recPos_G + s_G - ligPos_G
         const SimTK::Vec3 targetPos_G = recSitePos_G + randVecOnSphere_G - ligCOM_G;
@@ -2540,15 +2545,8 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
         std::cout << "Ligand COM Ground: " << ligCOM_G << " (Norm: " << ligCOM_G.norm() << ")\n";
         std::cout << "Target position Ground: " << targetPos_G << " (Norm: " << targetPos_G.norm() << ")\n";
 
-        // Equation (2) from notes: t_F = lig_X_FG * t_G
-        const SimTK::Vec3 targetPos_ligF = ligand_X_FG.R() * targetPos_G; // Express target position in ligand fixed frame
-        // const SimTK::Vec3 targetPos_ligF = ligand_X_FG * targetPos_G; // Express target position in ligand fixed frame
-
-        // SimTK::Transform target_X_FM(SimTK::Rotation(), targetPos_ligF);
-
         SimTK::Transform ligand_MobilizerPullback_X_BP = ~(ligand_X_PF * ligand_X_FM * ligand_X_MB);
         SimTK::Transform ligand_X_RootG = ~(ligand_X_TopRoot)*ligand_MobilizerPullback_X_BP;
-
 
         // SimTK::Transform X_FM_new = getRandomFM(someState, minDist, maxDist);
         //  SimTK::Transform X_CR = getRandomSphericalTransform(randRadiusInShell);
