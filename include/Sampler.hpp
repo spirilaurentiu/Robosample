@@ -65,8 +65,7 @@ class Sampler {
     // Draws X from von Mises-Fisher distribution with concentration
     // parameter k TODO: reference to the algorithm
     // X vector has the dimensions of the ndofs
-    [[nodiscard]] auto generateVonMisesFisherSample(std::vector<SimTK::Real>& X, SimTK::Real k)
-        -> std::vector<SimTK::Real>&;
+    void generateVonMisesFisherSample(std::vector<SimTK::Real>& X, SimTK::Real k);
 
     // Draws from chi distribution
     [[nodiscard]] auto generateChiSample() -> SimTK::Real;
@@ -81,21 +80,20 @@ class Sampler {
      * Take a variable and transforming according to some distribution
      * //TODO revise param1 and param2
      */
-    [[nodiscard]] auto convoluteVariable(SimTK::Real& var,
-                                         std::string distrib = "alternateInverse",
-                                         SimTK::Real param1 = 1.0,
-                                         SimTK::Real param2 = 0.0,
-                                         SimTK::Real param3 = 0.0) -> SimTK::Real;
-    [[nodiscard]] auto convoluteVariable(std::vector<SimTK::Real>& vvar,
-                                         std::string distrib = "alternateInverse",
-                                         SimTK::Real param1 = 1.0,
-                                         SimTK::Real param2 = 0.0) -> SimTK::Real;
-    [[nodiscard]] auto calcDeformationPotential(SimTK::Real& var,
-                                                std::string distrib = "alternateInverse",
-                                                SimTK::Real param1 = 1.0,
-                                                SimTK::Real param2 = 0.0) -> SimTK::Real;
-    [[nodiscard]] virtual auto setQToScaleBendStretchStdev(SimTK::State& someState,
-                                                           std::vector<SimTK::Real>& scaleFactors)
+    auto convoluteVariable(SimTK::Real& var,
+                           std::string distrib = "alternateInverse",
+                           SimTK::Real param1 = 1.0,
+                           SimTK::Real param2 = 0.0,
+                           SimTK::Real param3 = 0.0) -> SimTK::Real;
+    auto convoluteVariable(std::vector<SimTK::Real>& vvar,
+                           std::string distrib = "alternateInverse",
+                           SimTK::Real param1 = 1.0,
+                           SimTK::Real param2 = 0.0) -> SimTK::Real;
+    auto calcDeformationPotential(SimTK::Real& var,
+                                  std::string distrib = "alternateInverse",
+                                  SimTK::Real param1 = 1.0,
+                                  SimTK::Real param2 = 0.0) -> SimTK::Real;
+    virtual auto setQToScaleBendStretchStdev(SimTK::State& someState, std::vector<SimTK::Real>& scaleFactors)
         -> SimTK::Real = 0;
 
     // virtual void setIntegratorName(IntegratorName) = 0;

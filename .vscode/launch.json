@@ -24,9 +24,9 @@
                 "PYTHONPATH": "${workspaceFolder}/python/robosample"
             },
             "args": [
-                "ala-dipeptide",
-                "${workspaceFolder}/examples/ala-dipeptide.prmtop",
-                "${workspaceFolder}/examples/ala-dipeptide.rst7",
+                "2ala.2ala",
+                "${workspaceFolder}/examples/2ala.2ala.prmtop",
+                "${workspaceFolder}/examples/2ala.2ala.rst7",
                 "6000",
                 "0",
                 "10",
@@ -41,9 +41,9 @@
             "program": "${command:python.interpreterPath}",
             "args": [
                 "${workspaceFolder}/python/robosample/run.py",
-                "ala-dipeptide",
-                "${workspaceFolder}/examples/ala-dipeptide.prmtop",
-                "${workspaceFolder}/examples/ala-dipeptide.rst7",
+                "2ala.2ala",
+                "${workspaceFolder}/examples/2ala.2ala.prmtop",
+                "${workspaceFolder}/examples/2ala.2ala.rst7",
                 "6000",
                 "0",
                 "10",

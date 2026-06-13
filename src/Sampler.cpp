@@ -465,7 +465,7 @@ SimTK::Real Sampler::generateVonMisesSample(SimTK::Real Mean, SimTK::Real K) {
 }
 
 // Draws from von Mises-Fisher distribution
-std::vector<double>& Sampler::generateVonMisesFisherSample(std::vector<double>& X, double lambda) {
+void Sampler::generateVonMisesFisherSample(std::vector<double>& X, double lambda) {
     // int NDOFS = 3; // DELETE THIS
     std::cout << "Sampler::vonMisesFisher ndofs " << numDegreesOfFreedom << "\n";
 
@@ -518,8 +518,6 @@ std::vector<double>& Sampler::generateVonMisesFisherSample(std::vector<double>& 
             break;
         }
     }
-
-    return X;
 }
 
 // Draws from von Mises-Fisher distribution

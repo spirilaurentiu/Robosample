@@ -799,19 +799,6 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def(py::init<VectorInt>(), py::arg("startCounts"))
         .def("close", &TopologyRange::close, py::arg("endCounts"));
 
-    py::class_<CoordinateTransferError>(m, "CoordinateTransferError")
-        .def_readwrite("matchResiduals", &CoordinateTransferError::matchResiduals)
-        .def_readwrite("cartesian", &CoordinateTransferError::cartesian)
-        .def_readwrite("cartesianMax", &CoordinateTransferError::cartesianMax)
-        .def_readwrite("bonds", &CoordinateTransferError::bonds)
-        .def_readwrite("bondsMax", &CoordinateTransferError::bondsMax)
-        .def_readwrite("angles", &CoordinateTransferError::angles)
-        .def_readwrite("anglesMax", &CoordinateTransferError::anglesMax)
-        .def_readwrite("properDihedrals", &CoordinateTransferError::properDihedrals)
-        .def_readwrite("properDihedralsMax", &CoordinateTransferError::properDihedralsMax)
-        .def_readwrite("improperDihedrals", &CoordinateTransferError::improperDihedrals)
-        .def_readwrite("improperDihedralsMax", &CoordinateTransferError::improperDihedralsMax);
-
     py::class_<Context>(m, "Context")
         .def(py::init<const std::string&, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t, bool>())
         .def("getAtomNameByPrmtopIndex",
@@ -822,9 +809,6 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("addThermodynamicState",
              &Context::addThermodynamicState,
              "Add an empty themodynamic state to the context.")
-        .def("validate_context",
-             &Context::validateContext,
-             "Validates all worlds and replicas in the context.")
         .def("run_rex",
              &Context::RunREX,
              py::arg("num_equilibration_rounds"),
@@ -875,13 +859,5 @@ PYBIND11_MODULE(MODULE_NAME, m) {
              py::arg("thermostat_name"),
              py::arg("use_fixman_potential"),
              py::arg("use_nuts"),
-             "Add a sampler to the world.")
-        .def("get_coordinate_transfer_errors",
-             &World::getCoordinateTransferErrors,
-             "Get the coordinate transfer errors for all samplers in the world.")
-        .def("has_rigid_body_violations",
-             &World::hasRigidBodyViolations,
-             py::arg("timeStep"),
-             py::arg("numSteps"),
-             "Checks for rigid body violations.");
+             "Add a sampler to the world.");
 }

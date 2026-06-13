@@ -66,40 +66,21 @@ class Context {
         throw std::runtime_error("Atom with specified prmtop index not found.");
     }
 
-    auto validateContext() -> bool;
-
     void addWorld(bool fixmanTorque,
                   int samplesPerRound,
                   const std::vector<std::vector<BondFlexibility>>& rollFlexibilities,
                   bool wantSpatialForceHistory);
-
-    // Add task spaces
-    void addTaskSpacesLS();
 
     /** Add constraints */
     void addConstraints();
 
     void passTopologiesToNewWorld(int newWorldIx);
 
-    // --- Simulation parameters ---
-
-    //------------
-
-    // --- Mixing parameters ---
-    // Another way to do it is setting the number of rounds
     int getRequiredNofRounds();
 
     int getNofRoundsTillReblock();
 
     void updNofRoundsTillReblock(int nofRoundsTillReblock);
-
-    // Adaptive Gibbs blocking: TODO: consider moving in World
-    void allocateReblockQsCache();
-    void allocateReblockQsCacheQVectors();
-
-    // --- Arrange different mixing parameters ---
-    void initializeMixingParameters();
-    //------------
 
     auto getNofWorlds() const -> std::size_t {
         return worlds.size();
@@ -120,15 +101,6 @@ class Context {
     auto getWorlds() const -> const std::vector<World>& {
         return worlds;
     }
-
-    // Relationship BAT - mobod transforms
-    void PrintZMatrixMobods(int wIx, SimTK::State& someState);
-
-    auto Pearson(std::vector<std::vector<SimTK::Real>> someVector,
-                 int QIx1,
-                 int QIx2) -> SimTK::Real; // 2D roundsTillReblock; 3D nofQs
-
-    //------------
 
     /** Analysis related functions **/
     void addDistance(std::size_t whichWorld, std::size_t whichCompound, std::size_t aIx1, std::size_t aIx2);
@@ -152,13 +124,6 @@ class Context {
 
     // Print DuMM atoms stations in mobilized body frame
     void checkAtomStationsThroughDumm();
-
-    /**
-     * @brief Write pdb file.
-     */
-    void writeInitialPdb();
-    void writeFinalPdb();
-    void writePdbs(int someIndex, int thermodynamicStateIx = 0);
 
     // Output helpers
     auto getPdbRestartFreq() -> int;
@@ -346,13 +311,8 @@ class Context {
     void PrintNofAttemptedSwapsMatrix();
     void PrintNofAcceptedSwapsMatrix();
 
-    // Transformers
-    void Print_TRANSFORMERS_Work();
-
     std::vector<SimTK::Real> AtomIndex0, AtomIndex1, UDotCache, UCache;
     bool binaryFileIsInitialized = false;
-
-    std::string foutU, foutUDot, foutTorque;
 
     void initializeBinaryFile(const std::string& filename, uint32_t num_columns);
     void writeRowToBinaryFile(const std::string& filename,
@@ -466,179 +426,15 @@ class Context {
     std::vector<SimTK::Real> dcdYBuffer;
     std::vector<SimTK::Real> dcdZBuffer;
 
-    public:
-    // /** Implicit membrane mimicked by half-space contacts */
-    // void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
-
-    /**
-     * @brief Get Z-matrix indexes table
-     * @param
-     */
-    void calcZMatrixTable();
-
-    /**
-     * @brief Allocate Z Matrix BAT
-     * @param
-     */
-    void reallocZMatrixBAT();
-
-
-    /**
-     * @brief Print function for the zMatrixTable
-     * @param
-     */
-    void PrintZMatrixTable() const;
-
-
-    /**
-     * @brief Function to print the zMatrixBAT
-     * @param
-     */
-    void PrintZMatrixBAT() const;
-
-    /**
-     * @brief
-     * @param
-     */
-    void PrintZMatrixTableAndBAT() const;
-
-
     private:
     std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocationsCache;
 
-    /** @name Z Matrix and BAT functions
-     */
-
-    /**@{**/
-
-    //////////////////////////////////
-    /////      Z Matrix BAT      /////
-    //////////////////////////////////
-
     std::vector<std::vector<int>> zMatrixTable;
     std::vector<std::vector<SimTK::Real>> zMatrixBAT;
-
-    /**
-     * @brief Add a new row to the zMatrixTable
-     * @param
-     */
-    void addZMatrixTableRow(const std::vector<int>& newRow);
-
-    /**
-     * @brief Getter for a specific entry
-     * @param
-     * @return
-     */
-    int getZMatrixTableEntry(int rowIndex, int colIndex) const;
-
-    /**
-     * @brief Setter for a specific entry
-     * @param
-     */
-    void setZMatrixTableEntry(int rowIndex, int colIndex, int value);
-
-    /**
-     * @brief Setter for a specific entry
-     * @param
-     */
-    void setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value);
-
-    /**
-     * @brief Function to get a given row
-     * @param
-     */
-    const std::vector<SimTK::Real>& getZMatrixBATRow(size_t rowIndex) const;
-
-    /**
-     * @brief Function to get a given row
-     * @param
-     * @return
-     */
-    std::vector<SimTK::Real>& updZMatrixBATRow(size_t rowIndex);
-
-
-    /**
-     * @brief
-     * @param
-     */
-    void calcZMatrixBAT(
-        int wIx,
-        const std::vector<std::vector<std::pair<RoboAtom*, SimTK::Vec3>>>& otherWorldsAtomsLocations);
-
-    /**
-     * @brief Function to get the value for a given row and column in zMatrixBAT
-     * @param
-     * @return
-     */
-    SimTK::Real getZMatrixBATValue(size_t rowIndex, size_t colIndex) const;
-
-    /**
-     * @brief Function to add a new row to the zMatrixBAT
-     * @param
-     */
-    void addZMatrixBATRow(const std::vector<SimTK::Real>& newRow);
-
-    // WORK Q PERTURB BEND STRETCH ============================================
-
-    /**
-     * @brief zmatrixbat_ Get log of the Cartesian->BAT Jacobian
-     * @param
-     */
-    SimTK::Real calcInternalBATJacobianLog();
-
-    /**
-     * @brief zmatrixbat_ Add BAT coordinates
-     * @param
-     */
-    void addSubZMatrixBATsToWorld(int wIx, int replicaIx);
-
-    /**
-     * @brief zmatrixbat_ Get BAT coordinates modifiable by a selected world
-     * @param
-     */
-    void updSubZMatrixBATsToWorld(int wIx, int replicaIx);
-
-    /**
-     * @brief zmatrixbat_ Set BAT coordinates modifiable to all worlds of a replica
-     * @param
-     */
-    void updSubZMatrixBATsToAllWorlds(int replicaIx);
-
-    /**
-     * @brief zmatrixbat_ Print BAT coordinates
-     * @param
-     */
-    void PrintWorldSubZMatrixBATs(int wIx);
-
-    // WORK Q PERTURB BEND STRETCH --------------------------------------------
-
-    //////////////////////////////////
-    /////      Z Matrix BAT      /////
-    //////////////////////////////////
-
-    /**@}**/
-
-    // Molmodel to Gmolmodel (and inverse) bond mappings
-    // bondMapping[gmolmodelBondIndex] = molmodelBondIndex (inverse mapping)
-    // bondMapping[molmodelBondIndex] = gmolmodelBondIndex (normal mapping)
-    std::unordered_map<int, SimTK::Compound::BondIndex> bondMapping;
 
     // Explicit pairs (replica_i, replica_j)
     std::vector<std::pair<int, int>> exchangePairList;
 
     // Quick lookup: exchangePairs[i] = j or -1
     std::vector<int> exchangePairs;
-
-    //////////////////////////////////
-    //---         Q Stats        -----
-    //////////////////////////////////
-    void reserveThermostatsQs();
-
-    void setThermostatesQs();
-
-    void printQStats(int thIx);
-
-    //////////////////////////////////
-    //---         Q Stats        -----
-    //////////////////////////////////
 };

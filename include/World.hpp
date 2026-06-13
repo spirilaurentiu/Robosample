@@ -6,12 +6,12 @@
  * This is part of Robosample		                                      *
  */
 
-#include <math.h>
-#include <time.h>
 #include <unistd.h>
 
 #include <array>
 #include <atomic>
+#include <cmath>
+#include <ctime>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -20,6 +20,7 @@
 #include <unordered_set>
 
 #include "Compound.h"
+#include "CompoundSystem.h"
 #include "Constraint.h"
 #include "DuMMForceFieldSubsystem.h"
 #include "FixmanTorque.hpp"
@@ -34,49 +35,9 @@
 #include "HMCSampler.hpp"
 #include "Topology.hpp"
 
-class Context;
-
 struct TopoAtom {
     int topoIx;
     SimTK::Compound::AtomIndex cAIx;
-};
-
-template <typename T>
-std::string vecToString(const std::vector<T>& v) {
-    std::ostringstream oss;
-    oss << "[";
-    for (size_t i = 0; i < v.size(); ++i) {
-        oss << std::scientific << std::showpos << std::setprecision(2) << v[i];
-        if (i + 1 < v.size()) {
-            oss << ", ";
-        }
-    }
-    oss << "]";
-    return oss.str();
-}
-
-inline std::string atomsToString(const std::unordered_set<std::string>& atoms) {
-    std::ostringstream oss;
-    oss << "[";
-    size_t i = 0;
-    for (const auto& atom : atoms) {
-        oss << atom;
-        if (i + 1 < atoms.size()) {
-            oss << ", ";
-        }
-        ++i;
-    }
-    oss << "]";
-    return oss.str();
-}
-
-struct CoordinateTransferError {
-    std::vector<SimTK::Real> matchResiduals;
-    SimTK::Real cartesian{0}, cartesianMax{0};
-    SimTK::Real bonds{0}, bondsMax{0};
-    SimTK::Real angles{0}, anglesMax{0};
-    SimTK::Real properDihedrals{0}, properDihedralsMax{0};
-    SimTK::Real improperDihedrals{0}, improperDihedralsMax{0};
 };
 
 struct SpatialForceSample {
@@ -87,20 +48,48 @@ struct SpatialForceSample {
     SimTK::Real uDot;
 };
 
-//==============================================================================
-//                   CLASS TaskSpace
-//==============================================================================
-/**
- *  Contains a Symbody task space and additional data
- **/
-class StationTaskLaurentiu {
-    friend class Context;
-
-    public:
-    StationTaskLaurentiu();
-
-    private:
+// ----------------------------------------------------------------------------
+//  A rigid unit == a maximal set of atoms connected by non-ring Rigid tree
+//  bonds. This reproduces CompoundSystem::buildUpRigidBody exactly: that
+//  function recurses only over tree neighbours joined by Rigid bonds, and
+//  ring-closing bonds are never tree edges, so they never merge bodies.
+// ----------------------------------------------------------------------------
+struct WorldRigidUnit {
+    std::vector<int> atomCAIxs; // members (compound atom indices)
+    int rootCAIx = -1;          // inboard atom of the unit
+    int parentUnit = -1;        // -1 == attached to Ground
+    int jointParentCAIx = -1;   // chemical parent of rootCAIx (in parent unit)
+    SimTK::BondMobility::Mobility mobility = SimTK::BondMobility::Mobility::Rigid; // inboard joint mobility
+    SimTK::MobilizedBodyIndex mbx; // filled when the body is created
 };
+
+// ---------------------------------------------------------------------------
+//  Model-time cache. Built once (modelTopologies); reused every transfer.
+// ---------------------------------------------------------------------------
+struct FrameGraph {
+    int totalAtoms = 0;
+    std::vector<int> topoOffset; // size = numTopologies + 1; gAIx = topoOffset[t] + cAIx
+
+    // Bucket G: full-geometry atoms (gp>=0 && rc>=0). Struct-of-arrays.
+    std::vector<int> g_self, g_parent, g_gparent, g_refChild;
+
+    // Bucket F: fallback atoms (root-child with no grandparent, OR leaf).
+    std::vector<int> f_self, f_parent;
+
+    // Bucket R: roots (one per molecule).
+    std::vector<int> r_self;
+
+    [[nodiscard]] auto numFull() const -> int {
+        return (int)g_self.size();
+    }
+    [[nodiscard]] auto numFallback() const -> int {
+        return (int)f_self.size();
+    }
+    [[nodiscard]] auto numRoot() const -> int {
+        return (int)r_self.size();
+    }
+};
+
 
 // Describes bonds involving a root atom
 struct RootAtomBond {
@@ -331,8 +320,7 @@ class HarmonicImproperTorsionForce : public SimTK::DuMM::CustomBondTorsion {
 class World {
     public:
     void setAtomTargetLocationsToState(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
-    void updateInboardAndOutboardFramesFromTopologies(
-        const std::vector<std::vector<SimTK::Transform>>& atomFrameCache);
+    void updateInboardAndOutboardFramesFromTopologies();
 
     explicit World(int worldIndex,
                    Span<Topology> topo,
@@ -365,119 +353,16 @@ class World {
     /** Add contact constraints to specific bodies **/
     const SimTK::State& addSpeedConstraint(int prmtopIndex);
 
-    //=========================================================================
-    //                   TaskSpace Functions
-    //=========================================================================
-
-    /** Allocate memory for a task space consisting of a set of body indices
-     * station on the bodies expressed in both guest (target) and host
-     * and the difference between them
-     */
-    void addTaskSpaceLS();
-
-    /** Update target task space */
-    void updateTaskSpace(const SimTK::State& someState);
-
-    /** Get delta stationP */
-    SimTK::Array_<SimTK::Vec3>& getTaskSpaceStationPInGuest();
-
-    /** Get delta stationP */
-    SimTK::Array_<SimTK::Vec3>& getTaskSpaceStationPInHost();
-
-    /** Get delta stationP */
-    SimTK::Array_<SimTK::Vec3>& getTaskSpaceDeltaStationP();
-
     /** Calc station Jacobian */
     void calcStationJacobian(const SimTK::State& someState, SimTK::Matrix_<SimTK::Vec3>& JS) const;
-
-    /** Assign a scale factor for generalized velocities to every mobilized
-    body **/
-    void setUScaleFactorsToMobods();
-
-    /** Get the number of molecules **/
-    int getNofMolecules() const;
 
     /** Get U scale factor for the mobilized body **/
     SimTK::Real getMobodUScaleFactor(SimTK::MobilizedBodyIndex&) const;
     //...............
 
-    /** Print atom to MobilizedBodyIndex and bond to Compound::Bond index
-     * maps **/
-    void printMaps();
-
-    //...............
-
-
-    // --- Inter-world functions: Pass configurations among Worlds
-    // ELIZA
-    SimTK::Vec3 calcAtomLocationInGroundFrameThroughOMM(const SimTK::DuMM::AtomIndex&);
-
     // Get geometric center of a subset of atoms
     // TEODOR
     SimTK::Vec3 getGeometricCenterOfSelection(const SimTK::State& state);
-
-    /** Nice print helper for get/setAtomsLocations */
-    void PrintAtomsLocations(
-        const std::vector<std::vector<std::pair<RoboAtom*, SimTK::Vec3>>>& someAtomsLocations);
-    void WriteRst7FromTopology(std::string FN);
-
-    //=========================================================================
-    //                   RECONSTRUCTION-Related Functions
-    //=========================================================================
-
-    //-------------------------------------------------------------------------
-    /** @name Contacts - Contacts  **/
-    /**@{**/
-
-    /**	Description **/
-
-    void PrintFullTransformationGeometry(std::string indS,
-                                         const SimTK::State&,
-                                         bool x_pf_r = true,
-                                         bool x_fm_r = true,
-                                         bool x_bm_r = true,
-                                         bool x_pf_p = true,
-                                         bool x_fm_p = true,
-                                         bool x_bm_p = true);
-
-    /**
-     * RMSD function
-     */
-    SimTK::Real
-    RMSD(const std::vector<std::vector<std::pair<RoboAtom*, SimTK::Vec3>>>& srcWorldsAtomsLocations,
-         const std::vector<std::vector<std::pair<RoboAtom*, SimTK::Vec3>>>& destWorldsAtomsLocations) const;
-
-    /**
-     * Maximum distance between two corresponding atoms
-     */
-    std::pair<int, SimTK::Real> maxAtomDeviation(
-        const std::vector<std::vector<std::pair<RoboAtom*, SimTK::Vec3>>>& srcWorldsAtomsLocations,
-        const std::vector<std::vector<std::pair<RoboAtom*, SimTK::Vec3>>>& destWorldsAtomsLocations) const;
-
-    /**
-     * Helper for setAtoms Locations This function is only intended for root atoms!!
-     */
-    std::vector<SimTK::Transform> calcMobodToMobodTransforms(Topology& topology,
-                                                             SimTK::Compound::AtomIndex aIx,
-                                                             const SimTK::State& someState);
-
-    /**
-     *
-     */
-    SimTK::BondMobility::Mobility determineMobilityFrom_H(SimTK::MobilizedBodyIndex mbx,
-                                                          SimTK::State& someState);
-
-    // /**
-    //  *
-    //  */
-    // SimTK::Real
-    // getRootAngle(Topology& topology, SimTK::Compound::AtomIndex rootAIx, const SimTK::State& someState);
-
-    // /**
-    //  * Calc X_FM transforms for reconstruction
-    //  */
-    // SimTK::Transform
-    // calcX_FMTransforms(Topology& topology, SimTK::Compound::AtomIndex aIx, const SimTK::State& someState);
 
     /** Update Gmolmodel Atom Cartesian coordinates according to
     Molmodel Compound which in turn relizes Position and uses matter
@@ -506,11 +391,11 @@ class World {
     Careful not have different temperatures for World and Fixman Torque. **/
     void addFixmanTorque();
 
-    [[nodiscard]] auto getCompoundSystem() const -> const SimTK::CompoundSystem& {
-        return *compoundSystem;
+    [[nodiscard]] auto getMultibodySystem() const -> const SimTK::CompoundSystem& {
+        return *multibodySystem;
     }
-    [[nodiscard]] auto updCompoundSystem() const -> SimTK::CompoundSystem& {
-        return *compoundSystem;
+    [[nodiscard]] auto updMultibodySystem() const -> SimTK::CompoundSystem& {
+        return *multibodySystem;
     }
 
     [[nodiscard]] auto getMatterSubsystem() const -> const SimTK::SimbodyMatterSubsystem& {
@@ -660,56 +545,11 @@ class World {
                                                         const SimTK::Transform& reorientAB,
                                                         SimTK::Transform& X_FMprim);
 
-    //...............
-
-    // -- Debugging / helper functions ---
-    /** Print information about Simbody systems **/
-    void PrintSimbodyStateCache(SimTK::State&);
-
-    /** Print a Compound Cartesian coordinates as given by
-     * Compound::calcAtomLocationInGroundFrame **/
-    void printPoss(const SimTK::Compound& c, SimTK::State& someState);
-
-    /** Print a Compound Cartesian velocities as given by
-     * Compound::calcAtomVelocityInGroundFrame **/
-    void printVels(const SimTK::Compound& c, SimTK::State& someState);
-
-    /** Print a Compound Cartesian coordinates and velocities
-     * as given by Compound::calcAtomLocationInGroundFrame and
-     * Compound::calcAtomVelocityInGroundFrame**/
-    void printPossVels(const SimTK::Compound& c, SimTK::State& someState);
-    //...............
-
-
     // RANDOM_WALK related functions; we don't need getter, since we only
     // use these values inside the scope of World.
     void setTopologyIXs(std::vector<int> topologyIXs);
     void setAmberAtomIXs(std::vector<std::vector<int>> AmberAtomIXs);
 
-    // const std::vector<SimTK::Real&>& getCppQs(){
-    // 	return CppQs;
-    // }
-    // std::vector<SimTK::Real&>& updCppQs(){
-    // 	return CppQs;
-    // }
-
-    /** Get references to Qs **/
-    void initializeCppQs() {
-        // //
-        // SimTK::State& currentState = integ->updAdvancedState();
-        // const SimTK::Vector & allQs = matter->getQ(currentState);
-        // int NQ = matter->getNQ(currentState);
-        // //
-        // for(int qIx = 0; qIx < NQ; qIx++){
-        // 	CppQs[qIx] = allQs[qIx];
-        // }
-    }
-
-    void PrintDefaultTransforms() const;
-    void PrintAllTransforms() const;
-    void PrintXFMs() const;
-
-    void PrintXBMps() const;
     const SimTK::Vector& getBMps();
     const SimTK::Vector& getPFrs();
 
@@ -726,15 +566,8 @@ class World {
         return matter->getQ(worldState);
     }
 
-    const void PrintAdvancedQs() const;
-
     const SimTK::Vector& getAdvancedUs();
 
-    void PrintBATFromSimbody() const;
-    void calcSimbodyBAT_TODEL(std::vector<std::vector<int>>& ZMatrix,
-                              std::vector<SimTK::Real>& BONDLengths,
-                              std::vector<SimTK::Real>& ANGLEBends,
-                              std::vector<SimTK::Real>& TORSIONAngles);
     void calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix,
                         std::vector<SimTK::Real>& BONDLengths,
                         std::vector<SimTK::Real>& ANGLEBends,
@@ -744,13 +577,9 @@ class World {
         this->flexibilities_UNCHAINED = flexibilities_UNCHAINED;
     }
 
-    public:
-    // The three S: Study, System and State related.
-
-    // System->MultibodySystem->MolecularMechanicsSystems->CompoundSystem
     // This is non-copyable and non-movable, so we use a unique_ptr because World needs to be
     // copyable/movable.
-    std::unique_ptr<SimTK::CompoundSystem> compoundSystem;
+    std::unique_ptr<SimTK::CompoundSystem> multibodySystem;
 
     // Subsystem->SimbodyMatterSubsystem
     // This is non-copyable and non-movable, so we use a unique_ptr because World needs to be
@@ -800,14 +629,6 @@ class World {
 
     // --- Thermodynamics ---
     SimTK::Real temperature = SimTK::NaN;
-
-    // // Contact related
-    // std::unique_ptr<ContactTrackerSubsystem> tracker;
-    // std::unique_ptr<CompliantContactSubsystem> contactForces;
-    // ContactCliqueId clique1;
-    // std::unique_ptr<MobilizedBody::Weld> membrane;
-    // std::unique_ptr<Body::Rigid> memBody;
-    // //...............
 
     // --- Statistics ---
     std::vector<SimTK::Real> acosX_PF00;
@@ -900,15 +721,7 @@ class World {
     // setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value);
     // void calcZMatrixBAT(SimTK::State& someState);
 
-    [[nodiscard]] auto isOverconstrained() const -> bool;
-    [[nodiscard]] auto
-    checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) const
-        -> CoordinateTransferError;
-    [[nodiscard]] auto hasRigidBodyViolations(SimTK::Real timeStep, int numSteps) -> bool;
-
-    [[nodiscard]] auto getCoordinateTransferErrors() const -> const std::vector<CoordinateTransferError>& {
-        return coordinateTransferErrors;
-    }
+    void checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) const;
 
     [[nodiscard]] auto getMbx(int topoIx, int cAIx) const -> SimTK::MobilizedBodyIndex {
         return topoAtomToMbx[topoIx][cAIx];
@@ -919,20 +732,7 @@ class World {
     }
 
     private:
-    auto findDecorrelationTime(const SimTK::State& state,
-                               int equilibrationSteps,
-                               int tuneSteps,
-                               SimTK::Real timestep) -> SimTK::Real;
-    void optimizeCoordinates(std::vector<std::vector<double>>& coordinates,
-                             const std::vector<double>& scale) const;
-    [[nodiscard]] auto integratedAutocorrelation(const std::vector<SimTK::Real>& x, int maxLag = -1) const
-        -> SimTK::Real;
-    bool tuned = false;
-
     bool testing = false;
-
-    std::vector<std::vector<SimTK::Real>> matchAtomTargetLocationsResiduals;
-    std::vector<CoordinateTransferError> coordinateTransferErrors;
 
     std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocationsCache;
     std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocationsCacheOld;
@@ -970,8 +770,6 @@ class World {
         SimTK::Compound::AtomIndex(SimTK::InvalidIndex)};
 
     std::reference_wrapper<const ZMatrix> zMatrix;
-    std::vector<ZMatrixRow> zMatrixReferenceRows;
-    std::vector<ZMatrixRow> zMatrixReferenceDihedralRows;
 
     SimTK::State worldState;
 
@@ -1009,4 +807,30 @@ class World {
      * though the mbx itself is world-specific.
      */
     std::vector<TopoAtom> mbxRootCAIx;
+
+
+    auto decomposeRigidUnits(const Topology& topology) const -> std::vector<WorldRigidUnit>;
+    void buildFrameGraph(const Span<Topology>& topologies);
+    auto modelOneCompound(int topoIx, SimTK::RootMobility rootMobility) -> std::vector<WorldRigidUnit>;
+
+    FrameGraph frameGraph;                   // built once in modelTopologies
+    std::vector<SimTK::Vec3> targetFlat;     // [gAIx] reused each transfer
+    std::vector<SimTK::Transform> frameFlat; // [gAIx] reused each transfer
+    std::vector<SimTK::Transform> xpcBcFlat; // [gAIx] B == X_parentBC_childBC
+
+    // flat -> (topo,cAIx) accessor; inline, no bounds work in release.
+    const SimTK::Transform& F(int topoIx, SimTK::Compound::AtomIndex cAIx) const {
+        return frameFlat[frameGraph.topoOffset[topoIx] + int(cAIx)];
+    }
+    const SimTK::Transform& Xpc(int topoIx, SimTK::Compound::AtomIndex cAIx) const {
+        return xpcBcFlat[frameGraph.topoOffset[topoIx] + int(cAIx)];
+    }
+
+
+    std::vector<std::vector<SimTK::Transform>> atomFrameCache;
+    std::vector<std::vector<SimTK::Transform>> topoAtomBodyFrame;
+    // std::vector<std::vector<SimTK::Vec3>> atomStations;
+    std::vector<SimTK::Real> clustersMass;
+    std::vector<SimTK::Vec3> clustersCOM;
+    std::vector<SimTK::Inertia> clustersInertia;
 };

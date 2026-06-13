@@ -152,7 +152,7 @@ void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOut
         currentEnergy.kinetic = matter.get().calcKineticEnergy(state);
         if (useFixman) {
             currentEnergy.fixman = calcFixman(state);
-            currentEnergy.logSineSqrGamma2 = (rootTopology)->calcLogSineSqrGamma2(state);
+            currentEnergy.logSineSqrGamma2 = (rootTopology)->calcLogSineSqrGamma2(state, matter.get());
         } else {
             currentEnergy.fixman = 0.0;
             currentEnergy.logSineSqrGamma2 = 0.0;
@@ -1741,7 +1741,7 @@ void HMCSampler::buildTreeWithSimbody(SimTK::State& state,
             matter.get().calcKineticEnergy(state); // TODO * this->unboostKEFactor?
         if (useFixman) {
             nodeOut.proposedEnergy.fixman = calcFixman(state);
-            nodeOut.proposedEnergy.logSineSqrGamma2 = rootTopology->calcLogSineSqrGamma2(state);
+            nodeOut.proposedEnergy.logSineSqrGamma2 = rootTopology->calcLogSineSqrGamma2(state, matter.get());
         } else {
             nodeOut.proposedEnergy.fixman = 0.0;
             nodeOut.proposedEnergy.logSineSqrGamma2 = 0.0;
@@ -2586,7 +2586,7 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
         currentEnergy.kinetic = matter.get().calcKineticEnergy(someState);
         if (useFixman) {
             currentEnergy.fixman = calcFixman(someState);
-            currentEnergy.logSineSqrGamma2 = (rootTopology)->calcLogSineSqrGamma2(someState);
+            currentEnergy.logSineSqrGamma2 = (rootTopology)->calcLogSineSqrGamma2(someState, matter.get());
         } else {
             currentEnergy.fixman = 0.0;
             currentEnergy.logSineSqrGamma2 = 0.0;
@@ -3689,7 +3689,7 @@ auto HMCSampler::sampleIteration(
                     if (useFixman) {
                         result.proposedEnergy.fixman = calcFixman(advancedState);
                         result.proposedEnergy.logSineSqrGamma2 =
-                            (rootTopology)->calcLogSineSqrGamma2(advancedState);
+                            (rootTopology)->calcLogSineSqrGamma2(advancedState, matter.get());
                     }
                     result.proposedEnergy.total =
                         result.proposedEnergy.potential + result.proposedEnergy.kinetic
@@ -3717,7 +3717,7 @@ auto HMCSampler::sampleIteration(
                 if (useFixman) {
                     result.proposedEnergy.fixman = calcFixman(advancedState);
                     result.proposedEnergy.logSineSqrGamma2 =
-                        (rootTopology)->calcLogSineSqrGamma2(advancedState);
+                        (rootTopology)->calcLogSineSqrGamma2(advancedState, matter.get());
                 }
                 result.proposedEnergy.total = result.proposedEnergy.potential + result.proposedEnergy.kinetic
                                               + result.proposedEnergy.fixman

@@ -22,9 +22,6 @@ Contains a list of atoms bAtomList which consists of Atom
 objects **/
 class Topology : public SimTK::Compound {
     public:
-    // Map aIx to its Transform Default top transform
-    std::vector<SimTK::Transform> aIx2TopTransform;
-
     Topology(const SimTK::Compound::Name& name,
              SimTK::CompoundSystem::CompoundIndex compoundIndex,
              int rootGlobalAtomIx,
@@ -110,9 +107,59 @@ class Topology : public SimTK::Compound {
      * @note This quantity may represent an orientation regularization term.
      * @return log(sin²(pitch)), computed safely with analytic limits near singularities.
      */
-    [[nodiscard]] auto calcLogSineSqrGamma2(const SimTK::State& quatState) const -> SimTK::Real;
+    [[nodiscard]] auto calcLogSineSqrGamma2(const SimTK::State& quatState,
+                                            const SimTK::SimbodyMatterSubsystem& matter) const
+        -> SimTK::Real {
+        // Get atom transform and convert to quaternion (w,x,y,z)
+        const SimTK::Transform X =
+            calcAtomFrameInGroundFrameThroughSimbody(quatState, rootCompoundAtomIx, matter);
+        const SimTK::Quaternion quat = X.R().convertRotationToQuaternion();
 
-    [[nodiscard]] auto calcLogDetMBATGamma2Contribution(const SimTK::State& quatState) const -> SimTK::Real;
+        const SimTK::Real w = quat[0];
+        const SimTK::Real x = quat[1];
+        const SimTK::Real y = quat[2];
+        const SimTK::Real z = quat[3];
+
+        // Compute sin(pitch) = 2(wy - zx)
+        SimTK::Real sinPitch = 2.0 * ((w * y) - (z * x));
+
+        // Clamp to account for floating-point drift outside [-1, 1]
+        sinPitch = std::clamp(sinPitch, SimTK::Real(-1.0), SimTK::Real(1.0));
+
+        // Compute pitch and evaluate the stable log(sin²)
+        const SimTK::Real pitch = std::asin(sinPitch);
+        return safeLogSineSqr(pitch);
+    }
+
+    [[nodiscard]] auto calcLogDetMBATGamma2Contribution(const SimTK::State& quatState,
+                                                        const SimTK::SimbodyMatterSubsystem& matter) const
+        -> SimTK::Real {
+        SimTK::Transform X = calcAtomFrameInGroundFrameThroughSimbody(quatState, rootCompoundAtomIx, matter);
+        SimTK::Quaternion quat = (X.R()).convertRotationToQuaternion();
+
+        SimTK::Real w = quat[0];
+        SimTK::Real x = quat[1];
+        SimTK::Real y = quat[2];
+        SimTK::Real z = quat[3];
+        SimTK::Real sinPitch = 2 * (w * y - z * x);
+
+        std::cout << std::setprecision(20) << std::fixed;
+        std::cout << "sinpitch " << sinPitch << std::endl;
+        std::cout << "sinpitchsq" << sinPitch * sinPitch << std::endl;
+
+        SimTK::Real pitch = std::asin(sinPitch);
+        std::cout << "pitch " << pitch << std::endl;
+        // if(pitch < 0){
+        //	pitch = pitch + (2*SimTK_PI);
+        //	std::cout << "sin converted pitch " << std::sin(pitch) << std::endl;
+        // }
+
+        if (sinPitch < SimTK::Eps) { // consider using SimTK::Eps
+            return -SimTK::Infinity;
+        }
+        SimTK::Real result = std::log(sinPitch * sinPitch);
+        return result;
+    }
 
     /**
      * @brief Get a reference to the atom object in the atom list of this Compound.
@@ -123,17 +170,6 @@ class Topology : public SimTK::Compound {
      */
     [[nodiscard]] const RoboAtom& getAtom(SimTK::Compound::AtomIndex cAIx) const;
 
-    // /**
-    //  * @brief Get a reference to the bond object in the bond list of this Compound.
-    //  *
-    //  * This is not the Compound Atom Index but the global atom index.
-    //  *
-    //  * @param aIx0 Global Atom Index of one atom in the bond.
-    //  * @param aIx1 Global Atom Index of the other atom in the bond.
-    //  * @return Reference to the BondLink object.
-    //  */
-    // auto getBondByGlobalAtomIndex(int aIx0, int aIx1) const -> const RoboBond&;
-
     /**
      * @brief Get the bonded neighbor atom in the parent mobilized body.
      * @param aIx Compound Atom Index
@@ -143,21 +179,6 @@ class Topology : public SimTK::Compound {
                                           const SimTK::SimbodyMatterSubsystem& matter,
                                           const SimTK::DuMMForceFieldSubsystem& dumm) const
         -> SimTK::Compound::AtomIndex;
-
-    // /**
-    //  * @brief Calculate all atom frames in top frame. It avoids calling
-    //  * calcDefaultAtomFrameInCompoundFrame multiple times. This has to be called
-    //  * every time the coordinates change though.
-    //  * @param :
-    //  * @return
-    //  */
-    // void calcAtomsTopTransforms();
-
-    // /**
-    //  * @brief
-    //  * @return
-    //  */
-    // void printTopTransforms();
 
     /**
      * @brief Get atom Top level transform from the existing Topology map
@@ -183,31 +204,10 @@ class Topology : public SimTK::Compound {
                                                      const SimTK::SimbodyMatterSubsystem& matter,
                                                      const SimTK::State& someState) const -> SimTK::Vec3;
 
-    // auto matchAtomTargetLocations(const SimTK::Compound::AtomTargetLocations& atomTargets)
-    //     -> SimTK::Transform;
-    auto getMatchError(const SimTK::Compound::AtomTargetLocations& atomTargets) -> SimTK::Real;
-
-    void writeAtomListPdb(std::string dirname,
-                          std::string prefix,
-                          std::string suffix,
-                          int maxNofDigits,
-                          int index) const;
-
     /**
      * @brief Create a mapping between the local compound atom indices and the global atom indices.
      */
     void loadIndicesMaps(const SimTK::Compound::AtomTargetLocations& atomTargets);
-
-    /**
-     * @brief Get the global atom index from the local compound atom index.
-     * @param cAIx Compound Atom Index
-     * @return Global Atom Index
-     */
-    auto getGlobalAtomIndex(SimTK::Compound::AtomIndex cAIx) -> int;
-
-    /** Print atom to MobilizedBodyIndex and bond to Compound::Bond index
-     * maps **/
-    void printMaps();
 
     auto getAtomFrameCache() const -> const std::vector<SimTK::Transform>& {
         return atomFrameCache;
@@ -248,4 +248,22 @@ class Topology : public SimTK::Compound {
 
     bool flipAllChirality = false;
     SimTK::RootMobility rootMobility = SimTK::RootMobility::Weld;
+
+    // Map aIx to its Transform Default top transform
+    std::vector<SimTK::Transform> aIx2TopTransform;
+
+    auto calcAtomFrameInGroundFrameThroughSimbody(const SimTK::State& state,
+                                                  SimTK::Compound::AtomIndex cAIx,
+                                                  const SimTK::SimbodyMatterSubsystem& matter) const
+        -> SimTK::Transform {
+        // Body this atom is welded to (the value World wrote via setAtomMobilizedBodyIndex).
+        const SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(cAIx);
+        const SimTK::MobilizedBody& body = matter.getMobilizedBody(mbx);
+
+        // G_X_B from Simbody, B_X_atom from the stored per-atom frame-in-body.
+        const SimTK::Transform& G_X_B = body.getBodyTransform(state);
+        const SimTK::Transform& B_X_atom = getFrameInMobilizedBodyFrame(cAIx);
+
+        return G_X_B * B_X_atom;
+    }
 };

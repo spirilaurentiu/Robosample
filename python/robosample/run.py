@@ -6,6 +6,8 @@ import robosample
 
 # python3 python/robosample/run.py 1APQ examples/1APQ.prmtop examples/1APQ.rst7 6000 0 1 1
 # python3 python/robosample/run.py 2M6A examples/2M6A.prmtop examples/2M6A.rst7 6000 0 1 1
+# python3 python/robosample/run.py ffar1 examples/ffar1.prmtop examples/ffar1.rst7 6000 0 1 1
+# python3 python/robosample/run.py ala-dipeptide examples/ala-dipeptide.prmtop examples/ala-dipeptide.rst7 6000 0 1 1
 
 # Create the parser
 parser = argparse.ArgumentParser(description="Process PDB code and seed.")
@@ -67,12 +69,12 @@ context = robosample.Context(
 
 
 # All molecule roots are `robosample.rb.RootMobility.Weld`
-# context.set_root_mobility(0, robosample.rb.RootMobility.Free)
-
-context.set_root_mobility(0, robosample.rb.RootMobility.Weld)
+for i in range(0, len(context.system_topology.root_mobilities)):
+    context.set_root_mobility(i, robosample.rb.RootMobility.Free)
 
 bonds = context.standard_dihedral_bonds.loc[
     context.standard_dihedral_bonds["dihedral_type"].isin(["phi", "psi"])
+    # & (context.standard_dihedral_bonds["molecule_index"] == 0)
 ]
 
 # bonds = None

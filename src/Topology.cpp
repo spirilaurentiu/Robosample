@@ -95,55 +95,6 @@ void Topology::setImproperHarmonicTorsions(Span<RoboHarmonicImproperTorsion> imp
     subImproperHarmonicTorsions = improperHarmonicTorsions;
 }
 
-auto Topology::calcLogSineSqrGamma2(const SimTK::State& quatState) const -> SimTK::Real {
-    // Get atom transform and convert to quaternion (w,x,y,z)
-    const SimTK::Transform X = calcAtomFrameInGroundFrame(quatState, rootCompoundAtomIx);
-    const SimTK::Quaternion quat = X.R().convertRotationToQuaternion();
-
-    const SimTK::Real w = quat[0];
-    const SimTK::Real x = quat[1];
-    const SimTK::Real y = quat[2];
-    const SimTK::Real z = quat[3];
-
-    // Compute sin(pitch) = 2(wy - zx)
-    SimTK::Real sinPitch = 2.0 * ((w * y) - (z * x));
-
-    // Clamp to account for floating-point drift outside [-1, 1]
-    sinPitch = std::clamp(sinPitch, SimTK::Real(-1.0), SimTK::Real(1.0));
-
-    // Compute pitch and evaluate the stable log(sin²)
-    const SimTK::Real pitch = std::asin(sinPitch);
-    return safeLogSineSqr(pitch);
-}
-
-SimTK::Real Topology::calcLogDetMBATGamma2Contribution(const SimTK::State& quatState) const {
-    SimTK::Transform X = calcAtomFrameInGroundFrame(quatState, rootCompoundAtomIx);
-    SimTK::Quaternion quat = (X.R()).convertRotationToQuaternion();
-
-    SimTK::Real w = quat[0];
-    SimTK::Real x = quat[1];
-    SimTK::Real y = quat[2];
-    SimTK::Real z = quat[3];
-    SimTK::Real sinPitch = 2 * (w * y - z * x);
-
-    std::cout << std::setprecision(20) << std::fixed;
-    std::cout << "sinpitch " << sinPitch << std::endl;
-    std::cout << "sinpitchsq" << sinPitch * sinPitch << std::endl;
-
-    SimTK::Real pitch = std::asin(sinPitch);
-    std::cout << "pitch " << pitch << std::endl;
-    // if(pitch < 0){
-    //	pitch = pitch + (2*SimTK_PI);
-    //	std::cout << "sin converted pitch " << std::sin(pitch) << std::endl;
-    // }
-
-    if (sinPitch < SimTK::Eps) { // consider using SimTK::Eps
-        return -SimTK::Infinity;
-    }
-    SimTK::Real result = std::log(sinPitch * sinPitch);
-    return result;
-}
-
 /** Get a pointer to an atom object in the atom list inquiring
 by its Molmodel assigned atom index (SimTK::Compound::AtomIndex) .**/
 // TODO: Optimize use CompoundAtomIx2GmolAtomIx instead
@@ -158,39 +109,7 @@ const RoboAtom& Topology::getAtom(SimTK::Compound::AtomIndex cAIx) const {
     SimTK_ASSERT_ALWAYS(false, "Topology::getAtom(): Atom with specified Compound::AtomIndex not found.");
 }
 
-// /** **/
-// const RoboBond& Topology::getBondByGlobalAtomIndex(int aIx0, int aIx1) const {
-//     for (const auto& b : subBondList) {
-//     	if (b.bond.globalIndices[0] == aIx0 && b.bond.globalIndices[1] == aIx1) {
-//     		return b;
-//     	} else if (b.bond.globalIndices[0] == aIx1 && b.bond.globalIndices[1] == aIx0) {
-//     		return b;
-//     	}
-//     }
-// }
-
 void Topology::loadIndicesMaps(const SimTK::Compound::AtomTargetLocations& atomTargets) {
-    // // print spans
-    // for (const auto& a : subAtomList) {
-    // 	std::cout << "Topology::loadIndicesMaps(): Atom " << a.identity.uniqueAtomName << std::endl;
-    // }
-    // for (const auto& b : subBondList) {
-    // 	std::cout << "Topology::loadIndicesMaps(): Bond between global atom indices "
-    // 		<< b.bond.globalIndices[0] << " and " << b.bond.globalIndices[1] << std::endl;
-    // }
-    // for (const auto& angle : subAngleList) {
-    // 	std::cout << "Topology::loadIndicesMaps(): Angle between global atom indices "
-    // 		<< angle.getGlobalIndex1() << ", " << angle.getGlobalIndex2() << ", " << angle.getGlobalIndex3()
-    // << std::endl;
-    // }
-    // for (const auto& torsion : subTorsionList) {
-    // 	std::cout << "Topology::loadIndicesMaps(): Torsion between global atom indices "
-    // 		<< torsion.getGlobalIndex1() << ", " << torsion.getGlobalIndex2() << ", "
-    // 		<< torsion.getGlobalIndex3() << ", " << torsion.getGlobalIndex4() << std::endl;
-    // }
-
-    // aIx2TopTransform = std::vector<SimTK::Transform>(subAtomList.size(), SimTK::Transform());
-
     // Find the root atom index in the subAtomList
     for (const auto& a : subAtomList) {
         if (a.connectivity.root) {
@@ -199,85 +118,9 @@ void Topology::loadIndicesMaps(const SimTK::Compound::AtomTargetLocations& atomT
         }
     }
 
-    // compound2GlobalAtomIndex = std::vector<int>(subAtomList.size(), -1);
-    // global2CompoundAtomIndex = std::vector<std::pair<int, SimTK::Compound::AtomIndex>>(subAtomList.size(),
-    // std::make_pair(1, SimTK::Compound::AtomIndex(1))); // needs to be initialized to a valid (positive)
-    // Compound Atom Index for (const auto& a : subAtomList) { 	SimTK::Compound::AtomIndex aIx =
-    // a.identity.compoundAtomIndex; 	int globalAtomIndex = a.getGlobalIndex();
-
-    // 	compound2GlobalAtomIndex[aIx] = globalAtomIndex;
-    // 	global2CompoundAtomIndex[globalAtomIndex] = std::make_pair(globalAtomIndex, aIx);
-    // }
-
-    // // TODO Doesn't work for two molecules and i don't understand why this code exists in the first place
-    // // Traverse all bonds and save their indices
-    // for (std::size_t i = 0; i < subAtomList.size(); ++i) {
-    // 	const auto& b = subBondList[i];
-
-    // 	// Highly inefficient way to get the Compound::AtomIndex from the global atom index
-    // 	SimTK::Compound::AtomIndex cAIx0;
-    // 	int aIx0 = b.bond.globalIndices[1];
-    // 	for (const auto& a : subAtomList) {
-    // 		if (a.getGlobalIndex() == aIx0) {
-    // 			cAIx0 = a.identity.compoundAtomIndex;
-    // 			break;
-    // 		}
-    // 	}
-    // 	SimTK_ASSERT_ALWAYS(cAIx0.isValid() && cAIx0.isValidExtended(), "Topology::loadIndicesMaps(): Invalid
-    // Compound::AtomIndex found.");
-
-    // 	// Another inefficient way to get the Compound::AtomIndex from the global atom index
-    // 	SimTK::Compound::AtomIndex cAIx1;
-    // 	int aIx1 = b.bond.globalIndices[0];
-    // 	for (const auto& a : subAtomList) {
-    // 		if (a.getGlobalIndex() == aIx1) {
-    // 			cAIx1 = a.identity.compoundAtomIndex;
-    // 			break;
-    // 		}
-    // 	}
-    // 	SimTK_ASSERT_ALWAYS(cAIx1.isValid() && cAIx1.isValidExtended(), "Topology::loadIndicesMaps(): Invalid
-    // Compound::AtomIndex found.");
-
-    // 	// We sort pairs to make searching easier
-    // 	CompoundAtomIndexPair pair = canonical(cAIx0, cAIx1);
-    // 	aIxPair2Bonds.push_back(std::make_pair(pair, i));
-    // }
-
-    // // Sort the vector of pairs
-    // std::sort(aIxPair2Bonds.begin(), aIxPair2Bonds.end());
-
     atomFrameCache = std::vector<SimTK::Transform>(subAtomList.size(), SimTK::Transform());
     buildCache(atomTargets);
 }
-
-// int Topology::getGlobalAtomIndex(SimTK::Compound::AtomIndex cAIx) {
-//     return compound2GlobalAtomIndex[cAIx];
-// }
-
-// /*!
-//  * <!-- Calculate all atom frames in top frame. It avoids calling
-//  * calcDefaultAtomFrameInCompoundFrame multiple times. This has
-//  * to be called every time the coordinates change though. -->
-//  */
-// void Topology::calcAtomsTopTransforms() {
-//     // for (const auto& a : subAtomList) {
-//     //     SimTK::Compound::AtomIndex aIx = a.identity.compoundAtomIndex;
-//     //     aIx2TopTransform[aIx] = calcDefaultAtomFrameInCompoundFrame(aIx);
-//     // }
-
-//     // computeAllFrames(aIx2TopTransform);
-// }
-
-// /*!
-//  * <!--  -->
-//  */
-// void Topology::printTopTransforms() {
-//     std::cout << "Topology TopTransforms " << std::endl;
-//     for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-//         SimTK::Compound::AtomIndex aIx = (subAtomList[i]).identity.compoundAtomIndex;
-//         std::cout << aIx << " " << aIx2TopTransform[aIx] << std::endl;
-//     }
-// }
 
 // Return mbx by calling DuMM functions
 SimTK::MobilizedBodyIndex
@@ -312,65 +155,6 @@ SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(SimTK::Compoun
     const SimTK::Vec3 p_BS_G = R_GB * station;
     return p_GB + p_BS_G;
 }
-
-// auto Topology::matchAtomTargetLocations(const SimTK::Compound::AtomTargetLocations& atomTargets)
-//     -> SimTK::Transform {
-//     throw std::runtime_error("Topology::matchAtomTargetLocations() is deprecated.");
-
-//     matchDefaultBondLengths(atomTargets);
-//     matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
-//     matchDefaultBondAngles(atomTargets);
-//     matchDefaultDirections(atomTargets);
-//     matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
-
-//     // Recalculate atom frames in top compound frame
-//     computeAllFrames(aIx2TopTransform, atomTargets);
-
-//     // Call to Kabasch78
-//     matchDefaultTopLevelTransform(atomTargets, aIx2TopTransform);
-
-//     // Get the Ground to Top Transform
-//     const SimTK::Transform G_X_T = getTopLevelTransform();
-
-
-//     // // Ensure residual is low enough only on debug builds
-//     // assert(getTransformAndResidual(atomTargets).residual < 1e-5 && "After setAtoms_Compound_Match,
-//     residual
-//     // too high");
-
-//     return G_X_T;
-// }
-
-// auto Topology::getMatchError(const SimTK::Compound::AtomTargetLocations& atomTargets) -> SimTK::Real {
-//     std::vector<SimTK::Transform> atomSourceFrames(getNumAtoms());
-//     invalidateAtomFrameCache(atomSourceFrames, getNumAtoms());
-//     calcDefaultAtomFramesInCompoundFrame(atomSourceFrames);
-
-//     SimTK::Real cumulativeError = 0.0;
-//     for (const auto& target : atomTargets)
-//     {
-//     	const Compound::AtomIndex atomIndex = target.first;
-//     	const SimTK::Vec3& targetVec = target.second;
-//     	const SimTK::Vec3 source = getTopLevelTransform() * atomSourceFrames[atomIndex].T();
-
-//     	cumulativeError += (source - targetVec).norm();
-//     }
-
-//     return cumulativeError;
-// }
-
-// /** Print maps **/
-// void Topology::printMaps() {
-//     std::cout << "Topology map CompoundAtomIx2GmolAtomIx:" << std::endl;
-//     std::map< SimTK::Compound::AtomIndex, int >::const_iterator aIx2gmolaIxIt;
-//     for(aIx2gmolaIxIt = compound2GlobalAtomIndex.begin();
-//        aIx2gmolaIxIt != compound2GlobalAtomIndex.end(); ++aIx2gmolaIxIt)
-//     {
-//     	std::cout << "atomIndex " << aIx2gmolaIxIt->first
-//     		<< " gmolaIx " << aIx2gmolaIxIt->second
-//     		<< std::endl << std::flush;
-//     }
-// }
 
 /** Get the neighbor atom bonded to aIx atom in the parent mobilized body.
 TODO: No chemical parent for satellite subAtomList or first atom. **/

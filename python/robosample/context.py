@@ -1021,6 +1021,11 @@ class Context(rb.Context):
             self.z_matrix,
         )
 
+        # OpenMM must be initialized before adding samplers since they want to calculate energies when initializing
+        ok = super().initialize_openmm()
+        if not ok:
+            raise ValueError("Failed to initialize OpenMM system in Robosample.")
+
         # Extract thermodynamics state info from all samplers
         accept_reject_modes = list[rb.AcceptRejectMode]()
         distort_options = list[int]()
@@ -1072,11 +1077,6 @@ class Context(rb.Context):
         if -1 not in world_temperatures:
             super().set_world_temperatures(world_temperatures)
 
-        # OpenMM must be initialized before adding samplers since they want to calculate energies when initializing
-        ok = super().initialize_openmm()
-        if not ok:
-            raise ValueError("Failed to initialize OpenMM system in Robosample.")
-
         # Add samplers
         for i, w in enumerate(self.worlds):
             s = w.samplers[0]
@@ -1103,9 +1103,6 @@ class Context(rb.Context):
                 timesteps,
                 mdsteps,
             )
-
-        # if not super().validate_context():
-        #     raise ValueError("Invalid context.")
 
         print(
             "Context initialized successfully with the following parameters: ",
