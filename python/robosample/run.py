@@ -55,9 +55,10 @@ context.add_robotic_world(sele).add_sampler(
     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
     use_nuts=False,
     integratorType=robosample.rb.IntegratorType.BOUND_HMC,
+    sphere_radius_in_nm=0.5,
 )
 
 # Add replicas (geometric temperature ladder)
 context.initialize([300])
 
-context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, True)
+# context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, True)

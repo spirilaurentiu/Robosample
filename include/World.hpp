@@ -574,6 +574,7 @@ class World {
     auto addSampler(SamplerName samplerName,
                     IntegratorType integratorType,
                     ThermostatName thermostatName,
+                    SimTK::Real sphereRadiusInNm,
                     bool useFixmanPotential,
                     bool useNUTS) -> bool;
 
