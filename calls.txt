@@ -1,0 +1,115 @@
+bsetFrameInMobilizedBodyFrame() calls CompoundAtom::setFrameInMobilizedBodyFrame() which sets `frameInMobilizedBodyFrame` which is referenced in:
+- CompoundAtom::getLocationInMobilizedBodyFrame() called in:
+  - CompoundRep::getAtomLocationInMobilizedBodyFrame() which is called in multiple places
+  - CompoundRep::calcAtomLocationInGroundFrame() which is called in multiple places
+  - CompoundRep::calcAtomVelocityInGroundFrame() which is called in multiple places
+  - CompoundRep::calcAtomAccelerationInGroundFrame() which is called in multiple places
+- CompoundAtom::getFrameInMobilizedBodyFrame() called in:
+  - CompoundRep::calcAtomFrameInGroundFrame() which is called in `Compound::calcAtomFrameInGroundFrame` which doesn't seem to be called anywhere else
+  - CompoundRep::getFrameInMobilizedBodyFrame()
+
+DuMMForceFieldSubsystem::bsetAtomStationOnBody() sets `station_B` which is referenced in:
+- DuMMForceFieldSubsystem::getAtomStationOnBody() which is referenced in:
+  - HMCSampler::sampleIteration() to calculate proposed and accepted atom target locations
+  - Topology::getAtomLocationInMobilizedBodyFrameThroughDumm() which is called by:
+    - Topology::calcAtomLocationInGroundFrameThroughSimbody() which is called in HMCSampler and World before and after integration
+- DuMMForceFieldSubsystemRep::realizeInternalLists() which is called by Simbody
+- DuMMAtom::getStationOnBody() which is not called anywhere
+- DuMMAtom::attachToBody() which is called in:
+  - DuMMForceFieldSubsystemRep::realizeInternalLists() which is called by Simbody
+  - Cluster::attachToBody() which is called by:
+    - Cluster::attachToBody() (itself) recursively
+    - Cluster::placeCluster() which is called by:
+      - DuMMForceFieldSubsystem::placeClusterInCluster() which is not called anywhere
+      - DuMMForceFieldSubsystem::attachClusterToBody() which is called by CompoundSystem::modelOneCompound()
+  - Cluster::placeAtom() which is called by:
+    - DuMMForceFieldSubsystem::placeAtomInCluster() which is called by CompoundSystem::modelOneCompound()
+    - DuMMForceFieldSubsystem::attachAtomToBody() which is not called anywhere
+- DuMMAtom::dump() which is not used anywhere
+- DuMMAtom::invalidateTopologicalCache() which is called by Simbody
+
+
+bsetAllAtomStationOnBody() which sets `station_B_All` which doesn't seem to be referenced anywhere else
+
+updIncludedAtomStation() which updates `includedAtomStations` in DuMMForceFieldSubsystemRep which is referenced by:
+- DuMMForceFieldSubsystemRep::realizeSubsystemTopologyImpl() which is called by Simbody
+- DuMMForceFieldSubsystemRep::getIncludedAtomStation() which is referenced by:
+  - DuMMForceFieldSubsystemRep::realizeSubsystemPositionImpl() which is called by simbody after integration
+
+updAllAtomStation() which sets `DuMMForceFieldSubsystemRep::AllAtomStations` which is referenced in:
+- realizeInternalLists() with resize()
+- getAllAtomStation() which isn't called anywhere
+
+bsetAtomPlacementStation() which sets AtomPlacement::station (in nm) which is accessed in multiple places
+please check the World::modelOneCompound() function, as well as the others. we tried to no longer let molmodel control stuff
+for instance, `DuMMForceFieldSubsystemRep::calcMassProperties()` is not longer called, we handle it ourselves
+
+
+our goal is to gradually eliminate molmodel (compound) and robosample topology (inhierited from molmodel)
+don't all the underlying members represent the same thing? can't we just strap atom stations to world instead of topology and pass them from here?
+can we remove atom placements?
+
+
+
+
+***********
+
+context: this is robosample, a molecular simulation software implementing gibbss sampling coupled with hamiltonian monte calcMassProperties
+we basically do two kinds of integrations to ensure ergodicity:
+- cartesian (regular molecular dynamics) via openmm
+- internal (rigid body dynamics as robotics) via molmodel/simbody
+as the program got faster and faster via scientific and engineering optimizations, we have hit a hardwall ie molmodel and simbody
+they use that PIMPL idiom which in itself is nice, but for our requirements (>1M atoms and >100k rigid bodies) it fails miserabily
+usually, it's the pointer AoS, pointer chasing and vtable lookups that take most time during actual integration
+the biggest problem is simbody time stepper stepTo() function which takes:
+- cartesian coordinates (atom target locations)
+- converts to internal (Q/U/Udot etc)
+- advances and projects via verlet (no other integrator is used throut the program)
+- updates X_GB
+- converts to cartesian coordinates (dumm included atom stations and atom positions in ground)
+- sends them to openmm (cuda) which returns per atom forces
+- dumm somehow converts them back to simbody format
+- simbody then does some weird ass calculations
+- repeat the loop until it's over
+
+robosample itself is a mess. it tries to do what openmmtools does with replica and thermodynamic states (messy but it works)
+
+your task is to understand exactly how the program works and how molmodel and simbody interact with robosample and openmm
+this should not be an overview. it must be a very detailed and precise tehcnical report
+our goal in the future is to dump simtk molmodel and simbody in order to create a custom robotics library that is more efficient
+future expansion includes running computation heavy tasks with openmp and possibly cuda in the future
+your task now it to map the entire program, understand what it does in its current form
+in the past, we used to have multiple samplers (LAHMC, HMC etc), but we (will) only use HMC
+notice that we don't use and don't ever plan on using (ever again) contact geometry or any kind of integrator apart from vv
+ask questions where you don't understand. you decide what you need to know and what is not clear enough
+
+
+
+
+
+
+
+
+in theory, each world should hold its own robot (it does that now). it should know how to advance it through time via verlet
+in hmcsampler, nuts is no longer needed and can be discarded
+
+our final goal is to create a singular aligned memory slab that contains in one single block everything the program needs:
+- atom positions in ground
+- charge, mass etc
+- internal coordinates
+- z matrix entries and BAT values for each row (computed per replica or per thermodynamic state since i have no idea what my pi wants to do)
+- per atom frames
+- per body forces, accelerations, velocities etc
+- energies etc
+
+
+
+World::updateAtomListsFromSimbody() - why does it do that? memory layout goes in now, as well as python interface
+World: how do i determine which compound atom index is the root of the mobilized body ie `topoAtomIsRigidBodyRoot`?
+can we design around not calling getMobodRootAtomIndex() which references into World::mbxRootCAIx? or is it too small to matter? 100k mbx tho
+same question applies to topoAtomToDAIX and topoAtomToMbx
+when/where to we call Compound::setTopLevelTransform(SimTK::Transform()) via Topology?
+topology/thermodynamic state
+bat
+
+DuMM realizeSubsystemPositionImpl() - can't i just set positions to simbody state directly?

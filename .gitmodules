@@ -2,23 +2,22 @@
 	path = openmm
 	url = https://github.com/spirilaurentiu/openmm/
 	branch = update
-
-[submodule "Simbody01"]
-	path = Simbody01
-	url = https://github.com/spirilaurentiu/Simbody01/
-	branch = master
-
-[submodule "Molmodel"]
-	path = Molmodel
-	url = https://github.com/spirilaurentiu/Molmodel/
-	branch = refactor
-
+# [submodule "Simbody01"]
+# 	path = Simbody01
+# 	url = https://github.com/spirilaurentiu/Simbody01/
+# 	branch = master
+# [submodule "Molmodel"]
+# 	path = Molmodel
+# 	url = https://github.com/spirilaurentiu/Molmodel/
+# 	branch = refactor
 [submodule "pcg-cpp"]
 	path = pcg-cpp
 	url = https://github.com/imneme/pcg-cpp
 	branch = master
-
 [submodule "pybind11"]
 	path = pybind11
 	url = https://github.com/pybind/pybind11
 	branch = master
+[submodule "units"]
+	path = units
+	url = https://github.com/nholthaus/units

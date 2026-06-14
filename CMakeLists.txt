@@ -162,8 +162,8 @@ find_package(
 # These modules define the OPENMM_* / SIMBODY_* / MOLMODEL_* source and include
 # variables consumed by the object library below.
 include(${CMAKE_SOURCE_DIR}/cmake_modules/OpenMM.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake_modules/Simbody.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake_modules/Molmodel.cmake)
+# include(${CMAKE_SOURCE_DIR}/cmake_modules/Simbody.cmake)
+# include(${CMAKE_SOURCE_DIR}/cmake_modules/Molmodel.cmake)
 
 # =============================================================================
 # Source files
@@ -174,14 +174,16 @@ include(${CMAKE_SOURCE_DIR}/cmake_modules/Molmodel.cmake)
 # re-globs automatically.)
 # =============================================================================
 
-file(GLOB ROBOSAMPLE_C_SOURCE_FILES ${CMAKE_SOURCE_DIR}/format/src/*.c)
+# file(GLOB ROBOSAMPLE_C_SOURCE_FILES ${CMAKE_SOURCE_DIR}/format/src/*.c)
 
 file(GLOB ROBOSAMPLE_CXX_SOURCE_FILES ${CMAKE_SOURCE_DIR}/src/*.cpp
-     ${CMAKE_SOURCE_DIR}/format/src/*.cpp)
+     # ${CMAKE_SOURCE_DIR}/format/src/*.cpp
+)
 
 file(GLOB ROBOSAMPLE_SOURCE_INCLUDE_FILES ${CMAKE_SOURCE_DIR}/include/*.h*
-     ${CMAKE_SOURCE_DIR}/format/inc/*.h*
-     ${CMAKE_SOURCE_DIR}/format/inc/mdtraj/*.h*)
+     # ${CMAKE_SOURCE_DIR}/format/inc/*.h*
+     # ${CMAKE_SOURCE_DIR}/format/inc/mdtraj/*.h*
+)
 
 # =============================================================================
 # Profile-Guided Optimization (PGO) flags
@@ -310,29 +312,25 @@ add_library(
   robosample_objects OBJECT
   ${OPENMM_SOURCE_C_FILES}
   ${OPENMM_SOURCE_CXX_FILES}
-  ${SIMBODY_SOURCE_C_FILES}
-  ${SIMBODY_SOURCE_CXX_FILES}
-  ${MOLMODEL_C_SOURCE_FILES}
-  ${MOLMODEL_CXX_SOURCE_FILES}
-  ${ROBOSAMPLE_C_SOURCE_FILES}
+  # ${SIMBODY_SOURCE_C_FILES} ${SIMBODY_SOURCE_CXX_FILES}
+  # ${MOLMODEL_C_SOURCE_FILES} ${MOLMODEL_CXX_SOURCE_FILES}
+  # ${ROBOSAMPLE_C_SOURCE_FILES}
   ${ROBOSAMPLE_CXX_NO_BINDINGS}
   # Headers are listed only so IDEs index them; they are not compiled.
   ${OPENMM_SOURCE_INCLUDE_FILES}
-  ${SIMBODY_SOURCE_INCLUDE_FILES}
-  ${MOLMODEL_SOURCE_INCLUDE_FILES}
+  # ${SIMBODY_SOURCE_INCLUDE_FILES} ${MOLMODEL_SOURCE_INCLUDE_FILES}
   ${ROBOSAMPLE_SOURCE_INCLUDE_FILES})
 
 target_include_directories(
   robosample_objects
   PUBLIC $ENV{CONDA_PREFIX}/targets/x86_64-linux/include
          ${OPENMM_INCLUDE_DIRS}
-         ${SIMBODY_INCLUDE_DIRS}
-         ${MOLMODEL_INCLUDE_DIRS}
+         # ${SIMBODY_INCLUDE_DIRS} ${MOLMODEL_INCLUDE_DIRS}
          ${CMAKE_SOURCE_DIR}/include
-         ${CMAKE_SOURCE_DIR}/format/inc
-         ${CMAKE_SOURCE_DIR}/format/inc/mdtraj
+         # ${CMAKE_SOURCE_DIR}/format/inc ${CMAKE_SOURCE_DIR}/format/inc/mdtraj
          ${CMAKE_SOURCE_DIR}/pcg-cpp/include
-         ${CMAKE_SOURCE_DIR}/pybind11/include)
+         ${CMAKE_SOURCE_DIR}/pybind11/include
+         ${CMAKE_SOURCE_DIR}/units/include)
 
 # Expose every backend as a USE_<backend>=0/1 macro so the C++ can branch on all
 # four unconditionally. (Exactly one is 1, enforced at the top.)
@@ -456,102 +454,73 @@ install(TARGETS ${ROBOSAMPLE_LIB_NAME}
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${ROBOSAMPLE_LIB_NAME}.pyi"
         DESTINATION ${CMAKE_INSTALL_PREFIX})
 
+# #
 # =============================================================================
-# C++ Tests
-#
-# Tests build ONLY in the RelWithDebInfo configuration (see the guard below).
-#
-# GoogleTest is resolved via find_package — install it externally: conda install
-# -c conda-forge gtest
-#
-# To add a new test: drop tests/<folder>/Test<name>.cpp into one of the folders
-# listed in TEST_FOLDERS. It is discovered automatically on the next configure
-# (the glob uses CONFIGURE_DEPENDS). No edits to this file are required.
+# # C++ Tests # # Tests build ONLY in the RelWithDebInfo configuration (see the
+# guard below). # # GoogleTest is resolved via find_package — install it
+# externally: conda install # -c conda-forge gtest # # To add a new test: drop
+# tests/<folder>/Test<name>.cpp into one of the folders # listed in
+# TEST_FOLDERS. It is discovered automatically on the next configure # (the glob
+# uses CONFIGURE_DEPENDS). No edits to this file are required. #
 # =============================================================================
 
-include(CTest)
+# include(CTest)
 
-# CTest's include() above already defines a cached BUILD_TESTING option and
+# # CTest's include() above already defines a cached BUILD_TESTING option and #
 # calls enable_testing(). We deliberately override it to a normal (scope-local)
-# variable so tests are gated strictly on the build type, regardless of the
-# cache value.
-if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-  set(BUILD_TESTING ON)
-else()
-  set(BUILD_TESTING OFF)
-endif()
+# # variable so tests are gated strictly on the build type, regardless of the #
+# cache value. if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo") set(BUILD_TESTING
+# ON) else() set(BUILD_TESTING OFF) endif()
 
-if(BUILD_TESTING)
-  enable_testing()
+# if(BUILD_TESTING) enable_testing()
 
-  # robosample_add_test(<folder> <test_name> [EXTRA_SOURCES src1 src2 ...])
-  #
-  # Builds a test executable from tests/<folder>/<test_name>.cpp plus any
-  # EXTRA_SOURCES, reusing the already-compiled robosample_objects. The only
-  # source compiled fresh per test is the Test*.cpp itself.
-  function(robosample_add_test FOLDER_NAME TEST_NAME)
-    cmake_parse_arguments(ARG "" "" "EXTRA_SOURCES" ${ARGN})
+# # robosample_add_test(<folder> <test_name> [EXTRA_SOURCES src1 src2 ...]) # #
+# Builds a test executable from tests/<folder>/<test_name>.cpp plus any #
+# EXTRA_SOURCES, reusing the already-compiled robosample_objects. The only #
+# source compiled fresh per test is the Test*.cpp itself.
+# function(robosample_add_test FOLDER_NAME TEST_NAME) cmake_parse_arguments(ARG
+# "" "" "EXTRA_SOURCES" ${ARGN})
 
-    add_executable(
-      ${TEST_NAME} tests/${FOLDER_NAME}/${TEST_NAME}.cpp ${ARG_EXTRA_SOURCES}
-                   $<TARGET_OBJECTS:robosample_objects>)
+# add_executable( ${TEST_NAME} tests/${FOLDER_NAME}/${TEST_NAME}.cpp
+# ${ARG_EXTRA_SOURCES} $<TARGET_OBJECTS:robosample_objects>)
 
-    target_include_directories(
-      ${TEST_NAME}
-      PRIVATE $<TARGET_PROPERTY:robosample_objects,INCLUDE_DIRECTORIES>
-              ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/tests)
+# target_include_directories( ${TEST_NAME} PRIVATE
+# $<TARGET_PROPERTY:robosample_objects,INCLUDE_DIRECTORIES>
+# ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/tests)
 
-    target_compile_definitions(
-      ${TEST_NAME}
-      PRIVATE MODULE_NAME=${TEST_NAME}
-              $<TARGET_PROPERTY:robosample_objects,COMPILE_DEFINITIONS>)
+# target_compile_definitions( ${TEST_NAME} PRIVATE MODULE_NAME=${TEST_NAME}
+# $<TARGET_PROPERTY:robosample_objects,COMPILE_DEFINITIONS>)
 
-    target_compile_options(${TEST_NAME} PRIVATE ${ROBOSAMPLE_COMPILE_OPTIONS})
+# target_compile_options(${TEST_NAME} PRIVATE ${ROBOSAMPLE_COMPILE_OPTIONS})
 
-    target_link_options(${TEST_NAME} PRIVATE ${ROBOSAMPLE_LINK_OPTIONS})
+# target_link_options(${TEST_NAME} PRIVATE ${ROBOSAMPLE_LINK_OPTIONS})
 
-    target_link_libraries(
-      ${TEST_NAME}
-      PRIVATE BLAS::BLAS
-              LAPACK::LAPACK
-              OpenMP::OpenMP_CXX
-              Threads::Threads
-              GTest::gtest_main
-              $<$<BOOL:${USE_CUDA}>:CUDA::cudart;CUDA::cublas;CUDA::cufft>
-              $<$<BOOL:${USE_OPENCL}>:OpenCL::OpenCL>)
+# target_link_libraries( ${TEST_NAME} PRIVATE BLAS::BLAS LAPACK::LAPACK
+# OpenMP::OpenMP_CXX Threads::Threads GTest::gtest_main
+# $<$<BOOL:${USE_CUDA}>:CUDA::cudart;CUDA::cublas;CUDA::cufft>
+# $<$<BOOL:${USE_OPENCL}>:OpenCL::OpenCL>)
 
-    # LTO disabled for tests: faster links, and profile data from tests should
-    # not pollute the production PGO corpus anyway.
-    set_target_properties(
-      ${TEST_NAME}
-      PROPERTIES POSITION_INDEPENDENT_CODE ON
-                 CXX_STANDARD 17
-                 CXX_STANDARD_REQUIRED ON
-                 CXX_EXTENSIONS OFF
-                 INTERPROCEDURAL_OPTIMIZATION FALSE)
+# # LTO disabled for tests: faster links, and profile data from tests should #
+# not pollute the production PGO corpus anyway. set_target_properties(
+# ${TEST_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON CXX_STANDARD 17
+# CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF INTERPROCEDURAL_OPTIMIZATION
+# FALSE)
 
-    add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
-    gtest_discover_tests(${TEST_NAME})
-  endfunction()
+# add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+# gtest_discover_tests(${TEST_NAME}) endfunction()
 
-  # Locate GoogleTest (must be installed in the conda environment).
-  find_package(GTest REQUIRED)
-  include(GoogleTest)
+# # Locate GoogleTest (must be installed in the conda environment).
+# find_package(GTest REQUIRED) include(GoogleTest)
 
-  # Subdirectories under tests/ to scan for Test*.cpp.
-  set(TEST_FOLDERS SimTKMath SimTKCommon Simbody)
+# # Subdirectories under tests/ to scan for Test*.cpp. set(TEST_FOLDERS
+# SimTKMath SimTKCommon Simbody)
 
-  foreach(folder ${TEST_FOLDERS})
-    # Auto-discover all Test*.cpp files in the subdirectory. CONFIGURE_DEPENDS
-    # re-runs the glob on build so new test files are picked up without a manual
-    # reconfigure.
-    file(GLOB _test_sources CONFIGURE_DEPENDS
-         ${CMAKE_SOURCE_DIR}/tests/${folder}/Test*.cpp)
+# foreach(folder ${TEST_FOLDERS}) # Auto-discover all Test*.cpp files in the
+# subdirectory. CONFIGURE_DEPENDS # re-runs the glob on build so new test files
+# are picked up without a manual # reconfigure. file(GLOB _test_sources
+# CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/tests/${folder}/Test*.cpp)
 
-    foreach(_src IN LISTS _test_sources)
-      cmake_path(GET _src STEM _test_name)
-      robosample_add_test(${folder} ${_test_name})
-    endforeach()
-  endforeach()
+# foreach(_src IN LISTS _test_sources) cmake_path(GET _src STEM _test_name)
+# robosample_add_test(${folder} ${_test_name}) endforeach() endforeach()
 
-endif(BUILD_TESTING)
+# endif(BUILD_TESTING)
