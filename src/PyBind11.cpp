@@ -859,6 +859,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
                 roll_flexibilities: A list of lists of BondFlexibility objects, 
                                     e.g., [[rb.BondFlexibility(), ...], [...]]
                 want_spatial_force_history: A boolean indicating whether to track spatial force history.
+                sphere_radius_in_nm: A real number indicating the sphere radius in nanometers.
                 )doc")
         .def("getWorld",
              py::overload_cast<std::size_t>(&Context::getWorld, py::const_),
@@ -873,6 +874,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
              py::arg("sampler_name"),
              py::arg("integrator_type"),
              py::arg("thermostat_name"),
+             py::arg("sphere_radius_in_nm"),
              py::arg("use_fixman_potential"),
              py::arg("use_nuts"),
              "Add a sampler to the world.")

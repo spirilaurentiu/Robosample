@@ -3963,6 +3963,7 @@ std::size_t World::getNofSamplers() const {
 auto World::addSampler(SamplerName samplerName,
                        IntegratorType integratorType,
                        ThermostatName thermostatName,
+                       SimTK::Real sphereRadiusInNm,
                        bool useFixmanPotential,
                        bool useNUTS) -> bool {
     if (samplerName == SamplerName::HMC) {
@@ -3980,6 +3981,9 @@ auto World::addSampler(SamplerName samplerName,
         samplers.back()->setThermostat(thermostatName);
         samplers.back()->setSeed(randomEngine);
         samplers.back()->setUseNUTS(useNUTS);
+        samplers.back()->setSphereRadius(sphereRadiusInNm);
+
+        std::cout << "sphere radius in nm: " << sphereRadiusInNm << std::endl;
 
         // Initialize the sampler
         samplers.back()->initialize();

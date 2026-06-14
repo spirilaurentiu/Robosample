@@ -333,6 +333,7 @@ class Context:
                         roll_flexibilities: A list of lists of BondFlexibility objects, 
                                             e.g., [[rb.BondFlexibility(), ...], [...]]
                         want_spatial_force_history: A boolean indicating whether to track spatial force history.
+                        sphere_radius_in_nm: A real number indicating the sphere radius in nanometers.
         """
     def calculate_openmm_energy(self, worldIndex: typing.SupportsInt | typing.SupportsIndex) -> float:
         """
@@ -2435,7 +2436,7 @@ class VectorUreyBradley:
         Remove and return the item at index ``i``
         """
 class World:
-    def add_sampler(self, sampler_name: SamplerName, integrator_type: IntegratorType, thermostat_name: ThermostatName, use_fixman_potential: bool, use_nuts: bool) -> bool:
+    def add_sampler(self, sampler_name: SamplerName, integrator_type: IntegratorType, thermostat_name: ThermostatName, sphere_radius_in_nm: typing.SupportsFloat | typing.SupportsIndex, use_fixman_potential: bool, use_nuts: bool) -> bool:
         """
         Add a sampler to the world.
         """

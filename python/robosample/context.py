@@ -33,6 +33,7 @@ class Sampler:
     distortOption: int
     distortArgs: str
     flow: int
+    sphere_radius_in_nm: float = 0.0
 
 
 @dataclass
@@ -59,6 +60,7 @@ class World:
         distortOption: int = 0,
         distortArgs: str = "0",
         flow: int = 0,
+        sphere_radius_in_nm: float = 0.0,
     ) -> Self:
         assert len(self.samplers) == 0, (
             "Can only add samplers before initializing the context"
@@ -81,6 +83,7 @@ class World:
             distortOption=distortOption,
             distortArgs=distortArgs,
             flow=flow,
+            sphere_radius_in_nm=sphere_radius_in_nm,
         )
         self.samplers.append(s)
         return self
@@ -1084,6 +1087,7 @@ class Context(rb.Context):
                 s.samplerName,
                 s.integratorType,
                 s.thermostatName,
+                s.sphere_radius_in_nm,
                 s.useFixmanPotential,
                 s.use_nuts,
             )
