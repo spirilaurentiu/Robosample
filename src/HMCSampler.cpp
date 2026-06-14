@@ -2393,8 +2393,13 @@ SimTK::Vec3 HMCSampler::sampleRandomVectorOnSphere(SimTK::Real radius) {
 void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
     std::cout << "Propose: BOUND_HMC integrator\n";
 
-    setSphereRadius(2); // Host guest
-    // setSphereRadius(4); // 2rw9
+    SimTK::Real inpSphereRadius = 2.0; // host-guest
+    // SimTK::Real inpSphereRadius = 4.0; // 2rw9
+
+    std::cout << "BOUND_HMC: Sphere radius: " << inpSphereRadius << "\n";
+
+    setSphereRadius(inpSphereRadius);
+
 
     if (topologies.size() < 2) {
         std::cerr << "BOUND_HMC requires at least ligand + receptor topologies.\n";
