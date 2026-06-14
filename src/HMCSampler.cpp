@@ -2390,95 +2390,11 @@ SimTK::Vec3 HMCSampler::sampleRandomVectorOnSphere(SimTK::Real radius) {
 }
 
 
-// Copilot
-// void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
-//     std::cout << "Propose: BOUND_HMC integrator\n";
-
-//     setSphereRadius(0.5); // Default radius, can be overridden by user input
-
-//     if (topologies.size() < 2) {
-//         std::cerr << "BOUND_HMC requires at least ligand + receptor topologies.\n";
-//         return;
-//     }
-
-//     const int LIGAND_TOPO_IX = 0;
-//     const int RECEPTOR_TOPO_IX = 1;
-
-//     const auto& receptorAtoms = topologies[RECEPTOR_TOPO_IX].getAtoms();
-//     if (receptorAtoms.empty()) {
-//         std::cerr << "Receptor topology has no atoms. Cannot compute geometric center.\n";
-//         return;
-//     }
-
-//     1. Receptor geometric center in Ground
-//     SimTK::Vec3 recSitePos_G(0);
-//     for (const auto& atom : receptorAtoms) {
-//         const auto atomIx = atom.identity.compoundAtomIndex;
-//         recSitePos_G += topologies[RECEPTOR_TOPO_IX].calcAtomLocationInGroundFrame(someState, atomIx);
-//     }
-//     recSitePos_G /= static_cast<SimTK::Real>(receptorAtoms.size());
-
-//     const SimTK::Real activeSphereRadius = (sphereRadius > 0) ? sphereRadius : SimTK::Real(0.5);
-
-//     2. Ligand mobilized body and current transforms
-//     const SimTK::MobilizedBodyIndex LIGAND_MBX(1);
-//     const SimTK::MobilizedBody& mobod_L = matter.get().getMobilizedBody(LIGAND_MBX);
-
-//     const SimTK::Transform& ligand_X_GP = mobod_L.getBodyTransform(someState);      // parent body in Ground
-//     const SimTK::Transform& ligand_X_PF = mobod_L.getInboardFrame(someState);       // parent body -> F
-//     const SimTK::Transform& ligand_X_FM = mobod_L.getMobilizerTransform(someState); // F -> M
-//     const SimTK::Transform& ligand_X_MB = ~(mobod_L.getOutboardFrame(someState));   // M -> ligand body
-//     const SimTK::Transform& ligand_X_GB = mobod_L.getBodyTransform(someState);      // Ground -> ligand body
-
-//     const SimTK::Vec3 ligCOM_G = mobod_L.findMassCenterLocationInGround(someState);
-
-//     3. Receptor COM (optional, for logging)
-//     const SimTK::MobilizedBodyIndex RECEPTOR_MBX(2);
-//     const SimTK::MobilizedBody& mobod_R = matter.get().getMobilizedBody(RECEPTOR_MBX);
-//     const SimTK::Vec3 recCOM_G = mobod_R.findMassCenterLocationInGround(someState);
-
-//     4. Boundary check (currently always repositioning)
-//     SimTK::Vec3 ligCOM_To_recSite_G = recSitePos_G - ligCOM_G;
-//     std::cout << "Ligand to site vector: " << ligCOM_To_recSite_G << " (Norm: " << ligCOM_To_recSite_G.norm() << ")\n";
-
-//     if (ligCOM_To_recSite_G.normSqr() > activeSphereRadius * activeSphereRadius) {
-//     if (true) {
-//         5. Sample random point on sphere around receptor site
-//         SimTK::Vec3 randVecOnSphere_G = sampleRandomVectorOnSphere(activeSphereRadius);
-
-//         Desired ligand COM in Ground
-//         const SimTK::Vec3 desiredLigCOM_G = recSitePos_G + randVecOnSphere_G;
-
-//         std::cout << "Receptor site Ground: " << recSitePos_G << " (Norm: " << recSitePos_G.norm() << ")\n";
-//         std::cout << "Random vector sphere: " << randVecOnSphere_G << " (Norm: " << randVecOnSphere_G.norm() << ")\n";
-//         std::cout << "Ligand COM Ground: " << ligCOM_G << " (Norm: " << ligCOM_G.norm() << ")\n";
-//         std::cout << "Target position Ground: " << desiredLigCOM_G << " (Norm: " << desiredLigCOM_G.norm() << ")\n";
-
-//         6. Shift ligand body transform so its COM moves to desiredLigCOM_G
-//         const SimTK::Vec3 deltaCOM_G = desiredLigCOM_G - ligCOM_G;
-
-//         SimTK::Transform ligand_X_GB_new(ligand_X_GB.R(), ligand_X_GB.p() + deltaCOM_G);
-
-//         7. Convert new body transform to FM frame:
-//            X_GB = X_GP * X_PF * X_FM * X_MB
-//         => X_FM = ~X_PF * ~X_GP * X_GB * ~X_MB
-//         SimTK::Transform target_X_FM = ~ligand_X_PF * ~ligand_X_GP * ligand_X_GB_new * ~ligand_X_MB;
-
-//         std::cout << "Target X_FM: " << target_X_FM << "\n";
-
-//         8. Let Simbody solve q to fit this FM transform
-//         mobod_L.setQToFitTransform(someState, target_X_FM);
-//     }
-
-//     system.get().realize(someState, SimTK::Stage::Dynamics);
-// }
-
-
 void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
     std::cout << "Propose: BOUND_HMC integrator\n";
 
-    // setSphereRadius(2); // Host guest
-    setSphereRadius(4); // 2rw9
+    setSphereRadius(2); // Host guest
+    // setSphereRadius(4); // 2rw9
 
     if (topologies.size() < 2) {
         std::cerr << "BOUND_HMC requires at least ligand + receptor topologies.\n";
