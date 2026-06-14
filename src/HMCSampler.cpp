@@ -159,6 +159,7 @@ void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOut
     }
 
     currentEnergy.total = currentEnergy.potential + currentEnergy.kinetic + currentEnergy.fixman - (0.5 * RT * currentEnergy.logSineSqrGamma2);
+    std::cout << "HMCSampler::reinitialize() - Initial energies: PE=" << currentEnergy.potential << " kJ/mol, KE=" << currentEnergy.kinetic << " kJ/mol, Fixman=" << currentEnergy.fixman << " kJ/mol, logSineSqrGamma2=" << currentEnergy.logSineSqrGamma2 << ", Total=" << currentEnergy.total << " kJ/mol\n" << std::flush;
 
     if (!currentEnergy.validate(currentEnergy, RT, DegreesOfFreedom{numDegreesOfFreedom})) {
         throw std::runtime_error("HMCSampler::reinitialize() catastrophic failure: Initial energy is not valid.");
@@ -2389,6 +2390,28 @@ SimTK::Vec3 HMCSampler::sampleRandomVectorOnSphere(SimTK::Real radius) {
     return randVec;
 }
 
+SimTK::Vec3 HMCSampler::sampleRandomVectorInSphere(SimTK::Real radius) {
+    if (radius <= 0) {
+        throw std::invalid_argument("HMCSampler::sampleRandomVectorInSphere: Radius must be positive.");
+    }
+
+    // 1. Get a uniform random direction on the sphere unit surface
+    SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
+    SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
+
+    // 2. Scale the radius by the cube root of a uniform variable [0, 1)
+    //    This corrects the volume density scaling ($r^3$)
+    SimTK::Real unifNo = uniformRealDistribution(randomEngine);
+    SimTK::Real crbtRadius = radius * std::cbrt(unifNo);
+
+    // 3. Compute coordinates
+    SimTK::Vec3 randVec = {0, 0, 0};
+    randVec[0] = crbtRadius * std::cos(theta) * std::sin(phi);
+    randVec[1] = crbtRadius * std::sin(theta) * std::sin(phi);
+    randVec[2] = crbtRadius * std::cos(phi);
+
+    return randVec;
+}
 
 void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
     std::cout << "Propose: BOUND_HMC integrator\n";
@@ -2421,6 +2444,7 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
     recSitePos_G /= static_cast<SimTK::Real>(receptorAtoms.size());
 
     const SimTK::Real activeSphereRadius = (sphereRadius > 0) ? sphereRadius : SimTK::Real(0.5);
+
     const SimTK::MobilizedBodyIndex LIGAND_MBX(1);
     const SimTK::MobilizedBody& mobod_L = matter.get().getMobilizedBody(LIGAND_MBX);
     const SimTK::Transform& ligand_X_GB = mobod_L.getBodyTransform(someState);
@@ -2445,64 +2469,70 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState) {
     const SimTK::Transform& receptor_X_FM = mobod_R.getMobilizerTransform(someState);
     const SimTK::Transform& receptor_X_MB = ~(mobod_R.getOutboardFrame(someState));
     const SimTK::Vec3 recCOM_G = mobod_R.findMassCenterLocationInGround(someState);
-
-
-    // Give a random kick
-    if (numSamples == 0) {
-        std::cout << "Giving a random kick to the ligand\n";
-    }
+    SimTK::Vec3 ligCOM_To_recSite_G = recSitePos_G - ligCOM_G;
 
     // Bring back on the sphere if too far
-    SimTK::Vec3 ligCOM_To_recSite_G = recSitePos_G - ligCOM_G;
-    // if (ligCOM_To_recSite_G.normSqr() > activeSphereRadius * activeSphereRadius) {
-    if (true) {
-        std::cout << "JUMPED at " << ligCOM_To_recSite_G.norm() << "\n";
-        SimTK::Vec3 randVecOnSphere_G = sampleRandomVectorOnSphere(activeSphereRadius);
-        // Equation (1) from notes: t_G = recPos_G + s_G - ligPos_G
-        const SimTK::Vec3 targetPos_G = recSitePos_G + randVecOnSphere_G - ligCOM_G;
+    bool isFirstSample = (numSamples == 0);
+    bool isLigandOutsideSphere = (ligCOM_To_recSite_G.normSqr() > activeSphereRadius * activeSphereRadius);
+    bool timeToInsert = (numSamples % 5 == 0) && (!isFirstSample); //&& (((((((false)))))));
+    bool timeToKick = (isLigandOutsideSphere || isFirstSample);
+    bool timeToJump = timeToInsert || timeToKick;
 
-        std::cout << "Receptor site position: " << recSitePos_G << " (Norm: " << recSitePos_G.norm() << ")\n";
-        std::cout << "Random vector sphere: " << randVecOnSphere_G << " (Norm: " << randVecOnSphere_G.norm() << ")\n";
-        std::cout << "Ligand COM Ground: " << ligCOM_G << " (Norm: " << ligCOM_G.norm() << ")\n";
-        std::cout << "Target position Ground: " << targetPos_G << " (Norm: " << targetPos_G.norm() << ")\n";
+    SimTK::Vec3 randVec_G(0);
+    SimTK::Vec3 targetPos_G(0);
+    SimTK::Quaternion randQuat = generateRandomQuaternion();
+    SimTK::Rotation randomRotation(randQuat);
+    if (timeToInsert) { // Kick inside
+        randVec_G = sampleRandomVectorInSphere(activeSphereRadius);
+        // targetPos_G = recSitePos_G + randVec_G - ligCOM_G;
+        std::cout << "About to insert \n";
+
+    } else if (timeToKick) { // Kick on the surface
+        randVec_G = sampleRandomVectorOnSphere(activeSphereRadius);
+        // targetPos_G = recSitePos_G + randVec_G - ligCOM_G;
+        std::cout << "About to kick \n";
+
+    } else {
+        std::cout << "No jump at " << ligCOM_To_recSite_G.norm() << "\n";
+    }
+
+    if (timeToJump) {
+        // std::cout << "Receptor site position: " << recSitePos_G << " (Norm: " << recSitePos_G.norm() << ")\n";
+        // std::cout << "Random vector sphere: " << randVec_G << " (Norm: " << randVec_G.norm() << ")\n";
+        // std::cout << "Ligand COM Ground: " << ligCOM_G << " (Norm: " << ligCOM_G.norm() << ")\n";
+        // std::cout << "Target position Ground: " << targetPos_G << " (Norm: " << targetPos_G.norm() << ")\n";
 
         SimTK::Transform ligand_MobilizerPullback_X_BP = ~(ligand_X_PF * ligand_X_FM * ligand_X_MB);
         SimTK::Transform ligand_X_RootG = ~(ligand_X_TopRoot)*ligand_MobilizerPullback_X_BP;
 
         // SimTK::Transform X_FM_new = getRandomFM(someState, minDist, maxDist);
         //  SimTK::Transform X_CR = getRandomSphericalTransform(randRadiusInShell);
-        SimTK::Quaternion randQuat = generateRandomQuaternion();
-        SimTK::Rotation randomRotation(randQuat);
 
         // SimTK::Transform X_G_tar = SimTK::Transform(SimTK::Rotation(), SimTK::Vec3(0));
         // SimTK::Transform X_G_tar = SimTK::Transform(SimTK::Rotation(), 1 * ligCOM_G);
         // SimTK::Transform X_G_tar = SimTK::Transform(SimTK::Rotation(), ligCOM_G - recSitePos_G);
-        // SimTK::Transform X_G_tar = SimTK::Transform(SimTK::Rotation(), randVecOnSphere_G);
+        // SimTK::Transform X_G_tar = SimTK::Transform(SimTK::Rotation(), randVec_G);
         // SimTK::Transform X_G_tar = SimTK::Transform(SimTK::Rotation(), recSitePos_G);
-        // SimTK::Transform X_G_tar = SimTK::Transform(SimTK::Rotation(), recSitePos_G + randVecOnSphere_G);
-        SimTK::Transform X_G_tar = SimTK::Transform(randomRotation, recSitePos_G + randVecOnSphere_G);
+        // SimTK::Transform X_G_tar = SimTK::Transform(SimTK::Rotation(), recSitePos_G + randVec_G);
+        SimTK::Transform X_G_tar = SimTK::Transform(randomRotation, recSitePos_G + randVec_G);
         // SimTK::Transform X_G_tar = SimTK::Transform(SimTK::Rotation(), targetPos_G);
 
         SimTK::Transform target_X_FM = ligand_X_RootG * X_G_tar;
 
-
-        PrintTransform(ligand_X_PF, 6, "ligand_X_PF"); // same as X_GP as parent P is Ground !
-        PrintTransform(ligand_X_FM, 6, "ligand_X_FM");
-        PrintTransform(ligand_X_BM, 6, "ligand_X_BM");
-        // PrintTransform(ligand_X_PF * ligand_X_FM * ligand_X_MB, 6, "ligand_X_GB_check");
-
-        PrintTransform(ligand_G_X_Top, 6, "ligand_X_GTop");
-
-        PrintTransform(ligand_X_TopRoot, 6, "ligand_X_TopRoot");
-
-        PrintTransform(ligand_X_RootG, 6, "ligand_X_RootG");
-
-        PrintTransform(target_X_FM, 6, "target_X_FM");
+        // PrintTransform(ligand_X_PF, 6, "ligand_X_PF"); // same as X_GP as parent P is Ground !
+        // PrintTransform(ligand_X_FM, 6, "ligand_X_FM");
+        // PrintTransform(ligand_X_BM, 6, "ligand_X_BM");
+        // // PrintTransform(ligand_X_PF * ligand_X_FM * ligand_X_MB, 6, "ligand_X_GB_check");
+        // PrintTransform(ligand_G_X_Top, 6, "ligand_X_GTop");
+        // PrintTransform(ligand_X_TopRoot, 6, "ligand_X_TopRoot");
+        // PrintTransform(ligand_X_RootG, 6, "ligand_X_RootG");
+        // PrintTransform(target_X_FM, 6, "target_X_FM");
 
         std::cout << "Current q: " << someState.getQ() << "\n";
         mobod_L.setQToFitTransform(someState, target_X_FM);
         std::cout << "New q: " << someState.getQ() << "\n";
-    }
+
+    } // Kick
 
     system.get().realize(someState, SimTK::Stage::Position);
 }
@@ -3804,7 +3834,8 @@ auto HMCSampler::sampleIteration(SimTK::State& state, std::vector<SimTK::Compoun
         std::cout << "\t - Proposed energies: " << "PE=" << result.proposedEnergy.potential << " kJ/mol, "
                   << "KE=" << result.proposedEnergy.kinetic << " kJ/mol, "
                   << "Fixman=" << result.proposedEnergy.fixman << " kJ/mol, logSineSqrGamma2=" << result.proposedEnergy.logSineSqrGamma2 << ", "
-                  << "Total=" << result.proposedEnergy.total << " kJ/mol\n";
+                  << "Total=" << result.proposedEnergy.total << " kJ/mol\n"
+                  << std::flush;
     }
     validProposedEnergy = result.proposedEnergy.validate(currentEnergy, RT, DegreesOfFreedom{numDegreesOfFreedom});
     if (validProposedEnergy) {
@@ -3849,7 +3880,9 @@ auto HMCSampler::sampleIteration(SimTK::State& state, std::vector<SimTK::Compoun
             system.get().realize(state, SimTK::Stage::Position);
 
             // Convert momentum p to generalized velocity u via u = M(q)^-1 * p
-            matter.get().multiplyByMInv(state, result.proposalSimbody.p, state.updU());
+            if (useNUTS) {
+                matter.get().multiplyByMInv(state, result.proposalSimbody.p, state.updU());
+            }
             system.get().realize(state, SimTK::Stage::Velocity);
 
             // Convert from generalized to Cartesian coordinates

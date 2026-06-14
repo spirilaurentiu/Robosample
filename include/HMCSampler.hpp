@@ -85,13 +85,7 @@ One iteration must include:
 class Topology;
 class Context;
 
-void writePdb(SimTK::Compound& c,
-              SimTK::State& advanced,
-              const char* dirname,
-              const char* prefix,
-              int midlength,
-              const char* sufix,
-              SimTK::Real aTime);
+void writePdb(SimTK::Compound& c, SimTK::State& advanced, const char* dirname, const char* prefix, int midlength, const char* sufix, SimTK::Real aTime);
 
 /** A Generalized Coordinates Hamiltonian Monte Carlo sampler as described in
 J Chem Theory Comput. 2017 Oct 10;13(10):4649-4659. In short it consists
@@ -145,13 +139,7 @@ class HMCSampler : virtual public Sampler {
     std::vector<SimTK::Real> UCache, UDotCache, TorqueCache;
 
     /** Constructor **/
-    HMCSampler(World& argWorld,
-               SimTK::CompoundSystem& argCompoundSystem,
-               SimTK::SimbodyMatterSubsystem& argMatter,
-               Span<Topology> argTopologies,
-               SimTK::DuMMForceFieldSubsystem& argDumm,
-               SimTK::GeneralForceSubsystem& argForces,
-               SimTK::TimeStepper& argTimeStepper);
+    HMCSampler(World& argWorld, SimTK::CompoundSystem& argCompoundSystem, SimTK::SimbodyMatterSubsystem& argMatter, Span<Topology> argTopologies, SimTK::DuMMForceFieldSubsystem& argDumm, SimTK::GeneralForceSubsystem& argForces, SimTK::TimeStepper& argTimeStepper);
     //: Qmeans(nullptr), Qdiffs(nullptr), Qstds(nullptr)
 
     /** Destructor **/
@@ -297,8 +285,7 @@ class HMCSampler : virtual public Sampler {
     };
     std::vector<std::string> REBAS_MoleculeNames = {"ETHANE", "ALA1", "TRPCH"};
 
-    std::vector<SimTK::Real>&
-    dihedralSegmenter(int nofIntervals, SimTK::Real segHalfDiff, std::vector<SimTK::Real>& segLims);
+    std::vector<SimTK::Real>& dihedralSegmenter(int nofIntervals, SimTK::Real segHalfDiff, std::vector<SimTK::Real>& segLims);
     int findSegmentIndex(SimTK::Real value, const std::vector<SimTK::Real>& segLims);
 
     bool REBAS_Scale_Mbx(REBAS_MoleculeName_Ix molName, SimTK::MobilizedBodyIndex mbx);
@@ -314,8 +301,7 @@ class HMCSampler : virtual public Sampler {
     distribution.  **/
     void setVelocitiesToGaussian(SimTK::State& someState);
 
-    virtual void perturbVelocities(SimTK::State& someState,
-                                   VelocitiesPerturbMethod VPM = VelocitiesPerturbMethod::ToTemperature);
+    virtual void perturbVelocities(SimTK::State& someState, VelocitiesPerturbMethod VPM = VelocitiesPerturbMethod::ToTemperature);
 
     void setVelocitiesToNMA(SimTK::State& someState);
 
@@ -325,24 +311,11 @@ class HMCSampler : virtual public Sampler {
     void integrateVariableTrajectory(SimTK::State& someState);
 
     auto isUTurnOpenMM(const PhasePointOpenMM& minus, const PhasePointOpenMM& plus) -> bool;
-    auto buildTreeWithOpenMM(std::vector<OpenMM::Vec3>& positions,
-                             std::vector<OpenMM::Vec3>& velocities,
-                             int depth,
-                             NUTSDirection direction,
-                             SimTK::Real logU,
-                             SimTK::Real H0) -> NUTSNodeOpenMM;
+    auto buildTreeWithOpenMM(std::vector<OpenMM::Vec3>& positions, std::vector<OpenMM::Vec3>& velocities, int depth, NUTSDirection direction, SimTK::Real logU, SimTK::Real H0) -> NUTSNodeOpenMM;
     auto integrateNUTSWithOpenMM(SimTK::State& state, int maxDepth) -> NUTSResult;
 
 
-    void buildTreeWithSimbody(SimTK::State& state,
-                              int depth,
-                              NUTSDirection direction,
-                              SimTK::Real logU,
-                              SimTK::Real H0,
-                              NUTSNodeRef& nodeOut,
-                              NUTSTrajectoryLog& log,
-                              int& fwdLeafCount,
-                              int& bwdLeafCount);
+    void buildTreeWithSimbody(SimTK::State& state, int depth, NUTSDirection direction, SimTK::Real logU, SimTK::Real H0, NUTSNodeRef& nodeOut, NUTSTrajectoryLog& log, int& fwdLeafCount, int& bwdLeafCount);
     auto integrateNUTSWithSimbody(const SimTK::State& someState, int maxDepth) -> NUTSResult;
 
     /** Integrate trajectory one step at a time to compute quantities instantly **/
@@ -353,6 +326,7 @@ class HMCSampler : virtual public Sampler {
 
     /** BOUND HMC */
     SimTK::Vec3 sampleRandomVectorOnSphere(SimTK::Real radius);
+    SimTK::Vec3 sampleRandomVectorInSphere(SimTK::Real radius);
     void integrateTrajectory_BoundHMC(SimTK::State& someState);
 
     /** Integrate trajectory using task space forces */
@@ -401,9 +375,7 @@ class HMCSampler : virtual public Sampler {
     ForcesPerturbMethod forcesPerturbMethod();
 
     // Docking functions
-    SimTK::Real getComComDistance(SimTK::State& someState,
-                                  SimTK::MobilizedBodyIndex mbx1,
-                                  SimTK::MobilizedBodyIndex mbx2);
+    SimTK::Real getComComDistance(SimTK::State& someState, SimTK::MobilizedBodyIndex mbx1, SimTK::MobilizedBodyIndex mbx2);
     SimTK::Transform getRandomSphericalTransform(SimTK::Real radius);
     SimTK::Transform getRandomFM(SimTK::State& someState, SimTK::Real minDist, SimTK::Real maxDist);
     void teleport(SimTK::State& someState);
@@ -413,9 +385,7 @@ class HMCSampler : virtual public Sampler {
 
     void printDrilling(SimTK::State& someState);
 
-    auto sampleIteration(SimTK::State& state,
-                         std::vector<SimTK::Compound::AtomTargetLocations>& proposedAtomTargetLocations,
-                         bool shouldPrint) -> bool;
+    auto sampleIteration(SimTK::State& state, std::vector<SimTK::Compound::AtomTargetLocations>& proposedAtomTargetLocations, bool shouldPrint) -> bool;
 
     [[nodiscard]] auto integrateWithOpenMM(SimTK::State& state) -> NUTSResult;
 
@@ -515,9 +485,7 @@ class HMCSampler : virtual public Sampler {
     /**
      * Get the log of the Jacobian of a bond-angle stretch
      */
-    SimTK::Real calcBendStretchJacobianDetLog(SimTK::State& someState,
-                                              std::vector<SimTK::Real> scaleFactors,
-                                              unsigned int startFromBody = 0);
+    SimTK::Real calcBendStretchJacobianDetLog(SimTK::State& someState, std::vector<SimTK::Real> scaleFactors, unsigned int startFromBody = 0);
 
     /**@}**/
     // WORK Q PERTURB BEND STRETCH --------------------------------------------
@@ -530,31 +498,21 @@ class HMCSampler : virtual public Sampler {
 
     void PrintSubZMatrixBAT();
 
-    void
-    setSubZMatrixBATStats(std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATmeans,
-                          std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATdiffs,
-                          std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds,
-                          std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds_Alien);
+    void setSubZMatrixBATStats(std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATmeans, std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATdiffs, std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds, std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds_Alien);
 
     void PrintSubZMatrixBATAndRelated(SimTK::State& someState);
 
-    SimTK::Real scaleSubZMatrixBATDeviations(
-        SimTK::State& someState,
-        SimTK::Real scalingFactor,
-        bool BernoulliTrial = true,
-        bool varianceBasedScalingFactor = true,
-        std::vector<int> BATOrder = {1, 0, 2},        // bendstretch {1, 0, 2};  spherical {2, 1, 0}
-        std::vector<SimTK::Real> BATSign = {1, -1, 1} // bendstretch {1, -1, 1}; spherical {1, 1, 1}
+    SimTK::Real scaleSubZMatrixBATDeviations(SimTK::State& someState,
+                                             SimTK::Real scalingFactor,
+                                             bool BernoulliTrial = true,
+                                             bool varianceBasedScalingFactor = true,
+                                             std::vector<int> BATOrder = {1, 0, 2},        // bendstretch {1, 0, 2};  spherical {2, 1, 0}
+                                             std::vector<SimTK::Real> BATSign = {1, -1, 1} // bendstretch {1, -1, 1}; spherical {1, 1, 1}
     );
 
-    void updateSubZMatrixBAT(SimTK::State& someState,
-                             std::vector<int> BATOrder = {1, 0, 2},
-                             std::vector<SimTK::Real> BATSign = {1, -1, 1});
+    void updateSubZMatrixBAT(SimTK::State& someState, std::vector<int> BATOrder = {1, 0, 2}, std::vector<SimTK::Real> BATSign = {1, -1, 1});
 
-    SimTK::Real calcBATJacobianDetLog(SimTK::State& someState,
-                                      SimTK::BondMobility::Mobility bondMobility,
-                                      std::vector<int> BATOrder = {1, 0, 2},
-                                      std::vector<SimTK::Real> BATSign = {1, -1, 1});
+    SimTK::Real calcBATJacobianDetLog(SimTK::State& someState, SimTK::BondMobility::Mobility bondMobility, std::vector<int> BATOrder = {1, 0, 2}, std::vector<SimTK::Real> BATSign = {1, -1, 1});
 
     // Calculate sub determinant of MBAT
     SimTK::Real calcSubMBATDetLog(SimTK::State& someState);

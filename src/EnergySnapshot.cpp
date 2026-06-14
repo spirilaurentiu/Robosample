@@ -47,8 +47,7 @@ auto EnergySnapshot::checkTotal(SimTK::Real RT) const -> bool {
     const SimTK::Real tol = eps * (1.0 + std::abs(total));
 
     if (std::abs(total - expected) > tol) {
-        std::cerr << "\t[ERROR] Total energy does not match sum of components: " << total << " vs "
-                  << expected << '\n';
+        std::cerr << "\t[ERROR] Total energy does not match sum of components: " << total << " vs " << expected << '\n';
         return false;
     }
     return true;
@@ -115,9 +114,7 @@ auto EnergySnapshot::checkGeometryStability() const -> bool {
     return ok;
 }
 
-auto EnergySnapshot::hamiltonianDrift(const EnergySnapshot& ref,
-                                      SimTK::Real beta,
-                                      DegreesOfFreedom ndofs) const -> bool {
+auto EnergySnapshot::hamiltonianDrift(const EnergySnapshot& ref, SimTK::Real beta, DegreesOfFreedom ndofs) const -> bool {
     // Unwrap the strong type to get a plain arithmetic value.
     // The double static_cast is the only way to extract the underlying value
     // from an enum class; its verbosity is intentional -- it makes every
@@ -131,15 +128,13 @@ auto EnergySnapshot::hamiltonianDrift(const EnergySnapshot& ref,
     const SimTK::Real drift_limit = 2.0 * std::sqrt(N);
 
     if (drift_kt > drift_limit) {
-        std::cerr << "\t[ERROR] Hamiltonian drift too large: " << drift_kt << " kT (limit: " << drift_limit
-                  << " kT)" << '\n';
+        std::cerr << "\t[ERROR] Hamiltonian drift too large: " << drift_kt << " kT (limit: " << drift_limit << " kT)" << '\n';
         return false;
     }
     return true;
 }
 
-auto EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, DegreesOfFreedom ndofs) const
-    -> bool {
+auto EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, DegreesOfFreedom ndofs) const -> bool {
     // `&=` (not `&&`) ensures every check runs so all warnings are visible.
     bool valid = true;
 
@@ -159,19 +154,17 @@ auto EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, Degrees
         // std::cerr << "\t - [ERROR] Potential energy is suspiciously low: " << potential << '\n';
         // valid = false;
     } else if (std::abs(potential) > 1e6) {
-        // std::cerr << "\t - [ERROR] Potential energy is suspiciously high: " << potential << '\n';
-        // valid = false;
+        std::cerr << "\t - [ERROR] Potential energy is suspiciously high: " << potential << '\n';
+        valid = false;
     } else if (std::abs(ref.potential) < 1e-6) {
         // std::cerr << "\t - [ERROR] Reference potential energy is suspiciously low: " << ref.potential <<
         // '\n'; valid = false;
     } else if (std::abs(ref.potential) > 1e6) {
-        std::cerr << "\t - [ERROR] Reference potential energy is suspiciously high: " << ref.potential
-                  << '\n';
+        std::cerr << "\t - [ERROR] Reference potential energy is suspiciously high: " << ref.potential << '\n';
         valid = false;
     } else if (std::abs(potential / ref.potential) > 10) {
-        // std::cerr << "\t - [ERROR] Potential energy jump: " << potential << " vs ref " << ref.potential
-        //           << '\n';
-        // valid = false;
+        std::cerr << "\t - [ERROR] Potential energy jump: " << potential << " vs ref " << ref.potential << '\n';
+        valid = false;
     }
 
     if (ndofs > DegreesOfFreedom(0)) {
@@ -182,20 +175,19 @@ auto EnergySnapshot::validate(const EnergySnapshot& ref, SimTK::Real RT, Degrees
             std::cerr << "\t - [ERROR] Reference kinetic energy is suspiciously low: " << ref.kinetic << '\n';
             valid = false;
         } else if (std::abs(kinetic / ref.kinetic) > 100000) {
-            // std::cerr << "\t - [ERROR] Kinetic energy jump: " << kinetic << " vs ref " << ref.kinetic <<
-            // '\n'; valid = false;
+            std::cerr << "\t - [ERROR] Kinetic energy jump: " << kinetic << " vs ref " << ref.kinetic << '\n';
+            valid = false;
         }
     } else {
         if (std::abs(kinetic) > 1e-6) {
             std::cerr << "\t - [ERROR] Kinetic energy is suspiciously high: " << kinetic << '\n';
             valid = false;
         } else if (std::abs(ref.kinetic) > 1e6) {
-            std::cerr << "\t - [ERROR] Reference kinetic energy is suspiciously high: " << ref.kinetic
-                      << '\n';
+            std::cerr << "\t - [ERROR] Reference kinetic energy is suspiciously high: " << ref.kinetic << '\n';
             valid = false;
         } else if (std::abs(kinetic / ref.kinetic) > 100000) {
-            // std::cerr << "\t - [ERROR] Kinetic energy jump: " << kinetic << " vs ref " << ref.kinetic <<
-            // '\n'; valid = false;
+            std::cerr << "\t - [ERROR] Kinetic energy jump: " << kinetic << " vs ref " << ref.kinetic << '\n';
+            valid = false;
         }
     }
 
