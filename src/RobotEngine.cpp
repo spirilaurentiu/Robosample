@@ -98,8 +98,8 @@ inline robo::Real logDetSymPD(const robo::Real* A, int n) {
 //                 2 = + per-body X_GB/X_FM every step (huge; short runs only).
 //  Override at compile time, e.g.  -DROBO_VERBOSE=1 .
 // ============================================================================
-#define ROBO_DEBUG 0
-#define ROBO_VERBOSE 0
+#define ROBO_DEBUG 1
+#define ROBO_VERBOSE 2
 
 #ifndef ROBO_DEBUG
 #    define ROBO_DEBUG 1
@@ -1049,7 +1049,7 @@ void RobotEngine::normalizeQuaternions(const RobotModel& m, RobotState& s) {
 // ============================================================================
 //  VERLET  (fixed step)   VerletIntegrator.cpp::attemptDAEStep
 // ============================================================================
-void RobotEngine::verletStep(const RobotModel& m,
+bool RobotEngine::verletStep(const RobotModel& m,
                              RobotState& s,
                              ForceBridge& bridge,
                              const robo::ConstraintSet& cset,
@@ -1063,6 +1063,31 @@ void RobotEngine::verletStep(const RobotModel& m,
 
     std::vector<Real> q0(q, q + nq), u0(u, u + nu), qdot0(qdot, qdot + nq), udot0(udot, udot + nu),
         qdd0(qdd, qdd + nq);
+
+    // True iff every per-body spatial force is finite. OpenMM returns Inf forces
+    // for a hard steric overlap (LJ r^-12); integrating against those is what
+    // produced the "Particle coordinate is NaN" crash. Catch it here, at the
+    // source, and signal the caller to reject this step's pose.
+    auto forcesFinite = [&]() -> bool {
+        const SpatialVec* bf = s.bodyForceG();
+        for (int b = 1; b < m.numBodies; ++b) {
+            if (!std::isfinite(bf[b][0][0]) || !std::isfinite(bf[b][0][1]) || !std::isfinite(bf[b][0][2])
+                || !std::isfinite(bf[b][1][0]) || !std::isfinite(bf[b][1][1])
+                || !std::isfinite(bf[b][1][2])) {
+                return false;
+            }
+        }
+        return true;
+    };
+    auto restorePreStep = [&]() {
+        std::copy(q0.begin(), q0.end(), q);
+        std::copy(u0.begin(), u0.end(), u);
+        std::copy(qdot0.begin(), qdot0.end(), qdot);
+        std::copy(udot0.begin(), udot0.end(), udot);
+        std::copy(qdd0.begin(), qdd0.end(), qdd);
+        realizePosition(m, s);
+        fillAtomPositionsFromBodies(m, s);
+    };
 
     // ---- position: q1 = q0 + h*qdot0 + (h^2/2)*qddot0, normalize, then SHAKE ----
     for (int i = 0; i < nq; ++i) {
@@ -1082,11 +1107,14 @@ void RobotEngine::verletStep(const RobotModel& m,
         u[i] = u0[i] + h * udot0[i]; // u1_est
     }
 
-    auto evalDerivs = [&]() {
+    auto evalDerivs = [&]() -> bool {
         realizePosition(m, s);
         ROBO_CHECK("realizePosition");
         bridge.evaluate(s);
         ROBO_CHECK("bridge.evaluate");
+        if (!forcesFinite()) {
+            return false; // non-finite force -> abort before it corrupts udot/q
+        }
         realizeVelocity(m, s);
         ROBO_CHECK("realizeVelocity");
         realizeArticulatedBodyInertias(m, s);
@@ -1094,8 +1122,12 @@ void RobotEngine::verletStep(const RobotModel& m,
         ROBO_CHECK("calcUDot");
         calcQDot(m, s, qdot);
         calcQDotDot(m, s);
+        return true;
     };
-    evalDerivs();
+    if (!evalDerivs()) {
+        restorePreStep();
+        return false;
+    }
 
     const Real tol = Real(1e-4);
     Real prevChange = std::numeric_limits<Real>::infinity();
@@ -1108,7 +1140,10 @@ void RobotEngine::verletStep(const RobotModel& m,
             den += u[i] * u[i];
             u[i] = un;
         }
-        evalDerivs();
+        if (!evalDerivs()) {
+            restorePreStep();
+            return false;
+        }
         const Real change = std::sqrt(num) / (std::sqrt(den) + Real(1e-30));
         if (change <= tol) {
             break; // converged
@@ -1122,6 +1157,7 @@ void RobotEngine::verletStep(const RobotModel& m,
     cset.enforceVelocityConstraints(m, s); // localProjectU (RATTLE)
     realizeVelocity(m, s);                 // refresh V/KE at the projected u
     s.time += h;
+    return true;
 }
 
 bool RobotEngine::stepTo(const RobotModel& m,
@@ -1133,8 +1169,7 @@ bool RobotEngine::stepTo(const RobotModel& m,
     if (h <= 0) {
         return true;
     }
-    verletStep(m, s, bridge, cset, h);
-    return true;
+    return verletStep(m, s, bridge, cset, h);
 }
 
 // ---- calcQDotDot: qddot = N qddot-coupling. Pin/Translation: udot; Free: quat. ----

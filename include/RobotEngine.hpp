@@ -90,8 +90,11 @@ class RobotEngine {
     //     constraints — see MIGRATION_DESIGN.md §1/§4.3)
     //   realizeVelocity; forces; calcUDot
     //   implicit-trapezoid refine u (<=10 iters): u1 = u0 + (h/2)(udot0+udot1)
-    // Advances state by exactly one step h.
-    static void verletStep(const RobotModel& m,
+    // Advances state by exactly one step h. Returns false if a non-finite force
+    // or coordinate appeared during the step (e.g. a hard steric overlap drove an
+    // LJ force to Inf); in that case the pre-step q/u are restored so the caller
+    // sees a finite, unmodified state to reject from -- never a NaN it must chase.
+    static bool verletStep(const RobotModel& m,
                            RobotState& s,
                            ForceBridge& bridge,
                            const robo::ConstraintSet& cset,

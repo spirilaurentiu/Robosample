@@ -105,6 +105,14 @@ struct SamplerConfig {
     // minimum is physically a clash, never a resting state.
     double maxStartPE = 5.0e3; // kJ/mol; entry ceiling == rescue ceiling
 
+    // INITIAL KICK: before round 0, keep re-drawing the ligand position until
+    // the proposal passes the clash gate (dPE <= maxStartPE). This guarantees
+    // the simulation starts from a clash-free pose without burning real rounds.
+    // maxInitialKickTries caps the retry loop; if no clean pose is found within
+    // that budget the run throws rather than starting from a clashing geometry.
+    // Set to 0 (default) to disable -- the first round handles placement as usual.
+    int maxInitialKickTries = 0; // 0 = disabled; >0 = retry budget
+
     // ESCAPE HATCH (docking): max consecutive rejected docking moves tolerated from
     // the SAME carried-forward pose before a kick is FORCED regardless of energy
     // magnitude. A pose that is finite and below maxStartPE can still be locally
@@ -143,7 +151,8 @@ class World {
                        double sphereFactor,
                        std::optional<bool> useFixman,
                        bool alwaysKick,
-                       double clashThreshold);
+                       double clashThreshold,
+                       int maxInitialKickTries);
 
     // Mark this world as a docking world. ligandGroups[i] is the global atom
     // index list of ligand molecule i (each gets its own auto-sized sphere and is
@@ -158,6 +167,13 @@ class World {
 
     // One Gibbs sample on this world. Returns true if accepted.
     bool generateSample();
+
+    // Docking initialisation: keep drawing random ligand placements until the
+    // post-kick PE change is below the clash ceiling, or the retry budget
+    // (sampler_.maxInitialKickTries) is exhausted.  Returns the number of
+    // attempts needed.  Throws if no clean pose was found within the budget.
+    // Called by Context::runREX before round 0 when maxInitialKickTries > 0.
+    int findGoodStartingPose();
 
     [[nodiscard]] const RobotModel& model() const {
         return model_;
@@ -179,6 +195,14 @@ class World {
     [[nodiscard]] bool lastAccepted() const {
         return lastAccepted_;
     }
+    // Set by Context::runREX each round. During equilibration every world
+    // behaves as AlwaysAccept regardless of its sampler_.acceptRejectMode,
+    // so the burn-in warms up from the starting geometry without the
+    // Metropolis gate blocking large-dH moves from an unrelaxed structure.
+    void setEquilPhase(bool equil) {
+        equilPhase_ = equil;
+    }
+
     [[nodiscard]] bool lastKickApplied() const {
         return lastKickApplied_;
     }
@@ -245,6 +269,7 @@ class World {
     std::vector<int> siteAtoms_;
     bool lastAccepted_ = false;
     bool lastKickApplied_ = false;
+    bool equilPhase_ = false; // true during burn-in: AlwaysAccept overrides MH
 
     // Consecutive rejected docking moves from the current carried-forward pose.
     // Reset on any acceptance; when it reaches sampler_.maxStuckRounds a kick is

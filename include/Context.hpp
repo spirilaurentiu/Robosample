@@ -95,6 +95,11 @@ class Context {
     double openmmPotential(const std::vector<robo::Vec3>& coords);
     void writeOutputs(int replica, int round, bool verbose);
 
+    // Refuse to start (or warn, if ROBO_ALLOW_BAD_START is set) when the input
+    // geometry is non-finite or sterically clashing -- the docking world cannot
+    // repair a frozen-receptor clash, so this would otherwise loop forever.
+    void checkStartupGeometry();
+
     std::string baseName;
     std::uint32_t seed = 0;
 

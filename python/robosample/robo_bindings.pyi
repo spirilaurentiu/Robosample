@@ -987,9 +987,9 @@ class SystemTopology:
     def z_matrix_l(self, arg0: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> None:
         ...
 class World:
-    def add_sampler(self, timeStep: typing.SupportsFloat | typing.SupportsIndex, mdSteps: typing.SupportsInt | typing.SupportsIndex, acceptRejectMode: AcceptRejectMode, use_nuts: bool, sphere_factor: typing.SupportsFloat | typing.SupportsIndex = 1.0, use_fixman: bool | None = None, always_kick: bool = False, clash_threshold: typing.SupportsFloat | typing.SupportsIndex = 10.0) -> World:
+    def add_sampler(self, timeStep: typing.SupportsFloat | typing.SupportsIndex, mdSteps: typing.SupportsInt | typing.SupportsIndex, acceptRejectMode: AcceptRejectMode, use_nuts: bool, sphere_factor: typing.SupportsFloat | typing.SupportsIndex = 1.0, use_fixman: bool | None = None, always_kick: bool = False, clash_threshold: typing.SupportsFloat | typing.SupportsIndex = 10.0, max_initial_kick_tries: typing.SupportsInt | typing.SupportsIndex = 0) -> World:
         """
-        Configure this world's sampler; returns the world for chaining. sphere_factor scales the auto-sized per-ligand binding sphere (R = R_receptor + sphere_factor*R_ligand). The docking kick relocates a ligand only when its COM leaves the sphere (always_kick=True perturbs every round). A proposed pose is rejected -- in ALL modes, including AlwaysAccept -- if its potential energy is non-finite or |PE| exceeds clash_threshold, so overlapping geometry never passes. use_fixman=None auto-enables Fixman+logSineSqr on non-Cartesian worlds.
+        Configure this world's sampler; returns the world for chaining. sphere_factor scales the auto-sized per-ligand binding sphere (R = R_receptor + sphere_factor*R_ligand). The docking kick relocates a ligand only when its COM leaves the sphere (always_kick=True perturbs every round). A proposed pose is rejected -- in ALL modes, including AlwaysAccept -- if its potential energy is non-finite or |PE| exceeds clash_threshold, so overlapping geometry never passes. use_fixman=None auto-enables Fixman+logSineSqr on non-Cartesian worlds. max_initial_kick_tries>0 enables a pre-round-0 retry loop that keeps drawing random placements until a clash-free starting pose is found (dPE <= maxStartPE), or raises RuntimeError after the budget is exhausted.
         """
     @property
     def index(self) -> int:

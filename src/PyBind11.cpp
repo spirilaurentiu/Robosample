@@ -64,6 +64,7 @@ PYBIND11_MODULE(robo_bindings, m) {
              py::arg("use_fixman") = py::none(), // None => auto: on for non-Cartesian
              py::arg("always_kick") = false,     // perturb every round (else: only when COM left sphere)
              py::arg("clash_threshold") = 10.0,  // reject if |peNew|>factor*|pePre| (relative, dimensionless)
+             py::arg("max_initial_kick_tries") = 0, // >0: retry kick before round 0 until clash-free
              py::return_value_policy::reference,
              "Configure this world's sampler; returns the world for chaining. "
              "sphere_factor scales the auto-sized per-ligand binding sphere "
@@ -72,7 +73,10 @@ PYBIND11_MODULE(robo_bindings, m) {
              "round). A proposed pose is rejected -- in ALL modes, including AlwaysAccept "
              "-- if its potential energy is non-finite or |PE| exceeds clash_threshold, so "
              "overlapping geometry never passes. use_fixman=None auto-enables "
-             "Fixman+logSineSqr on non-Cartesian worlds.")
+             "Fixman+logSineSqr on non-Cartesian worlds. "
+             "max_initial_kick_tries>0 enables a pre-round-0 retry loop that keeps "
+             "drawing random placements until a clash-free starting pose is found "
+             "(dPE <= maxStartPE), or raises RuntimeError after the budget is exhausted.")
         .def_property_readonly("index", &World::index)
         .def_property_readonly("is_cartesian", &World::isCartesian)
         .def_property_readonly("is_docking", &World::isDocking);

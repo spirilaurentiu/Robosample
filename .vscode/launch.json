@@ -28,8 +28,8 @@
                 "${workspaceFolder}/examples/2R9W.prmtop",
                 "${workspaceFolder}/examples/2R9W.rst7",
                 "6000",
-                "0",
-                "50",
+                "10",
+                "100",
                 "1"
             ],
             "cwd": "${workspaceFolder}"
@@ -45,8 +45,8 @@
                 "${workspaceFolder}/examples/2R9W.prmtop",
                 "${workspaceFolder}/examples/2R9W.rst7",
                 "6000",
-                "0",
-                "50",
+                "10",
+                "100",
                 "1"
             ],
             "cwd": "${workspaceFolder}",

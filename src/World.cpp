@@ -15,8 +15,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <numeric>
 #include <queue>
+#include <stdexcept>
+#include <string>
 
 using robo::Real;
 using robo::Rotation;
@@ -25,6 +29,19 @@ using robo::Vec3;
 
 namespace {
 constexpr double kBoltzmann_kJ = 0.0083144626; // kJ/mol/K
+
+// Runtime toggle for per-kick docking diagnostics, read once. Set the env var
+//   ROBO_DOCK_DEBUG=1
+// to print, every kick, the sphere geometry and the sampled placement in GROUND
+// (Cartesian) coordinates. All lengths below are nanometres (the engine's and
+// OpenMM's native unit; AMBER Angstrom inputs are converted by ANG_TO_NM on load).
+bool dockDebugEnabled() {
+    static const bool on = [] {
+        const char* e = std::getenv("ROBO_DOCK_DEBUG");
+        return e != nullptr && e[0] != '0' && e[0] != '\0';
+    }();
+    return on;
+}
 
 struct DSU {
     std::vector<int> p;
@@ -176,7 +193,8 @@ World& World::add_sampler(double timeStep,
                           double sphereFactor,
                           std::optional<bool> useFixman,
                           bool alwaysKick,
-                          double clashThreshold) {
+                          double clashThreshold,
+                          int maxInitialKickTries) {
     sampler_.timeStep = timeStep;
     sampler_.mdSteps = mdSteps;
     sampler_.acceptRejectMode = mode;
@@ -184,12 +202,27 @@ World& World::add_sampler(double timeStep,
     sampler_.sphereFactor = (sphereFactor > 0.0) ? sphereFactor : 1.0;
     sampler_.alwaysKick = alwaysKick;
     sampler_.clashThreshold = (clashThreshold > 0.0) ? clashThreshold : 1.0e4;
+    sampler_.maxInitialKickTries = (maxInitialKickTries > 0) ? maxInitialKickTries : 0;
 
-    if (sampler_.timeStep > 0.005) {
+    if (sampler_.timeStep == 0.0 || sampler_.mdSteps == 0) {
+        // Pure proposal world: no internal dynamics. For docking this means a
+        // rigid teleport only -- placement energy is the sole criterion.
+        // timeStep=0 on a Cartesian world is the "OpenMM HMC reference" mode:
+        // the docking world places the ligand, then the Cartesian world runs
+        // its own integrator each round from that starting pose.
+        sampler_.timeStep = 0.0;
+        sampler_.mdSteps = 0;
         std::fprintf(stderr,
-                     "[world] WARNING: timeStep=%.4g ps is large for all-atom MD; "
-                     "the integrator may go NON-FINITE every step (PE frozen, q restored). "
+                     "[world %d] timeStep=0 / mdSteps=0: pure proposal mode "
+                     "(no internal dynamics; %s)\n",
+                     index_,
+                     docking_ ? "rigid teleport only" : "OpenMM HMC reference mode");
+    } else if (sampler_.timeStep > 0.005) {
+        std::fprintf(stderr,
+                     "[world %d] WARNING: timeStep=%.4g ps is large for all-atom MD; "
+                     "the integrator may go NON-FINITE every step. "
                      "Typical stable values are 0.001-0.002 ps.\n",
+                     index_,
                      sampler_.timeStep);
     }
     // AUTO default: Fixman + logSineSqr ON for non-Cartesian (torsional + docking)
@@ -736,6 +769,28 @@ bool World::repositionLigands(bool forceAll) {
     Vec3* P = state_.atomPosG();
     bool movedAny = false;
 
+    // Receptor geometry (defines the sphere CENTRE and its radius contribution).
+    // All lengths in nm (the engine's native unit; AMBER Å inputs are divided by
+    // 10 at load time). Printed unconditionally to stderr so every kick is
+    // traceable without rebuilding or setting an env var.
+    const Vec3 siteMassCom = atomSetMassCenter(siteAtoms_);
+    const double Rrec = atomSetRadius(siteAtoms_, site);
+    std::fprintf(stderr,
+                 "[dock] --- kick decision  always_kick=%s ---\n"
+                 "[dock] receptor : nAtoms=%d  "
+                 "centroid/sphere-center=(% .4f % .4f % .4f) nm  "
+                 "massCOM=(% .4f % .4f % .4f) nm  "
+                 "R_receptor=%.4f nm\n",
+                 forceAll ? "always" : "containment",
+                 (int)siteAtoms_.size(),
+                 site[0],
+                 site[1],
+                 site[2],
+                 siteMassCom[0],
+                 siteMassCom[1],
+                 siteMassCom[2],
+                 Rrec);
+
     // The kick is a PURE proposal: it relocates the ligand and does nothing else.
     // There is NO acceptance here -- the whole move (kick + dynamics) is judged in
     // generateSample, where Hold is referenced to the pre-kick state and an
@@ -747,21 +802,75 @@ bool World::repositionLigands(bool forceAll) {
         if (grp.empty()) {
             continue;
         }
-        const double radius = groupSphereRadius(g);
+        const Vec3 ligCentroid = atomSetCentroid(grp);
+        const double Rlig = atomSetRadius(grp, ligCentroid);
+        const double radius = groupSphereRadius(g); // Rrec + sphereFactor * Rlig
         const Vec3 com = atomSetMassCenter(grp);
-        const bool inside = (com - site).norm() <= radius;
-        if (!forceAll && inside) {
+        const double dist = (com - site).norm();
+        const bool inside = dist <= radius;
+        const bool willKick = forceAll || !inside;
+
+        std::fprintf(stderr,
+                     "[dock] ligand[%d]: nAtoms=%d  "
+                     "R_ligand=%.4f nm  "
+                     "COM=(% .4f % .4f % .4f) nm  "
+                     "|COM-center|=%.4f nm\n"
+                     "[dock]   sphere: center=(% .4f % .4f % .4f) nm  "
+                     "radius=%.4f nm  "
+                     "(R_rec=%.4f + sphereFactor=%.3f * R_lig=%.4f)\n"
+                     "[dock]   inside=%s  should_kick=%s  reason=%s\n",
+                     g,
+                     (int)grp.size(),
+                     Rlig,
+                     com[0],
+                     com[1],
+                     com[2],
+                     dist,
+                     site[0],
+                     site[1],
+                     site[2],
+                     radius,
+                     Rrec,
+                     sampler_.sphereFactor,
+                     Rlig,
+                     inside ? "Y" : "N",
+                     willKick ? "Y" : "N",
+                     forceAll ? "always_kick/rescue"
+                              : (inside ? "containment:inside->skip" : "containment:escaped->kick"));
+
+        if (!willKick) {
             continue;
         }
 
         // Perturb the full external q: uniform COM position in the sphere + uniform
         // reorientation (rigid: rotate the ligand about its COM, then translate).
-        const Vec3 target = site + sampleUniformInSphere(radius);
+        const Vec3 offset = sampleUniformInSphere(radius);
+        const Vec3 target = site + offset;
         const Rotation R = sampleUniformRotation();
         for (int a : grp) {
             P[a] = target + (R * (P[a] - com));
         }
         movedAny = true;
+
+        // Re-measure COM from the *updated* P[] to confirm the draw actually moved
+        // the ligand (sanity: newCOM should equal target within floating-point noise).
+        const Vec3 newCom = atomSetMassCenter(grp);
+        std::fprintf(stderr,
+                     "[dock]   KICK: offset=(% .4f % .4f % .4f) nm  "
+                     "|offset|=%.4f nm  (max=radius=%.4f nm)\n"
+                     "[dock]   new target=(% .4f % .4f % .4f) nm  "
+                     "new COM=(% .4f % .4f % .4f) nm  [Ground/Cartesian, nm]\n",
+                     offset[0],
+                     offset[1],
+                     offset[2],
+                     offset.norm(),
+                     radius,
+                     target[0],
+                     target[1],
+                     target[2],
+                     newCom[0],
+                     newCom[1],
+                     newCom[2]);
     }
 
     if (movedAny) {
@@ -771,6 +880,102 @@ bool World::repositionLigands(bool forceAll) {
         setAtomsLocationsInGround(pos);
     }
     return movedAny;
+}
+
+// ----------------------------------------------------------------------------
+//  findGoodStartingPose
+//
+//  Called once before round 0 when sampler_.maxInitialKickTries > 0.
+//  Keeps drawing random placements for every ligand until the immediate
+//  post-kick PE change is below the clash ceiling (maxStartPE) for ALL
+//  ligands simultaneously -- the same gate the normal per-round pre-step
+//  screen uses.  When a clean pose is found it is committed to
+//  state_.atomPosG() (and the replica coord array upstream via the
+//  normal setAtomsLocationsInGround path), so round 0 starts from a
+//  clash-free geometry rather than the raw input file position.
+//
+//  Returns the number of attempts used.  Throws std::runtime_error if the
+//  budget is exhausted without finding a clean pose, so the user gets an
+//  immediate, explicit failure rather than a run that silently wastes every
+//  round on rejections.
+// ----------------------------------------------------------------------------
+int World::findGoodStartingPose() {
+    if (!docking_ || sampler_.maxInitialKickTries <= 0) {
+        return 0;
+    }
+
+    // Evaluate the current PE so we have a pePre baseline for dPE gating.
+    // (We don't call the full reinitialize() here -- we just need the energy
+    // to judge whether a candidate placement is clash-free.)
+    RobotEngine::realizePosition(model_, state_);
+    RobotEngine::realizeArticulatedBodyInertias(model_, state_);
+    bridge_.evaluate(state_);
+    const double pePre = bridge_.calcPotentialEnergy();
+
+    std::fprintf(stderr,
+                 "[dock] findGoodStartingPose: pePre=%.2f kJ/mol  "
+                 "clash_ceiling(maxStartPE)=%.0f  budget=%d tries\n",
+                 pePre,
+                 sampler_.maxStartPE,
+                 sampler_.maxInitialKickTries);
+
+    // Save the current positions so we can restore them if needed.
+    std::vector<Vec3> saved(state_.atomPosG(), state_.atomPosG() + model_.numAtoms);
+
+    for (int attempt = 1; attempt <= sampler_.maxInitialKickTries; ++attempt) {
+        // Force-kick every ligand unconditionally (forceAll=true).
+        repositionLigands(/*forceAll=*/true);
+
+        // Evaluate the post-kick PE at the proposed Cartesian positions.
+        // repositionLigands already called setAtomsLocationsInGround, which
+        // rebuilt q/frames, so bridge_.evaluate sees the new geometry.
+        bridge_.evaluate(state_);
+        const double pePost = bridge_.calcPotentialEnergy();
+        const double dPE = pePost - pePre;
+        const bool clean = std::isfinite(pePost) && (dPE <= sampler_.maxStartPE);
+
+        std::fprintf(stderr,
+                     "[dock]   attempt %d/%d: pePost=%.2f  dPE=%+.2f kJ/mol  -> %s\n",
+                     attempt,
+                     sampler_.maxInitialKickTries,
+                     pePost,
+                     dPE,
+                     clean ? "GOOD (accepted as start)" : "clash, retry");
+
+        if (clean) {
+            // Commit: leave state_.atomPosG() at this position.
+            // Zero u so the first reinitialize() seeds from rest.
+            std::fill(state_.u(), state_.u() + model_.nu, Real(0));
+            std::fprintf(stderr,
+                         "[dock] findGoodStartingPose: found clean pose in %d attempt(s). "
+                         "pePost=%.2f kJ/mol  dPE=%+.2f kJ/mol\n",
+                         attempt,
+                         pePost,
+                         dPE);
+            return attempt;
+        }
+
+        // Restore the receptor+ligand positions before the next draw so that
+        // the sphere-center geometry (centroid of siteAtoms_) is always correct.
+        // Only the LIGAND atoms need to be reset -- receptor is welded and
+        // setAtomsLocationsInGround doesn't move it -- but the simplest safe
+        // approach is to restore everything and let repositionLigands pick a
+        // fresh draw next iteration.
+        setAtomsLocationsInGround(saved);
+    }
+
+    // Budget exhausted.
+    char msg[256];
+    std::snprintf(msg,
+                  sizeof(msg),
+                  "findGoodStartingPose: could not find a clash-free starting pose for "
+                  "the ligand(s) after %d attempt(s) (maxStartPE=%.0f kJ/mol). "
+                  "Check that ligand_molecule_indices is correct and that the receptor "
+                  "is minimized. Increase max_initial_kick_tries if the binding site is "
+                  "very occluded.",
+                  sampler_.maxInitialKickTries,
+                  sampler_.maxStartPE);
+    throw std::runtime_error(msg);
 }
 
 // ----------------------------------------------------------------------------
@@ -841,7 +1046,28 @@ bool World::generateSample() {
         //       move loops forever ("PE frozen, q restored"). This makes the trap
         //       escapable independent of energy magnitude.
         const bool stuck = (dockingStuckCount_ >= sampler_.maxStuckRounds);
-        const bool preIsBad = !std::isfinite(pePre) || (std::abs(pePre) > 1e3);
+        // A clash is a HIGH POSITIVE potential (steric overlap, r^-12). A bound
+        // pose is strongly NEGATIVE (e.g. -2400 kJ/mol) and is exactly what we
+        // want to keep -- it must NOT be flagged "bad". The old test
+        // |pePre| > 1e3 force-kicked every well-bound pose, scrambling it every
+        // round ("From -2400 -> wrong conf"). Gate on the positive ceiling only,
+        // and use the configured maxStartPE (not a hard-coded 1e3) so a strained
+        // but immovable receptor offset does not by itself trip the rescue.
+        const bool preIsBad = !std::isfinite(pePre) || (pePre > sampler_.maxStartPE);
+        std::fprintf(stderr,
+                     "[dock] pre-kick: PE_old=%.2f  Fix_old=%.2f  H_old=%.2f kJ/mol  "
+                     "triggers: always_kick=%s  preIsBad=%s(maxStartPE=%.0f)  "
+                     "stuck=%s(%d/%d)  -> will_kick=%s\n",
+                     pePre,
+                     fixPre,
+                     dockPotPre,
+                     sampler_.alwaysKick ? "Y" : "N",
+                     preIsBad ? "Y" : "N",
+                     sampler_.maxStartPE,
+                     stuck ? "Y" : "N",
+                     dockingStuckCount_,
+                     sampler_.maxStuckRounds,
+                     (sampler_.alwaysKick || preIsBad || stuck) ? "Y" : "N");
         lastKickApplied_ = repositionLigands(sampler_.alwaysKick || preIsBad || stuck);
         if (stuck) {
             dockingStuckCount_ = 0; // fresh window after the forced shake
@@ -857,12 +1083,46 @@ bool World::generateSample() {
     }
 
     const Real h = sampler_.timeStep;
-    for (int i = 0; i < sampler_.mdSteps; ++i) {
-        RobotEngine::stepTo(model_, state_, bridge_, constraints_, state_.time + h);
+
+    // PRE-STEP CLASH SCREEN (docking). reinitialize() has just evaluated the
+    // post-kick forces/PE. If the kick drove the guest into a hard overlap, the
+    // *change* in potential is enormous (or already non-finite). Handing such a
+    // pose to the Verlet integrator is fatal: a single step against an ~Inf LJ
+    // force turns finite q into NaN -- the "Particle coordinate is NaN" crash
+    // seen when the proposal overlaps the receptor. So reject BEFORE stepping.
+    // Gate on the move-INDUCED change (pePost - pePre), not the absolute total:
+    // the rigid receptor may carry a large constant internal energy (e.g. an
+    // unminimized protein at ~1e7 kJ/mol) that the ligand world neither created
+    // nor can remove, and which cancels in the difference.
+    bool stepsOk = true;
+    if (docking_) {
+        const double pePost = state_.energy.pe; // set by reinitialize()
+        const double dPEpost = pePost - pePre;
+        const bool screenedOut = !std::isfinite(pePost) || (dPEpost > sampler_.maxStartPE);
+        std::fprintf(stderr,
+                     "[dock] post-kick proposal (pre-MD):\n"
+                     "[dock]   PE_old  = %12.2f kJ/mol\n"
+                     "[dock]   PE_new  = %12.2f kJ/mol\n"
+                     "[dock]   dPE     = %+12.2f kJ/mol  (new-old, clash ceiling=%.0f)\n"
+                     "[dock]   pre-step screen: %s\n",
+                     pePre,
+                     pePost,
+                     dPEpost,
+                     sampler_.maxStartPE,
+                     screenedOut ? "REJECT (skip MD, dPE>ceiling or non-finite)" : "pass -> run MD");
+        if (screenedOut) {
+            stepsOk = false;
+        }
     }
 
-    bool finite = true;
-    {
+    for (int i = 0; stepsOk && i < sampler_.mdSteps; ++i) {
+        // stepTo returns false if a non-finite force/coordinate appeared mid-step;
+        // bail immediately so the broken pose is rejected, never carried forward.
+        stepsOk = RobotEngine::stepTo(model_, state_, bridge_, constraints_, state_.time + h);
+    }
+
+    bool finite = stepsOk;
+    if (finite) {
         const Real* qchk = state_.q();
         for (int i = 0; i < model_.nq; ++i) {
             if (!std::isfinite(qchk[i])) {
@@ -876,27 +1136,42 @@ bool World::generateSample() {
     if (finite) {
         const double Hnew = currentTotalEnergy(); // sets state_.energy (pe, ke, ...)
         const double peNew = state_.energy.pe;
-        // VALIDITY: a proposal must be finite AND pass two energy gates:
-        //   - RELATIVE: |peNew| <= clashThreshold * max(1, |pePre|), which adapts to
-        //     the free-space (~0) and bound (~-2000) regimes during exploration;
-        //   - ABSOLUTE: peNew <= maxStartPE, a physical clash ceiling shared with the
-        //     forced-kick rescue above. The relative check alone is too permissive in
-        //     the bound regime (at pePre~-2400 it admits poses up to ~24000), which is
-        //     how a +9800 clash entered the chain and became an absorbing state. The
-        //     absolute ceiling caps what can ever be accepted at the same value the
-        //     rescue treats as bad, so an admitted pose is always one the rescue can
-        //     also recover from.
-        // double ratio = std::max(std::abs(peNew), std::abs(pePre))
-        //                / std::max(std::min(std::abs(peNew), std::abs(pePre)), 1e-12);
-        // bool isClash = ratio > sampler_.clashThreshold;
-
-        const bool valid = std::isfinite(Hnew) && std::isfinite(peNew) && peNew < 1e3 && Hnew < 1e3;
-        //    && (std::abs(peNew) <= sampler_.clashThreshold * std::max(1.0, std::abs(pePre)))
-        //    && (peNew <= sampler_.maxStartPE) && !isClash;
-        if (valid && metropolis(Hold_, Hnew)) {
+        const double keNew = state_.energy.ke;
+        const double fixNew = state_.energy.fixman;
+        const double dPE = peNew - pePre;
+        const double dFix = fixNew - fixPre;
+        const double dH = Hnew - Hold_;
+        const bool valid = std::isfinite(Hnew) && std::isfinite(peNew) && (dPE <= sampler_.maxStartPE);
+        const bool mhPass = metropolis(Hold_, Hnew);
+        std::fprintf(stderr,
+                     "[dock] post-MD decision:\n"
+                     "[dock]   PE_old  = %12.2f   PE_new  = %12.2f   dPE  = %+12.2f kJ/mol\n"
+                     "[dock]   KE_old  = %12.2f   KE_new  = %12.2f   dKE  = %+12.2f kJ/mol\n"
+                     "[dock]   Fix_old = %12.2f   Fix_new = %12.2f   dFix = %+12.2f kJ/mol\n"
+                     "[dock]   H_old   = %12.2f   H_new   = %12.2f   dH   = %+12.2f kJ/mol\n"
+                     "[dock]   valid(dPE<=%.0f)=%s  metropolis=%s  -> %s\n",
+                     pePre,
+                     peNew,
+                     dPE,
+                     0.0,
+                     keNew,
+                     keNew,
+                     fixPre,
+                     fixNew,
+                     dFix,
+                     Hold_,
+                     Hnew,
+                     dH,
+                     sampler_.maxStartPE,
+                     valid ? "Y" : "N",
+                     mhPass ? "Y" : "N",
+                     (valid && mhPass) ? "ACCEPT" : "reject");
+        if (valid && mhPass) {
             RobotEngine::fillAtomPositionsFromBodies(model_, state_);
             accepted = true;
         }
+    } else if (!stepsOk) {
+        std::fprintf(stderr, "[dock] post-MD: non-finite force mid-step or pre-screen -> reject\n");
     } else {
         std::fprintf(stderr, "[gen] q NON-FINITE -> restoring\n");
     }
@@ -998,7 +1273,13 @@ double World::currentTotalEnergy() {
 }
 
 bool World::metropolis(double Hold, double Hnew) {
-    if (sampler_.acceptRejectMode == AcceptRejectMode::AlwaysAccept) {
+    // During burn-in (equilPhase_) every move is accepted regardless of the
+    // world's configured acceptRejectMode. This lets the system relax from the
+    // starting geometry (which may be far from equilibrium) without the
+    // Metropolis gate blocking large-dH moves. The sampler configuration is
+    // otherwise unchanged -- same timestep, same mdSteps, same kick logic --
+    // so switching to production is a single flag flip with no other state change.
+    if (equilPhase_ || sampler_.acceptRejectMode == AcceptRejectMode::AlwaysAccept) {
         return true;
     }
     const double dH = Hnew - Hold;

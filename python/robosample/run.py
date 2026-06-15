@@ -47,34 +47,35 @@ context.add_docking_world(ligand_molecule_indices=[0]).add_sampler(
     # the pose is restored unchanged -- a frozen-PE absorbing state. 0.002 ps is in
     # the stable range the engine recommends. mdSteps raised 10 -> 50 to preserve the
     # ~0.1 ps trajectory length (0.002 * 50 = 0.1 ps) at the smaller step.
-    timeStep=0.05,
+    timeStep=0,
     mdSteps=40,
     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
     use_nuts=False,
     sphere_factor=0.5,
     clash_threshold=10.0,  # reject if |peNew| > 10*|pePre| (relative; 1 order of magnitude)
-    always_kick=True,
+    always_kick=False,
+    max_initial_kick_tries=1000,
 )
 
 
-# (2) Torsional relaxation world (phi/psi flexible) WITH the Fixman correction in
-#     the acceptance Hamiltonian -- required for rigorous Boltzmann sampling of a
-#     constrained (internal-coordinate) world.
-dihedrals = [
-    robosample.DihedralType.PROTEIN_PHI.value,
-    robosample.DihedralType.PROTEIN_PSI.value,
-]
-bonds = context.standard_dihedral_bonds.loc[
-    context.standard_dihedral_bonds["dihedral_type"].isin(dihedrals)
-]
-sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, False)
-context.add_robotic_world(sele).add_sampler(
-    timeStep=0.001,
-    mdSteps=10,
-    acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
-    use_nuts=False,
-    use_fixman=True,
-)
+# # (2) Torsional relaxation world (phi/psi flexible) WITH the Fixman correction in
+# #     the acceptance Hamiltonian -- required for rigorous Boltzmann sampling of a
+# #     constrained (internal-coordinate) world.
+# dihedrals = [
+#     robosample.DihedralType.PROTEIN_PHI.value,
+#     robosample.DihedralType.PROTEIN_PSI.value,
+# ]
+# bonds = context.standard_dihedral_bonds.loc[
+#     context.standard_dihedral_bonds["dihedral_type"].isin(dihedrals)
+# ]
+# sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, False)
+# context.add_robotic_world(sele).add_sampler(
+#     timeStep=0.005,
+#     mdSteps=20,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
+#     use_nuts=False,
+#     use_fixman=True,
+# )
 
 # (3) Cartesian all-atom MD world for mixing (uses the MTS integrator).
 context.add_cartesian_world().add_sampler(
