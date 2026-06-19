@@ -59,6 +59,48 @@ class ConstraintSet {
     // RATTLE: project u so that G u = 0. Requires realizeVelocity() current.
     auto enforceVelocityConstraints(const RobotModel& model, RobotState& state) const -> void;
 
+    // Loop-closure contribution to the Fixman potential: ln det( G M^-1 G^T ).
+    //
+    // Why this exists (Spiridon & Minh 2017, JCTC 13:4649, Eqs. 2-3):
+    //   The marginal density a constrained move samples is rho(phi_f) ~
+    //   |M_{N_f}|^{1/2} exp(-beta U)  (their Eq. 2), and the Fixman potential
+    //   U_F = (1/2) RT ln( |M_{N_f}| / |M_3N| )  (their Eq. 3) is what flattens it
+    //   back to the unconstrained Cartesian Boltzmann marginal. |M_{N_f}| is the
+    //   mass-metric determinant of the *flexible* coordinates of the constrained
+    //   system.
+    //
+    //   For an ACYCLIC molecule the flexible coordinates are exactly the tree's
+    //   torsions, and |M_{N_f}| is the articulated-body tree determinant computed
+    //   by RobotEngine::calcLogDetM (Jain et al. O(n) algorithm, refs 9 & 23 in
+    //   the paper -- derived for *branched* molecules, i.e. trees). No loop
+    //   closures, so this function returns 0 and the tree determinant is the whole
+    //   story. This is the regime the paper validated (C4 chain, butane, alanine
+    //   dipeptide -- all acyclic).
+    //
+    //   For a CYCLIC molecule (a macrocycle: a ring closed by a RATTLE distance
+    //   constraint) the spanning tree carries one *too many* flexible torsions --
+    //   the loop-closure constraint removes one DOF per ring. Integrating the
+    //   RATTLE-projected momenta (constrained to G M^-1 p = 0) over that reduced
+    //   subspace contributes a factor det(G M^-1 G^T)^{-1/2} to the marginal, so
+    //   the correct flexible-coordinate determinant is
+    //         |M_{N_f}| = |M_tree| / |G M^-1 G^T|.
+    //   Hence the full Fixman gains a -(1/2) RT ln det(G M^-1 G^T) term. The Jain
+    //   tree algorithm does not supply it (it knows nothing about loop closures),
+    //   and the paper never tested ring Boltzmann correctness (its macrocycle
+    //   results, Sec. 3.5, measure only sampling *efficiency*), so this term has
+    //   simply been absent for cyclic systems.
+    //
+    // Implementation note: G here is assembled exactly as in
+    //   enforceVelocityConstraints (atomForce = vecAB = (1/2) dC/dr for the
+    //   squared-distance constraint C = |rAB|^2 - d0^2). That (1/2) and the
+    //   squared-vs-linear constraint convention put a *constant* multiplicative
+    //   factor in det(.) -- a constant per fixed constraint count -- which cancels
+    //   identically in any Metropolis dH. Only the configuration-dependent part of
+    //   ln det(G M^-1 G^T) survives, and that is what this returns (up to that
+    //   constant). Requires realizeArticulatedBodyInertias() current (needed by
+    //   multiplyByMInv). Returns 0 when there are no loop-closure constraints.
+    auto calcConstraintLogDet(const RobotModel& model, RobotState& state) const -> Real;
+
     // SHAKE: Newton-iterate q so that C(q) = |rAB|^2 - d0^2 = 0. refreshKinematics
     // rebuilds atom positions + H from q each iteration (C is nonlinear).
     template <typename RefreshFn>
@@ -127,15 +169,21 @@ class ConstraintSet {
 
     private:
     // Build A = G M^-1 G^T (numC x numC, symmetric) and solve A x = rhs.
+    // If logAbsDetOut != nullptr it receives ln|det A| as a free by-product of the
+    // factorization (used by calcConstraintLogDet for the loop-closure Fixman term).
     static auto solveCoupling(const std::vector<std::vector<Real>>& jacobianT,
                               const std::vector<std::vector<Real>>& minvJacobianT,
                               const std::vector<Real>& rhs,
                               int numC,
-                              int numU) -> std::vector<Real>;
+                              int numU,
+                              Real* logAbsDetOut = nullptr) -> std::vector<Real>;
 
-    // Dense solve with partial pivoting (numC is a handful).
-    static auto solveSmallSpd(std::vector<std::vector<Real>> matA, std::vector<Real> vecB)
-        -> std::vector<Real>;
+    // Dense solve with partial pivoting (numC is a handful). If logAbsDetOut !=
+    // nullptr it is set to sum_k ln|pivot_k| = ln|det matA| (row swaps only flip
+    // the sign of det; matA = G M^-1 G^T is SPD so |det| = product of |pivots|).
+    static auto solveSmallSpd(std::vector<std::vector<Real>> matA,
+                              std::vector<Real> vecB,
+                              Real* logAbsDetOut = nullptr) -> std::vector<Real>;
 };
 
 } // namespace robo

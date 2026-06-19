@@ -584,6 +584,29 @@ void World::buildModel(const SystemTopology& sys,
 // ----------------------------------------------------------------------------
 //  setAtomsLocationsInGround
 // ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+//  setAtomsLocationsInGround  -- the GIBBS-BLOCK CONTINUATION entry point.
+//
+//  This is how one Gibbs block hands the full configuration to the next. The
+//  incoming atomPosG is the previous block's POST-Metropolis state (accepted ->
+//  new point; rejected -> the point we stayed at). Because Cartesian coordinates
+//  fully encode every bond length, bond angle, and torsion, copying them in and
+//  rebuilding this world's internal frames from them carries ALL degrees of
+//  freedom forward unchanged -- exactly the Gibbs requirement that each block
+//  condition on the current values of the coordinates it does not itself sample.
+//
+//  Important: the bonds/angles this world holds rigid are NOT hard-constrained to
+//  idealized values. recomputeGeometry() rebuilds every rigid body's shape from
+//  the ACTUAL incoming coordinates (dst), so a coordinate frozen here sits at
+//  whatever value it currently has -- and if some other block (e.g. a future
+//  bond-length world) moves it, this block picks up the new value on its next
+//  visit. The freeze is per-block (Gibbs conditioning), never a permanent
+//  constraint. The q=0 / identity-quaternion reset does NOT discard geometry: it
+//  only declares "the current configuration is this block's reference", with the
+//  geometry living in the frames just rebuilt from dst. q=0 reconstructs the
+//  incoming pose exactly (exact for a tree), which is also why a rejected move
+//  restores the received geometry bit-for-bit.
+// ----------------------------------------------------------------------------
 void World::setAtomsLocationsInGround(const std::vector<robo::Vec3>& atomPosG) {
     Vec3* dst = state_.atomPosG();
     const int n = std::min<int>(model_.numAtoms, (int)atomPosG.size());
@@ -594,7 +617,7 @@ void World::setAtomsLocationsInGround(const std::vector<robo::Vec3>& atomPosG) {
         return;
     }
 
-    recomputeGeometry(dst);
+    recomputeGeometry(dst); // rigid-body shapes from the carried-over geometry
     std::fill(state_.q(), state_.q() + model_.nq, Real(0));
     for (int qs : model_.quaternionQStart) {
         state_.q()[qs] = Real(1);
@@ -602,6 +625,14 @@ void World::setAtomsLocationsInGround(const std::vector<robo::Vec3>& atomPosG) {
     std::fill(state_.u(), state_.u() + model_.nu, Real(0));
     RobotEngine::realizePosition(model_, state_);
 
+    // Loop-closure target = the CARRIED-OVER distance, not the force-field r0.
+    // The closure distance is part of the state being continued, so it must track
+    // whatever the previous block left (continuation), exactly as the bonds and
+    // angles above do. Do NOT reset this to the equilibrium bond length r0 -- that
+    // would stamp a fixed idealized geometry over the carried-over configuration
+    // and break Gibbs continuation. (Across torsional blocks the closure is held
+    // fixed, so this value simply propagates; a block that genuinely samples the
+    // ring region would update it through the carried-over Cartesian.)
     for (auto& c : constraints_.distance) {
         c.restLength = (dst[c.atomA] - dst[c.atomB]).norm();
     }
@@ -653,11 +684,35 @@ void World::recomputeGeometry(const robo::Vec3* targets) {
 //  Fixman / coordinate-Jacobian corrections (torsional worlds)
 // ----------------------------------------------------------------------------
 double World::calcFixman() {
-    // ln|M_phi| = sum_b ln det(D_b), the O(n) articulated-body determinant.
+    // Fixman compensating potential, Spiridon & Minh 2017 (JCTC 13:4649) Eq. 3:
+    //   U_F = (1/2) RT ln( |M_{N_f}| / |M_3N| )
+    // where |M_{N_f}| is the mass-metric determinant of the constrained system's
+    // FLEXIBLE coordinates and |M_3N| (constant) is the Cartesian reference. U_F
+    // makes the constrained-move marginal (their Eq. 2, rho ~ |M_{N_f}|^{1/2}
+    // e^{-bU}) match the unconstrained Cartesian Boltzmann marginal.
     RobotEngine::realizeArticulatedBodyInertias(model_, state_);
+
+    // (a) Tree term: ln|M_tree| = sum_b ln det(D_b), the O(n) articulated-body
+    //     determinant (Jain et al., refs 9 & 23). For an ACYCLIC molecule the
+    //     flexible coordinates ARE the tree torsions, so |M_{N_f}| = |M_tree| and
+    //     this term alone is exact -- the regime the paper validated.
     const double lnDetM = RobotEngine::calcLogDetM(model_, state_);
-    // U_F = 1/2 RT ( ln|M_phi| - ln|M_3N| ).  Paper Eq. 3.
-    return 0.5 * RT_ * (lnDetM - lnDetMCartesian_);
+
+    // (b) Loop-closure term: for a CYCLIC molecule the ring is opened into the
+    //     spanning tree and closed by a RATTLE distance constraint, which removes
+    //     one flexible DOF per ring. The RATTLE momentum projection (G M^-1 p = 0)
+    //     contributes det(G M^-1 G^T)^{-1/2} to the marginal, so the correct
+    //     flexible determinant is |M_{N_f}| = |M_tree| / det(G M^-1 G^T). The Jain
+    //     tree algorithm does not include this (it is a branched-molecule method);
+    //     the paper never tested ring Boltzmann correctness (its macrocycle data,
+    //     Sec. 3.5, measured efficiency only), so the term was simply missing for
+    //     cyclic systems. calcConstraintLogDet returns 0 when there are no loop
+    //     closures, making this a guaranteed no-op on every acyclic system.
+    const double lnDetZ = constraints_.calcConstraintLogDet(model_, state_);
+
+    // U_F = 1/2 RT ( ln|M_tree| - ln det(G M^-1 G^T) - ln|M_3N| ).
+    // = 1/2 RT ( ln|M_{N_f}| - ln|M_3N| ), i.e. Eq. 3 with the cyclic |M_{N_f}|.
+    return 0.5 * RT_ * (lnDetM - lnDetZ - lnDetMCartesian_);
 }
 
 double World::calcLogSineSqrGamma2() const {
