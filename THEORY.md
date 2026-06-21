@@ -28,13 +28,13 @@ Notation convention: "~" means "distributed as"; "proportional to" is written ou
 |---|---|
 | q | generalized coordinates **mobile in the current block** -- the block's *restricted space*. In torsional dynamics: a subset of torsions, plus the 6 external DOF of any free root body. In general: any subset of internal/Cartesian DOF |
 | p | generalized momenta conjugate to the mobile q |
-| M(q) | configuration-dependent generalized mass-metric (articulated mass matrix) of the block's reduced multibody tree; the Riemannian metric on the restricted space (Section 6) |
+| \mathcal{M}(q) | configuration-dependent generalized mass metric tensor (mass matrix) of the block's reduced multibody tree; the Riemannian metric on the restricted space (Section 6) |
 | D_b | per-body articulated factor (the dof x dof block produced by the articulated-body algorithm at body b); ln det M(q) = sum_b ln det(D_b), computed in O(n) without forming M |
-| M_3N | constant 3N x 3N Cartesian mass matrix (diagonal atomic masses); the metric used in Cartesian blocks. The *effective* reference in the Fixman term for torsional dynamics -- see M_B for the exact one |
-| M_B | full 3N x 3N BAT mass-metric (M_B = J_BAT^T M_3N J_BAT); the **exact** Fixman reference (Jain et al. 2013). det M_B = \|J_BAT\|^2 * det M_3N, so M_B = M_3N up to the configuration-dependent BAT volume element \|J_BAT\|^2 (Section 6) |
+| M_{3N} | constant 3N x 3N Cartesian mass matrix (diagonal atomic masses); the metric used in Cartesian blocks. The *effective* reference in the Fixman term for torsional dynamics -- see M_B for the exact one |
+| M_B | full 3N x 3N BAT mass-metric (M_B = J_{BAT}^T M_{3N} J_{BAT}); the **exact** Fixman reference (Jain et al. 2013). det M_B = \|J_{BAT}\|^2 * det M_3N, so M_B = M_3N up to the configuration-dependent BAT volume element \|J_{BAT}\|^2 (Section 6) |
 | W_BAT(q) | internal BAT-volume compensating potential for any world that mobilizes a *hard* internal coordinate (Ball: angles; Cyl: bonds). W_BAT = -R*T* [ sum_{mobile angles k} ln sin theta_k + sum_{mobile bonds i} ln r_i^2 ]; identically zero (constant, cancels) under torsional dynamics (Section 6) |
 | V(q) | potential energy (force field + chosen solvent model), evaluated on the full atomistic model through OpenMM |
-| H(q,p) | the **Hamiltonian function** of the block, H = V + K + F + J (+ W_BAT for Ball/Cyl worlds) (Section 6) |
+| \mathcal{H}(q,p) | the **Hamiltonian function** of the block, H = V + K + F + J (+ W_BAT for Ball/Cyl worlds) (Section 6) |
 | K(p,q) | kinetic energy, (1/2) p^T M(q)^-1 p (the Riemannian cometric form) |
 | F(q) | Fixman compensating potential (Section 6) |
 | J(q) | external-rotation Jacobian for free root bodies (Section 6) |
@@ -46,7 +46,7 @@ Notation convention: "~" means "distributed as"; "proportional to" is written ou
 | gamma2_b | polar ("pitch") Euler angle of free root body b, extracted from its orientation quaternion |
 | n, nu | n = number of bodies in the block's tree (the O(n) cost); nu = total mobilities (length of u). Distinct from M_3N's N = atom count |
 | Phi, H, P, D, Ga, Mk_G | spatial-operator quantities of the multibody engine: rigid shift Phi, hinge map H, articulated body inertia P, hinge inertia D = H^T P H, articulated gain Ga = P H D^-1, body spatial inertia Mk_G (all defined in Section 3.5) |
-| pi | target distribution; Z is the partition function |
+| \pi | target distribution; Z is the configurational partition function |
 
 ---
 
@@ -55,7 +55,7 @@ Notation convention: "~" means "distributed as"; "proportional to" is written ou
 By default the target is the canonical Boltzmann distribution
 
 ```
-pi(q) = Z^-1 * exp( -beta * V(q) )
+\pi(q) = Z^-1 * exp( -beta * V(q) )
 ```
 
 (constant N, T), with pi defined on the flat Cartesian configuration measure dx; the
@@ -63,7 +63,7 @@ generalized-coordinate machinery of Sections 3 and 6 reproduces this same target
 coordinate-change Jacobians absorbed into F and J. With implicit solvent there is no simulation box,
 so there is no volume or PV term;
 "NVT" here means constant-temperature canonical sampling. This is the **implemented default, not a
-limitation**: the machinery samples any target of the form pi(q) proportional to exp(-beta*phi(q))
+limitation**: the machinery samples any target of the form \pi(q) proportional to exp(-beta*phi(q))
 for a configurational weight phi, so other ensembles or biased/tempered targets are admissible by
 substituting the corresponding weight into the acceptance Hamiltonian (Section 6). Explicit-solvent
 constant-pressure sampling, for instance, would add the appropriate PV/box terms; nothing in the
@@ -104,7 +104,7 @@ configurational partition function is Z = integral exp(-beta*V) dx over Cartesia
 -> BAT change of variables has the Jacobian
 
 ```
-dx = |J_BAT| * db * dtheta * dtau * de,     |J_BAT| = ( product_i r_i^2 ) * ( product_j sin theta_j ) * const
+dx = |J_{BAT}| * db * d\theta * d\tau * de,     |J_BAT| = ( product_i r_i^2 ) * ( product_j sin theta_j ) * const
 ```
 
 (the standard Z-matrix volume element; de are external DOF). This Jacobian is **independent of the
