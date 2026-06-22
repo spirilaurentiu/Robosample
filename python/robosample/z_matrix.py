@@ -168,17 +168,83 @@ def build_z_matrix(
                     "indices: %s." % (len(z_i), n, missing)
                 )
             if len(z_i) == placed_at_last_retry:
-                raise ValueError(
-                    "Z-matrix stalled at %d/%d atoms. %d deferred pair(s) could "
-                    "not be resolved: %s. Likely cause: degenerate topology or an "
-                    "unsuitable root atom."
-                    % (
-                        len(z_i),
-                        n,
-                        len(deferred),
-                        [(a0.idx, a1.idx) for a0, a1 in deferred],
+                # No progress is possible with proper (tree-depth-3) references.
+                # A rigid fragment can lack such a chain entirely: a 4-point
+                # water's virtual site hangs off the central atom whose other
+                # tree-neighbours are all leaves, so no grandchild reference
+                # exists. Place the remaining atom(s) with a FALLBACK reference
+                # built from already-placed atoms. The dihedral reference is only a
+                # geometric anchor and, for a rigid fragment, its internal
+                # coordinates are frozen, so any three distinct placed atoms that
+                # include the atom's tree-parent are a valid reference. This runs
+                # ONLY at a genuine stall, so a molecule that can be built with
+                # proper references is never affected.
+                progressed = False
+                still: list[tuple[pmd.Atom, pmd.Atom]] = []
+                for a0, a1 in deferred:
+                    if a0.idx in selected:
+                        continue
+                    # angle reference a2: a placed tree-neighbour of a1, != a0.
+                    a2 = next(
+                        (
+                            a
+                            for a in tree_adj[a1.idx]
+                            if a.idx in selected and a.idx != a0.idx
+                        ),
+                        None,
                     )
-                )
+                    if a2 is None:
+                        still.append((a0, a1))
+                        continue
+                    # dihedral reference a3: prefer a placed atom bonded to a2 (a
+                    # real dihedral -- for water this is the H-H ring bond that was
+                    # cut from the tree); else any placed distinct atom.
+                    a3idx = next(
+                        (
+                            p.idx
+                            for p in a2.bond_partners
+                            if p.idx in selected
+                            and p.idx not in (a0.idx, a1.idx, a2.idx)
+                        ),
+                        None,
+                    )
+                    if a3idx is None:
+                        a3idx = next(
+                            (
+                                idx
+                                for idx in sorted(selected)
+                                if idx not in (a0.idx, a1.idx, a2.idx)
+                            ),
+                            None,
+                        )
+                    if a3idx is None:
+                        still.append((a0, a1))
+                        continue
+                    z_i.append(a0.idx)
+                    z_j.append(a1.idx)
+                    z_k.append(a2.idx)
+                    z_l.append(a3idx)
+                    selected.add(a0.idx)
+                    progressed = True
+                    for nb in tree_adj[a0.idx]:
+                        if nb.idx not in selected:
+                            still.append((nb, a0))
+                if not progressed:
+                    raise ValueError(
+                        "Z-matrix stalled at %d/%d atoms. %d deferred pair(s) could "
+                        "not be resolved: %s. Likely cause: degenerate topology or an "
+                        "unsuitable root atom."
+                        % (
+                            len(z_i),
+                            n,
+                            len(deferred),
+                            [(a0.idx, a1.idx) for a0, a1 in deferred],
+                        )
+                    )
+                deferred = []
+                placed_at_last_retry = len(z_i)
+                work.extend(still)
+                continue
             placed_at_last_retry = len(z_i)
             work.extend(deferred)
             deferred.clear()

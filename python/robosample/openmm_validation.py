@@ -53,19 +53,49 @@ def _build_reference_system(
     """Build the ParmEd + OpenMM reference ``System`` (shared by the helpers).
 
     Kept in one place so the plain and per-group reference energies are
-    guaranteed to come from an identically configured system.
+    guaranteed to come from an identically configured system. The nonbonded
+    method, cutoff, implicit-solvent model, and (for Ewald/PME) the reciprocal-
+    space tolerance are taken from ``context.system_topology`` so the reference
+    mirrors whatever the C++ side built -- gas phase, GBSA, or explicit-solvent
+    PME alike.
     """
-    implicit_solvent = mm.app.OBC2 if context.system_topology.use_gbsa_obc2 else None
+    sys_top = context.system_topology
+    implicit_solvent = mm.app.OBC2 if sys_top.use_gbsa_obc2 else None
+
+    # Map the Robosample nonbonded method onto the OpenMM app constant. ParmEd's
+    # createSystem reads the periodic box straight from `parm` (loaded with the
+    # inpcrd), so PME/Ewald/CutoffPeriodic pick up the same box the C++ side uses.
+    method_map = {
+        robosample.NonbondedMethod.NoCutoff: mm.app.NoCutoff,
+        robosample.NonbondedMethod.CutoffNonPeriodic: mm.app.CutoffNonPeriodic,
+        robosample.NonbondedMethod.CutoffPeriodic: mm.app.CutoffPeriodic,
+        robosample.NonbondedMethod.Ewald: mm.app.Ewald,
+        robosample.NonbondedMethod.PME: mm.app.PME,
+    }
+    nb_method = method_map.get(sys_top.nonbonded_method, mm.app.NoCutoff)
+    is_periodic = sys_top.nonbonded_method in (
+        robosample.NonbondedMethod.CutoffPeriodic,
+        robosample.NonbondedMethod.Ewald,
+        robosample.NonbondedMethod.PME,
+    )
 
     parm = pmd.load_file(str(prmtop_path), xyz=str(inpcrd_path))
     system = parm.createSystem(
-        nonbondedMethod=None,
-        nonbondedCutoff=context.system_topology.nonbonded_cutoff,
+        nonbondedMethod=nb_method,
+        nonbondedCutoff=sys_top.nonbonded_cutoff,
         constraints=None,
         implicitSolvent=implicit_solvent,
         rigidWater=False,
         removeCMMotion=False,
     )
+
+    # Match the C++ side's PME/Ewald reciprocal-space accuracy and dispersion
+    # correction so the totals line up rather than differing by a tunable error.
+    if is_periodic:
+        for force in system.getForces():
+            if isinstance(force, mm.NonbondedForce):
+                force.setEwaldErrorTolerance(sys_top.ewald_error_tolerance)
+                force.setUseDispersionCorrection(True)
     return parm, system
 
 
@@ -81,6 +111,7 @@ def reference_potential_energy(
     platform = mm.Platform.getPlatformByName(platform_name)
     mm_context = mm.Context(system, integrator, platform)
     mm_context.setPositions(parm.positions)
+    mm_context.computeVirtualSites()  # place EPs from their frames (no-op if none)
     state = mm_context.getState(getEnergy=True)
     return state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
 
@@ -120,6 +151,7 @@ def reference_potential_energy_by_group(
     platform = mm.Platform.getPlatformByName(platform_name)
     mm_context = mm.Context(system, integrator, platform)
     mm_context.setPositions(parm.positions)
+    mm_context.computeVirtualSites()  # place EPs from their frames (no-op if none)
 
     total = (
         mm_context.getState(getEnergy=True)

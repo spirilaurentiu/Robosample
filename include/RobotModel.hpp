@@ -114,6 +114,23 @@ struct RobotModel {
     std::vector<robo::UnitInertia>
         bodyUnitInertia_B; // [numBodies] unit inertia about body origin, body frame
 
+    // ---- kinetic-metric preconditioning (fictitious mass; SAMPLING only) ----
+    // Per-body scale applied to the body spatial inertia Mk_G in the KINETIC
+    // metric ONLY: the momentum draw (sqrt(M^-1)), the kinetic energy
+    // (1/2 u^T M u), and the Fixman log-det (ln det M). Default 1.0 == physical.
+    // MUST be a run-constant (never a function of q). Does NOT enter V.
+    //
+    // Why this is bias-free: Mk_G is the single source for P/D (hence both the
+    // sqrt(M^-1) draw and ln det M) and for calcKineticEnergy, so scaling it by a
+    // constant s_b shifts ln det M by the constant sum_b dof_b * ln s_b, which
+    // cancels in dH; and the marginalised det(M)^{1/2} is cancelled exactly by
+    // the Fixman exp(-beta F) for the SAME (scaled) M. Net effect: the sampled
+    // configurational distribution is unchanged; only the proposal dynamics are
+    // rescaled, raising the stable dt ~sqrt(s_b) for the scaled body. Used to
+    // tame stiff explicit-solvent libration. See World::setMassScaleByJoint /
+    // setBodyMassScale. May be left empty (treated as all-1.0).
+    std::vector<robo::Real> bodyMassScale; // [numBodies]  default 1.0
+
     // ---- atom <-> body maps ------------------------------------------------
     std::vector<int> atomBody;             // [numAtoms]  body index of each atom
     std::vector<robo::Real> atomMass;      // [numAtoms]  per-atom mass (Daltons), constant

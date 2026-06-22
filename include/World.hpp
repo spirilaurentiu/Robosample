@@ -224,6 +224,15 @@ class World {
 
     void setTemperature(double T);
 
+    // Kinetic-metric preconditioning (fictitious mass; sampling only). Inflates
+    // the spatial inertia used ONLY in the proposal (momentum draw, KE, Fixman
+    // ln det M) for selected bodies, raising their stable dt ~sqrt(scale) with
+    // zero configurational bias (see RobotModel::bodyMassScale). Call after
+    // buildModel(). Typical use: setMassScaleByJoint(JointType::Free, 16.0) on a
+    // solvent world to tame water libration.
+    void setBodyMassScale(int body, double scale);
+    void setMassScaleByJoint(JointType jt, double scale);
+
     private:
     // --- internal (torsional) HMC pieces ---
     void reinitialize(); // seed velocities, record initial H (incl. Fixman)

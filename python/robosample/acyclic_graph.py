@@ -118,6 +118,13 @@ def build_acyclic_graph(
             for gchild in child.bond_partners:
                 if gchild is parent:
                     continue
+                # The four atoms of a dihedral must be DISTINCT. With extra-point
+                # (virtual-site) water the bond_partners of the real atoms include
+                # the EP, so e.g. grandparent==gchild==H1 for the O-EPW bond yields
+                # (H1, O, EPW, H1) -- ParmEd rejects a 4-atom term with a duplicate
+                # atom. A repeated atom is not a real dihedral anyway, so skip it.
+                if len({grandparent.idx, parent.idx, child.idx, gchild.idx}) < 4:
+                    continue
                 candidate = pmd.Dihedral(grandparent, parent, child, gchild)
                 dtype: DihedralType = dihedral_classifier.classify(candidate)
                 if dtype == DihedralType.PROTEIN_RING_DIHEDRAL:

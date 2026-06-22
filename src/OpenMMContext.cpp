@@ -79,10 +79,94 @@ auto OpenMMContext::initialize(const SystemTopology& systemTopology) -> bool {
         system->addParticle(systemTopology.atomsMass[i]);
     }
 
+    // ------------------------------------------------------------------------
+    //  Periodic box (explicit solvent). For any periodic method the box vectors
+    //  MUST be set on the System BEFORE the Context is constructed -- PME builds
+    //  its reciprocal-space grid from them at context-creation time. The vectors
+    //  arrive already reduced (lower-triangular) from ParmEd, so we copy them in
+    //  verbatim. OpenMM also requires the cutoff to be at most half the smallest
+    //  box width; check it here so the failure is legible instead of a deep
+    //  OpenMM assertion.
+    // ------------------------------------------------------------------------
+    if (isPeriodic(systemTopology.nonbondedMethod)) {
+        if (systemTopology.boxVectors.size() != 9) {
+            throw std::runtime_error("A periodic nonbonded method (CutoffPeriodic/Ewald/PME) requires "
+                                     "box_vectors of length 9 (three reduced lattice vectors). Got "
+                                     + std::to_string(systemTopology.boxVectors.size()) + ".");
+        }
+        const auto& bv = systemTopology.boxVectors;
+        const OpenMM::Vec3 a(bv[0], bv[1], bv[2]);
+        const OpenMM::Vec3 b(bv[3], bv[4], bv[5]);
+        const OpenMM::Vec3 c(bv[6], bv[7], bv[8]);
+        // Diagonal entries are the box widths for reduced (lower-triangular) vectors.
+        const double minWidth = std::min({bv[0], bv[4], bv[8]});
+        if (systemTopology.nonbondedCutoff > 0.5 * minWidth) {
+            throw std::runtime_error("nonbonded_cutoff (" + std::to_string(systemTopology.nonbondedCutoff)
+                                     + " nm) exceeds half the smallest box width (" + std::to_string(minWidth)
+                                     + " nm). Lower the cutoff or enlarge the box.");
+        }
+        system->setDefaultPeriodicBoxVectors(a, b, c);
+        std::cout << "[INFO] Periodic box set: a=" << bv[0] << " b=" << bv[4] << " c=" << bv[8]
+                  << " nm; method="
+                  << (systemTopology.nonbondedMethod == NonbondedMethod::PME     ? "PME"
+                      : systemTopology.nonbondedMethod == NonbondedMethod::Ewald ? "Ewald"
+                                                                                 : "CutoffPeriodic")
+                  << ", cutoff=" << systemTopology.nonbondedCutoff << " nm.\n";
+    }
+
+    // ------------------------------------------------------------------------
+    //  Virtual sites (extra points). Declared BEFORE the Context is created so
+    //  OpenMM treats each EP as a dependent particle: the integrator does not
+    //  move it, computeVirtualSites() places it from its parents, and its force
+    //  is redistributed onto the parents. Without this an EP (mass 0) is frozen
+    //  in space and detaches from its molecule as the molecule moves.
+    // ------------------------------------------------------------------------
+    hasVirtualSites = systemTopology.numVirtualSites > 0;
+    for (int i = 0; i < systemTopology.numVirtualSites; ++i) {
+        system->setVirtualSite(systemTopology.vsSite[i],
+                               new OpenMM::ThreeParticleAverageSite(systemTopology.vsAtom1[i],
+                                                                    systemTopology.vsAtom2[i],
+                                                                    systemTopology.vsAtom3[i],
+                                                                    systemTopology.vsWeight1[i],
+                                                                    systemTopology.vsWeight2[i],
+                                                                    systemTopology.vsWeight3[i]));
+    }
+    if (hasVirtualSites) {
+        std::cout << "[INFO] Declared " << systemTopology.numVirtualSites
+                  << " virtual site(s) (3-particle average).\n";
+    }
+
+    // Safety net: every massless particle MUST be a declared virtual site. A
+    // massless real particle is silently frozen by the integrator (this is
+    // exactly how an undeclared water EP detaches and corrupts the electrostatics
+    // without any crash). Fail loudly instead.
+    {
+        std::vector<bool> isVS(static_cast<std::size_t>(systemTopology.numAtoms), false);
+        for (int i = 0; i < systemTopology.numVirtualSites; ++i) {
+            isVS[static_cast<std::size_t>(systemTopology.vsSite[i])] = true;
+        }
+        for (int a = 0; a < systemTopology.numAtoms; ++a) {
+            if (systemTopology.atomsMass[a] == 0.0 && !isVS[static_cast<std::size_t>(a)]) {
+                throw std::runtime_error(
+                    "Particle " + std::to_string(a)
+                    + " is massless but is not a declared virtual site. Massless real particles are "
+                      "frozen by the integrator (an extra point would detach from its molecule). "
+                      "Declare it as a virtual site (populate system_topology.vs*), or give it mass.");
+            }
+        }
+    }
+
     // GBSA needs implicit-solvent radii. If GBSA is requested but every radius is
     // zero (not populated by the prmtop reader), GBSA would be silently wrong, so
     // skip it with a warning rather than emit a bogus solvation energy.
     bool gbsaUsable = systemTopology.useGBSAOBC2;
+    // Implicit (GBSA) and explicit (periodic) solvent are mutually exclusive --
+    // a periodic box means real waters carry the solvation, so GBSA must be off.
+    if (gbsaUsable && isPeriodic(systemTopology.nonbondedMethod)) {
+        std::cerr << "[WARN] use_gbsa_obc2 is set together with a periodic nonbonded method; "
+                     "GBSA (implicit) is incompatible with explicit solvent and will be skipped.\n";
+        gbsaUsable = false;
+    }
     if (gbsaUsable) {
         bool anyRadius = false;
         for (int i = 0; i < systemTopology.numAtoms; ++i) {
@@ -195,6 +279,9 @@ auto OpenMMContext::initialize(const SystemTopology& systemTopology) -> bool {
 auto OpenMMContext::computePotentialEnergy(const std::vector<OpenMM::Vec3>& positions) -> double {
     ensureInitialized();
     context->setPositions(positions);
+    if (hasVirtualSites) {
+        context->computeVirtualSites();
+    }
     const auto state = context->getState(OpenMM::State::Energy, enforcePeriodicBox);
     potentialEnergy = state.getPotentialEnergy();
     return potentialEnergy;
@@ -204,6 +291,9 @@ auto OpenMMContext::computePotentialEnergyByGroup(const std::vector<OpenMM::Vec3
     -> std::pair<double, std::vector<OpenMMContext::ForceGroupEnergy>> {
     ensureInitialized();
     context->setPositions(positions);
+    if (hasVirtualSites) {
+        context->computeVirtualSites();
+    }
     const auto totalState = context->getState(OpenMM::State::Energy, enforcePeriodicBox);
     potentialEnergy = totalState.getPotentialEnergy();
 
@@ -242,6 +332,9 @@ void OpenMMContext::evaluateForcesFromPositionsCache(const std::vector<OpenMM::V
                                                      std::vector<OpenMM::Vec3>& outForces) const {
     ensureInitialized();
     context->setPositions(positions);
+    if (hasVirtualSites) {
+        context->computeVirtualSites();
+    }
     const auto state = context->getState(OpenMM::State::Forces, enforcePeriodicBox);
     outForces = state.getForces();
 }
@@ -301,6 +394,26 @@ auto OpenMMContext::createNonbondedForce(const SystemTopology& systemTopology) -
                 nonbondedForce->setUseDispersionCorrection(true);
             }
             break;
+        case NonbondedMethod::CutoffPeriodic:
+            // Periodic reaction-field cutoff. Explicit solvent => isotropic
+            // long-range dispersion correction on.
+            nonbondedForce->setNonbondedMethod(OpenMM::NonbondedForce::CutoffPeriodic);
+            nonbondedForce->setUseDispersionCorrection(true);
+            break;
+        case NonbondedMethod::Ewald:
+            nonbondedForce->setNonbondedMethod(OpenMM::NonbondedForce::Ewald);
+            nonbondedForce->setEwaldErrorTolerance(systemTopology.ewaldErrorTolerance);
+            nonbondedForce->setUseDispersionCorrection(true);
+            break;
+        case NonbondedMethod::PME:
+            // Particle-Mesh Ewald: the standard explicit-solvent electrostatics.
+            // The box was already set on the System above. Exceptions/1-4 pairs
+            // added below are PME-aware (OpenMM applies the reciprocal-space
+            // correction for excluded pairs automatically).
+            nonbondedForce->setNonbondedMethod(OpenMM::NonbondedForce::PME);
+            nonbondedForce->setEwaldErrorTolerance(systemTopology.ewaldErrorTolerance);
+            nonbondedForce->setUseDispersionCorrection(true);
+            break;
         default:
             throw std::invalid_argument("Unsupported nonbonded method");
     }
@@ -340,7 +453,11 @@ auto OpenMMContext::createGBSAOBCForce(const SystemTopology& systemTopology) -> 
             gbsaForceMethod = OpenMM::GBSAOBCForce::CutoffNonPeriodic;
             break;
         default:
-            throw std::invalid_argument("Unsupported nonbonded method for GBSAOBCForce");
+            // CutoffPeriodic/Ewald/PME mean explicit solvent -- GBSA is implicit
+            // and must never be combined with it. initialize() already skips GBSA
+            // for periodic methods, so reaching here is a logic error.
+            throw std::invalid_argument("GBSA (implicit solvent) is incompatible with a periodic "
+                                        "nonbonded method (explicit solvent).");
     }
     auto* force = new OpenMM::GBSAOBCForce();
     force->setSolventDielectric(systemTopology.gbsaSolventDielectric); // default 78.5

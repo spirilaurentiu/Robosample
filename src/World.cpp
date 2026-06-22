@@ -246,6 +246,34 @@ void World::setTemperature(double T) {
 }
 
 // ----------------------------------------------------------------------------
+//  Kinetic-metric preconditioning (fictitious mass; sampling only).
+//  Scales the spatial inertia used ONLY in the proposal (momentum draw, KE,
+//  Fixman ln det M) -> raises the stable dt ~sqrt(scale) for the scaled body
+//  with ZERO configurational bias (RobotModel::bodyMassScale documents why).
+//  Call AFTER buildModel(). Re-sizes defensively if the model array is missing
+//  (e.g. a Cartesian world that took the compact build path).
+// ----------------------------------------------------------------------------
+void World::setBodyMassScale(int body, double scale) {
+    if ((int)model_.bodyMassScale.size() != model_.numBodies) {
+        model_.bodyMassScale.assign(model_.numBodies, robo::Real(1));
+    }
+    if (body >= 1 && body < model_.numBodies) {
+        model_.bodyMassScale[body] = robo::Real(scale);
+    }
+}
+
+void World::setMassScaleByJoint(JointType jt, double scale) {
+    if ((int)model_.bodyMassScale.size() != model_.numBodies) {
+        model_.bodyMassScale.assign(model_.numBodies, robo::Real(1));
+    }
+    for (int b = 1; b < model_.numBodies; ++b) {
+        if (model_.bodyJoint[b] == jt) {
+            model_.bodyMassScale[b] = robo::Real(scale);
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
 //  buildModel  (unchanged structure; stores ln|M_3N| for the Fixman reference)
 // ----------------------------------------------------------------------------
 void World::buildModel(const SystemTopology& sys,
@@ -542,6 +570,7 @@ void World::buildModel(const SystemTopology& sys,
     model_.bodyMass.assign(B, 0);
     model_.bodyCom_B.assign(B, Vec3(0));
     model_.bodyUnitInertia_B.assign(B, robo::UnitInertia(0, 0, 0));
+    model_.bodyMassScale.assign(B, robo::Real(1)); // kinetic-metric preconditioning; 1.0 = physical
     model_.atomStation_B.assign(nAtoms, Vec3(0));
 
     state_.allocateFull(model_);
@@ -715,27 +744,143 @@ double World::calcFixman() {
     return 0.5 * RT_ * (lnDetM - lnDetZ - lnDetMCartesian_);
 }
 
-double World::calcLogSineSqrGamma2() const {
-    // Sum over EVERY root body (parent == Ground) that carries a full 3D
-    // orientation (Free joint). The old code used topologies[0] only, missing
-    // every additional free molecule (multiple ligands, free receptor, ...).
-    const robo::Transform* X_GB = state_.X_GB();
-    double acc = 0.0;
-    for (int b = 1; b < model_.numBodies; ++b) {
-        if (model_.bodyParent[b] != 0) {
+// ---------------------------------------------------------------------------
+//  Absolute orientation of a free-root body, built from a body-fixed atom
+//  triplet in the CURRENT Ground frame.
+//
+//  WHY NOT X_GB[b].R(): the per-block frame handoff (setAtomsLocationsInGround
+//  -> recomputeGeometry) rebuilds every root frame with IDENTITY rotation and
+//  resets the joint coordinate q = 0 (computeAllAtomFrames r_self branch). So
+//  X_GB[b].R() carries only the WITHIN-block deviation from that reset -- it is
+//  exactly identity at the START of every move (the gimbal pole, sin(pitch)->0).
+//  Reading it floors J(q) to its eps cap for every free root at H_old, every
+//  round, independent of the real pose -- the +41352 vs +7352 artifact. The
+//  external-rotation Jacobian needs the molecule's TRUE orientation in space
+//  (Section 6: "body b's orientation"), which is frame-reset-invariant and read
+//  here straight from the atom geometry.
+//
+//  Convention: x along (root -> reference atom), z along the triplet normal,
+//  y = z x x. Any fixed convention is admissible: it shifts J by a per-body
+//  constant that is IDENTICAL at H_old and H_new, so only the physical change in
+//  orientation across the trajectory survives in dH. Returns false for a body
+//  without 3 non-collinear real atoms (no 3D orientation DOF -> no J term).
+static bool freeRootAbsRotation(const RobotModel& m, const RobotState& s, int b, Rotation& Rout) {
+    const Vec3* P = s.atomPosG();
+    const int a0 = m.bodyRootAtom[b];
+    if (a0 < 0) {
+        return false;
+    }
+    const Vec3 p0 = P[a0];
+    // Pick the two real (mass>0) body atoms, distinct from the root, that span
+    // the largest triangle -- the most numerically stable, orientation-defining
+    // pair (a near-collinear pick would make the frame ill-conditioned).
+    int bestA1 = -1, bestA2 = -1;
+    Real bestArea = 0;
+    for (int ci = m.bodyAtomsBeg[b]; ci < m.bodyAtomsEnd[b]; ++ci) {
+        const int a1 = m.bodyAtoms[ci];
+        if (a1 == a0 || m.atomMass[a1] <= Real(0)) {
             continue;
         }
-        if (model_.bodyJoint[b] != JointType::Free) {
+        for (int cj = ci + 1; cj < m.bodyAtomsEnd[b]; ++cj) {
+            const int a2 = m.bodyAtoms[cj];
+            if (a2 == a0 || m.atomMass[a2] <= Real(0)) {
+                continue;
+            }
+            const Real area = ((P[a1] - p0) % (P[a2] - p0)).norm();
+            if (area > bestArea) {
+                bestArea = area;
+                bestA1 = a1;
+                bestA2 = a2;
+            }
+        }
+    }
+    if (bestA1 < 0 || bestArea < Real(1e-10)) {
+        return false;
+    }
+    const Vec3 ex = (P[bestA1] - p0) / (P[bestA1] - p0).norm();
+    Vec3 ez = ex % (P[bestA2] - p0);
+    ez = ez / ez.norm();
+    const Vec3 ey = ez % ex;
+    Rout = Rotation(robo::Mat33(ex[0], ey[0], ez[0], ex[1], ey[1], ez[1], ex[2], ey[2], ez[2]));
+    return true;
+}
+
+double World::calcLogSineSqrGamma2() const {
+    // Sum over EVERY free root body (parent == Ground, Free joint). gamma2_b is
+    // the pitch of the body's TRUE orientation in space (freeRootAbsRotation),
+    // NOT X_GB[b].R() -- which the per-block reset pins to identity (q = 0) at
+    // the start of every move, flooring J for all roots (see helper).
+    double acc = 0.0;
+    for (int b = 1; b < model_.numBodies; ++b) {
+        if (model_.bodyParent[b] != 0 || model_.bodyJoint[b] != JointType::Free) {
+            continue;
+        }
+        Rotation Rabs;
+        if (!freeRootAbsRotation(model_, state_, b, Rabs)) {
+            continue; // < 3 non-collinear real atoms: no 3D orientation DOF
+        }
+        Real w, x, y, z;
+        rotationToQuaternion(Rabs, w, x, y, z);
+        const Real sinPitch = std::clamp(Real(2.0) * ((w * y) - (z * x)), Real(-1.0), Real(1.0));
+        acc += safeLogSineSqr(std::asin(sinPitch));
+    }
+    return acc;
+}
+
+// ---------------------------------------------------------------------------
+//  TEMPORARY DIAGNOSTIC -- remove once the J / logSineSqr term is confirmed.
+//
+//  Prints the per-free-root pitch sine that feeds the external-rotation
+//  Jacobian J, now read from the body's TRUE orientation (freeRootAbsRotation),
+//  the same quantity calcLogSineSqrGamma2 uses. Called once in reinitialize()
+//  (START of move) and once in currentTotalEnergy() (END). After the fix BOTH
+//  should show ordinary, non-floored values and nearly the same sum (the pose
+//  barely moves in one block) -- i.e. floored=0 at "reinit", and J no longer
+//  dominates dH.
+static void dbgPrintFreeRootPitches(const char* where, const RobotModel& m, const RobotState& s) {
+    int nFree = 0, nFloored = 0, shown = 0;
+    double totLss = 0.0;
+    std::fprintf(stderr, "[Jdbg %-6s] per-free-root sinPitch (first few shown):\n", where);
+    for (int b = 1; b < m.numBodies; ++b) {
+        if (m.bodyParent[b] != 0 || m.bodyJoint[b] != JointType::Free) {
+            continue;
+        }
+        ++nFree;
+        Rotation Rabs;
+        if (!freeRootAbsRotation(m, s, b, Rabs)) {
             continue;
         }
         Real w, x, y, z;
-        rotationToQuaternion(X_GB[b].R(), w, x, y, z);
-        Real sinPitch = 2.0 * ((w * y) - (z * x));
-        sinPitch = std::clamp(sinPitch, Real(-1.0), Real(1.0));
-        const Real pitch = std::asin(sinPitch);
-        acc += safeLogSineSqr(pitch);
+        rotationToQuaternion(Rabs, w, x, y, z);
+        const Real sinPitch = std::clamp(Real(2.0) * ((w * y) - (z * x)), Real(-1.0), Real(1.0));
+        const Real s2 = sinPitch * sinPitch;
+        const Real lss = safeLogSineSqr(std::asin(sinPitch));
+        totLss += lss;
+        if (s2 < Real(1e-12)) {
+            ++nFloored;
+        }
+        if (shown < 5) {
+            std::fprintf(stderr,
+                         "[Jdbg %-6s]   body=%-5d quat=(%+.4f %+.4f %+.4f %+.4f) "
+                         "sinPitch=%+.3e sin^2=%.3e ln(sin^2)=%+8.3f\n",
+                         where,
+                         b,
+                         w,
+                         x,
+                         y,
+                         z,
+                         sinPitch,
+                         s2,
+                         lss);
+            ++shown;
+        }
     }
-    return acc;
+    std::fprintf(stderr,
+                 "[Jdbg %-6s] freeRoots=%d  floored(sin^2<1e-12)=%d  sum ln(sin^2)=%.1f\n",
+                 where,
+                 nFree,
+                 nFloored,
+                 totLss);
 }
 
 // ----------------------------------------------------------------------------
@@ -1137,6 +1282,16 @@ bool World::generateSample() {
         state_.energy.total = Hold_;
     }
 
+    // Real pre-trajectory energy components, for an HONEST acceptance log and a
+    // correct clash gate. reinitialize() already drew the momenta and folded the
+    // resulting kinetic energy into Hold_ -- so KE_old is NOT zero; the metropolis
+    // test compares the full Hold_ (PE + KE + Fixman + J) against Hnew. For a
+    // torsional world these are the freshly-seeded values; for docking PE/Fix are
+    // referenced to the pre-kick pose (KE is configuration-independent).
+    const double peOld = docking_ ? pePre : state_.energy.pe;
+    const double keOld = state_.energy.ke;
+    const double fixOld = docking_ ? fixPre : state_.energy.fixman;
+
     const Real h = sampler_.timeStep;
 
     // PRE-STEP CLASH SCREEN (docking). reinitialize() has just evaluated the
@@ -1193,30 +1348,38 @@ bool World::generateSample() {
         const double peNew = state_.energy.pe;
         const double keNew = state_.energy.ke;
         const double fixNew = state_.energy.fixman;
-        const double dPE = peNew - pePre;
-        const double dFix = fixNew - fixPre;
+        const double dPE = peNew - peOld;
+        const double dKE = keNew - keOld;
+        const double dFix = fixNew - fixOld;
         const double dH = Hnew - Hold_;
         const bool valid = std::isfinite(Hnew) && std::isfinite(peNew) && (dPE <= sampler_.maxStartPE);
         const bool mhPass = metropolis(Hold_, Hnew);
+        const char* tag = docking_ ? "dock" : "hmc";
         std::fprintf(stderr,
-                     "[dock] post-MD decision:\n"
-                     "[dock]   PE_old  = %12.2f   PE_new  = %12.2f   dPE  = %+12.2f kJ/mol\n"
-                     "[dock]   KE_old  = %12.2f   KE_new  = %12.2f   dKE  = %+12.2f kJ/mol\n"
-                     "[dock]   Fix_old = %12.2f   Fix_new = %12.2f   dFix = %+12.2f kJ/mol\n"
-                     "[dock]   H_old   = %12.2f   H_new   = %12.2f   dH   = %+12.2f kJ/mol\n"
-                     "[dock]   valid(dPE<=%.0f)=%s  metropolis=%s  -> %s\n",
-                     pePre,
+                     "[%s] post-MD decision:\n"
+                     "[%s]   PE_old  = %12.2f   PE_new  = %12.2f   dPE  = %+12.2f kJ/mol\n"
+                     "[%s]   KE_old  = %12.2f   KE_new  = %12.2f   dKE  = %+12.2f kJ/mol\n"
+                     "[%s]   Fix_old = %12.2f   Fix_new = %12.2f   dFix = %+12.2f kJ/mol\n"
+                     "[%s]   H_old   = %12.2f   H_new   = %12.2f   dH   = %+12.2f kJ/mol\n"
+                     "[%s]   valid(dPE<=%.0f)=%s  metropolis=%s  -> %s\n",
+                     tag,
+                     tag,
+                     peOld,
                      peNew,
                      dPE,
-                     0.0,
+                     tag,
+                     keOld,
                      keNew,
-                     keNew,
-                     fixPre,
+                     dKE,
+                     tag,
+                     fixOld,
                      fixNew,
                      dFix,
+                     tag,
                      Hold_,
                      Hnew,
                      dH,
+                     tag,
                      sampler_.maxStartPE,
                      valid ? "Y" : "N",
                      mhPass ? "Y" : "N",
@@ -1226,9 +1389,9 @@ bool World::generateSample() {
             accepted = true;
         }
     } else if (!stepsOk) {
-        std::fprintf(stderr, "[dock] post-MD: non-finite force mid-step or pre-screen -> reject\n");
+        std::fprintf(stderr, "[hmc] post-MD: non-finite force mid-step or pre-screen -> reject\n");
     } else {
-        std::fprintf(stderr, "[gen] q NON-FINITE -> restoring\n");
+        std::fprintf(stderr, "[hmc] q NON-FINITE -> restoring\n");
     }
 
     if (accepted) {
@@ -1300,6 +1463,7 @@ void World::reinitialize() {
     if (sampler_.useFixman) {
         fixman = calcFixman();
         logSineSqr = calcLogSineSqrGamma2();
+        dbgPrintFreeRootPitches("reinit", model_, state_); // TEMP: J-term diagnostic
     }
     state_.energy.pe = pe;
     state_.energy.ke = ke;
@@ -1318,6 +1482,7 @@ double World::currentTotalEnergy() {
     if (sampler_.useFixman) {
         fixman = calcFixman(); // realizes ABI internally; position already current
         logSineSqr = calcLogSineSqrGamma2();
+        dbgPrintFreeRootPitches("postMD", model_, state_); // TEMP: J-term diagnostic
     }
     state_.energy.pe = pe;
     state_.energy.ke = ke;

@@ -197,6 +197,45 @@ struct SystemTopology {
     NonbondedMethod nonbondedMethod = NonbondedMethod::NoCutoff;
     double nonbondedCutoff = 1.2;
 
+    // -------------------------------------------------------------------------
+    // Periodic box (explicit solvent)
+    // -------------------------------------------------------------------------
+    // Three REDUCED lattice vectors in OpenMM's lower-triangular convention
+    //   a = (ax, 0,  0 ),  b = (bx, by, 0 ),  c = (cx, cy, cz),
+    // stored row-major as 9 doubles [a.x a.y a.z  b.x b.y b.z  c.x c.y c.z], in
+    // nm. Filled directly from ParmEd's parm.box_vectors (already reduced), so no
+    // a/b/c/alpha/beta/gamma reduction happens on the C++ side. EMPTY for any
+    // non-periodic method; REQUIRED (length 9) for CutoffPeriodic / Ewald / PME.
+    // The box is set on the OpenMM System (setDefaultPeriodicBoxVectors) BEFORE
+    // the Context is created, which is mandatory for PME.
+    std::vector<double> boxVectors;
+
+    // Reciprocal-space accuracy for Ewald/PME (OpenMM setEwaldErrorTolerance).
+    // Ignored by the non-Ewald methods. 5e-4 is OpenMM's usual default.
+    double ewaldErrorTolerance = 5.0e-4;
+
+    // -------------------------------------------------------------------------
+    // Virtual sites (extra points: massless particles placed by real atoms)
+    // -------------------------------------------------------------------------
+    // 4-point water (OPC, TIP4P family) carries a massless EP that holds the
+    // negative charge; its position is the affine combination
+    //   r_site = w1*r_a1 + w2*r_a2 + w3*r_a3,   w1 + w2 + w3 = 1
+    // (a 3-particle AVERAGE site). These MUST be declared to OpenMM via
+    // setVirtualSite(ThreeParticleAverageSite) so the integrator skips them and
+    // redistributes their force onto the parents; otherwise OpenMM freezes the
+    // massless particle in place and the EP detaches as the molecule moves.
+    // Indices are global/BFS atom indices (the OpenMM particle order). Only the
+    // 3-particle average type is represented here (covers OPC/TIP4P/-Ew/-2005);
+    // out-of-plane sites (e.g. TIP5P) would need an additional type.
+    int numVirtualSites{0};
+    std::vector<int> vsSite;       ///< global index of the massless EP particle.
+    std::vector<int> vsAtom1;      ///< parent atom 1 (global index).
+    std::vector<int> vsAtom2;      ///< parent atom 2 (global index).
+    std::vector<int> vsAtom3;      ///< parent atom 3 (global index).
+    std::vector<double> vsWeight1; ///< weight on parent 1.
+    std::vector<double> vsWeight2; ///< weight on parent 2.
+    std::vector<double> vsWeight3; ///< weight on parent 3.
+
     double thermostatTemperature = 300.0;
     double collisionFrequency = 1.0;
     int seed = 0;

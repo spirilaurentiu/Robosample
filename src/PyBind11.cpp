@@ -195,6 +195,16 @@ PYBIND11_MODULE(robo_bindings, m) {
         .def_readwrite("gbsa_solute_dielectric", &SystemTopology::gbsaSoluteDielectric)
         .def_readwrite("nonbonded_method", &SystemTopology::nonbondedMethod)
         .def_readwrite("nonbonded_cutoff", &SystemTopology::nonbondedCutoff)
+        .def_readwrite("box_vectors", &SystemTopology::boxVectors)
+        .def_readwrite("ewald_error_tolerance", &SystemTopology::ewaldErrorTolerance)
+        .def_readwrite("num_virtual_sites", &SystemTopology::numVirtualSites)
+        .def_readwrite("vs_site", &SystemTopology::vsSite)
+        .def_readwrite("vs_atom1", &SystemTopology::vsAtom1)
+        .def_readwrite("vs_atom2", &SystemTopology::vsAtom2)
+        .def_readwrite("vs_atom3", &SystemTopology::vsAtom3)
+        .def_readwrite("vs_weight1", &SystemTopology::vsWeight1)
+        .def_readwrite("vs_weight2", &SystemTopology::vsWeight2)
+        .def_readwrite("vs_weight3", &SystemTopology::vsWeight3)
         .def_readwrite("thermostat_temperature", &SystemTopology::thermostatTemperature)
         .def_readwrite("collision_frequency", &SystemTopology::collisionFrequency)
         .def_readwrite("seed", &SystemTopology::seed);
@@ -264,6 +274,16 @@ PYBIND11_MODULE(robo_bindings, m) {
             },
             py::arg("enabled"),
             "Enable/disable separate OpenMM force groups for each Force.")
+        .def(
+            "set_enforce_periodic_box",
+            [](Context& /*ctx*/, bool enabled) {
+                OpenMMContext::get().setEnforcePeriodicBox(enabled);
+            },
+            py::arg("enabled"),
+            "Whether OpenMM wraps coordinates into the primary box when state is "
+            "pulled back. MUST stay False (the default) under explicit solvent so "
+            "the robot engine receives whole molecules; energies/forces are "
+            "unaffected (minimum image is always applied internally).")
         .def("calc_openmm_potential_energy_by_group",
              &Context::computePotentialEnergyByGroup,
              "Compute potential energy by OpenMM force group, returning (group, name, energy) tuples.");

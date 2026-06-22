@@ -1,66 +1,74 @@
 import argparse
 
-# import openmm_validation
+import openmm_validation
+
 import robosample
 
-# python3 python/robosample/run.py example examples/example.prmtop examples/example.rst7 6000 0 1 1
+# Explicit-solvent (PME / PBC) smoke test.
+#
+#   python3 python/robosample/run.py myrun system.prmtop system.rst7 1 5 50 1
+#
+# The prmtop/rst7 MUST carry a periodic box (a solvated system from tleap:
+# solvateBox / solvateOct). The rst7 is read for both coordinates AND the box.
 
-# Create the parser
-parser = argparse.ArgumentParser(description="Process PDB code and seed.")
-
-# Add the arguments
+parser = argparse.ArgumentParser(description="Explicit-solvent (PME) Robosample run.")
 parser.add_argument("name", type=str, help="Name of the simulation.")
-parser.add_argument("prmtop", type=str, help="Relative path to the .prmtop file.")
-parser.add_argument("inpcrd", type=str, help="Relative path to the .inpcrd file.")
+parser.add_argument("prmtop", type=str, help="Path to the .prmtop file.")
+parser.add_argument(
+    "inpcrd", type=str, help="Path to the .inpcrd/.rst7 file (with box)."
+)
 parser.add_argument("seed", type=int, help="The seed.")
-parser.add_argument("equil_steps", type=int, help="The number of equilibration steps.")
-parser.add_argument("prod_steps", type=int, help="The number of production steps.")
+parser.add_argument("equil_steps", type=int, help="Number of equilibration rounds.")
+parser.add_argument("prod_steps", type=int, help="Number of production rounds.")
 parser.add_argument("write_freq", type=int, help="CSV and DCD write frequency.")
-
-# Parse the arguments
+parser.add_argument(
+    "validate", type=bool, help="Whether to run the OpenMM validation (0 or 1)."
+)
 args = parser.parse_args()
 
-# Create robosample context
+# ---- Build the context in EXPLICIT-SOLVENT mode -----------------------------
+# explicit_solvent=True:
+#   * PME electrostatics, GBSA off,
+#   * box read from the rst7 and stored as reduced lattice vectors,
+#   * 1.0 nm cutoff (override with nonbonded_cutoff=...),
+#   * every molecule (solute + each water) gets a FREE 6-DOF root.
 dih_classifier = robosample.AmberDihedralClassifier()
 context = robosample.Context(args.name, args.seed, dih_classifier)
-context.load_amber(args.prmtop, args.inpcrd)
+context.load_amber(args.prmtop, args.inpcrd, explicit_solvent=True)
 
-# platform = "CUDA"
-# ok, cpp_pe, ref_pe, per_class = openmm_validation.compare_by_force_group(
-#     context, args.prmtop, args.inpcrd, platform_name=platform
+# Keep whole molecules across worlds: never let OpenMM wrap the coordinates that
+# flow into the robot engine. This is the default; set here explicitly so the
+# intent is on the page. (Energies/forces are unaffected -- OpenMM always applies
+# the minimum image internally; this only governs returned positions.)
+context.set_enforce_periodic_box(False)
+
+# ---- Optional: verify the PME energy matches an OpenMM reference -------------
+if args.validate:
+    ok, cpp_pe, ref_pe, per_class = openmm_validation.compare_by_force_group(
+        context, args.prmtop, args.inpcrd, platform_name="Reference"
+    )
+    print(f"[validate] C++ PME PE = {cpp_pe:.6f} kJ/mol")
+    print(f"[validate] ref PME PE = {ref_pe:.6f} kJ/mol")
+    print(f"[validate] per-force-group match: {'OK' if ok else 'MISMATCH'}")
+    for name, (c, r) in per_class.items():
+        print(f"[validate]   {name:24s} cpp={c:14.4f}  ref={r:14.4f}  d={c - r:+.4e}")
+
+# ---- Worlds (the Gibbs sweep order = the move schedule) ---------------------
+
+# # (1) Cartesian all-atom MD world. This runs on the device through OpenMM with
+# #     PME, so PBC is handled entirely by OpenMM. Velocities are reseeded to the
+# #     replica temperature each round (Andersen-style), then `mdSteps` of Verlet.
+# context.add_cartesian_world().add_sampler(
+#     timeStep=0.001,
+#     mdSteps=100,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
+#     use_nuts=False,
 # )
 
-# # All molecule roots are `robosample.rb.RootMobility.Weld`
-# context.set_root_mobility(0, robosample.rb.RootMobility.WELD)
-
-# ---- Worlds (the Gibbs sweep order = the move schedule) ----------------------
-
-# (1) Docking world: molecule 0 is the ligand (Free root); everything else is
-#     welded/rigid. The binding sphere is sized AUTOMATICALLY, per ligand, as
-#     R_receptor + sphere_factor * R_ligand. The ligand is repositioned (uniform
-#     position + reorientation) only when its COM leaves the sphere; a proposal
-#     whose energy is non-finite or |PE| > clash_threshold is rejected (in every
-#     mode), so an overlap with the receptor never passes.
-context.add_docking_world(ligand_molecule_indices=[0]).add_sampler(
-    # 0.1 ps was ~100x too large for all-atom MD: from any mildly strained pose the
-    # Verlet step diverges to non-finite within mdSteps, so the move is rejected and
-    # the pose is restored unchanged -- a frozen-PE absorbing state. 0.002 ps is in
-    # the stable range the engine recommends. mdSteps raised 10 -> 50 to preserve the
-    # ~0.1 ps trajectory length (0.002 * 50 = 0.1 ps) at the smaller step.
-    timeStep=0,
-    mdSteps=40,
-    acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
-    use_nuts=False,
-    sphere_factor=0.5,
-    clash_threshold=10.0,  # reject if |peNew| > 10*|pePre| (relative; 1 order of magnitude)
-    always_kick=False,
-    max_initial_kick_tries=1000,
-)
-
-
-# # (2) Torsional relaxation world (phi/psi flexible) WITH the Fixman correction in
-# #     the acceptance Hamiltonian -- required for rigorous Boltzmann sampling of a
-# #     constrained (internal-coordinate) world.
+# (2) Optional internal-coordinate world on the solute (molecule 0) phi/psi.
+#     The torsional Verlet needs no box -- it moves only internal DOF and the
+#     forces arrive minimum-imaged from OpenMM. Every water is a Free-root rigid
+#     body here, so it gets a rigid-body HMC move as well.
 # dihedrals = [
 #     robosample.DihedralType.PROTEIN_PHI.value,
 #     robosample.DihedralType.PROTEIN_PSI.value,
@@ -68,25 +76,19 @@ context.add_docking_world(ligand_molecule_indices=[0]).add_sampler(
 # bonds = context.standard_dihedral_bonds.loc[
 #     context.standard_dihedral_bonds["dihedral_type"].isin(dihedrals)
 # ]
-# sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, False)
-# context.add_robotic_world(sele).add_sampler(
-#     timeStep=0.005,
-#     mdSteps=20,
-#     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
-#     use_nuts=False,
-#     use_fixman=True,
-# )
-
-# (3) Cartesian all-atom MD world for mixing (uses the MTS integrator).
-context.add_cartesian_world().add_sampler(
+sele = context.build_flexibilities(None, robosample.rb.BondMobility.Torsion, False)
+context.add_robotic_world(sele).add_sampler(
     timeStep=0.001,
-    mdSteps=1000,
-    acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,  # Andersen-thermostatted MD
+    mdSteps=2000,
+    acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
     use_nuts=False,
+    use_fixman=True,  # required for rigorous Boltzmann sampling of a constrained world
 )
 
-# [rex] round=12175 replica=0 T=300.0 world=0(docking) kick=N acc=rej PE=189.8145 KE=0.0000 Fix=-902.1686 H=-677.8935
-# From -2400 -> wrong conf, but cannot detect it's wrong
-
+# ---- Run --------------------------------------------------------------------
+# initialize() runs an O(N^2) startup clash scan (now minimum-image aware). On a
+# large solvent box this takes a moment; if your box is not yet minimized and the
+# scan flags clashes, set ROBO_ALLOW_BAD_START=1 in the environment to downgrade
+# the hard error to a warning, or minimize first.
 context.initialize([300])
 context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, True)

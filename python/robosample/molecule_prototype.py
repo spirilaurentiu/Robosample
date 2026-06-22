@@ -81,12 +81,26 @@ class MoleculePrototype:
             molecule, dihedral_classifier
         )
 
-        # -- Root: heaviest terminal atom (or the sole atom for n == 1) ----
+        # -- Root: heaviest real LEAF of the spanning tree (or sole atom n==1) --
+        # The root anchors the kinematic frame and takes the root mobilizer, so it
+        # must be a real (massive) atom -- never a massless virtual site (EP) --
+        # and it must be a LEAF of the spanning tree (degree 1 in self.acyclic_
+        # graph). A leaf root guarantees the Z-matrix root triplet root->second->
+        # third can be formed: the leaf's single tree-neighbour is interior and so
+        # has a further neighbour. Rooting at an interior atom (e.g. the O of a
+        # 4-point water, whose tree-neighbours are all leaves) cannot form the
+        # triplet. A connected tree on n>=2 atoms always has >=2 leaves, so this is
+        # well defined; fall back to any real atom only in pathological cases.
         if self.num_atoms == 1:
             root_atom: pmd.Atom = molecule.atoms[0]
         else:
-            terminals = [a for a in molecule.atoms if len(a.bond_partners) == 1]
-            root_atom = self._sort_atoms_by_mass(terminals)[0]
+            g = self.acyclic_graph
+            tree_leaves = [
+                a for a in molecule.atoms if g.degree(a.idx) == 1 and a.mass > 0.0
+            ]
+            real_atoms = [a for a in molecule.atoms if a.mass > 0.0]
+            candidates = tree_leaves or real_atoms or list(molecule.atoms)
+            root_atom = self._sort_atoms_by_mass(candidates)[0]
         self.atoms_root_index: int = root_atom.idx  # local index of root
         self.atoms_root_compound_index: int = 0  # root is always compound 0
 

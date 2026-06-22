@@ -8,6 +8,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -16,7 +17,34 @@
 
 namespace {
 constexpr double kBoltzmann_kJ = 0.0083144626; // kJ/mol/K
+
+// Convert the three reduced lattice vectors (nm, lower-triangular, row-major
+// a,b,c) into a CHARMM/DCD Box: side lengths in Angstrom and angles in degrees.
+dcd::Box boxFromReducedVectors(const std::vector<double>& bv) {
+    dcd::Box box;
+    if (bv.size() != 9) {
+        return box; // default 1 A cube
+    }
+    const double ax = bv[0];
+    const double bx = bv[3], by = bv[4];
+    const double cx = bv[6], cy = bv[7], cz = bv[8];
+    const double a = ax;
+    const double b = std::sqrt(bx * bx + by * by);
+    const double c = std::sqrt(cx * cx + cy * cy + cz * cz);
+    constexpr double kRad2Deg = 57.29577951308232;
+    const double cosGamma = (a > 0 && b > 0) ? (ax * bx) / (a * b) : 0.0;
+    const double cosBeta = (a > 0 && c > 0) ? (ax * cx) / (a * c) : 0.0;
+    const double cosAlpha = (b > 0 && c > 0) ? (bx * cx + by * cy) / (b * c) : 0.0;
+    constexpr double kNm2Ang = 10.0;
+    box.sideA = a * kNm2Ang;
+    box.sideB = b * kNm2Ang;
+    box.sideC = c * kNm2Ang;
+    box.angleAlpha = std::acos(std::max(-1.0, std::min(1.0, cosAlpha))) * kRad2Deg;
+    box.angleBeta = std::acos(std::max(-1.0, std::min(1.0, cosBeta))) * kRad2Deg;
+    box.angleGamma = std::acos(std::max(-1.0, std::min(1.0, cosGamma))) * kRad2Deg;
+    return box;
 }
+} // namespace
 
 Context::Context(std::string baseName, std::uint32_t seed)
     : baseName(std::move(baseName))
@@ -169,11 +197,13 @@ void Context::initialize(const std::vector<double>& temperatures) {
 
     dcdWriters_.clear();
     dcdWriters_.reserve(temperatures_.size());
+    const bool periodicDcd =
+        OpenMMContext::isPeriodic(systemTopology.nonbondedMethod) && systemTopology.boxVectors.size() == 9;
     for (std::size_t r = 0; r < temperatures_.size(); ++r) {
         dcdWriters_.emplace_back();
         dcdWriters_.back().initialize(baseName + "." + std::to_string(r) + ".dcd",
                                       systemTopology.numAtoms,
-                                      /*withBox*/ false);
+                                      /*withBox*/ periodicDcd);
     }
 }
 
@@ -188,13 +218,39 @@ void Context::checkStartupGeometry() {
         return;
     }
 
-    // Bonded/1-2 pairs are excluded from the clash scan (a bond length ~0.1 nm
-    // is not a clash). We only exclude direct bonds here -- cheap and sufficient
-    // to remove the obvious false positives.
-    std::set<std::pair<int, int>> bonded;
+    // Excluded pairs: not just 1-2 bonds, but the FULL intramolecular
+    // non-interacting set -- the OpenMM exclusion list (1-2 and 1-3) and the 1-4
+    // (scaling14) pairs. These are bonded geometry, never clashes. Using only
+    // bonds is wrong for 4-point water: the extra point sits ~0.078 nm from each
+    // hydrogen (a 1-3 pair that OpenMM excludes), so a bonds-only filter reports
+    // two phantom "clashes" per water (2*Nwater of them). The clash scan is meant
+    // to catch INTERMOLECULAR overlaps from a bad/unminimized placement, not the
+    // internal geometry of a virtual-site water. Keyed as min*N+max in a hash set.
+    std::unordered_set<long long> excluded;
+    auto pairKey = [n](int i, int j) -> long long {
+        if (i > j) {
+            std::swap(i, j);
+        }
+        return static_cast<long long>(i) * n + j;
+    };
     for (int k = 0; k < systemTopology.numBonds; ++k) {
-        const int i = systemTopology.bondsI[k], j = systemTopology.bondsJ[k];
-        bonded.insert({std::min(i, j), std::max(i, j)});
+        excluded.insert(pairKey(systemTopology.bondsI[k], systemTopology.bondsJ[k]));
+    }
+    for (int k = 0; k < systemTopology.numExclusions; ++k) {
+        excluded.insert(pairKey(systemTopology.exclusionI[k], systemTopology.exclusionJ[k]));
+    }
+    for (int k = 0; k < systemTopology.numScaling14; ++k) {
+        excluded.insert(pairKey(systemTopology.scaling14I[k], systemTopology.scaling14L[k]));
+    }
+
+    // Virtual sites / massless particles (e.g. a 4-point water's extra point) have
+    // no Lennard-Jones term -- no steric presence -- so they cannot clash and are
+    // skipped entirely. (Belt-and-suspenders with the exclusion set above.)
+    std::vector<bool> isVirtual(static_cast<std::size_t>(n), false);
+    for (int a = 0; a < n; ++a) {
+        if (systemTopology.atomsMass[a] == 0.0) {
+            isVirtual[static_cast<std::size_t>(a)] = true;
+        }
     }
 
     // Hard-clash distance. Two non-bonded heavy/H atoms closer than this are in
@@ -209,6 +265,32 @@ void Context::checkStartupGeometry() {
     const auto& X = systemTopology.atomsX;
     const auto& Y = systemTopology.atomsY;
     const auto& Z = systemTopology.atomsZ;
+
+    // Under explicit solvent the box is periodic, so a "distance" must be the
+    // MINIMUM-IMAGE distance: two atoms on opposite faces are actually neighbours.
+    // box_vectors are reduced (lower-triangular) a=(ax,0,0) b=(bx,by,0) c=(cx,cy,cz);
+    // wrap the displacement by subtracting whole lattice vectors in c,b,a order
+    // (the same order OpenMM reduces them). Without this the scan reports phantom
+    // clashes (or misses real cross-boundary ones) on a solvated box.
+    const bool periodic =
+        OpenMMContext::isPeriodic(systemTopology.nonbondedMethod) && systemTopology.boxVectors.size() == 9;
+    const auto& bv = systemTopology.boxVectors;
+    auto minImage = [&](double& dx, double& dy, double& dz) {
+        if (!periodic) {
+            return;
+        }
+        // c then b then a (bv layout: a=[0..2], b=[3..5], c=[6..8]).
+        double n = std::round(dz / bv[8]);
+        dx -= n * bv[6];
+        dy -= n * bv[7];
+        dz -= n * bv[8];
+        n = std::round(dy / bv[4]);
+        dx -= n * bv[3];
+        dy -= n * bv[4];
+        n = std::round(dx / bv[0]);
+        dx -= n * bv[0];
+    };
+
     bool anyNaN = false;
     for (int a = 0; a < n; ++a) {
         if (!std::isfinite(X[a]) || !std::isfinite(Y[a]) || !std::isfinite(Z[a])) {
@@ -216,11 +298,18 @@ void Context::checkStartupGeometry() {
         }
     }
     for (int a = 0; a < n && !anyNaN; ++a) {
+        if (isVirtual[static_cast<std::size_t>(a)]) {
+            continue;
+        }
         for (int b = a + 1; b < n; ++b) {
-            if (bonded.count({a, b})) {
+            if (isVirtual[static_cast<std::size_t>(b)]) {
                 continue;
             }
-            const double dx = X[a] - X[b], dy = Y[a] - Y[b], dz = Z[a] - Z[b];
+            if (excluded.count(pairKey(a, b)) != 0) {
+                continue;
+            }
+            double dx = X[a] - X[b], dy = Y[a] - Y[b], dz = Z[a] - Z[b];
+            minImage(dx, dy, dz);
             const double d = std::sqrt(dx * dx + dy * dy + dz * dz);
             if (d < minNonbondedNm) {
                 minNonbondedNm = d;
@@ -434,18 +523,87 @@ void Context::writeOutputs(int replica, int round, bool verbose) {
     }
 
     if (replica >= 0 && replica < static_cast<int>(dcdWriters_.size())) {
-        const auto& coords = replicaCoords_[replica];
+        const auto& coords = replicaCoords_[replica]; // read-only; engine state untouched
         const int n = systemTopology.numAtoms;
         const auto& perm = systemTopology.atomsPrmtopIndex;
         const bool havePerm = (static_cast<int>(perm.size()) == n);
         dcdScratch_.resize(static_cast<std::size_t>(3 * n));
-        for (int a = 0; a < n; ++a) {
+
+        // Whole-molecule periodic imaging, applied ONLY to the output copy.
+        // replicaCoords_ stays unwrapped (contiguous per molecule) so the next
+        // setAtomsLocationsInGround/frame rebuild is unaffected. Each molecule is
+        // shifted by integer lattice vectors so its center of mass lands in the
+        // primary cell, then translated rigidly -- bonds never straddle a face.
+        const auto& bv = systemTopology.boxVectors;
+        const int numMol = systemTopology.numMolecules;
+        const bool haveRanges = OpenMMContext::isPeriodic(systemTopology.nonbondedMethod) && bv.size() == 9
+                                && static_cast<int>(systemTopology.atomsBegin.size()) == numMol
+                                && static_cast<int>(systemTopology.atomsEnd.size()) == numMol;
+
+        auto scatter = [&](int a, double sx, double sy, double sz) {
             const int p = havePerm ? perm[a] : a;
-            dcdScratch_[3 * p + 0] = coords[a][0] * 10.0;
-            dcdScratch_[3 * p + 1] = coords[a][1] * 10.0;
-            dcdScratch_[3 * p + 2] = coords[a][2] * 10.0;
+            dcdScratch_[3 * p + 0] = (coords[a][0] + sx) * 10.0;
+            dcdScratch_[3 * p + 1] = (coords[a][1] + sy) * 10.0;
+            dcdScratch_[3 * p + 2] = (coords[a][2] + sz) * 10.0;
+        };
+
+        if (!haveRanges) {
+            // Non-periodic (or missing ranges): write coordinates verbatim.
+            for (int a = 0; a < n; ++a) {
+                scatter(a, 0.0, 0.0, 0.0);
+            }
+        } else {
+            // Reduced lower-triangular box: a=(bv0,0,0) b=(bv3,bv4,0) c=(bv6,bv7,bv8).
+            // Wrap in c -> b -> a order (same convention as the clash-scan minImage).
+            for (int m = 0; m < numMol; ++m) {
+                const int beg = systemTopology.atomsBegin[m];
+                const int end = systemTopology.atomsEnd[m];
+                if (beg >= end) {
+                    continue;
+                }
+
+                // Mass-weighted COM in engine order (molecule is intact here).
+                double cx = 0.0, cy = 0.0, cz = 0.0, mtot = 0.0;
+                const int nMass = static_cast<int>(systemTopology.atomsMass.size());
+                for (int a = beg; a < end; ++a) {
+                    const double mass = (a < nMass) ? systemTopology.atomsMass[a] : 1.0;
+                    cx += mass * coords[a][0];
+                    cy += mass * coords[a][1];
+                    cz += mass * coords[a][2];
+                    mtot += mass;
+                }
+                if (mtot > 0.0) {
+                    cx /= mtot;
+                    cy /= mtot;
+                    cz /= mtot;
+                } else { // all-massless (e.g. pure virtual sites): use first atom
+                    cx = coords[beg][0];
+                    cy = coords[beg][1];
+                    cz = coords[beg][2];
+                }
+
+                // Accumulate the rigid shift that brings the COM into [0, L).
+                double sx = 0.0, sy = 0.0, sz = 0.0;
+                const double nc = (bv[8] != 0.0) ? std::floor(cz / bv[8]) : 0.0;
+                cx -= nc * bv[6];
+                cy -= nc * bv[7];
+                sx -= nc * bv[6];
+                sy -= nc * bv[7];
+                sz -= nc * bv[8];
+                const double nb = (bv[4] != 0.0) ? std::floor(cy / bv[4]) : 0.0;
+                cx -= nb * bv[3];
+                sx -= nb * bv[3];
+                sy -= nb * bv[4];
+                const double na = (bv[0] != 0.0) ? std::floor(cx / bv[0]) : 0.0;
+                sx -= na * bv[0];
+
+                for (int a = beg; a < end; ++a) {
+                    scatter(a, sx, sy, sz);
+                }
+            }
         }
-        dcdWriters_[replica].append(dcdScratch_);
+
+        dcdWriters_[replica].append(dcdScratch_, boxFromReducedVectors(systemTopology.boxVectors));
     }
 }
 

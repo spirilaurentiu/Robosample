@@ -424,6 +424,39 @@ void symSqrt(const Real* A, int n, Real* S) {
     }
 }
 
+// -------- exact unit-quaternion advance (exponential map) ------------------
+// Advance a unit quaternion under a constant angular velocity w_F expressed in
+// the PARENT (F) frame, consistent with the engine's qdot = 1/2 (0,w_F) (x) q
+// (left multiply; matches convertAngVelToQuaternionDot / N(q)). With theta =
+// 1/2 |w| h: Dq = (cos theta, sin theta * w_hat) and q1 = Dq (x) q0. Both
+// operands are unit, so q1 is unit BY CONSTRUCTION -- the |q|^2 -> Inf ->
+// q/sqrt(Inf) = 0 overflow path of the linear "q += h*qdot" drift cannot occur.
+// Reversible: negating w gives Dq^-1, so q0 = Dq^-1 (x) q1 (HMC needs this).
+// As h -> 0 it reduces to q0 + h * (1/2 (0,w) (x) q0) = q0 + h * qdot0.
+inline void advanceQuatExp(const Real* q0, const Vec3& wF, Real h, Real* q1) {
+    const Real wn = std::sqrt(wF[0] * wF[0] + wF[1] * wF[1] + wF[2] * wF[2]);
+    Real a, b, c, d; // Dq = (a, b, c, d)
+    if (wn > Real(1e-12)) {
+        const Real theta = Real(0.5) * wn * h;
+        const Real ssc = std::sin(theta) / wn; // sin(theta) / |w|
+        a = std::cos(theta);
+        b = ssc * wF[0];
+        c = ssc * wF[1];
+        d = ssc * wF[2];
+    } else {
+        a = Real(1); // small-angle limit: Dq ~ (1, 1/2 h w)
+        b = Real(0.5) * h * wF[0];
+        c = Real(0.5) * h * wF[1];
+        d = Real(0.5) * h * wF[2];
+    }
+    const Real w = q0[0], x = q0[1], y = q0[2], z = q0[3];
+    // Hamilton product Dq (x) q0
+    q1[0] = a * w - b * x - c * y - d * z;
+    q1[1] = a * x + b * w + c * z - d * y;
+    q1[2] = a * y - b * z + c * w + d * x;
+    q1[3] = a * z + b * y - c * x + d * w;
+}
+
 // -------- per-joint cross-mobilizer transform X_FM(q) ----------------------
 // Faithful to RigidBodyNodeSpec_{Pin,Translation,Free}.h / RigidBodyNode_Weld.
 Transform jointX_FM(JointType jt, const Real* q, int qOff) {
@@ -495,6 +528,11 @@ void RobotEngine::realizePosition(const RobotModel& m, RobotState& s) {
     X_GB[0] = Transform(); // Ground
     Mk[0] = SpatialInertia();
 
+    // Kinetic-metric preconditioning: fictitious per-body inertia scale applied
+    // to Mk_G ONLY (draw + KE + Fixman all read Mk_G, so they stay consistent).
+    // Empty => all 1.0 (physical). Hoisted out of the hot loop.
+    const Real* massScale = m.bodyMassScale.empty() ? nullptr : m.bodyMassScale.data();
+
     for (int b = 1; b < m.numBodies; ++b) {
         const int p = m.bodyParent[b];
         const JointType jt = m.bodyJoint[b];
@@ -538,7 +576,12 @@ void RobotEngine::realizePosition(const RobotModel& m, RobotState& s) {
         const robo::UnitInertia G_Bo_G = m.bodyUnitInertia_B[b].reexpress(~R_GB);
         const Vec3 p_BBc_G = R_GB * m.bodyCom_B[b];
         comG[b] = p_GB + p_BBc_G;
-        Mk[b] = SpatialInertia(m.bodyMass[b], p_BBc_G, G_Bo_G);
+        // bodyMass is the only scaled argument: UnitInertia is mass-normalised, so
+        // mass*scale propagates the factor through the whole spatial inertia (mass,
+        // first moment, and inertia tensor) -> a uniformly heavier, SPD-valid copy
+        // of the same rigid body. Bias-free (see RobotModel::bodyMassScale).
+        const Real massB = massScale ? (m.bodyMass[b] * massScale[b]) : m.bodyMass[b];
+        Mk[b] = SpatialInertia(massB, p_BBc_G, G_Bo_G);
     }
 
     // Per-atom Ground positions and stations (R_GB * station_B). The transfer
@@ -1061,8 +1104,11 @@ bool RobotEngine::verletStep(const RobotModel& m,
     Real* udot = s.udot();
     Real* qdd = s.qdotdot();
 
-    std::vector<Real> q0(q, q + nq), u0(u, u + nu), qdot0(qdot, qdot + nq), udot0(udot, udot + nu),
-        qdd0(qdd, qdd + nq);
+    std::vector<Real> q0(q, q + nq);
+    std::vector<Real> u0(u, u + nu);
+    std::vector<Real> qdot0(qdot, qdot + nq);
+    std::vector<Real> udot0(udot, udot + nu);
+    std::vector<Real> qdd0(qdd, qdd + nq);
 
     // True iff every per-body spatial force is finite. OpenMM returns Inf forces
     // for a hard steric overlap (LJ r^-12); integrating against those is what
@@ -1079,6 +1125,28 @@ bool RobotEngine::verletStep(const RobotModel& m,
         }
         return true;
     };
+
+    // forcesFinite() only catches OpenMM Inf. A CFL-unstable step (e.g. a stiff
+    // explicit-solvent contact at too-large dt) amplifies u geometrically while
+    // it is still finite, then overflows the quaternion. Cap ||u|| relative to
+    // the freshly-seeded momentum norm so a runaway is rejected early, while a
+    // merely hot trajectory (||u|| growing a few x) passes.
+    Real uSeedNorm2 = 0;
+    for (int i = 0; i < nu; ++i) {
+        uSeedNorm2 += u0[i] * u0[i];
+    }
+    const Real uCap2 = (uSeedNorm2 + Real(1e-30)) * Real(1e6);
+    auto velocitiesSane = [&]() -> bool {
+        Real n2 = 0;
+        for (int i = 0; i < nu; ++i) {
+            if (!std::isfinite(u[i])) {
+                return false;
+            }
+            n2 += u[i] * u[i];
+        }
+        return n2 <= uCap2;
+    };
+
     auto restorePreStep = [&]() {
         std::copy(q0.begin(), q0.end(), q);
         std::copy(u0.begin(), u0.end(), u);
@@ -1089,11 +1157,35 @@ bool RobotEngine::verletStep(const RobotModel& m,
         fillAtomPositionsFromBodies(m, s);
     };
 
-    // ---- position: q1 = q0 + h*qdot0 + (h^2/2)*qddot0, normalize, then SHAKE ----
+    // ---- position drift ----
+    // Scalar DOFs (Pin, Translation, and the Free TRANSLATION block): Taylor
+    // q1 = q0 + h*qdot0 + (h^2/2)*qddot0.
+    // Quaternion DOFs (Free, Ball): EXACT exponential-map advance from the
+    // start-of-step angular velocity w_FM = u0[uOff..uOff+2]. Keeps |q| = 1 by
+    // construction (no renormalisation drift, no overflow-to-zero), is reversible,
+    // and reduces to the old linear update as h -> 0, so it changes only the
+    // proposal, not the target (guidance/acceptance separation; see THEORY 5.4).
     for (int i = 0; i < nq; ++i) {
         q[i] = q0[i] + h * qdot0[i] + (h * h / 2) * qdd0[i];
     }
-    normalizeQuaternions(m, s);
+    for (int b = 1; b < m.numBodies; ++b) {
+        if (!m.isQuaternionBody(b)) {
+            continue;
+        }
+        const int qOff = m.bodyQIndex[b];
+        const int uOff = m.bodyUIndex[b];
+        Vec3 wHalf(u0[uOff] + Real(0.5) * h * udot0[uOff],
+                   u0[uOff + 1] + Real(0.5) * h * udot0[uOff + 1],
+                   u0[uOff + 2] + Real(0.5) * h * udot0[uOff + 2]); // w_FM in F, step start
+        Real qnew[4];
+        advanceQuatExp(&q0[qOff], wHalf, h, qnew); // overrides the 4 quaternion slots
+        q[qOff + 0] = qnew[0];
+        q[qOff + 1] = qnew[1];
+        q[qOff + 2] = qnew[2];
+        q[qOff + 3] = qnew[3];
+        // translation block q[qOff+4..6] keeps its Taylor update from the loop above
+    }
+    normalizeQuaternions(m, s); // now only mops up ~1e-16 rounding; never rescues an overflow
 
     auto refreshPos = [&]() {
         realizePosition(m, s);
@@ -1120,6 +1212,11 @@ bool RobotEngine::verletStep(const RobotModel& m,
         realizeArticulatedBodyInertias(m, s);
         calcUDot(m, s);
         ROBO_CHECK("calcUDot");
+        for (int i = 0; i < nu; ++i) {
+            if (!std::isfinite(udot[i])) {
+                return false; // finite-but-diverging udot -> reject before it propagates
+            }
+        }
         calcQDot(m, s, qdot);
         calcQDotDot(m, s);
         return true;
@@ -1140,11 +1237,19 @@ bool RobotEngine::verletStep(const RobotModel& m,
             den += u[i] * u[i];
             u[i] = un;
         }
+        if (!velocitiesSane()) { // velocity runaway -> reject early (pre-overflow)
+            restorePreStep();
+            return false;
+        }
         if (!evalDerivs()) {
             restorePreStep();
             return false;
         }
         const Real change = std::sqrt(num) / (std::sqrt(den) + Real(1e-30));
+        if (!std::isfinite(change) || change > Real(1e6)) { // non-contracting solve -> reject
+            restorePreStep();
+            return false;
+        }
         if (change <= tol) {
             break; // converged
         }

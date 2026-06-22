@@ -12,7 +12,7 @@ from .amber_dihedral_classifier import AmberDihedralClassifier
 from .amber_dihedral_types import DihedralType
 from .molecule_prototype import MoleculePrototype
 from .robo_bindings import Context as _Context
-from .robo_bindings import RootMobility, SystemTopology
+from .robo_bindings import NonbondedMethod, RootMobility, SystemTopology
 from .secondary_structure import DSSPCode
 from .units import ANG_TO_NM
 
@@ -96,11 +96,36 @@ class Context(_Context):
         return super().build_flexibilities(pairs, mobility, flag)
 
     def load_amber(
-        self, prmtop_path: str | os.PathLike[str], inpcrd_path: str | os.PathLike[str]
+        self,
+        prmtop_path: str | os.PathLike[str],
+        inpcrd_path: str | os.PathLike[str],
+        *,
+        explicit_solvent: bool = False,
+        nonbonded_method: NonbondedMethod | None = None,
+        nonbonded_cutoff: float | None = None,
+        ewald_error_tolerance: float | None = None,
     ) -> None:
         """
         Read an AMBER ``.prmtop`` + coordinate file and populate
         ``self.system_topology``.
+
+        Solvent model
+        -------------
+        By default (``explicit_solvent=False``) the system is built for implicit
+        solvent: GBSA-OBC2 with a non-periodic, no-cutoff nonbonded treatment --
+        the historical Robosample default, unchanged.
+
+        Set ``explicit_solvent=True`` for a solvated (periodic) box. This:
+          * selects PME for electrostatics (overridable via ``nonbonded_method``),
+          * disables GBSA (implicit and explicit solvent are mutually exclusive),
+          * reads the periodic box from the coordinate file and stores the three
+            reduced lattice vectors (nm) on ``system_topology.box_vectors``,
+          * sets a 1.0 nm cutoff by default (overridable), and
+          * gives **every** molecule a FREE (6-DOF) root, so solvent molecules can
+            translate and reorient (a welded water would be frozen in place).
+
+        The individual ``nonbonded_*`` / ``ewald_error_tolerance`` arguments
+        override the explicit-solvent defaults when given.
         """
         self.system_topology = SystemTopology()
         self.system_topology.use_gbsa_obc2 = True
@@ -405,6 +430,111 @@ class Context(_Context):
         # equilibrium) is per-molecule data sourced from MoleculePrototype and
         # is already populated by the _FIELD_SPECS loop above, with correct
         # atom offsets applied. No inline block needed here.
+
+        # --------------------------------------------------------------------
+        #  Virtual sites (extra points). 4-point waters (OPC/TIP4P) carry a
+        #  massless EP whose position is a 3-particle affine average of the real
+        #  atoms. Read each EP's frame + weights and map the parent atoms through
+        #  the same prmtop->global reindexing the rest of the SoA uses, so the
+        #  indices match the OpenMM particle order. Done unconditionally: an EP
+        #  must be declared whenever it exists, regardless of the solvent flag.
+        # --------------------------------------------------------------------
+        vs_site, vs_a1, vs_a2, vs_a3 = [], [], [], []
+        vs_w1, vs_w2, vs_w3 = [], [], []
+        for atom in parm.atoms:
+            if type(atom).__name__ != "ExtraPoint":
+                continue
+            frame = atom.frame_type
+            if type(frame).__name__ != "ThreeParticleExtraPointFrame":
+                raise NotImplementedError(
+                    f"Extra point {atom.name} (idx {atom.idx}) uses frame "
+                    f"{type(frame).__name__}, which is not yet supported. Only "
+                    "3-particle average sites (OPC / TIP4P family) are handled; "
+                    "out-of-plane sites (e.g. TIP5P) need an additional virtual-"
+                    "site type."
+                )
+            fa = frame.get_atoms()
+            w = frame.get_weights()
+            if len(fa) != 3 or len(w) != 3:
+                raise NotImplementedError(
+                    f"Extra point {atom.name}: expected a 3-atom frame, got "
+                    f"{len(fa)} atoms / {len(w)} weights."
+                )
+            g = self.prmtop_to_global_index
+            vs_site.append(g[atom.idx])
+            vs_a1.append(g[fa[0].idx])
+            vs_a2.append(g[fa[1].idx])
+            vs_a3.append(g[fa[2].idx])
+            vs_w1.append(float(w[0]))
+            vs_w2.append(float(w[1]))
+            vs_w3.append(float(w[2]))
+
+        self.system_topology.num_virtual_sites = len(vs_site)
+        self.system_topology.vs_site = vs_site
+        self.system_topology.vs_atom1 = vs_a1
+        self.system_topology.vs_atom2 = vs_a2
+        self.system_topology.vs_atom3 = vs_a3
+        self.system_topology.vs_weight1 = vs_w1
+        self.system_topology.vs_weight2 = vs_w2
+        self.system_topology.vs_weight3 = vs_w3
+
+        # --------------------------------------------------------------------
+        #  Solvent / periodicity configuration.
+        # --------------------------------------------------------------------
+        want_periodic = explicit_solvent or (
+            nonbonded_method is not None
+            and nonbonded_method
+            in (
+                NonbondedMethod.CutoffPeriodic,
+                NonbondedMethod.Ewald,
+                NonbondedMethod.PME,
+            )
+        )
+
+        if want_periodic:
+            # Explicit solvent: PME by default, GBSA off, real box, FREE roots.
+            method = (
+                nonbonded_method
+                if nonbonded_method is not None
+                else NonbondedMethod.PME
+            )
+            self.system_topology.nonbonded_method = method
+            self.system_topology.use_gbsa_obc2 = False
+            self.system_topology.nonbonded_cutoff = (
+                nonbonded_cutoff if nonbonded_cutoff is not None else 1.0
+            )
+            if ewald_error_tolerance is not None:
+                self.system_topology.ewald_error_tolerance = ewald_error_tolerance
+
+            # Box: pass ParmEd's three REDUCED lattice vectors straight through,
+            # converted to nm and flattened row-major [a.xyz b.xyz c.xyz].
+            box = parm.box_vectors
+            if box is None:
+                raise ValueError(
+                    "explicit_solvent=True (or a periodic nonbonded method) was requested, "
+                    "but the coordinate file has no periodic box. Provide an inpcrd/rst7 with "
+                    "box information, or use the implicit-solvent path."
+                )
+            box_nm = box.value_in_unit(pmd.unit.nanometer)
+            self.system_topology.box_vectors = [
+                float(component) for vec in box_nm for component in vec
+            ]
+
+            # Every molecule (solute and each solvent molecule) gets a FREE 6-DOF
+            # root so it can translate and reorient. A welded solvent molecule
+            # would be frozen in place, which is unphysical for explicit solvent.
+            self.system_topology.root_mobilities = [
+                RootMobility.FREE
+            ] * self.system_topology.num_molecules
+        else:
+            # Implicit / non-periodic path: honour explicit overrides if given,
+            # otherwise leave the historical defaults (GBSA-OBC2, NoCutoff) intact.
+            if nonbonded_method is not None:
+                self.system_topology.nonbonded_method = nonbonded_method
+            if nonbonded_cutoff is not None:
+                self.system_topology.nonbonded_cutoff = nonbonded_cutoff
+            if ewald_error_tolerance is not None:
+                self.system_topology.ewald_error_tolerance = ewald_error_tolerance
 
         return
 

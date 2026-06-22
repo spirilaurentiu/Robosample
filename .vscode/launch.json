@@ -21,16 +21,17 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/python/robosample"
+                "PYTHONPATH": "${workspaceFolder}/python/robosam65ple"
             },
             "args": [
-                "2R9W",
-                "${workspaceFolder}/examples/2R9W.prmtop",
-                "${workspaceFolder}/examples/2R9W.rst7",
+                "2ala",
+                "${workspaceFolder}/tip3p/2ala.prmtop",
+                "${workspaceFolder}/tip3p/equilibrated.rst7",
                 "6000",
+                "0",
                 "10",
-                "100",
-                "1"
+                "1",
+                "true"
             ],
             "cwd": "${workspaceFolder}"
         },
@@ -41,13 +42,14 @@
             "program": "${command:python.interpreterPath}",
             "args": [
                 "${workspaceFolder}/python/robosample/run.py",
-                "2R9W",
-                "${workspaceFolder}/examples/2R9W.prmtop",
-                "${workspaceFolder}/examples/2R9W.rst7",
+                "2ala",
+                "${workspaceFolder}/tip3p/2ala.prmtop",
+                "${workspaceFolder}/tip3p/equilibrated.rst7",
                 "6000",
+                "0",
                 "10",
-                "100",
-                "1"
+                "1",
+                "true"
             ],
             "cwd": "${workspaceFolder}",
             "environment": [

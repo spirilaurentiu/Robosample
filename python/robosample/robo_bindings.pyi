@@ -157,6 +157,10 @@ class Context:
         """
         Run replica exchange: Gibbs sweep over worlds + adjacent swaps.
         """
+    def set_enforce_periodic_box(self, enabled: bool) -> None:
+        """
+        Whether OpenMM wraps coordinates into the primary box when state is pulled back. MUST stay False (the default) under explicit solvent so the robot engine receives whole molecules; energies/forces are unaffected (minimum image is always applied internally).
+        """
     def set_mts(self, enabled: bool, inner_substeps: typing.SupportsInt | typing.SupportsIndex = 4) -> None:
         """
         Enable r-RESPA multiple-timestep OpenMM MD (Cartesian world): slow forces once per outer step, fast bonded forces inner_substeps times. Call before initialize().
@@ -567,6 +571,12 @@ class SystemTopology:
     def bonds_stiffness(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
+    def box_vectors(self) -> list[float]:
+        ...
+    @box_vectors.setter
+    def box_vectors(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
     def cmap_grid_energy(self) -> list[float]:
         ...
     @cmap_grid_energy.setter
@@ -637,6 +647,12 @@ class SystemTopology:
         ...
     @collision_frequency.setter
     def collision_frequency(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def ewald_error_tolerance(self) -> float:
+        ...
+    @ewald_error_tolerance.setter
+    def ewald_error_tolerance(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def exclusion_begin(self) -> list[int]:
@@ -787,6 +803,12 @@ class SystemTopology:
         ...
     @num_urey_bradley.setter
     def num_urey_bradley(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def num_virtual_sites(self) -> int:
+        ...
+    @num_virtual_sites.setter
+    def num_virtual_sites(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def num_z_matrix_rows(self) -> int:
@@ -949,6 +971,48 @@ class SystemTopology:
         ...
     @urey_bradley_stiffness.setter
     def urey_bradley_stiffness(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def vs_atom1(self) -> list[int]:
+        ...
+    @vs_atom1.setter
+    def vs_atom1(self, arg0: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def vs_atom2(self) -> list[int]:
+        ...
+    @vs_atom2.setter
+    def vs_atom2(self, arg0: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def vs_atom3(self) -> list[int]:
+        ...
+    @vs_atom3.setter
+    def vs_atom3(self, arg0: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def vs_site(self) -> list[int]:
+        ...
+    @vs_site.setter
+    def vs_site(self, arg0: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def vs_weight1(self) -> list[float]:
+        ...
+    @vs_weight1.setter
+    def vs_weight1(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def vs_weight2(self) -> list[float]:
+        ...
+    @vs_weight2.setter
+    def vs_weight2(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def vs_weight3(self) -> list[float]:
+        ...
+    @vs_weight3.setter
+    def vs_weight3(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
     def z_matrix_begin(self) -> list[int]:

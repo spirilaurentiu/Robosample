@@ -3,6 +3,7 @@ from .amber_dihedral_classifier import AmberDihedralClassifier
 from .amber_dihedral_types import DihedralType
 from .context import Context
 from .molecule_prototype import MoleculePrototype
+from .robo_bindings import NonbondedMethod, RootMobility
 
 __all__ = [
     "rb",
@@ -10,4 +11,6 @@ __all__ = [
     "DihedralType",
     "Context",
     "MoleculePrototype",
+    "NonbondedMethod",
+    "RootMobility",
 ]

@@ -27,6 +27,7 @@ class OpenMMContext {
         context.reset();
         system.reset();
         forceGroupLabels.clear();
+        hasVirtualSites = false;
         initialized = false;
     }
 
@@ -75,10 +76,36 @@ class OpenMMContext {
     void setPositions(const std::vector<OpenMM::Vec3>& positions) {
         ensureInitialized();
         context->setPositions(positions);
+        if (hasVirtualSites) {
+            context->computeVirtualSites();
+        }
     }
     void getPositions(std::vector<OpenMM::Vec3>& out) const {
         ensureInitialized();
         out = context->getState(OpenMM::State::Positions, enforcePeriodicBox).getPositions();
+    }
+
+    // Whether OpenMM wraps coordinates into the primary box when we PULL state
+    // (positions/forces/energy getState calls). For Robosample this MUST stay
+    // false under explicit solvent: the robot engine consumes per-atom positions
+    // and rebuilds each molecule's internal frames from contiguous geometry, so a
+    // wrapped molecule that straddles a box face would yield a ~box-length "bond"
+    // and corrupt the frame build. Energies/forces are unaffected by this flag
+    // (OpenMM always applies the minimum image internally); wrapping is purely a
+    // representation of the returned positions. Any periodic-image bookkeeping for
+    // visualization is done as a WHOLE-MOLECULE rigid translation elsewhere, never
+    // here. Default false.
+    void setEnforcePeriodicBox(bool v) {
+        enforcePeriodicBox = v;
+    }
+    [[nodiscard]] auto getEnforcePeriodicBox() const -> bool {
+        return enforcePeriodicBox;
+    }
+
+    // True for the methods that require a periodic box (and thus exclude GBSA).
+    [[nodiscard]] static auto isPeriodic(NonbondedMethod m) -> bool {
+        return m == NonbondedMethod::CutoffPeriodic || m == NonbondedMethod::Ewald
+               || m == NonbondedMethod::PME;
     }
 
     auto computePotentialEnergy(const std::vector<OpenMM::Vec3>& positions) -> double;
@@ -140,5 +167,6 @@ class OpenMMContext {
     static constexpr int kMtsFastGroup = 1; // bonds, angles, torsions, CMAP, UB
 
     bool enforcePeriodicBox = false;
+    bool hasVirtualSites = false;
     bool initialized = false;
 };

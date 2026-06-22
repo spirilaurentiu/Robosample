@@ -56,10 +56,15 @@ class Writer {
     ///
     /// @tparam Vec  Anything with .data() → const double* and size ≥ 3*numAtoms.
     ///              The interleaved layout x0 y0 z0 … xN yN zN is required.
+    /// @param box   Periodic box for this frame. Ignored unless the writer was
+    ///              opened withBox=true; supply the per-frame box under PBC so the
+    ///              trajectory images correctly in analysis tools.
     template <typename Vec>
-    auto append(const Vec& coords /* , const Box& box */) -> void {
+    auto append(const Vec& coords, const Box& box = Box{}) -> void {
         assert(fileFd_ >= 0 && "dcd::Writer: not initialized");
-        // fillBox(box);
+        if (withBox_) {
+            fillBox(box);
+        }
         deinterleaveCoords(coords.data());
         writeAll(frameBuf_.data(), static_cast<std::size_t>(frameBytes_));
         ++frameCount_;

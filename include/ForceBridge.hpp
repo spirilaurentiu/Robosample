@@ -77,6 +77,19 @@ class ForceBridge {
         const robo::Vec3* posG = s.atomPosG();
         const robo::Transform* X_GB = s.X_GB();
         for (int a = 0; a < model_.numAtoms; ++a) {
+            // Virtual sites (mass == 0, e.g. the OPC/TIP4P M-site) carry no
+            // independent DOF: OpenMM's getState(Forces) has ALREADY projected
+            // the force computed at the site onto its real parent atoms (verify:
+            // sum over REAL atoms reproduces the system net force / -dPE/dq to
+            // machine precision, while the raw force still left in the site's own
+            // slot makes the global sum nonzero). Reducing that leftover slot too
+            // would DOUBLE-COUNT the site force -- here it would re-apply ~10^3
+            // kJ/mol/nm per water at the M-site station, a non-conservative kick
+            // that pumps the body's kinetic energy every step. Skip it; the
+            // parents already carry the contribution.
+            if (model_.atomMass[a] == robo::Real(0)) {
+                continue;
+            }
             const int b = model_.atomBody[a];
             const robo::Vec3 f(forces[a][0], forces[a][1], forces[a][2]);
             const robo::Vec3 r = posG[a] - X_GB[b].p(); // station in Ground, about body origin
