@@ -1459,11 +1459,12 @@ void World::reinitialize() {
 
     const double pe = bridge_.calcPotentialEnergy();
     const double ke = RobotEngine::calcKineticEnergy(model_, state_);
-    double fixman = 0.0, logSineSqr = 0.0;
+    double fixman = 0.0;
+    double logSineSqr = 0.0;
     if (sampler_.useFixman) {
         fixman = calcFixman();
         logSineSqr = calcLogSineSqrGamma2();
-        dbgPrintFreeRootPitches("reinit", model_, state_); // TEMP: J-term diagnostic
+        // dbgPrintFreeRootPitches("reinit", model_, state_); // TEMP: J-term diagnostic
     }
     state_.energy.pe = pe;
     state_.energy.ke = ke;
@@ -1478,11 +1479,12 @@ double World::currentTotalEnergy() {
     const double pe = bridge_.calcPotentialEnergy();
     RobotEngine::realizeVelocity(model_, state_);
     const double ke = RobotEngine::calcKineticEnergy(model_, state_);
-    double fixman = 0.0, logSineSqr = 0.0;
+    double fixman = 0.0;
+    double logSineSqr = 0.0;
     if (sampler_.useFixman) {
         fixman = calcFixman(); // realizes ABI internally; position already current
         logSineSqr = calcLogSineSqrGamma2();
-        dbgPrintFreeRootPitches("postMD", model_, state_); // TEMP: J-term diagnostic
+        // dbgPrintFreeRootPitches("postMD", model_, state_); // TEMP: J-term diagnostic
     }
     state_.energy.pe = pe;
     state_.energy.ke = ke;

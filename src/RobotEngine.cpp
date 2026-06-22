@@ -1227,17 +1227,22 @@ bool RobotEngine::verletStep(const RobotModel& m,
     }
 
     const Real tol = Real(1e-4);
+    const Real omega = Real(0.7); // under-relaxation; 1.0 == plain fixed point
+    const int maxIters = 25;      // was 10
     Real prevChange = std::numeric_limits<Real>::infinity();
-    for (int iter = 0; iter < 10; ++iter) {
-        Real num = 0, den = 0; // Simbody's relative 2-norm change
+    bool converged = false;
+
+    for (int iter = 0; iter < maxIters; ++iter) {
+        Real num = 0, den = 0;
         for (int i = 0; i < nu; ++i) {
-            const Real un = u0[i] + (h / 2) * (udot0[i] + udot[i]);
+            const Real target = u0[i] + (h / 2) * (udot0[i] + udot[i]);
+            const Real un = (Real(1) - omega) * u[i] + omega * target;
             const Real d = un - u[i];
             num += d * d;
             den += u[i] * u[i];
             u[i] = un;
         }
-        if (!velocitiesSane()) { // velocity runaway -> reject early (pre-overflow)
+        if (!velocitiesSane()) {
             restorePreStep();
             return false;
         }
@@ -1245,19 +1250,31 @@ bool RobotEngine::verletStep(const RobotModel& m,
             restorePreStep();
             return false;
         }
+
         const Real change = std::sqrt(num) / (std::sqrt(den) + Real(1e-30));
-        if (!std::isfinite(change) || change > Real(1e6)) { // non-contracting solve -> reject
+        if (!std::isfinite(change) || change > Real(1e6)) {
             restorePreStep();
             return false;
         }
+
         if (change <= tol) {
-            break; // converged
+            converged = true;
+            break;
         }
+
+        // Diverging fixed point: the step cannot be solved at this h.
+        // REJECT — do not ship the half-solved velocity. (was: bare `break`)
         if (iter > 1 && change > prevChange) {
-            break; // FIX: Simbody's break, only after i>1
+            restorePreStep();
+            return false;
         }
+
         prevChange = change;
     }
+    if (!converged) {
+        restorePreStep();
+        return false;
+    } // ran out of iterations un-converged
 
     cset.enforceVelocityConstraints(m, s); // localProjectU (RATTLE)
     realizeVelocity(m, s);                 // refresh V/KE at the projected u

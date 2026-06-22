@@ -46,6 +46,19 @@ PYBIND11_MODULE(robo_bindings, m) {
         .value("Cylinder", BondMobility::Cylinder)
         .value("BendStretch", BondMobility::BendStretch);
 
+    // NEW: needed so Python can target mass scaling by joint type.
+    py::enum_<JointType>(m, "JointType")
+        .value("Weld", JointType::Weld)
+        .value("Pin", JointType::Pin)
+        .value("Slider", JointType::Slider)
+        .value("Cylinder", JointType::Cylinder)
+        .value("BendStretch", JointType::BendStretch)
+        .value("Translation", JointType::Translation)
+        .value("Ball", JointType::Ball)
+        .value("SphericalCoords", JointType::SphericalCoords)
+        .value("FreeLine", JointType::FreeLine)
+        .value("Free", JointType::Free);
+
     py::class_<Selection>(m, "Selection").def(py::init<>());
 
     // A flexibility world. add_sampler returns *this so Python can chain. Note:
@@ -77,6 +90,22 @@ PYBIND11_MODULE(robo_bindings, m) {
              "max_initial_kick_tries>0 enables a pre-round-0 retry loop that keeps "
              "drawing random placements until a clash-free starting pose is found "
              "(dPE <= maxStartPE), or raises RuntimeError after the budget is exhausted.")
+        // NEW: kinetic-metric mass scaling (fictitious mass; SAMPLING only).
+        // OFF by default (scale 1.0 == physical). Call after the world is created.
+        .def("set_mass_scale_by_joint",
+             &World::setMassScaleByJoint,
+             py::arg("joint_type"),
+             py::arg("scale"),
+             "Inflate the spatial inertia used ONLY in the proposal (momentum draw, "
+             "KE, Fixman ln det M) for every body of the given JointType, raising the "
+             "stable dt ~sqrt(scale) with zero configurational bias. scale=1.0 is "
+             "physical (off). Typical: set_mass_scale_by_joint(JointType.Free, 16.0) "
+             "on a solvent world to tame water libration.")
+        .def("set_body_mass_scale",
+             &World::setBodyMassScale,
+             py::arg("body"),
+             py::arg("scale"),
+             "Per-body form of set_mass_scale_by_joint (scale=1.0 is physical/off).")
         .def_property_readonly("index", &World::index)
         .def_property_readonly("is_cartesian", &World::isCartesian)
         .def_property_readonly("is_docking", &World::isDocking);

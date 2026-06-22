@@ -12,7 +12,7 @@ from .amber_dihedral_classifier import AmberDihedralClassifier
 from .amber_dihedral_types import DihedralType
 from .molecule_prototype import MoleculePrototype
 from .robo_bindings import Context as _Context
-from .robo_bindings import NonbondedMethod, RootMobility, SystemTopology
+from .robo_bindings import JointType, NonbondedMethod, RootMobility, SystemTopology
 from .secondary_structure import DSSPCode
 from .units import ANG_TO_NM
 
@@ -538,7 +538,7 @@ class Context(_Context):
 
         return
 
-    def add_docking_world(self, ligand_molecule_indices):
+    def add_docking_world(self, ligand_molecule_indices, mass_scale=None):
         """Add a rigid-body docking world.
 
         Parameters
@@ -564,4 +564,41 @@ class Context(_Context):
         """
         if isinstance(ligand_molecule_indices, int):
             ligand_molecule_indices = [ligand_molecule_indices]
-        return super().add_docking_world([int(i) for i in ligand_molecule_indices])
+        world = super().add_docking_world([int(i) for i in ligand_molecule_indices])
+        self._apply_mass_scale(world, mass_scale)
+        return world
+
+    def _apply_mass_scale(self, world, mass_scale) -> None:
+        """Opt-in kinetic-metric mass scaling. Off (physical) when mass_scale is None.
+
+        mass_scale may be:
+          * None              -> off (default; bodies keep their physical inertia)
+          * float             -> applied to all Free-root bodies (the canonical
+                                 explicit-solvent / water-libration case)
+          * {JointType: float}-> per-joint-type scale factors
+        """
+        if mass_scale is None:
+            return
+        items = (
+            mass_scale.items()
+            if isinstance(mass_scale, dict)
+            else [(JointType.Free, float(mass_scale))]
+        )
+        for joint_type, scale in items:
+            if scale is None or float(scale) == 1.0:
+                continue  # 1.0 == physical == off
+            world.set_mass_scale_by_joint(joint_type, float(scale))
+
+    def add_robotic_world(self, selection, mass_scale=None):
+        world = super().add_robotic_world(selection)
+        self._apply_mass_scale(world, mass_scale)
+        return world
+
+    def add_torsional_world(self, selection, mass_scale=None):
+        # Alias kept in sync with add_robotic_world (incl. the mass_scale flag).
+        return self.add_robotic_world(selection, mass_scale=mass_scale)
+
+    def add_cartesian_world(self, mass_scale=None):
+        world = super().add_cartesian_world()
+        self._apply_mass_scale(world, mass_scale)
+        return world

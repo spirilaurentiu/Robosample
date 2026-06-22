@@ -4,7 +4,7 @@ Robosample C++ bindings (robo_bindings)
 from __future__ import annotations
 import collections.abc
 import typing
-__all__: list[str] = ['AcceptRejectMode', 'BondMobility', 'Context', 'ForceGroupEnergy', 'MoveType', 'NonbondedMethod', 'RootMobility', 'Selection', 'SystemTopology', 'World']
+__all__: list[str] = ['AcceptRejectMode', 'BondMobility', 'Context', 'ForceGroupEnergy', 'JointType', 'MoveType', 'NonbondedMethod', 'RootMobility', 'Selection', 'SystemTopology', 'World']
 class AcceptRejectMode:
     """
     Members:
@@ -182,6 +182,75 @@ class ForceGroupEnergy:
         ...
     @property
     def name(self) -> str:
+        ...
+class JointType:
+    """
+    Members:
+    
+      Weld
+    
+      Pin
+    
+      Slider
+    
+      Cylinder
+    
+      BendStretch
+    
+      Translation
+    
+      Ball
+    
+      SphericalCoords
+    
+      FreeLine
+    
+      Free
+    """
+    Ball: typing.ClassVar[JointType]  # value = <JointType.Ball: 6>
+    BendStretch: typing.ClassVar[JointType]  # value = <JointType.BendStretch: 4>
+    Cylinder: typing.ClassVar[JointType]  # value = <JointType.Cylinder: 3>
+    Free: typing.ClassVar[JointType]  # value = <JointType.Free: 9>
+    FreeLine: typing.ClassVar[JointType]  # value = <JointType.FreeLine: 8>
+    Pin: typing.ClassVar[JointType]  # value = <JointType.Pin: 1>
+    Slider: typing.ClassVar[JointType]  # value = <JointType.Slider: 2>
+    SphericalCoords: typing.ClassVar[JointType]  # value = <JointType.SphericalCoords: 7>
+    Translation: typing.ClassVar[JointType]  # value = <JointType.Translation: 5>
+    Weld: typing.ClassVar[JointType]  # value = <JointType.Weld: 0>
+    __members__: typing.ClassVar[dict[str, JointType]]  # value = {'Weld': <JointType.Weld: 0>, 'Pin': <JointType.Pin: 1>, 'Slider': <JointType.Slider: 2>, 'Cylinder': <JointType.Cylinder: 3>, 'BendStretch': <JointType.BendStretch: 4>, 'Translation': <JointType.Translation: 5>, 'Ball': <JointType.Ball: 6>, 'SphericalCoords': <JointType.SphericalCoords: 7>, 'FreeLine': <JointType.FreeLine: 8>, 'Free': <JointType.Free: 9>}
+    @typing.overload
+    def __eq__(self, other: JointType) -> bool:
+        ...
+    @typing.overload
+    def __eq__(self, other: typing.Any) -> bool:
+        ...
+    def __getstate__(self) -> int:
+        ...
+    def __hash__(self) -> int:
+        ...
+    def __index__(self) -> int:
+        ...
+    def __init__(self, value: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def __int__(self) -> int:
+        ...
+    @typing.overload
+    def __ne__(self, other: JointType) -> bool:
+        ...
+    @typing.overload
+    def __ne__(self, other: typing.Any) -> bool:
+        ...
+    def __repr__(self) -> str:
+        ...
+    def __setstate__(self, state: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def __str__(self) -> str:
+        ...
+    @property
+    def name(self) -> str:
+        ...
+    @property
+    def value(self) -> int:
         ...
 class MoveType:
     """
@@ -1054,6 +1123,14 @@ class World:
     def add_sampler(self, timeStep: typing.SupportsFloat | typing.SupportsIndex, mdSteps: typing.SupportsInt | typing.SupportsIndex, acceptRejectMode: AcceptRejectMode, use_nuts: bool, sphere_factor: typing.SupportsFloat | typing.SupportsIndex = 1.0, use_fixman: bool | None = None, always_kick: bool = False, clash_threshold: typing.SupportsFloat | typing.SupportsIndex = 10.0, max_initial_kick_tries: typing.SupportsInt | typing.SupportsIndex = 0) -> World:
         """
         Configure this world's sampler; returns the world for chaining. sphere_factor scales the auto-sized per-ligand binding sphere (R = R_receptor + sphere_factor*R_ligand). The docking kick relocates a ligand only when its COM leaves the sphere (always_kick=True perturbs every round). A proposed pose is rejected -- in ALL modes, including AlwaysAccept -- if its potential energy is non-finite or |PE| exceeds clash_threshold, so overlapping geometry never passes. use_fixman=None auto-enables Fixman+logSineSqr on non-Cartesian worlds. max_initial_kick_tries>0 enables a pre-round-0 retry loop that keeps drawing random placements until a clash-free starting pose is found (dPE <= maxStartPE), or raises RuntimeError after the budget is exhausted.
+        """
+    def set_body_mass_scale(self, body: typing.SupportsInt | typing.SupportsIndex, scale: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Per-body form of set_mass_scale_by_joint (scale=1.0 is physical/off).
+        """
+    def set_mass_scale_by_joint(self, joint_type: JointType, scale: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Inflate the spatial inertia used ONLY in the proposal (momentum draw, KE, Fixman ln det M) for every body of the given JointType, raising the stable dt ~sqrt(scale) with zero configurational bias. scale=1.0 is physical (off). Typical: set_mass_scale_by_joint(JointType.Free, 16.0) on a solvent world to tame water libration.
         """
     @property
     def index(self) -> int:

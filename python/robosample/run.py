@@ -69,17 +69,17 @@ if args.validate:
 #     The torsional Verlet needs no box -- it moves only internal DOF and the
 #     forces arrive minimum-imaged from OpenMM. Every water is a Free-root rigid
 #     body here, so it gets a rigid-body HMC move as well.
-# dihedrals = [
-#     robosample.DihedralType.PROTEIN_PHI.value,
-#     robosample.DihedralType.PROTEIN_PSI.value,
-# ]
-# bonds = context.standard_dihedral_bonds.loc[
-#     context.standard_dihedral_bonds["dihedral_type"].isin(dihedrals)
-# ]
-sele = context.build_flexibilities(None, robosample.rb.BondMobility.Torsion, False)
+dihedrals = [
+    robosample.DihedralType.PROTEIN_PHI.value,
+    robosample.DihedralType.PROTEIN_PSI.value,
+]
+bonds = context.standard_dihedral_bonds.loc[
+    context.standard_dihedral_bonds["dihedral_type"].isin(dihedrals)
+]
+sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, False)
 context.add_robotic_world(sele).add_sampler(
-    timeStep=0.001,
-    mdSteps=2000,
+    timeStep=0.004,
+    mdSteps=25,
     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
     use_nuts=False,
     use_fixman=True,  # required for rigorous Boltzmann sampling of a constrained world
