@@ -121,6 +121,18 @@ struct SamplerConfig {
     // counter guarantees no pose is a permanent trap: after this many stuck rounds
     // the ligand is relocated unconditionally, then the counter resets.
     int maxStuckRounds = 25;
+
+    // Reversibility diagnostic cadence. 0 = OFF (default; preserves zero overhead).
+    // N > 0 = run RobotEngine::checkReversibility every N generateSample() calls
+    // (the first call is round 0, so N>0 also performs the startup check). The probe
+    // integrates mdSteps forward + back at the world's timeStep from the freshly
+    // seeded state, logs the relative round-trip residual, and warns if it is large
+    // or non-finite. It is a NON-DESTRUCTIVE smoke test that certifies dt only for
+    // the current configuration (the safe dt is configuration dependent); the
+    // always-on guard remains the per-step corrector throw in verletStep. See
+    // THEORY 5.7. Set from Python via the reversibility_check_every=N argument to
+    // context.add_*_world() (which forwards to World::setReversibilityCheck).
+    int reversibilityCheckInterval = 0;
 };
 
 class World {
@@ -233,6 +245,11 @@ class World {
     void setBodyMassScale(int body, double scale);
     void setMassScaleByJoint(JointType jt, double scale);
 
+    // Enable/disable the periodic reversibility probe (THEORY 5.7). interval<=0
+    // disables it; interval>0 runs it every `interval` generateSample() calls,
+    // starting at round 0. Bound to Python as world.set_reversibility_check(...).
+    void setReversibilityCheck(int interval);
+
     private:
     // --- internal (torsional) HMC pieces ---
     void reinitialize(); // seed velocities, record initial H (incl. Fixman)
@@ -278,7 +295,8 @@ class World {
     std::vector<int> siteAtoms_;
     bool lastAccepted_ = false;
     bool lastKickApplied_ = false;
-    bool equilPhase_ = false; // true during burn-in: AlwaysAccept overrides MH
+    long generateSampleCalls_ = 0; // for the reversibility-check cadence (SamplerConfig)
+    bool equilPhase_ = false;      // true during burn-in: AlwaysAccept overrides MH
 
     // Consecutive rejected docking moves from the current carried-forward pose.
     // Reset on any acceptance; when it reaches sampler_.maxStuckRounds a kick is

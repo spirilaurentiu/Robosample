@@ -1132,6 +1132,10 @@ class World:
         """
         Inflate the spatial inertia used ONLY in the proposal (momentum draw, KE, Fixman ln det M) for every body of the given JointType, raising the stable dt ~sqrt(scale) with zero configurational bias. scale=1.0 is physical (off). Typical: set_mass_scale_by_joint(JointType.Free, 16.0) on a solvent world to tame water libration.
         """
+    def set_reversibility_check(self, interval: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Low-level setter for the periodic reversibility probe. Prefer the reversibility_check_every=N argument to context.add_*_world(), which forwards here. interval<=0 disables it (default); interval>0 runs RobotEngine::checkReversibility every `interval` rounds (starting at round 0, so it doubles as a startup check), integrating mdSteps forward+back at this world's timestep from the freshly seeded state and logging the relative round-trip residual (~1e-12 ideal; a large or non-finite value means the timestep is too large for the current geometry). Non-destructive; it is a smoke test for the current configuration only -- the always-on guard is the per-step corrector throw in the integrator. See THEORY 5.7.
+        """
     @property
     def index(self) -> int:
         ...

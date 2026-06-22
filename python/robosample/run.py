@@ -78,7 +78,7 @@ bonds = context.standard_dihedral_bonds.loc[
 ]
 sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, False)
 context.add_robotic_world(sele).add_sampler(
-    timeStep=0.004,
+    timeStep=0.04,
     mdSteps=25,
     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
     use_nuts=False,

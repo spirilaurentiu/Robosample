@@ -273,6 +273,20 @@ void World::setMassScaleByJoint(JointType jt, double scale) {
     }
 }
 
+void World::setReversibilityCheck(int interval) {
+    sampler_.reversibilityCheckInterval = (interval > 0) ? interval : 0;
+    if (sampler_.reversibilityCheckInterval > 0) {
+        // Typically set from add_*_world() BEFORE add_sampler(), so mdSteps and
+        // timeStep are not known here yet; the per-round "[rev]" line logs the
+        // actual step count and dt at run time.
+        std::fprintf(stderr,
+                     "[world %d] reversibility probe ENABLED: every %d round(s) "
+                     "(non-destructive; residual logged per round; see THEORY 5.7).\n",
+                     index_,
+                     sampler_.reversibilityCheckInterval);
+    }
+}
+
 // ----------------------------------------------------------------------------
 //  buildModel  (unchanged structure; stores ln|M_3N| for the Fixman reference)
 // ----------------------------------------------------------------------------
@@ -1323,6 +1337,29 @@ bool World::generateSample() {
         if (screenedOut) {
             stepsOk = false;
         }
+    }
+
+    // Periodic reversibility probe (THEORY 5.7). Non-destructive: it integrates
+    // mdSteps forward + back at this world's dt from the freshly seeded state and
+    // restores the state, so the real proposal below is unaffected. It is a
+    // smoke test for the CURRENT geometry only -- the always-on guard is the
+    // per-step corrector throw inside verletStep. Disabled when interval == 0.
+    const long revRound = generateSampleCalls_++;
+    if (sampler_.reversibilityCheckInterval > 0 && stepsOk && sampler_.mdSteps > 0
+        && (revRound % sampler_.reversibilityCheckInterval == 0)) {
+        const Real revResid =
+            RobotEngine::checkReversibility(model_, state_, bridge_, constraints_, sampler_.mdSteps, h);
+        const Real revTol = Real(1e-6); // relative round-trip residual; ~1e-12 for a clean step
+        const bool revBad = !std::isfinite(revResid) || revResid > revTol;
+        std::fprintf(stderr,
+                     "[rev] world %d round %ld: round-trip residual = %.3e over %d steps at dt=%.6g ps%s\n",
+                     index_,
+                     revRound,
+                     (double)revResid,
+                     sampler_.mdSteps,
+                     (double)sampler_.timeStep,
+                     revBad ? "  <-- WARNING: integrator not reversible at this dt/geometry; reduce timestep"
+                            : "  (ok)");
     }
 
     for (int i = 0; stepsOk && i < sampler_.mdSteps; ++i) {

@@ -27,9 +27,11 @@
 #include "RobotEngine.hpp"
 
 #include <cmath>
+#include <cstdio>
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -1158,13 +1160,25 @@ bool RobotEngine::verletStep(const RobotModel& m,
     };
 
     // ---- position drift ----
-    // Scalar DOFs (Pin, Translation, and the Free TRANSLATION block): Taylor
-    // q1 = q0 + h*qdot0 + (h^2/2)*qddot0.
+    // Scalar DOFs (Pin, Translation, and the Free TRANSLATION block): 2nd-order
+    // Taylor q1 = q0 + h*qdot0 + (h^2/2)*qddot0 (local error O(h^3); global method
+    // order 2 -- see THEORY 5.2).
+    //
     // Quaternion DOFs (Free, Ball): EXACT exponential-map advance from the
-    // start-of-step angular velocity w_FM = u0[uOff..uOff+2]. Keeps |q| = 1 by
-    // construction (no renormalisation drift, no overflow-to-zero), is reversible,
-    // and reduces to the old linear update as h -> 0, so it changes only the
-    // proposal, not the target (guidance/acceptance separation; see THEORY 5.4).
+    // midpoint angular velocity wHalf = u0 + (h/2)*udot0, applied as a left
+    // Hamilton product onto q0. This DELIBERATELY diverges from Simbody's
+    // linear-Taylor-plus-renormalize quaternion update, and is NOT a bug to be
+    // "matched away": it keeps |q| = 1 by construction, is reversible, reduces to
+    // the linear update as h -> 0 (so it changes only the proposal, not the target
+    // -- THEORY 5.4), and -- crucially -- it advances the orientation purely from
+    // the angular velocity, BYPASSING the quaternion second derivative qddot.
+    // The linear-Taylor update instead leans on qddot (calcQDotDot); with the
+    // port's reimplemented Free-joint kinematics that path injects kinetic energy
+    // through the root body and (via the articulated recursion) the whole tree --
+    // an observed ~+1300 kJ/mol/traj KE pump even at 1 fs. The exp-map is robust to
+    // that latent N/qddot inconsistency. ROOT-CAUSE TODO: golden-test the Free-joint
+    // quaternion kinematics (N, Ndot, qddot) against Simbody on a single free body
+    // (THEORY 3.4); until that is closed, the exp-map is the correct propagator.
     for (int i = 0; i < nq; ++i) {
         q[i] = q0[i] + h * qdot0[i] + (h * h / 2) * qdd0[i];
     }
@@ -1185,7 +1199,7 @@ bool RobotEngine::verletStep(const RobotModel& m,
         q[qOff + 3] = qnew[3];
         // translation block q[qOff+4..6] keeps its Taylor update from the loop above
     }
-    normalizeQuaternions(m, s); // now only mops up ~1e-16 rounding; never rescues an overflow
+    normalizeQuaternions(m, s); // mops up ~1e-16 rounding after the exp-map; never rescues an overflow
 
     auto refreshPos = [&]() {
         realizePosition(m, s);
@@ -1226,22 +1240,29 @@ bool RobotEngine::verletStep(const RobotModel& m,
         return false;
     }
 
+    // Simbody: tol = min(1e-4, 0.1*accuracy). For fixed-step HMC (default accuracy
+    // ~1e-3) this evaluates to 1e-4. Plain functional iteration, no under-relaxation,
+    // max 10 sweeps -- matching VerletIntegrator::attemptDAEStep exactly.
     const Real tol = Real(1e-4);
-    const Real omega = Real(0.7); // under-relaxation; 1.0 == plain fixed point
-    const int maxIters = 25;      // was 10
     Real prevChange = std::numeric_limits<Real>::infinity();
+    Real lastChange = std::numeric_limits<Real>::infinity(); // for the dt-too-large message
+    int usedIters = 0;
     bool converged = false;
 
-    for (int iter = 0; iter < maxIters; ++iter) {
-        Real num = 0, den = 0;
+    for (int iter = 0; iter < 10; ++iter) {
+        ++usedIters;
+        Real num = 0, den = 0; // Simbody's relative 2-norm change
         for (int i = 0; i < nu; ++i) {
-            const Real target = u0[i] + (h / 2) * (udot0[i] + udot[i]);
-            const Real un = (Real(1) - omega) * u[i] + omega * target;
+            const Real un = u0[i] + (h / 2) * (udot0[i] + udot[i]);
             const Real d = un - u[i];
             num += d * d;
             den += u[i] * u[i];
             u[i] = un;
         }
+        // Genuine non-finite / runaway. In Simbody this is the realize()/project()
+        // exception path: caught, and in fixed-step mode the step still "succeeds",
+        // propagating the bad state to the move-level energy validation, which
+        // rejects the MOVE. We short-circuit to the same outcome by rejecting here.
         if (!velocitiesSane()) {
             restorePreStep();
             return false;
@@ -1252,6 +1273,7 @@ bool RobotEngine::verletStep(const RobotModel& m,
         }
 
         const Real change = std::sqrt(num) / (std::sqrt(den) + Real(1e-30));
+        lastChange = change;
         if (!std::isfinite(change) || change > Real(1e6)) {
             restorePreStep();
             return false;
@@ -1259,22 +1281,49 @@ bool RobotEngine::verletStep(const RobotModel& m,
 
         if (change <= tol) {
             converged = true;
-            break;
+            break; // converged
         }
 
-        // Diverging fixed point: the step cannot be solved at this h.
-        // REJECT — do not ship the half-solved velocity. (was: bare `break`)
+        // Functional iteration stopped contracting (after iter > 1, to skip the
+        // crude forward-Euler seed's first non-monotone blip). We stop iterating
+        // here; whether to take the step or reject is decided after the loop.
         if (iter > 1 && change > prevChange) {
-            restorePreStep();
-            return false;
+            break;
         }
 
         prevChange = change;
     }
+
+    // dt-too-large guard (deliberately STRICTER than Simbody's "take the step").
+    // Reaching here without convergence means the implicit-trapezoid corrector
+    // could not find its fixed point at this dt for the CURRENT configuration --
+    // a FINITE, bounded solve that simply will not contract. This is distinct from
+    // a steric clash (non-finite force / runaway u), which is handled above as a
+    // move rejection (return false) because clashes are a normal, transient part of
+    // sampling. A non-converged corrector instead means the proposal map is no
+    // longer the converged, reversible trapezoidal map that HMC correctness and
+    // energy conservation rest on (THEORY 5.5/5.6): silently taking it pumps energy.
+    // Because the convergence radius -- and hence the largest reversible dt -- is
+    // configuration dependent (it scales with the metric M(q) and the local force
+    // stiffness; THEORY 5.5), this can fire only in stiffer regions even when the
+    // startup geometry integrated cleanly. We fail loud rather than corrupt the run.
     if (!converged) {
         restorePreStep();
-        return false;
-    } // ran out of iterations un-converged
+        char msg[320];
+        std::snprintf(msg,
+                      sizeof(msg),
+                      "RobotEngine::verletStep: velocity corrector did not converge at "
+                      "dt=%.6g ps (relative change %.3e > tol %.3e after %d iterations). "
+                      "The timestep is too large for the current configuration; reduce "
+                      "this world's timestep. (Steric clashes are handled separately as "
+                      "move rejections; this is a genuine non-convergence of the implicit "
+                      "trapezoid solve -- see THEORY 5.5.)",
+                      (double)h,
+                      (double)lastChange,
+                      (double)tol,
+                      usedIters);
+        throw std::runtime_error(msg);
+    }
 
     cset.enforceVelocityConstraints(m, s); // localProjectU (RATTLE)
     realizeVelocity(m, s);                 // refresh V/KE at the projected u
@@ -1292,6 +1341,138 @@ bool RobotEngine::stepTo(const RobotModel& m,
         return true;
     }
     return verletStep(m, s, bridge, cset, h);
+}
+
+// ============================================================================
+//  Reversibility diagnostic (HMC proposal sanity check)
+// ============================================================================
+// Integrate nSteps forward at fixed step h, flip every generalized speed
+// (u -> -u), integrate nSteps "back", flip again. For a time-reversible map the
+// state returns to its start to within ~machine epsilon amplified by the work
+// done; a too-large h (the non-reversible, energy-pumping regime) returns a
+// residual of order the trajectory size. Returns the RELATIVE round-trip
+// residual ||(q,u)_returned - (q,u)_start|| / ||(q,u)_start||.
+//
+// Two properties of this probe matter for how it is used:
+//   * It is NON-DESTRUCTIVE: the state s is restored to its entry value before
+//     returning, so it can be called at startup or mid-run without perturbing
+//     the chain.
+//   * It certifies h ONLY for the configuration it is run from. The integrator
+//     map depends on q through the configuration-dependent mass metric M(q) and
+//     the local force stiffness, so the largest reversible h varies across
+//     configuration space (THEORY 5.5). A startup call is therefore a smoke test
+//     -- "is dt in the right ballpark for this geometry?" -- NOT a whole-run
+//     guarantee. The ongoing, per-configuration guard is the corrector-
+//     convergence throw inside verletStep, which tests the CURRENT geometry on
+//     every step.
+//
+// If the corrector throws mid-probe (dt already non-convergent here), that is
+// caught and reported as an infinite residual rather than aborting the probe.
+//
+// Quaternion DOF are compared with a double-cover-aware chordal distance
+// min(|q - q0|, |q + q0|), since q and -q are the same rotation on S^3 (THEORY
+// 3.4); scalar coordinates and the velocity vector use the plain Euclidean norm.
+Real RobotEngine::checkReversibility(const RobotModel& m,
+                                     RobotState& s,
+                                     ForceBridge& bridge,
+                                     const robo::ConstraintSet& cset,
+                                     int nSteps,
+                                     Real h) {
+    const int nq = m.nq, nu = m.nu;
+
+    // Snapshot the entry state (for comparison and for restoration).
+    std::vector<Real> qStart(s.q(), s.q() + nq);
+    std::vector<Real> uStart(s.u(), s.u() + nu);
+    std::vector<Real> qdotStart(s.qdot(), s.qdot() + nq);
+    std::vector<Real> udotStart(s.udot(), s.udot() + nu);
+    std::vector<Real> qddStart(s.qdotdot(), s.qdotdot() + nq);
+    const Real timeStart = s.time;
+
+    auto restoreStart = [&]() {
+        std::copy(qStart.begin(), qStart.end(), s.q());
+        std::copy(uStart.begin(), uStart.end(), s.u());
+        std::copy(qdotStart.begin(), qdotStart.end(), s.qdot());
+        std::copy(udotStart.begin(), udotStart.end(), s.udot());
+        std::copy(qddStart.begin(), qddStart.end(), s.qdotdot());
+        s.time = timeStart;
+        realizePosition(m, s);
+        realizeVelocity(m, s);
+        fillAtomPositionsFromBodies(m, s);
+    };
+
+    // Momentum-flip involution S: negate all generalized speeds and refresh the
+    // velocity-dependent derived quantities against -u.
+    auto flipMomenta = [&]() {
+        Real* u = s.u();
+        for (int i = 0; i < nu; ++i) {
+            u[i] = -u[i];
+        }
+        realizeVelocity(m, s);
+        realizeArticulatedBodyInertias(m, s);
+        calcUDot(m, s);
+        calcQDot(m, s, s.qdot());
+        calcQDotDot(m, s);
+    };
+
+    // Forward leg, flip, back leg, flip. Any non-finite rejection or corrector
+    // throw means h is already not integrable/reversible here -> infinite residual.
+    try {
+        for (int i = 0; i < nSteps; ++i) {
+            if (!verletStep(m, s, bridge, cset, h)) {
+                restoreStart();
+                return std::numeric_limits<Real>::infinity();
+            }
+        }
+        flipMomenta();
+        for (int i = 0; i < nSteps; ++i) {
+            if (!verletStep(m, s, bridge, cset, h)) {
+                restoreStart();
+                return std::numeric_limits<Real>::infinity();
+            }
+        }
+        flipMomenta();
+    } catch (const std::exception&) {
+        restoreStart();
+        return std::numeric_limits<Real>::infinity();
+    }
+
+    // Round-trip residual. Quaternion blocks: double-cover chordal distance.
+    const Real* q = s.q();
+    const Real* u = s.u();
+    Real resid2 = 0, scale2 = 0;
+
+    std::vector<bool> isQuatSlot(nq, false);
+    for (int b = 1; b < m.numBodies; ++b) {
+        if (!m.isQuaternionBody(b)) {
+            continue;
+        }
+        const int qOff = m.bodyQIndex[b];
+        Real dPlus2 = 0, dMinus2 = 0;
+        for (int k = 0; k < 4; ++k) {
+            isQuatSlot[qOff + k] = true;
+            const Real a = q[qOff + k], b0 = qStart[qOff + k];
+            dPlus2 += (a - b0) * (a - b0);
+            dMinus2 += (a + b0) * (a + b0);
+            scale2 += b0 * b0;
+        }
+        resid2 += std::min(dPlus2, dMinus2); // q == -q on S^3
+    }
+    for (int i = 0; i < nq; ++i) {
+        if (isQuatSlot[i]) {
+            continue;
+        }
+        const Real d = q[i] - qStart[i];
+        resid2 += d * d;
+        scale2 += qStart[i] * qStart[i];
+    }
+    for (int i = 0; i < nu; ++i) {
+        const Real d = u[i] - uStart[i];
+        resid2 += d * d;
+        scale2 += uStart[i] * uStart[i];
+    }
+
+    restoreStart(); // non-destructive probe
+    return std::sqrt(resid2) / (std::sqrt(scale2) + Real(1e-30));
 }
 
 // ---- calcQDotDot: qddot = N qddot-coupling. Pin/Translation: udot; Free: quat. ----

@@ -538,7 +538,9 @@ class Context(_Context):
 
         return
 
-    def add_docking_world(self, ligand_molecule_indices, mass_scale=None):
+    def add_docking_world(
+        self, ligand_molecule_indices, mass_scale=None, reversibility_check_every=0
+    ):
         """Add a rigid-body docking world.
 
         Parameters
@@ -549,6 +551,10 @@ class Context(_Context):
             rigid. The binding-site centre is the centroid of all non-ligand
             (receptor) atoms. Pass the binding-sphere radius via
             ``.add_sampler(sphere_radius=...)``.
+        reversibility_check_every : int
+            Cadence of the non-destructive HMC reversibility probe (THEORY 5.7);
+            0 = OFF (default), N > 0 runs it every N rounds. See
+            ``add_robotic_world`` for the full description.
 
         Returns
         -------
@@ -566,6 +572,8 @@ class Context(_Context):
             ligand_molecule_indices = [ligand_molecule_indices]
         world = super().add_docking_world([int(i) for i in ligand_molecule_indices])
         self._apply_mass_scale(world, mass_scale)
+        if reversibility_check_every:
+            world.set_reversibility_check(int(reversibility_check_every))
         return world
 
     def _apply_mass_scale(self, world, mass_scale) -> None:
@@ -589,16 +597,45 @@ class Context(_Context):
                 continue  # 1.0 == physical == off
             world.set_mass_scale_by_joint(joint_type, float(scale))
 
-    def add_robotic_world(self, selection, mass_scale=None):
+    def add_robotic_world(
+        self, selection, mass_scale=None, reversibility_check_every=0
+    ):
+        """Add a torsional (internal-coordinate) world.
+
+        Parameters
+        ----------
+        selection : str
+            Atom selection that becomes mobile (its torsions are sampled).
+        mass_scale : None | float | dict[JointType, float]
+            Opt-in kinetic-metric mass scaling (off / physical when None).
+        reversibility_check_every : int
+            Cadence of the non-destructive HMC reversibility probe (THEORY 5.7).
+            0 = OFF (default; zero overhead). N > 0 runs
+            ``RobotEngine::checkReversibility`` every N rounds (round 0 included,
+            so it also serves as a startup check), logging the relative
+            round-trip residual and warning if dt is too large for the current
+            geometry. It certifies dt only for the configuration it runs from;
+            the always-on guard remains the per-step corrector throw.
+        """
         world = super().add_robotic_world(selection)
         self._apply_mass_scale(world, mass_scale)
+        if reversibility_check_every:
+            world.set_reversibility_check(int(reversibility_check_every))
         return world
 
-    def add_torsional_world(self, selection, mass_scale=None):
-        # Alias kept in sync with add_robotic_world (incl. the mass_scale flag).
-        return self.add_robotic_world(selection, mass_scale=mass_scale)
+    def add_torsional_world(
+        self, selection, mass_scale=None, reversibility_check_every=0
+    ):
+        # Alias kept in sync with add_robotic_world (mass_scale + reversibility_check_every).
+        return self.add_robotic_world(
+            selection,
+            mass_scale=mass_scale,
+            reversibility_check_every=reversibility_check_every,
+        )
 
-    def add_cartesian_world(self, mass_scale=None):
+    def add_cartesian_world(self, mass_scale=None, reversibility_check_every=0):
         world = super().add_cartesian_world()
         self._apply_mass_scale(world, mass_scale)
+        if reversibility_check_every:
+            world.set_reversibility_check(int(reversibility_check_every))
         return world

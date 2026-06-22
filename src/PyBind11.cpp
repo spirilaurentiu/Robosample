@@ -106,6 +106,19 @@ PYBIND11_MODULE(robo_bindings, m) {
              py::arg("body"),
              py::arg("scale"),
              "Per-body form of set_mass_scale_by_joint (scale=1.0 is physical/off).")
+        .def("set_reversibility_check",
+             &World::setReversibilityCheck,
+             py::arg("interval"),
+             "Low-level setter for the periodic reversibility probe. Prefer the "
+             "reversibility_check_every=N argument to context.add_*_world(), which "
+             "forwards here. interval<=0 disables it (default); interval>0 runs "
+             "RobotEngine::checkReversibility every `interval` rounds (starting at round 0, "
+             "so it doubles as a startup check), integrating mdSteps forward+back at this "
+             "world's timestep from the freshly seeded state and logging the relative "
+             "round-trip residual (~1e-12 ideal; a large or non-finite value means the "
+             "timestep is too large for the current geometry). Non-destructive; it is a "
+             "smoke test for the current configuration only -- the always-on guard is the "
+             "per-step corrector throw in the integrator. See THEORY 5.7.")
         .def_property_readonly("index", &World::index)
         .def_property_readonly("is_cartesian", &World::isCartesian)
         .def_property_readonly("is_docking", &World::isDocking);

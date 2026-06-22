@@ -603,29 +603,102 @@ For acyclic molecules there is no projection and no such factor.
 
 ### 5.2 Propagation under the bare potential V
 
-Dynamics are integrated with **velocity Verlet** (internal and Cartesian alike) using forces derived
-from the **bare potential V only**. Concretely, "under V only" means: the integrator's forces are
-the per-atom Cartesian forces -grad V from OpenMM, reduced to per-body spatial forces for the
+Dynamics are integrated with the **fixed-step Verlet integrator** (internal and Cartesian alike),
+the velocity-Verlet-class method of Simbody's `VerletIntegrator`, using forces derived from the
+**bare potential V only**. Concretely, "under V only" means: the integrator's forces are the
+per-atom Cartesian forces -grad V from OpenMM, reduced to per-body spatial forces for the
 articulated solver (Section 3); the gradients of the Fixman potential F and the Jacobian J (the
 "torques") are **not** added to these forces. So V is what generates the trajectory; F and J enter
 only the acceptance (Section 5.4). After each step, constraints (if any) are projected onto the
 manifold (Section 7).
 
-The per-step sequence (one velocity-Verlet step of size dt; the SHAKE/RATTLE projections are no-ops
-on acyclic molecules):
+**The integrator is a second-order, semi-explicit predictor-corrector, not an explicit
+kick-drift-kick leapfrog.** This distinction is load-bearing and is the source of the integrator's
+actual conservation properties (Section 5.5): the position is advanced by an explicit second-order
+Taylor step using the start-of-step acceleration, and the velocity is advanced by an **implicit
+trapezoidal corrector** solved by functional iteration. The two coincide with textbook velocity
+Verlet only for a separable, constant-mass Hamiltonian (the Cartesian case); for the
+configuration-dependent metric M(q) and velocity-dependent (Coriolis/gyroscopic) forces of internal
+coordinates they do not, which is exactly where the symplecticity caveat of Section 5.5 applies. The
+integrator is run with a **fixed step** (Simbody: `setFixedStepSize`); in that mode Simbody's Verlet
+is symplectic for separable systems and the step is **taken unconditionally** -- there is no
+step-size adaptation, so a non-converged corrector does not shrink dt or reject the step (Section
+5.5). It is the trajectory-level Metropolis test (Section 5.3), not per-step control, that supplies
+correctness.
+
+The per-step sequence (one fixed-step Verlet step of size dt; the SHAKE/RATTLE projections are no-ops
+on acyclic molecules). qdot0 = N(q0) u0 for quaternion DOF and u0 otherwise; qdotdot0 is the
+corresponding q-acceleration; udot = M^-1 (f - f_bias) is one O(n) forward-dynamics sweep
+(Section 3.5, recursion 4), with f_bias carrying the gyroscopic and Coriolis terms:
 
 ```
-1. half kick    u  <- u + (dt/2) M^-1 ( f(q) - f_bias )         (forces from -grad V; Section 3.5)
-2. drift        q  <- q + dt * qdot(q, u)                       (qdot = N(q) u for quaternion DOF, else u)
-3. SHAKE        project q so that sigma(q) = 0                   (Section 7.1), then refresh kinematics
-4. forces       recompute f(q_new) and f_bias at the new q
-5. half kick    u  <- u + (dt/2) M^-1 ( f(q_new) - f_bias )
-6. RATTLE       project u so that G M^-1 p = 0                   (Section 7.1)
+1. position (Taylor, 2nd order)   q  <- q0 + dt*qdot0 + (dt^2/2)*qdotdot0   (all coords, incl. quaternion)
+2. quaternion rotation (exp-map)   q  <- expmap(wHalf, dt) (x) q0 ; wHalf = u0 + (dt/2)*udot0   then q <- q/|q|
+3. SHAKE                           project q so that sigma(q) = 0            (Section 7.1), refresh kinematics
+4. velocity predictor (fwd Euler)  u  <- u0 + dt*udot0                      (forces from -grad V at q1)
+5. velocity corrector (trapezoid)  repeat (<=10): u <- u0 + (dt/2)*(udot0 + udot1); recompute udot1
+                                   until ||du||/||u|| <= tol (= min(1e-4, 0.1*accuracy))
+6. RATTLE                          project u so that G M^-1 p = 0           (Section 7.1)
 ```
 
-Each `M^-1(...)` application is one O(n) forward-dynamics sweep (Section 3.5, recursion 4); the bias
-f_bias carries the gyroscopic and Coriolis terms. This map is time-reversible and volume-preserving
-on the constraint manifold (Section 5.5), which is what the MH test of Section 5.3 requires.
+The corrector is **plain functional iteration**, which has a limited radius of convergence; if it
+stops contracting it is abandoned and **the step is taken with the best u so far** (Simbody's
+fixed-step behaviour -- it cannot shrink dt). A persistently non-converging corrector is the signal
+that dt is too large for the block; the resulting large dH is rejected by the MH test, and only when
+that test is disabled (e.g. an equilibration/AlwaysAccept phase) does the unconverged step manifest
+as visible energy drift (Section 5.5). The orientation of a quaternion (Free/Ball) body is **not**
+advanced by the linear Taylor formula of step 1; it is advanced by an **exact exponential-map
+rotation** (step 2): the increment quaternion expmap(wHalf, dt) = (cos(theta), sin(theta) * wHalf/|wHalf|)
+with theta = (1/2)|wHalf| dt and the midpoint angular velocity wHalf = u0 + (dt/2) udot0, applied as
+a left Hamilton product onto q0, followed by renormalization that mops up only rounding. This is a
+**deliberate divergence from Simbody's linear-Taylor-plus-renormalize quaternion update** (Section
+3.4), and it is the propagator of record. Three properties make it the correct choice here: it keeps
+|q| = 1 by construction (the renormalization is O(1e-16), not a real projection); it is reversible
+and reduces to the linear update as dt -> 0, so it changes only the proposal, never the target
+(Section 5.4); and -- decisively -- it advances the orientation **purely from the angular velocity**,
+bypassing the quaternion second derivative qddot. The linear-Taylor update instead leans on qddot;
+with the engine's reimplemented Free-joint quaternion kinematics that path **injects kinetic energy**
+through the root body and, via the articulated recursion V_GB[b] = Phi V_GB[parent] + H u, through
+the entire tree -- an observed one-sided KE pump of order 1e3 kJ/mol per trajectory even at dt = 1 fs.
+The exp-map is robust to that latent inconsistency; the inconsistency itself (a not-yet-byte-faithful
+N / Ndot / qddot for the Free joint relative to Simbody) is the open item flagged for golden-testing
+in Section 3.4. The converged map is time-reversible and volume-preserving on the constraint manifold
+(Section 5.5), which is what the MH test of Section 5.3 requires.
+
+**Integration order and error estimate (the registered constants, and what they mean).** Simbody
+registers this integrator as `AbstractIntegratorRep(handle, sys, 2, 3, "Verlet", true)`, i.e. with
+**method min-order 2, method max-order 3, error-control enabled**, and inside the step it sets the
+local error estimate's order to **errOrder = 3**. The class is documented as "a third order,
+semi-explicit integrator" whose "velocities ... are only accurate to lower order." These three
+numbers (2, 3, 3) are not interchangeable; precisely:
+
+- *Definition.* A one-step method of **order p** has **global** error O(dt^p) over a fixed time
+  interval and **local** (single-step) truncation error O(dt^(p+1)). The two differ by one power of
+  dt because local errors accumulate over ~T/dt steps.
+- **Method order = 2 (the governing number).** `getMethodMinOrder() = 2`. Verlet is a **second-order
+  method**: trajectories and conserved quantities are accurate to **O(dt^2)** globally. This is *the*
+  number that governs the science -- it is the h^2 in the energy bound (Section 5.5) and in the
+  step-size dependence of every computed average (Section 5.6; Davidchack 2014). The practical rule
+  follows directly: **halving dt quarters the discretization error and the energy fluctuation.** The
+  velocities are specifically the second-order (lower-order) quantity -- Simbody's "only accurate to
+  lower order" -- which is why velocity-dependent (Coriolis) forces degrade accuracy fastest in the
+  internal-coordinate case (Section 5.5).
+- **Max-order = 3 (the most accurate quantity, and the error-estimate order).** `getMethodMaxOrder()
+  = 3` and `errOrder = 3`. The **position** Taylor step q1 = q0 + dt*qdot0 + (dt^2/2)*qdotdot0 has a
+  **local** truncation error O(dt^3), and the integrator forms a corresponding **3rd-order local
+  error estimate** (a per-step quantity, *not* the global trajectory order). "Third order" in the
+  Simbody label refers to this local/error-estimate order, **not** to the global accuracy.
+- **What errOrder = 3 is used for, and why it is inert here.** In variable-step mode the controller
+  picks the next step from the error estimate as dt_new proportional to dt * (accuracy/err)^(1/errOrder)
+  = (...)^(1/3). **Robosample runs the integrator in fixed-step mode (Section 5.5), so this estimate
+  is computed but never acted upon** -- the step size cannot change. errOrder therefore governs
+  nothing in the implemented sampler; it is documented here for fidelity to the reference and for the
+  event a variable-step mode is ever enabled (which, per Section 5.5, would also forfeit
+  symplecticity).
+
+In one sentence for the reader who wants only the operative fact: **treat the integrator as second
+order (errors and energy fluctuation scale as dt^2); the "third order" is a local/error-estimate
+property that does not govern the sampled results and is unused in fixed-step operation.**
 
 ### 5.3 Acceptance
 
@@ -647,7 +720,7 @@ volume-preserving and the MH test uses the *exact* acceptance Hamiltonian, the m
 acceptance distribution exactly, whatever the guidance was. Two consequences used here:
 
 - **The Fixman torque is unnecessary for correctness.** Because F enters only the acceptance, the
-  leapfrog need not compute grad F. (Robosample nonetheless implements the Fixman torque as a
+  integrator need not compute grad F. (Robosample nonetheless implements the Fixman torque as a
   per-world option; including it changes only the proposal trajectory, never the target. In a
   pure-MD setting with no MH test, by contrast, the Fixman torque in the forces *is* required to
   reach the Boltzmann distribution -- hence its availability.)
@@ -655,51 +728,188 @@ acceptance distribution exactly, whatever the guidance was. Two consequences use
   (e.g. an internal-coordinate force field; Section 12) may be used to *guide* proposals while the
   exact atomistic H is retained for acceptance, with no bias.
 
-### 5.5 Properties of the velocity Verlet integrator
+### 5.5 Properties of the fixed-step Verlet integrator
 
-The validity of the HMC move rests on four properties of the (constrained) velocity Verlet map; all
-four hold for velocity Verlet, and SHAKE/RATTLE preserves them on the constraint manifold.
+The validity of the HMC move rests on three properties of the (constrained) proposal map -- time
+reversibility, volume preservation, and (for the energy bound) symplecticity. **These hold to
+different degrees for the separable Cartesian case and the non-separable internal-coordinate case,
+and the distinction is essential to read correctly.** What HMC strictly requires for *correctness*
+is reversibility + volume preservation + exact dH (Section 5.4); symplecticity is what additionally
+*bounds* the energy error and hence protects the acceptance rate.
 
-- **Time reversibility.** There is an involution S (flip momenta, p -> -p) such that if a step sends
-  (q0, p0) -> (q1, p1), then it sends (q1, -p1) -> (q0, -p0). Forward and reverse proposals are
-  therefore equiprobable, so the proposal ratio in the MH test is unity.
-- **Volume preservation (phase space).** The map has unit Jacobian determinant, preserving the
-  Lebesgue measure dq*dp (Liouville). This is what allows the MH ratio to omit a proposal-Jacobian
-  factor.
-- **Symplecticity.** Velocity Verlet preserves the symplectic 2-form omega = sum_i dq_i ^ dp_i;
-  geometrically it preserves the **oriented area** of the projection onto each conjugate (q_i, p_i)
-  slice (summed). Symplecticity is *stronger* than volume preservation and is what bounds the energy
-  error: by backward error analysis a symplectic integrator exactly conserves a nearby **shadow
-  Hamiltonian** H~ = H + O(dt^2), so the true energy stays within
+- **Separable (Cartesian) blocks -- the strong case.** When M = M_3N is constant and the forces are
+  velocity-independent, the implicit corrector converges in a single pass and the scheme reduces
+  **exactly to Stoermer/velocity Verlet**, which is symplectic. Simbody's documentation states this
+  for the fixed-step mode used here: with fixed time steps the integrator is symplectic and conserves
+  energy extremely well. For such blocks the backward-error result applies: a symplectic integrator
+  exactly conserves a nearby **shadow Hamiltonian** H~ = H + O(dt^2), so
 
   ```
   |H(t) - H(0)| <= C * dt^2
   ```
 
-  -- an O(dt^2) **bounded oscillation, not a secular drift** -- over times exponentially long in
-  1/dt (the standard backward-error result for smooth potentials and stable dt; near the stability
-  limit, or with stiff constraints, the practical guarantee is the weaker O(dt^2) bounded error). The
-  constant C grows with the stiffness of V (larger force derivatives -> smaller usable
-  dt). This bound on dH is exactly what keeps the acceptance probability min(1, exp(-beta*dH)) from
-  collapsing as the trajectory lengthens, and it is why a coarser dt costs acceptance but not
-  correctness (Section 5.6).
+  is an O(dt^2) **bounded oscillation, not a secular drift**, over times exponentially long in 1/dt
+  (smooth V, stable dt; near the stability limit or with stiff constraints the practical guarantee is
+  the weaker O(dt^2) bounded error). The constant C grows with the stiffness of V.
+
+- **Internal-coordinate blocks -- the qualified case.** Here the Hamiltonian is **non-separable**:
+  K = (1/2) p^T M(q)^-1 p with the metric M depending on q, and the bias forces are
+  velocity-dependent (Coriolis/gyroscopic). The corrector is then a genuine implicit solve and the
+  method is the **implicit-trapezoid Verlet**, *not* textbook velocity Verlet. Its properties:
+  - It is **time-reversible and volume-preserving when (and only when) the corrector converges** to
+    the trapezoidal solution -- this is what HMC needs, and it holds at any dt small enough for the
+    functional iteration to converge.
+  - It is **not strictly symplectic** for the configuration-dependent metric, so the exact
+    shadow-Hamiltonian guarantee above does **not** apply. Energy conservation is the weaker property
+    that conservative non-symplectic, time-reversible methods enjoy: bounded for small dt, but a
+    **secular energy drift is permitted** and grows with dt and with the magnitude of the
+    velocity-dependent forces. (Simbody notes that with velocity-dependent forces the reported
+    velocities are only accurate to lower order, reducing overall accuracy; Davidchack 2014 observes
+    precisely this upward energy drift in rigid-body NVE integration once the step exceeds roughly
+    60-70% of the stability threshold -- about 4.5 fs for rigid TIP4P water.) **A one-sided dH growth
+    at large dt is therefore the expected behaviour of a correct implementation, not a defect**; it is
+    the discretization error the MH test is designed to absorb.
+  - **The MH test absorbs this error exactly in the sampled distribution** (Section 5.4): a drifting
+    trajectory produces a large dH and is rejected, so the cost of a too-large dt is acceptance rate,
+    never bias -- *provided the MH test is active*. When acceptance is disabled (an
+    equilibration/AlwaysAccept phase), the bare integrator drift is what is observed, and it must not
+    be given a physical interpretation.
+
+- **Corrector convergence is a precondition, not an afterthought.** A non-converged corrector step is
+  not the exact trapezoidal map and is therefore **not reversible**, which would invalidate the MH
+  proposal ratio for that step. Simbody's fixed-step driver nonetheless takes the step (it cannot
+  shrink dt); the implementation must therefore be run at a dt small enough that the corrector
+  converges in practice, with the MH test rejecting the occasional bad trajectory. A persistently
+  non-converging corrector signals that dt is too large for the block and should be reduced.
+
 - **Manifold preservation (SHAKE/RATTLE).** When holonomic ring-closure constraints are active
   (Section 7), SHAKE projects positions and RATTLE projects velocities back onto the constraint
-  manifold each step, and the constrained Verlet remains reversible, symplectic, and
-  measure-preserving **on that manifold**. A holonomic constraint sigma(q) = 0 depends on positions
-  q **only** (a single algebraic relation per constraint, not on velocities), so each independent
-  constraint removes exactly one dimension from the configuration manifold (3N -> 3N - m for m
-  constraints) and the conjugate momentum is restricted correspondingly. The projection costs O(m*n)
-  per Newton iteration plus an O(m^3) solve (Section 7.1), small for the few ring closures of a
-  macrocycle.
+  manifold each step, and the constrained map remains reversible and measure-preserving **on that
+  manifold** (and symplectic there in the separable case). A holonomic constraint sigma(q) = 0
+  depends on positions q **only** (a single algebraic relation per constraint, not on velocities), so
+  each independent constraint removes exactly one dimension from the configuration manifold
+  (3N -> 3N - m for m constraints) and the conjugate momentum is restricted correspondingly. The
+  projection costs O(m*n) per Newton iteration plus an O(m^3) solve (Section 7.1), small for the few
+  ring closures of a macrocycle.
 
 ### 5.6 Time step is a property of the proposal, not the target (multiscale HMC)
 
-A larger dt is a coarser leapfrog map. Provided the map is reversible and volume-preserving and the
+A larger dt is a coarser Verlet map. Provided the map is reversible and volume-preserving and the
 **exact dH** is used in the MH test, the move is exactly pi-stationary at any dt; only the energy
 bound of Section 5.5 (hence the acceptance rate) changes. Assigning small dt to stiff blocks and
 large dt to soft blocks therefore introduces **no bias** -- only a change in efficiency. This is the
 sense in which Robosample is a multiscale HMC sampler.
+
+The one precondition (Section 5.5) is that the implicit velocity corrector **converges** at the
+chosen dt, since reversibility holds only for the converged trapezoidal map; an un-converged step is
+not reversible and is the signal that dt is too large for that block. In practice this bounds the
+usable dt from above for stiff blocks, but within that range the no-bias property is exact and
+independent of dt.
+
+### 5.7 Coordinate-space geometry, corrector convergence, and reversibility
+
+This section makes precise three things the integrator's correctness rests on: why the propagator has
+**two distinct paths** (one for flat coordinates, one for the orientation manifold), how a **too-large
+dt is detected for free** from the corrector, and why the safe dt -- and hence reversibility -- is
+**configuration dependent**, so that a single startup check cannot certify a whole run.
+
+**Two propagation paths, set by the shape of each coordinate's space.** A mobilizer's generalized
+coordinates live in one of two kinds of space, and the integrator advances each kind differently
+because a straight-line (Taylor) step is only valid in a flat space.
+
+- *Flat path (linear Taylor; qdot = u).* Pin torsions, Translation, and the Free joint's translation
+  block. Their coordinates lie in a flat (zero-curvature) space: Translation and the Free-translation
+  block in R^3; a Pin torsion on the circle S^1, which has **zero intrinsic curvature** (a circle is a
+  line made periodic, locally indistinguishable from R) and is integrated as an unwrapped real. The
+  velocity-to-coordinate map is the identity (qdot = u). A second-order Taylor step
+  q1 = q0 + dt*qdot0 + (dt^2/2)*qddot0 lands on another valid point of the same flat space with local
+  error O(dt^3); nothing to project. This path is genuine velocity Verlet.
+- *Curved path (exponential map).* The orientation of a Free (or, when ported, Ball) body, stored as a
+  unit quaternion living on **S^3, the unit 3-sphere in R^4** -- a compact manifold of **constant
+  positive curvature** that **double-covers the rotation group SO(3)** (q and -q are the same physical
+  rotation). The velocity-to-coordinate map qdot = N(q) w is configuration dependent and satisfies
+  q . qdot = 0 (qdot is **tangent** to the sphere); the generalized speed w (the body angular velocity,
+  3 numbers) lives in the tangent space / Lie algebra so(3), while the coordinate q (4 numbers) lives
+  on the manifold. A straight-line step in the four ambient components leaves the sphere (|q| != 1) and
+  must be repaired in one of exactly two ways:
+  - *project back* (Simbody): take the flat Taylor step in R^4, then renormalize q <- q/|q|. The
+    projection is not energy-neutral and depends on the quaternion second derivative qddot.
+  - *move along the manifold* (the path used here): rotate q0 by the exact rotation
+    expmap(wHalf, dt), the Lie-group exponential from so(3) to SO(3) lifted to the quaternion double
+    cover, with the midpoint angular velocity wHalf = u0 + (dt/2) udot0 (giving a second-order,
+    time-symmetric step). This never leaves S^3 -- the subsequent renormalization corrects only ~1e-16
+    of rounding -- and it advances the orientation **purely from the angular velocity, bypassing
+    qddot**.
+
+  The exp-map is a **deliberate divergence from Simbody** (Section 3.4, Section 5.2). In a fully
+  faithful engine the two repairs agree to O(dt^3) and either is fine; in this engine the project-back
+  path leans on qddot, and the port's Free-joint quaternion kinematics (N, Ndot, qddot) are not yet
+  byte-faithful to Simbody, so that path injects kinetic energy through the root body and -- via the
+  articulated recursion V_GB[b] = Phi V_GB[parent] + H u -- through the entire tree (an observed
+  one-sided KE pump of order 1e3 kJ/mol per trajectory even at dt = 1 fs). The exp-map is robust to
+  that latent inconsistency because it never evaluates qddot. The inconsistency itself remains an open
+  item to be closed by golden-testing the Free-joint kinematics against Simbody on a single free body
+  (Section 3.4); until then the exp-map is the propagator of record. It changes only the proposal, not
+  the target (Section 5.4).
+
+  Note that what makes the orientation special is its **dimension and curvature**, not merely that it
+  is a "rotation": the Pin torsion is also rotational but lives on the flat S^1, so it takes the flat
+  path. Only the genuinely curved S^3 needs the manifold step.
+
+**Corrector convergence as a free "dt-too-large" detector.** The velocity corrector solves the
+implicit trapezoid u1 = u0 + (dt/2)(udot0 + udot(q1,u1)) by functional iteration. That iteration is a
+contraction only when, roughly, (dt/2) * ||d udot / d u|| < 1, where d udot / d u collects the
+velocity-dependent (Coriolis/gyroscopic) coupling and the inverse metric M(q)^-1. There is therefore a
+**convergence radius in dt**: below it the iteration contracts in two or three sweeps; above it the
+iterates stop contracting (the "change increased after iteration 1" branch) or fail to reach the
+tolerance within the iteration cap. Detecting this costs nothing -- the integrator already computes the
+relative change each sweep -- and it is a sharp, *local* indicator that dt exceeds what the current
+configuration can integrate as a converged, reversible map.
+
+The implementation uses this as a hard guard, deliberately **stricter than Simbody**. Two failure modes
+are distinguished and handled differently:
+
+- *Steric clash / runaway (non-finite force, or |u| amplifying past a cap).* A hard overlap gives
+  OpenMM an infinite (r^-12) force; this is a **normal, transient** event in sampling. The step is
+  **rejected as a move** (the proposal is discarded and the chain keeps its previous point), exactly as
+  the Metropolis test would do with the resulting infinite dH. It does **not** abort the run.
+- *Genuine non-convergence (finite, bounded iterates that will not reach the tolerance).* This is the
+  pure "dt too large for this configuration" signal: the proposal map is no longer the converged,
+  reversible trapezoidal map that Sections 5.5-5.6 require, so silently taking it would pump energy.
+  The integrator **throws and terminates** with a diagnostic message reporting dt, the relative change
+  reached, the tolerance, and the iteration count. At a correctly chosen dt this never fires (the
+  corrector converges every step), so the throw is a tripwire for a misconfigured timestep, not a
+  runtime branch the sampler relies on.
+
+**Reversibility is configuration dependent; a startup check is a smoke test, not a guarantee.** It is
+tempting to validate dt once, at the start, with a round-trip reversibility probe (integrate n steps
+forward, flip the momenta, integrate n steps back, flip again, and measure how far the state returned:
+~machine epsilon for a reversible map, O(trajectory size) when dt is too large; quaternion DOF compared
+with the double-cover-aware distance min(|q-q0|, |q+q0|) because q and -q coincide on S^3). Such a probe
+is implemented and is useful, but it certifies dt **only for the configuration it is run from**, for a
+reason that must not be misread:
+
+- It is **not** the curvature of S^3 that varies -- that curvature is *constant*, so the orientation
+  manifold's intrinsic geometry is identical everywhere.
+- What varies is the **mass metric M(q)** (the articulated inertia depends on every torsion) and the
+  **local force stiffness d^2 V / d q^2** (a near-clash or compressed region is far stiffer than an open
+  one). The largest reversible dt scales like 2 / omega_max with
+  omega_max = sqrt( lambda_max( M(q)^-1 d^2V/dq^2 ) ), and **both factors are functions of q**.
+
+Consequently a dt that is perfectly reversible in an open conformation can become non-reversible -- and
+begin pumping energy -- when the chain visits a stiffer geometry. The startup reversibility probe answers
+only "is dt in the right ballpark for the initial structure?"; it cannot certify the trajectory. The
+genuine, ongoing guard is the **per-step corrector-convergence throw above**, which tests the *current*
+configuration on *every* step. The reversibility probe is therefore best used as (i) a one-time startup
+sanity check and (ii) an optional periodic probe from the current geometry, with the per-step throw as
+the always-on safety net. Its cadence is exposed to the user (Python:
+`world.set_reversibility_check(interval)`, backed by `SamplerConfig.reversibilityCheckInterval`) and
+defaults to **off** (interval 0, zero overhead); a positive interval N runs the probe every N rounds,
+starting at round 0 so the first invocation doubles as the startup check, integrating mdSteps
+forward+back at the world's timestep and logging the relative round-trip residual. This is also why
+the multiscale-dt freedom of Section 5.6 is bounded
+per-configuration rather than by a single global number: the usable dt is a property of where in
+configuration space the block currently is.
 
 ---
 
@@ -937,8 +1147,8 @@ with a welded root (so J = 0) and no ring closures (so the G*M^-1*G^T term of F 
    H_old = V_old + K_old + F_old
    ```
 
-3. Velocity Verlet integrates the block's mobile torsions under V only (no Fixman torque), producing
-   (q_new, p_new).
+3. The fixed-step Verlet integrator (Section 5.2) integrates the block's mobile torsions under V
+   only (no Fixman torque), producing (q_new, p_new).
 4. Evaluate
 
    ```
@@ -1142,7 +1352,7 @@ inherits invariance (Section 13.4) but generally not reversibility.
 ### 13.2 What one constrained block targets (Fixman lemma)
 
 A block B fixes its frozen coordinates at their incoming values, resamples p ~ N(0, R*T*M(.)),
-integrates internal-coordinate velocity Verlet under V, and applies the MH test on
+integrates internal-coordinate fixed-step Verlet (Section 5.2) under V, and applies the MH test on
 H_B = V + (1/2) p^T M^-1 p + F [+ J] [+ W_BAT], with F = (1/2)*R*T*ln det M. Internal-coordinate HMC with
 H = V + (1/2) p^T M^-1 p leaves invariant the joint proportional to exp(-beta*H); marginalizing the
 Gaussian p gives configurational density proportional to exp(-beta*V)*det(M)^(1/2). The Fixman term
@@ -1335,6 +1545,9 @@ sources; landscape rows in Section 14 also draw on the related-methods literatur
   *J. Chem. Phys.* 2011, 135, 194110.
 - Leimkuhler, B.; Reich, S. *Simulating Hamiltonian Dynamics*; Cambridge University Press, 2004.
   (symplectic integrators, backward error analysis, shadow Hamiltonian)
+- Davidchack, R. L. Discretization errors in molecular dynamics simulations with deterministic and
+  stochastic thermostats. arXiv:1412.7067, 2014. (h^2 discretization error, shadow Hamiltonian, and
+  the onset of upward energy drift in rigid-body NVE beyond ~60-70% of the stability threshold)
 - Ryckaert, J.-P.; Ciccotti, G.; Berendsen, H. J. C. Numerical integration of the Cartesian
   equations of motion of a system with constraints: molecular dynamics of n-alkanes (SHAKE).
   *J. Comput. Phys.* 1977, 23, 327.

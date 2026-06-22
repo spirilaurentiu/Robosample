@@ -108,6 +108,22 @@ class RobotEngine {
                        const robo::ConstraintSet& cset,
                        robo::Real tEnd);
 
+    // Reversibility diagnostic: integrate nSteps forward at step h, flip the
+    // momenta, integrate nSteps back, flip again, and return the RELATIVE
+    // round-trip residual ||(q,u)_returned - (q,u)_start|| / ||(q,u)_start||.
+    // ~machine-eps for a reversible step; O(1) when h is too large. Quaternion
+    // DOF use a double-cover-aware distance. NON-DESTRUCTIVE (restores s).
+    // NOTE: certifies h only for the configuration it is called from -- the safe
+    // h is configuration dependent (M(q), force stiffness), so this is a startup/
+    // periodic smoke test, not a whole-run guarantee. The per-step corrector
+    // throw in verletStep is the ongoing guard. See THEORY 5.5.
+    static robo::Real checkReversibility(const RobotModel& m,
+                                         RobotState& s,
+                                         ForceBridge& bridge,
+                                         const robo::ConstraintSet& cset,
+                                         int nSteps,
+                                         robo::Real h);
+
     // ---- TRANSFER: internal q/u -> Cartesian (accept path) ----------------
     // Port of the accept-branch loop in HMCSampler::sampleIteration:
     //   atomPosG[a] = X_GB[body].p + X_GB[body].R * station_B[a]
