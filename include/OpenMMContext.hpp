@@ -36,6 +36,13 @@ class OpenMMContext {
         context->setVelocitiesToTemperature(temperature, seed);
     }
 
+    // ---- NCMC alchemy (per-molecule intermolecular decoupling) -------------
+    // enableAlchemy stores the decoupled atom range and a flag; the correction
+    // force is built in initialize() (which has the SystemTopology). PME/periodic
+    // is rejected there. setAlchemicalLambda drives the global "lambda_inter".
+    void enableAlchemy(int atomBegin, int atomEnd);
+    void setAlchemicalLambda(double lambdaInter);
+
     [[nodiscard]] auto getPotentialEnergy() const -> double {
         ensureInitialized();
         return potentialEnergy;
@@ -136,6 +143,12 @@ class OpenMMContext {
     [[nodiscard]] auto createGBSAOBCForce(const SystemTopology& systemTopology) -> OpenMM::GBSAOBCForce*;
     [[nodiscard]] auto createCustomNonbondedForce(const SystemTopology& systemTopology)
         -> OpenMM::CustomNonbondedForce*;
+    // Alchemy correction force: total [begin,end) x rest pair energy becomes
+    // lambda_inter * standard (LJ + Coulomb), via a (lambda_inter-1)*standard term
+    // over an interaction group. No intermolecular exceptions exist, so no
+    // exclusion list is needed (scales to large assemblies).
+    [[nodiscard]] auto createAlchemyCorrectionForce(const SystemTopology& systemTopology)
+        -> OpenMM::CustomNonbondedForce*;
     [[nodiscard]] auto createHarmonicBondForce(const SystemTopology& systemTopology)
         -> OpenMM::HarmonicBondForce*;
     [[nodiscard]] auto createHarmonicAngleForce(const SystemTopology& systemTopology)
@@ -159,6 +172,12 @@ class OpenMMContext {
 
     bool separateForceGroups = false;
     std::vector<std::pair<int, std::string>> forceGroupLabels;
+
+    // NCMC alchemy state.
+    bool alchemyEnabled = false;
+    int alchemyBegin = -1;
+    int alchemyEnd = -1;
+    OpenMM::CustomNonbondedForce* alchemyForce = nullptr; // owned by `system`
 
     // r-RESPA multiple-timestep state.
     bool useMTS = false;

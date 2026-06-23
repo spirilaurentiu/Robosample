@@ -911,6 +911,106 @@ the multiscale-dt freedom of Section 5.6 is bounded
 per-configuration rather than by a single global number: the usable dt is a property of where in
 configuration space the block currently is.
 
+### 5.8 Nonequilibrium candidate moves for dense/caged systems (NCMC)
+
+Sections 5.1-5.7 describe the single HMC move. This section adds a **distinct move
+type** for the regime where that move fails not because of stiffness or the time
+step, but because the proposed configuration is **caged** by other molecules.
+
+**The problem (contact density, not solvent).** A torsional block mobilizes one
+molecule's torsions while every other molecule is welded (Section 3.2). A single
+isolated molecule therefore integrates on a smooth intramolecular surface and
+tolerates a large dt (Section 5.6). The moment a *second* dense body is in contact
+-- explicit solvent, a lipid bilayer/nanodisc, a binding partner, or another
+subunit of a large assembly -- every torsional displacement drives the mobile
+atoms into the **frozen** atoms of that body. The potential rises on an r^-12 wall:
+the corrector convergence radius collapses (dt is forced down, Section 5.7) and any
+step that does integrate produces a large dH and is rejected. The failure scales
+with the number of contacting atoms and is identical for water, lipid, or a
+neighbouring protein -- they are all dense frozen cages. **This is an efficiency
+failure, not a correctness one** (Section 5.6): the MH test still targets the exact
+canonical distribution; the proposals simply stop moving.
+
+**The move (per-molecule alchemical decouple-move-recouple).** Following Nilmeier,
+Crooks, Minh & Chodera (2011), the cage is removed *during the proposal* by a
+nonequilibrium switch. The acceptance Hamiltonian's potential is made a function of
+a coupling parameter lambda that scales the molecule's **intermolecular** nonbonded
+with every other molecule (its intramolecular force field is untouched, so its own
+torsional barriers and 1-4 contacts are preserved). One move is a protocol of
+interleaved **perturbation** steps (change lambda at fixed configuration) and
+**propagation** steps (one fixed-step internal-coordinate Verlet step at fixed
+lambda, Section 5.2):
+
+```
+lambda: 1 -> 0  (decouple)   ... stride at lambda~0 (uncaged) ...   0 -> 1 (recouple)
+```
+
+Near lambda = 0 the molecule's torsions stride freely through the region occupied
+by the frozen cage; as lambda returns to 1 the mobile DOF relax to a configuration
+compatible with the environment. The frozen environment itself does not move within
+this move -- it relaxes in the fully-flexible Cartesian world of the same Gibbs scan
+(DOF coverage, Section 13.5, condition C4). Letting a *local environment shell*
+co-move (a mixed Pin + Cartesian world) would let the cage yield inside the move
+too; that is an efficiency refinement, not a correctness requirement.
+
+**Acceptance (the load-bearing detail).** The propagation is the same fixed-step
+Verlet of Section 5.2: deterministic, time-reversible, and volume-preserving on the
+constraint manifold (Section 5.5). For such an integrator the conditional path
+action vanishes (Nilmeier et al. 2011, Eq. 20; their bistable-dimer Eq. 28), so the
+move is accepted on the **full Hamiltonian difference between the two lambda = 1
+endpoints**, *not* on the protocol work:
+
+```
+accept with probability min(1, exp(-beta * (H_end - H_start))),
+H = V + K + F + J   (Section 6),   both endpoints evaluated at lambda = 1.
+```
+
+Three consequences must be read precisely, because the natural-looking alternative
+(adding a separate work term) is wrong:
+
+- **Work is implicit, never added.** For a deterministic, reversible,
+  volume-preserving propagator the protocol work w (sum over perturbation steps of
+  the lambda-induced dV) equals H_end - H_start; the two are the *same* quantity, so
+  using `H_end - H_start + w` double-counts. The NCMC benefit is already inside
+  H_end - H_start: a slow protocol lets the mobile DOF relax as lambda returns, so
+  the molecule lands in a low-energy, cage-compatible configuration and H_end is
+  small; a fast protocol does not, and H_end is large. The accumulated w is retained
+  only as a **diagnostic**, and its discrepancy from H_end - H_start is a free check
+  on corrector convergence (it should be small).
+- **F and J enter only at the endpoints.** The Fixman determinant F = (1/2) R T ln
+  det M(q) and the external-rotation Jacobian J depend on geometry, not on lambda
+  (lambda scales nonbonded V only; the articulated inertia M is unchanged). They are
+  therefore absent from the protocol work and appear in H_start and H_end exactly as
+  in the ordinary torsional move (Sections 6, 10). Likewise the alchemical
+  (thermodynamic) perturbation changes no coordinate, so its phase-space Jacobian is
+  unity (Nilmeier et al. 2011, "Thermodynamic Perturbation"), and the symmetric
+  1 -> 0 -> 1 protocol is its own reverse, so the protocol-selection ratio is unity.
+- **It reduces to the ordinary move.** With lambda held at 1 throughout, every
+  perturbation dV = 0, the protocol is a plain Verlet trajectory, and the test
+  collapses to the Section 5.3 acceptance min(1, exp(-beta dH)). This is the exact
+  regression check for an implementation.
+
+**Momentum handling.** Because momenta are fully resampled at the start of every
+block (Section 5.1) -- itself a Gibbs move on the velocity marginal -- the NCMC
+momentum-reversal that a momentum-persistent chain would require is unnecessary
+here; Nilmeier et al. (2011) note exactly this option ("reinitialize velocities from
+the Maxwell-Boltzmann distribution after each NCMC step"). The move is thus an HMC
+move with a lambda-protocol trajectory, and inherits the Section 13.0
+detailed-balance argument unchanged, with the proposal map being the protocol.
+
+**Relation to the rest of the framework.** NCMC is the guidance/acceptance split of
+Section 5.4 taken to its limit: the *proposal* is generated under a softened
+(decoupled) potential, while the exact atomistic H is retained for acceptance, so
+the sampled distribution is unbiased regardless of how aggressively the cage is
+softened (Section 5.4). It composes with the mixed Gibbs scan exactly like any other
+pi-invariant block (Section 13.4); a fully flexible Cartesian world must still appear
+in the cycle to relax the environment and cover all DOF (Section 13.5). The current
+implementation softens a molecule's intermolecular nonbonded for the non-periodic
+(vacuum/implicit) case -- the large-assembly regime where caging appears even
+without solvent; periodic/PME alchemy (reciprocal space couples all atoms) is a
+separate extension. Chen & Roux (2014, 2015) give the closely related hybrid
+nonequilibrium-MD/MC formulation and its symmetric-momentum-reversal acceptance.
+
 ---
 
 ## 6. The acceptance Hamiltonian function
@@ -1539,6 +1639,15 @@ sources; landscape rows in Section 14 also draw on the related-methods literatur
 - Forrest, B. M.; Suter, U. W. Generalized coordinate hybrid Monte Carlo. *Mol. Phys.* 1994, 82, 393.
 - Duane, S.; Kennedy, A. D.; Pendleton, B. J.; Roweth, D. Hybrid Monte Carlo. *Phys. Lett. B* 1987,
   195, 216.
+- Nilmeier, J. P.; Crooks, G. E.; Minh, D. D. L.; Chodera, J. D. Nonequilibrium candidate Monte
+  Carlo is an efficient tool for equilibrium simulation. *Proc. Natl. Acad. Sci. USA* 2011, 108 (45),
+  E1009. (NCMC; the decouple-move-recouple proposal and the deterministic-propagation acceptance of
+  Section 5.8. Note D. D. L. Minh is shared with the Robosample lineage.)
+- Chen, Y.; Roux, B. Efficient hybrid non-equilibrium molecular dynamics -- Monte Carlo simulations
+  with symmetric momentum reversal. *J. Chem. Phys.* 2014, 141, 114107; and Generalized Metropolis
+  acceptance criterion for hybrid non-equilibrium molecular dynamics -- Monte Carlo simulations.
+  *J. Chem. Phys.* 2015, 142, 024101. (Hybrid neMD/MC; momentum-reversal acceptance referenced in
+  Section 5.8.)
 - Geman, S.; Geman, D. Stochastic relaxation, Gibbs distributions, and the Bayesian restoration of
   images. *IEEE Trans. Pattern Anal. Mach. Intell.* 1984, PAMI-6, 721.
 - Chodera, J. D.; Shirts, M. R. Replica exchange and expanded ensemble simulations as Gibbs sampling.

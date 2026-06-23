@@ -43,7 +43,8 @@ enum class AcceptRejectMode : std::uint8_t {
 //               MdHmc relaxation sub-move on the same world.
 enum class MoveType : std::uint8_t {
     MdHmc = 0,
-    RigidKick
+    RigidKick,
+    NcmcSwitch // NEW: lambda:1->0->1 alchemical decouple-move-recouple (per-molecule)
 };
 
 enum class BondMobility : std::uint8_t {
@@ -133,6 +134,18 @@ struct SamplerConfig {
     // THEORY 5.7. Set from Python via the reversibility_check_every=N argument to
     // context.add_*_world() (which forwards to World::setReversibilityCheck).
     int reversibilityCheckInterval = 0;
+
+    // ---- NCMC (MoveType::NcmcSwitch) -----------------------------------
+    // Total protocol substeps; lambda ramps 1->0 then 0->1, one Verlet step per
+    // substep (the torsional stride happens near the lambda~0 midpoint where the
+    // mobile molecule is uncaged from all others). 0 => not an NCMC world.
+    int ncmcSteps = 0;
+    // Fraction of ncmcSteps held at lambda=0 between the down- and up-ramps.
+    double ncmcHoldFraction = 0.0;
+    // Atom-index range [begin,end) of the molecule decoupled from every other
+    // molecule. Set by World::configureNcmc.
+    int ncmcAtomBegin = -1;
+    int ncmcAtomEnd = -1;
 };
 
 class World {
@@ -171,6 +184,12 @@ class World {
     // repositioned independently); siteAtoms is the receptor atom list whose
     // centroid is the sphere centre. Called by Context::addDockingWorld.
     void configureDocking(std::vector<std::vector<int>> ligandGroups, std::vector<int> siteAtoms);
+
+    // Mark this world as a per-molecule NCMC world: during the lambda:1->0->1
+    // switch the intermolecular nonbonded between [atomBegin,atomEnd) and every
+    // other molecule is alchemically softened (intramolecular physics untouched).
+    // Call AFTER add_sampler (it sets moveType last). Vacuum/implicit only.
+    void configureNcmc(int atomBegin, int atomEnd, int ncmcSteps, double holdFraction);
 
     void setAtomsLocationsInGround(const std::vector<robo::Vec3>& atomPosG);
     [[nodiscard]] const robo::Vec3* getAtomsLocationsInGround() const {
@@ -254,7 +273,9 @@ class World {
     // --- internal (torsional) HMC pieces ---
     void reinitialize(); // seed velocities, record initial H (incl. Fixman)
     bool metropolis(double Hold, double Hnew);
-    double currentTotalEnergy(); // PE (OpenMM) + KE (engine) [+ Fixman - 1/2 RT logSineSqr]
+    double currentTotalEnergy();        // PE (OpenMM) + KE (engine) [+ Fixman - 1/2 RT logSineSqr]
+    bool ncmcMove();                    // the lambda-protocol HMC move (NcmcSwitch)
+    double protocolLambda(int s) const; // lambda schedule, s in [0, ncmcSteps)
     void recomputeGeometry(const robo::Vec3* targets);
 
     // --- Fixman / coordinate-Jacobian corrections (torsional worlds only) ---

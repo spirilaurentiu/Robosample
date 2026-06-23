@@ -77,13 +77,23 @@ bonds = context.standard_dihedral_bonds.loc[
     context.standard_dihedral_bonds["dihedral_type"].isin(dihedrals)
 ]
 sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, False)
-context.add_robotic_world(sele).add_sampler(
-    timeStep=0.04,
-    mdSteps=25,
-    acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
-    use_nuts=False,
-    use_fixman=True,  # required for rigorous Boltzmann sampling of a constrained world
+# context.add_robotic_world(sele).add_sampler(
+#     timeStep=0.04,
+#     mdSteps=25,
+#     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
+#     use_nuts=False,
+#     use_fixman=True,  # required for rigorous Boltzmann sampling of a constrained world
+# )
+
+context.add_ncmc_world(
+    sele,
+    molecule_index=0,
+    timestep=0.002,
+    ncmc_steps=1000,
+    hold_fraction=0.2,
+    use_fixman=True,  # rigorous Boltzmann sampling of the constrained world
 )
+
 
 # ---- Run --------------------------------------------------------------------
 # initialize() runs an O(N^2) startup clash scan (now minimum-image aware). On a

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -214,6 +215,22 @@ auto OpenMMContext::initialize(const SystemTopology& systemTopology) -> bool {
     }
     if (systemTopology.hasNBfix) {
         addForce(createCustomNonbondedForce(systemTopology), "CustomNonbondedForce", /*slow*/ true);
+    }
+    // NCMC: per-molecule intermolecular decoupling correction (vacuum/implicit only).
+    if (alchemyEnabled) {
+        if (systemTopology.nonbondedMethod == NonbondedMethod::Ewald
+            || systemTopology.nonbondedMethod == NonbondedMethod::PME
+            || systemTopology.nonbondedMethod == NonbondedMethod::CutoffPeriodic) {
+            throw std::runtime_error(
+                "NCMC alchemy is not supported for periodic/PME nonbonded yet: reciprocal "
+                "space couples all atoms, so a per-molecule correction force is not exact. "
+                "Use NoCutoff/CutoffNonPeriodic (vacuum/implicit).");
+        }
+        if (systemTopology.hasNBfix) {
+            throw std::runtime_error("NCMC alchemy + NBFIX is not supported in v1.");
+        }
+        alchemyForce = createAlchemyCorrectionForce(systemTopology);
+        addForce(alchemyForce, "AlchemyCorrection", /*slow*/ true);
     }
 
     // Fast (bonded) forces -> inner tier.
@@ -475,6 +492,57 @@ auto OpenMMContext::createGBSAOBCForce(const SystemTopology& systemTopology) -> 
 auto OpenMMContext::createCustomNonbondedForce(const SystemTopology& /*systemTopology*/)
     -> OpenMM::CustomNonbondedForce* {
     throw std::runtime_error("createCustomNonbondedForce (NBFIX) not implemented yet");
+}
+
+auto OpenMMContext::createAlchemyCorrectionForce(const SystemTopology& sys) -> OpenMM::CustomNonbondedForce* {
+    // Total [begin,end) x rest pair energy = standard + (lambda_inter-1)*standard
+    //                                      = lambda_inter * standard.
+    // Lorentz-Berthelot combining, matching OpenMM NonbondedForce defaults. All
+    // 1-4/exclusion pairs are intramolecular, so the A x rest interaction group
+    // carries no exceptions and needs no exclusion list (scales to assemblies).
+    const double ONE_4PI_EPS0 = 138.935456; // kJ*nm/(mol*e^2)
+    auto* f =
+        new OpenMM::CustomNonbondedForce("(lambda_inter - 1)*(4*eps*((sig/r)^12 - (sig/r)^6) + k*q1*q2/r);"
+                                         "eps=sqrt(eps1*eps2); sig=0.5*(sig1+sig2)");
+    f->addGlobalParameter("lambda_inter", 1.0);
+    f->addGlobalParameter("k", ONE_4PI_EPS0);
+    f->addPerParticleParameter("q");
+    f->addPerParticleParameter("sig");
+    f->addPerParticleParameter("eps");
+    for (int i = 0; i < sys.numAtoms; ++i) {
+        std::vector<double> p{sys.atomsCharge[i], sys.atomsSigma[i], sys.atomsEpsilon[i]};
+        f->addParticle(p);
+    }
+    if (sys.nonbondedMethod == NonbondedMethod::CutoffNonPeriodic) {
+        f->setNonbondedMethod(OpenMM::CustomNonbondedForce::CutoffNonPeriodic);
+        f->setCutoffDistance(sys.nonbondedCutoff);
+    } else {
+        f->setNonbondedMethod(OpenMM::CustomNonbondedForce::NoCutoff);
+    }
+    std::set<int> aSet, restSet;
+    for (int i = 0; i < sys.numAtoms; ++i) {
+        if (i >= alchemyBegin && i < alchemyEnd) {
+            aSet.insert(i);
+        } else {
+            restSet.insert(i);
+        }
+    }
+    f->addInteractionGroup(aSet, restSet); // A x rest ONLY
+    return f;
+}
+
+void OpenMMContext::enableAlchemy(int atomBegin, int atomEnd) {
+    alchemyEnabled = true;
+    alchemyBegin = atomBegin;
+    alchemyEnd = atomEnd;
+}
+
+void OpenMMContext::setAlchemicalLambda(double lambdaInter) {
+    if (!alchemyEnabled) {
+        return;
+    }
+    ensureInitialized();
+    context->setParameter("lambda_inter", lambdaInter);
 }
 
 auto OpenMMContext::createHarmonicBondForce(const SystemTopology& systemTopology)

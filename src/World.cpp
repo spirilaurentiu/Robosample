@@ -1196,6 +1196,9 @@ int World::findGoodStartingPose() {
 //  Sampling
 // ----------------------------------------------------------------------------
 bool World::generateSample() {
+    if (sampler_.moveType == MoveType::NcmcSwitch) {
+        return ncmcMove();
+    }
     if (cartesian_) {
         lastKickApplied_ = false;
         savedPosG_.assign(state_.atomPosG(), state_.atomPosG() + model_.numAtoms);
@@ -1546,4 +1549,146 @@ bool World::metropolis(double Hold, double Hnew) {
         return true;
     }
     return uniform_(rng_) < std::exp(-beta_ * dH);
+}
+
+void World::configureNcmc(int atomBegin, int atomEnd, int ncmcSteps, double holdFraction) {
+    sampler_.ncmcAtomBegin = atomBegin;
+    sampler_.ncmcAtomEnd = atomEnd;
+    sampler_.ncmcSteps = ncmcSteps;
+    sampler_.ncmcHoldFraction = holdFraction;
+    sampler_.moveType = MoveType::NcmcSwitch; // must be set AFTER add_sampler
+    bridge_.enableAlchemy(atomBegin, atomEnd);
+}
+
+double World::protocolLambda(int s) const {
+    // s in [0, ncmcSteps): triangle 1 -> 0 -> 1 with an optional flat lambda=0 hold.
+    const int N = sampler_.ncmcSteps;
+    int hold = static_cast<int>(sampler_.ncmcHoldFraction * N);
+    int ramp = (N - hold) / 2;
+    if (ramp < 1) {
+        ramp = 1;
+    }
+    if (s < ramp) {
+        return 1.0 - static_cast<double>(s) / ramp; // 1 -> 0
+    }
+    if (s < ramp + hold) {
+        return 0.0; // the uncaged stride
+    }
+    const int up = s - ramp - hold;
+    const double l = static_cast<double>(up) / ramp; // 0 -> 1
+    return (l > 1.0) ? 1.0 : l;
+}
+
+bool World::ncmcMove() {
+    // Per-molecule NCMC (Nilmeier, Crooks, Minh & Chodera 2011): a lambda:1->0->1
+    // alchemical decouple-move-recouple proposal. During the switch the
+    // INTERMOLECULAR nonbonded between this world's molecule and every other
+    // molecule is softened (its intramolecular physics is untouched), so the
+    // molecule strides free of the cage of contacting molecules near lambda=0 and
+    // is recoupled as its mobile DOF relax to fit the (frozen) environment. The
+    // environment itself relaxes in the Cartesian world of the Gibbs scan (DOF
+    // coverage, THEORY 13.5); a co-mobilized local shell would let it relax inside
+    // the move too (documented efficiency follow-up).
+    savedQ_.assign(state_.q(), state_.q() + model_.nq);
+    bridge_.setAlchemicalLambda(1.0);
+    reinitialize(); // draws p ~ N(0, RT M(q0)); sets Hold_ = V1 + K + F + J
+    const double Hstart = Hold_;
+
+    // No explicit momentum flip. Momenta are resampled from Maxwell-Boltzmann at
+    // the start of every block (reinitialize, above), itself a Gibbs move on the
+    // velocity marginal. Under that resampling the NCMC momentum-reversal is
+    // unnecessary -- Nilmeier et al. 2011 explicitly sanction reinitializing
+    // velocities after each NCMC step -- since the carried-over sign is overwritten
+    // next block and never read. (Mirrors the existing MdHmc move, which also
+    // resamples and accepts on dH without an explicit flip.)
+
+    const robo::Real h = sampler_.timeStep;
+    // DIAGNOSTIC ONLY (NOT used in acceptance): protocol work w = sum over the
+    // PERTURBATION substeps of dV at fixed q (Nilmeier et al. 2011, Eq. 16). For a
+    // deterministic, reversible, volume-preserving propagator (THEORY 5.5) the heat
+    // satisfies dS = 0, so w == Hend - Hstart up to the small non-symplectic drift;
+    // logging the gap w - (Hend - Hstart) is a free consistency check (a large gap
+    // flags a non-converged corrector / dt too large for this configuration).
+    double work = 0.0;
+    bool ok = true;
+    double Vprev = bridge_.calcPotentialEnergy(); // V at lambda=1, current q
+    double lamPrev = 1.0;
+
+    for (int s = 0; ok && s < sampler_.ncmcSteps; ++s) {
+        // (i) PERTURB: change lambda at FIXED q; accumulate work = V(lam_new) - V(lam_old).
+        const double lam = protocolLambda(s);
+        if (lam != lamPrev) {
+            bridge_.setAlchemicalLambda(lam);
+            bridge_.evaluate(state_); // recompute at same q, new lambda
+            const double Vnew = bridge_.calcPotentialEnergy();
+            if (!std::isfinite(Vnew)) {
+                ok = false;
+                break;
+            }
+            work += Vnew - Vprev;
+            Vprev = Vnew;
+            lamPrev = lam;
+        }
+        // (ii) PROPAGATE one Verlet step at fixed lambda (deterministic, reversible).
+        ok = RobotEngine::stepTo(model_, state_, bridge_, constraints_, state_.time + h);
+        if (ok) {
+            Vprev = bridge_.calcPotentialEnergy(); // fixed-lambda V drift = heat, not work
+        }
+    }
+
+    bool finite = ok;
+    if (finite) {
+        const robo::Real* q = state_.q();
+        for (int i = 0; i < model_.nq; ++i) {
+            if (!std::isfinite(q[i])) {
+                finite = false;
+                break;
+            }
+        }
+    }
+
+    bool accepted = false;
+    if (finite) {
+        bridge_.setAlchemicalLambda(1.0);
+        const double Hend = currentTotalEnergy(); // V1(qend) + K + F + J at lambda=1
+
+        // Acceptance for DETERMINISTIC, reversible, volume-preserving propagation
+        // (THEORY 5.5 => path-action dS = 0): accept on the FULL Hamiltonian
+        // difference at the lambda=1 endpoints, NOT on the work (Nilmeier et al.
+        // 2011, Eq. 20; bistable-dimer Eq. 28). For such integrators w == Hend -
+        // Hstart, so adding work would DOUBLE-COUNT. The alchemical cost is already
+        // inside Hend - Hstart: a slow protocol lets the mobile DOF relax as lambda
+        // returns to 1, lowering Hend; a fast one does not. The thermodynamic
+        // (alchemical) perturbation has unit coordinate Jacobian (alpha-ratio = 1)
+        // and the 1->0->1 protocol is its own reverse (protocol ratio = 1), so no
+        // extra factors enter dH. GATE: lambda == 1 throughout => work == 0 and
+        // Hend - Hstart is the plain Verlet dH => reduces EXACTLY to the
+        // torsional-HMC metropolis test, which is the existing metropolis() call.
+        const double dH = Hend - Hstart;
+        std::fprintf(stderr,
+                     "[ncmc] world %d: Hstart=%.2f Hend=%.2f dH=%+.2f kJ/mol  "
+                     "work(diag)=%.2f gap=%+.2f (steps=%d)\n",
+                     index_,
+                     Hstart,
+                     Hend,
+                     dH,
+                     work,
+                     work - dH,
+                     sampler_.ncmcSteps);
+        if (std::isfinite(dH) && metropolis(Hstart, Hend)) {
+            RobotEngine::fillAtomPositionsFromBodies(model_, state_);
+            accepted = true;
+        }
+    } else {
+        std::fprintf(stderr, "[ncmc] non-finite during protocol -> reject\n");
+    }
+
+    if (!accepted) {
+        bridge_.setAlchemicalLambda(1.0);
+        std::copy(savedQ_.begin(), savedQ_.end(), state_.q());
+        RobotEngine::realizePosition(model_, state_);
+        RobotEngine::fillAtomPositionsFromBodies(model_, state_);
+    }
+    lastAccepted_ = accepted;
+    return accepted;
 }

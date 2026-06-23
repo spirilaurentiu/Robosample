@@ -34,7 +34,8 @@ PYBIND11_MODULE(robo_bindings, m) {
     // Proposal type of a world's sampler (a docking world auto-selects RigidKick).
     py::enum_<MoveType>(m, "MoveType")
         .value("MdHmc", MoveType::MdHmc)
-        .value("RigidKick", MoveType::RigidKick);
+        .value("RigidKick", MoveType::RigidKick)
+        .value("NcmcSwitch", MoveType::NcmcSwitch);
 
     py::enum_<BondMobility>(m, "BondMobility")
         .value("Rigid", BondMobility::Rigid)
@@ -67,6 +68,14 @@ PYBIND11_MODULE(robo_bindings, m) {
     //   use_fixman    : include the Fixman potential + logSineSqr in the
     //                   acceptance H of torsional (internal-coordinate) worlds.
     py::class_<World>(m, "World")
+        .def("configure_ncmc",
+             &World::configureNcmc,
+             py::arg("atom_begin"),
+             py::arg("atom_end"),
+             py::arg("ncmc_steps"),
+             py::arg("hold_fraction") = 0.0,
+             "Make this a per-molecule NCMC world: soften [atom_begin,atom_end) x "
+             "rest nonbonded during a lambda:1->0->1 switch. Call AFTER add_sampler.")
         .def("add_sampler",
              &World::add_sampler,
              py::arg("timeStep"),

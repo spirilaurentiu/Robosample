@@ -108,6 +108,14 @@ class ForceBridge {
         OpenMMContext::get().setVelocitiesToTemperature(temperature, seed);
     }
 
+    // NCMC passthroughs (forward only ints; no SystemTopology coupling here).
+    void enableAlchemy(int atomBegin, int atomEnd) const {
+        OpenMMContext::get().enableAlchemy(atomBegin, atomEnd);
+    }
+    void setAlchemicalLambda(double lambdaInter) const {
+        OpenMMContext::get().setAlchemicalLambda(lambdaInter);
+    }
+
     bool integrateTrajectoryOnDevice(RobotState& s, int steps, robo::Real timestep) {
         setAtomPositionsInGround(s);                  // posCache_ <- s.atomPosG()
         OpenMMContext::get().setPositions(posCache_); // push to the live context

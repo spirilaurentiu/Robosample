@@ -11,8 +11,14 @@ from . import prmtop_reader, topology
 from .amber_dihedral_classifier import AmberDihedralClassifier
 from .amber_dihedral_types import DihedralType
 from .molecule_prototype import MoleculePrototype
+from .robo_bindings import (
+    AcceptRejectMode,
+    JointType,
+    NonbondedMethod,
+    RootMobility,
+    SystemTopology,
+)
 from .robo_bindings import Context as _Context
-from .robo_bindings import JointType, NonbondedMethod, RootMobility, SystemTopology
 from .secondary_structure import DSSPCode
 from .units import ANG_TO_NM
 
@@ -638,4 +644,46 @@ class Context(_Context):
         self._apply_mass_scale(world, mass_scale)
         if reversibility_check_every:
             world.set_reversibility_check(int(reversibility_check_every))
+        return world
+
+    def add_ncmc_world(
+        self,
+        selection,
+        molecule_index,
+        timestep,
+        ncmc_steps,
+        hold_fraction=0.0,
+        accept_reject_mode=None,
+        use_fixman=None,
+    ):
+        """Add a per-molecule NCMC torsional world.
+
+        During each move the intermolecular nonbonded between ``molecule_index``
+        and every other molecule is alchemically softened over a lambda:1->0->1
+        switch, so the molecule strides through the cage of contacting molecules
+        near lambda=0 and is recoupled with the accumulated work paid in the
+        acceptance. The molecule's *intramolecular* physics is untouched.
+
+        Vacuum / implicit only (NoCutoff / CutoffNonPeriodic). A periodic/PME
+        system raises at initialize() by design -- explicit-solvent alchemy is a
+        separate effort. ``ncmc_steps`` is the protocol length (more steps =>
+        smoother switch, higher acceptance, slower); ``hold_fraction`` holds
+        lambda=0 for that fraction of the protocol (the uncaged stride).
+        """
+        beg = int(self.system_topology.atoms_begin[molecule_index])
+        end = int(self.system_topology.atoms_end[molecule_index])
+        world = super().add_robotic_world(selection)
+        world.add_sampler(
+            timeStep=timestep,
+            mdSteps=0,  # NCMC drives its own protocol loop, not mdSteps
+            acceptRejectMode=(
+                accept_reject_mode
+                if accept_reject_mode is not None
+                else AcceptRejectMode.MetropolisHastings
+            ),
+            use_nuts=False,
+            use_fixman=use_fixman,
+        )
+        # configure_ncmc sets moveType=NcmcSwitch LAST (after add_sampler).
+        world.configure_ncmc(beg, end, int(ncmc_steps), float(hold_fraction))
         return world

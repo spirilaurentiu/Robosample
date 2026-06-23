@@ -259,10 +259,13 @@ class MoveType:
       MdHmc
     
       RigidKick
+    
+      NcmcSwitch
     """
     MdHmc: typing.ClassVar[MoveType]  # value = <MoveType.MdHmc: 0>
+    NcmcSwitch: typing.ClassVar[MoveType]  # value = <MoveType.NcmcSwitch: 2>
     RigidKick: typing.ClassVar[MoveType]  # value = <MoveType.RigidKick: 1>
-    __members__: typing.ClassVar[dict[str, MoveType]]  # value = {'MdHmc': <MoveType.MdHmc: 0>, 'RigidKick': <MoveType.RigidKick: 1>}
+    __members__: typing.ClassVar[dict[str, MoveType]]  # value = {'MdHmc': <MoveType.MdHmc: 0>, 'RigidKick': <MoveType.RigidKick: 1>, 'NcmcSwitch': <MoveType.NcmcSwitch: 2>}
     @typing.overload
     def __eq__(self, other: MoveType) -> bool:
         ...
@@ -1123,6 +1126,10 @@ class World:
     def add_sampler(self, timeStep: typing.SupportsFloat | typing.SupportsIndex, mdSteps: typing.SupportsInt | typing.SupportsIndex, acceptRejectMode: AcceptRejectMode, use_nuts: bool, sphere_factor: typing.SupportsFloat | typing.SupportsIndex = 1.0, use_fixman: bool | None = None, always_kick: bool = False, clash_threshold: typing.SupportsFloat | typing.SupportsIndex = 10.0, max_initial_kick_tries: typing.SupportsInt | typing.SupportsIndex = 0) -> World:
         """
         Configure this world's sampler; returns the world for chaining. sphere_factor scales the auto-sized per-ligand binding sphere (R = R_receptor + sphere_factor*R_ligand). The docking kick relocates a ligand only when its COM leaves the sphere (always_kick=True perturbs every round). A proposed pose is rejected -- in ALL modes, including AlwaysAccept -- if its potential energy is non-finite or |PE| exceeds clash_threshold, so overlapping geometry never passes. use_fixman=None auto-enables Fixman+logSineSqr on non-Cartesian worlds. max_initial_kick_tries>0 enables a pre-round-0 retry loop that keeps drawing random placements until a clash-free starting pose is found (dPE <= maxStartPE), or raises RuntimeError after the budget is exhausted.
+        """
+    def configure_ncmc(self, atom_begin: typing.SupportsInt | typing.SupportsIndex, atom_end: typing.SupportsInt | typing.SupportsIndex, ncmc_steps: typing.SupportsInt | typing.SupportsIndex, hold_fraction: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
+        """
+        Make this a per-molecule NCMC world: soften [atom_begin,atom_end) x rest nonbonded during a lambda:1->0->1 switch. Call AFTER add_sampler.
         """
     def set_body_mass_scale(self, body: typing.SupportsInt | typing.SupportsIndex, scale: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
