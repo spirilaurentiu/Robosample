@@ -47,6 +47,19 @@ enum class MoveType : std::uint8_t {
     NcmcSwitch // NEW: lambda:1->0->1 alchemical decouple-move-recouple (per-molecule)
 };
 
+// Velocity-distortion option for the HMC momentum draw, ported from the simtk
+// Robosample "NMA scaling" (HMCSampler::setVelocitiesToNMA). Before the
+// sqrt(M^-1) map, each generalized-speed component of the white-noise draw is
+// scaled by its per-DOF NMA factor and the overall vector length is restored by
+// sqrt(nu)/||uScale|| so the kinetic temperature is preserved. The source read
+// the per-body factors from World::getMobodUScaleFactor but never populated them,
+// so the effective factors are unity and the distortion reduces to the plain
+// Gaussian draw unless non-unit factors are supplied. A nullopt option (Python
+// None, the default) means the distortion is not applied at all.
+enum class DistortOption : std::uint8_t {
+    NMA = 0
+};
+
 enum class BondMobility : std::uint8_t {
     Rigid = 0,
     Torsion,
@@ -71,6 +84,17 @@ struct SamplerConfig {
     MoveType moveType = MoveType::MdHmc;
     bool useNuts = false;
 
+    // Velocity-distortion applied at momentum-draw time (World::reinitialize).
+    // nullopt (Python None, the default) => plain Gaussian draw, no distortion.
+    // DistortOption::NMA => apply the per-DOF NMA velocity scaling (see the
+    // DistortOption enum). Ported from the simtk HMCSampler DistortOpt path.
+    std::optional<DistortOption> distortOption = std::nullopt;
+    // NMA Route B bias magnitude alpha (DistortOption::NMA only). The momentum
+    // mixture is Us = z +/- alpha * uhat, uhat a UNIT direction, so alpha is the
+    // directed push in thermal-sigma units along that direction (||bias||^2 =
+    // alpha^2, NOT nu). Larger alpha => bolder proposals, lower acceptance. See
+    // add_sampler docstring for guidance; 1.0 is one thermal sigma.
+    double nmaBiasScale = 1.0;
     // Docking: the binding sphere is sized automatically, per ligand, as
     //   R_i = R_receptor + sphereFactor * R_ligand_i
     // (R_receptor / R_ligand_i = max extent of each set from its centroid, from
@@ -177,7 +201,9 @@ class World {
                        std::optional<bool> useFixman,
                        bool alwaysKick,
                        double clashThreshold,
-                       int maxInitialKickTries);
+                       int maxInitialKickTries,
+                       std::optional<DistortOption> distortOption = std::nullopt,
+                       double nmaBiasScale = 1.0);
 
     // Mark this world as a docking world. ligandGroups[i] is the global atom
     // index list of ligand molecule i (each gets its own auto-sized sphere and is
@@ -269,11 +295,25 @@ class World {
     // starting at round 0. Bound to Python as world.set_reversibility_check(...).
     void setReversibilityCheck(int interval);
 
+    // Compute the Route B mass-weighted internal-coordinate Hessian at the given
+    // (minimized) Ground-frame coordinates and store the softest non-trivial mode
+    // as the per-DOF NMA direction consumed by reinitialize(). atomPosGFlat is
+    // [x0,y0,z0, x1,...] in nm, global/OpenMM atom order. Returns omega^2 of the
+    // chosen mode (sanity: should be > 0 at a real minimum). No-op on Cartesian worlds.
+    double setNMASoftModeFromHessian(const std::vector<double>& atomPosGFlat,
+                                     double h = 1e-5,
+                                     double zeroTol = 1e-6);
+
     private:
     // --- internal (torsional) HMC pieces ---
     void reinitialize(); // seed velocities, record initial H (incl. Fixman)
     bool metropolis(double Hold, double Hnew);
-    double currentTotalEnergy();        // PE (OpenMM) + KE (engine) [+ Fixman - 1/2 RT logSineSqr]
+    double currentTotalEnergy(); // PE (OpenMM) + KE (engine) [+ Fixman - 1/2 RT logSineSqr]
+    // NMA Route B kinetic correction RT*ln cosh(w.mu), w = M^(1/2) u / sqrt(RT).
+    // Subtracted from the kinetic term in both Hold_ and Hnew so the acceptance
+    // uses ke_mix = -RT*ln g(u|q) for the biased-mixture momentum draw. Returns 0
+    // (strict no-op) unless DistortOption::NMA is active and nmaBias_ is set.
+    double nmaKineticCorrection();
     bool ncmcMove();                    // the lambda-protocol HMC move (NcmcSwitch)
     double protocolLambda(int s) const; // lambda schedule, s in [0, ncmcSteps)
     void recomputeGeometry(const robo::Vec3* targets);
@@ -334,6 +374,18 @@ class World {
     std::mt19937_64 rng_;
     std::normal_distribution<double> gaussian_{0.0, 1.0};
     std::uniform_real_distribution<double> uniform_{0.0, 1.0};
+
+    // Per-DOF NMA velocity-scale factors for DistortOption::NMA. Sized to nu and
+    // lazily initialised to 1.0 in reinitialize(); the simtk source read these
+    // per mobilized body (getMobodUScaleFactor) but never populated them, so the
+    // effective default is unity (NMA distortion == plain Gaussian draw).
+    std::vector<robo::Real> uScaleFactors_;
+
+    // NMA Route B bias mu = uScaleFactors_ * sqrt(nu)/||uScaleFactors_|| (length-
+    // restored; unit factors => mu = ones). Set per block in reinitialize(); the
+    // momentum draw is the mixture Us = z +/- mu, and the acceptance correction
+    // RT*ln cosh(w.mu) uses this same mu.
+    std::vector<robo::Real> nmaBias_;
 
     std::vector<robo::Vec3> savedPosG_;
     std::vector<double> savedQ_;

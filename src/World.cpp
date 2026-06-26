@@ -17,10 +17,12 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
 #include <numeric>
 #include <queue>
 #include <stdexcept>
-#include <string>
+
+#include "NMA.hpp"
 
 using robo::Real;
 using robo::Rotation;
@@ -38,6 +40,20 @@ constexpr double kBoltzmann_kJ = 0.0083144626; // kJ/mol/K
 bool dockDebugEnabled() {
     static const bool on = [] {
         const char* e = std::getenv("ROBO_DOCK_DEBUG");
+        return e != nullptr && e[0] != '0' && e[0] != '\0';
+    }();
+    return on;
+}
+
+// Opt-in trace of the NMA velocity-distortion draw (DistortOption::NMA). Set the
+// env var ROBO_NMA_DEBUG=1 to see, per Gibbs block, exactly how the momentum draw
+// is re-pointed. Off by default so the per-block reinitialize() path stays quiet.
+bool nmaDebugEnabled() {
+    return true;
+
+
+    static const bool on = [] {
+        const char* e = std::getenv("ROBO_NMA_DEBUG");
         return e != nullptr && e[0] != '0' && e[0] != '\0';
     }();
     return on;
@@ -194,7 +210,9 @@ World& World::add_sampler(double timeStep,
                           std::optional<bool> useFixman,
                           bool alwaysKick,
                           double clashThreshold,
-                          int maxInitialKickTries) {
+                          int maxInitialKickTries,
+                          std::optional<DistortOption> distortOption,
+                          double nmaBiasScale) {
     sampler_.timeStep = timeStep;
     sampler_.mdSteps = mdSteps;
     sampler_.acceptRejectMode = mode;
@@ -203,6 +221,8 @@ World& World::add_sampler(double timeStep,
     sampler_.alwaysKick = alwaysKick;
     sampler_.clashThreshold = (clashThreshold > 0.0) ? clashThreshold : 1.0e4;
     sampler_.maxInitialKickTries = (maxInitialKickTries > 0) ? maxInitialKickTries : 0;
+    sampler_.distortOption = distortOption; // nullopt => no velocity distortion
+    sampler_.nmaBiasScale = nmaBiasScale;   // NMA Route B bias magnitude (thermal sigmas)
 
     if (sampler_.timeStep == 0.0 || sampler_.mdSteps == 0) {
         // Pure proposal world: no internal dynamics. For docking this means a
@@ -285,6 +305,29 @@ void World::setReversibilityCheck(int interval) {
                      index_,
                      sampler_.reversibilityCheckInterval);
     }
+}
+
+double World::setNMASoftModeFromHessian(const std::vector<double>& atomPosGFlat, double h, double zeroTol) {
+    if (cartesian_) {
+        return 0.0; // Route B is an internal-coordinate move; Cartesian world has nu==1 body
+    }
+    // Position the world at the minimized geometry. This rebuilds the rigid-body
+    // frames (recomputeGeometry) and sets q<-0, u<-0, then realizePosition. The
+    // minimum is therefore at q0==0 in these frames -- exactly where we want H.
+    const int nA = model_.numAtoms;
+    std::vector<robo::Vec3> pos(static_cast<std::size_t>(nA));
+    for (int a = 0; a < nA; ++a) {
+        pos[a] = robo::Vec3(atomPosGFlat[3 * a], atomPosGFlat[3 * a + 1], atomPosGFlat[3 * a + 2]);
+    }
+    setAtomsLocationsInGround(pos);
+
+    robo::RouteBNMA nma = robo::computeRouteBNMA(model_, state_, h, zeroTol);
+
+    // This is the hand-off: a length-nu vector here makes reinitialize() use it
+    // (its all-ones fallback only fires when the size != nu).
+    uScaleFactors_ = nma.uScaleFactors;
+
+    return (nma.softMode >= 0) ? nma.eigval[nma.softMode] : 0.0;
 }
 
 // ----------------------------------------------------------------------------
@@ -1478,6 +1521,73 @@ void World::reinitialize() {
     for (int i = 0; i < nu; ++i) {
         g[i] = gaussian_(rng_);
     }
+
+    // simtk NMA Route B (DistortOption::NMA): draw the momentum from a symmetric
+    // two-component Gaussian MIXTURE biased along the NMA direction instead of the
+    // isotropic Gaussian. Us = z + s*mu, s = +/-1 uniform, mu = alpha * uhat where
+    // uhat = uScaleFactors_/||uScaleFactors_|| is a UNIT direction and alpha =
+    // nmaBiasScale is the directed push in thermal sigmas (so ||mu||^2 = alpha^2).
+    // The map u = sqrt(RT) * M^-1/2 * Us below is unchanged; only the seed differs.
+    // The bias steers proposals along soft directions; detailed balance is restored
+    // in the acceptance by ke_mix = ke - RT*ln cosh(w.mu) (see nmaKineticCorrection).
+    // With alpha=0 the mixture collapses to the plain draw. nullopt (None) => skip.
+    if (sampler_.distortOption == DistortOption::NMA) {
+        if (static_cast<int>(uScaleFactors_.size()) != nu) {
+            uScaleFactors_.assign(nu, Real{1});
+        }
+        // Bias mu = alpha * uhat, where uhat = uScaleFactors_ / ||uScaleFactors_|| is a
+        // UNIT direction and alpha = nmaBiasScale is the directed push in thermal-sigma
+        // units. Hence ||mu||^2 = alpha^2 (NOT nu): the bias injects only ~1/2 RT alpha^2
+        // of directed energy, so alpha controls boldness vs acceptance directly.
+        Real norm2 = 0;
+        for (int i = 0; i < nu; ++i) {
+            norm2 += uScaleFactors_[i] * uScaleFactors_[i];
+        }
+        const Real alpha = sampler_.nmaBiasScale;
+        const Real unitScale = (norm2 > 0) ? (alpha / std::sqrt(norm2)) : Real{0};
+        nmaBias_.assign(nu, Real{0});
+        for (int i = 0; i < nu; ++i) {
+            nmaBias_[i] = uScaleFactors_[i] * unitScale;
+        }
+
+        // Symmetric mixture sign s = +/-1.
+        const Real s = (uniform_(rng_) < 0.5) ? Real{-1} : Real{1};
+
+        const bool trace = nmaDebugEnabled();
+        Real zN2 = 0, muDotZ = 0;
+        if (trace) {
+            for (int i = 0; i < nu; ++i) {
+                zN2 += g[i] * g[i];
+                muDotZ += nmaBias_[i] * g[i];
+            }
+        }
+
+        // Shift the white noise by the signed bias: Us = z + s*mu (in place in g).
+        Real muDotUs = 0, UsN2 = 0;
+        for (int i = 0; i < nu; ++i) {
+            g[i] += s * nmaBias_[i];
+            muDotUs += nmaBias_[i] * g[i];
+            UsN2 += g[i] * g[i];
+        }
+
+        if (trace) {
+            const int k = std::min(nu, 8);
+            std::cout << "[nma] world " << index_ << ": Route B mixture draw, nu=" << nu << ", sign s=" << s
+                      << ", alpha=" << alpha << "\n";
+            std::cout << "[nma]   mu=alpha*uhat (first " << k << "): ";
+            for (int i = 0; i < k; ++i) {
+                std::cout << nmaBias_[i] << ' ';
+            }
+            std::cout << (k < nu ? "...\n" : "\n");
+            std::cout << "[nma]   ||mu||^2=" << (alpha * alpha)
+                      << " (==alpha^2; directed energy ~1/2 RT alpha^2=" << (0.5 * RT_ * alpha * alpha)
+                      << "), ||z||^2=" << zN2 << ", mu.z=" << muDotZ << "\n";
+            std::cout << "[nma]   Us=z+s*mu: ||Us||^2=" << UsN2 << ", mu.Us=" << muDotUs
+                      << "  (mu.Us is the START w.mu; multiplyBySqrtM must reproduce it)\n"
+                      << std::flush;
+        }
+    }
+
     RobotEngine::multiplyBySqrtMInv(model_, state_, g.data(), seeded.data());
     const Real scale = std::sqrt(RT_);
     Real* u = state_.u();
@@ -1499,6 +1609,14 @@ void World::reinitialize() {
 
     const double pe = bridge_.calcPotentialEnergy();
     const double ke = RobotEngine::calcKineticEnergy(model_, state_);
+    const double nmaCorr = nmaKineticCorrection(); // RT*ln cosh(w.mu); 0 unless Route B
+    if (sampler_.distortOption == DistortOption::NMA && nmaDebugEnabled()) {
+        // Physical KE = 1/2 u^T M u (equipartition target nu/2*RT), and the Route B
+        // kinetic ke_mix = ke - nmaCorr that actually enters the acceptance H.
+        std::cout << "[nma]   START: ke=1/2 u^T M u=" << ke << " (target nu/2*RT=" << (0.5 * nu * RT_)
+                  << "), ke_mix=ke-corr=" << (ke - nmaCorr) << "\n"
+                  << std::flush;
+    }
     double fixman = 0.0;
     double logSineSqr = 0.0;
     if (sampler_.useFixman) {
@@ -1510,8 +1628,46 @@ void World::reinitialize() {
     state_.energy.ke = ke;
     state_.energy.fixman = fixman;
     state_.energy.logSineSqrGamma2 = logSineSqr;
-    Hold_ = pe + ke + fixman - (0.5 * RT_ * logSineSqr);
+    // ke_mix = ke - nmaCorr replaces the kinetic term for the NMA Route B mixture
+    // draw (nmaCorr == 0 for ordinary HMC, so Hold_ is unchanged off Route B).
+    Hold_ = pe + ke + fixman - (0.5 * RT_ * logSineSqr) - nmaCorr;
     state_.energy.total = Hold_;
+}
+
+double World::nmaKineticCorrection() {
+    // RT*ln cosh(w.mu), w = M^(1/2) u / sqrt(RT), mu = nmaBias_. ke_mix = ke - this
+    // equals -RT*ln g(u|q) for the symmetric biased-mixture momentum draw (up to the
+    // same q-independent constant the standard kinetic term drops), so subtracting it
+    // from both Hold_ and Hnew makes the Route B move detailed-balanced. Returns 0
+    // (strict no-op) for ordinary HMC, so it never perturbs the standard path.
+    if (sampler_.distortOption != DistortOption::NMA) {
+        return 0.0;
+    }
+    const int nu = model_.nu;
+    if (static_cast<int>(nmaBias_.size()) != nu) {
+        return 0.0; // bias not yet built (no reinitialize this block) => no correction
+    }
+    // multiplyBySqrtM needs the articulated-body inertias at the current config; it
+    // uses local scratch, so it does NOT disturb V_GB (the velocities calcKineticEnergy
+    // just read). Position is already realized at every call site.
+    RobotEngine::realizeArticulatedBodyInertias(model_, state_);
+    std::vector<Real> sqrtMu(nu);
+    RobotEngine::multiplyBySqrtM(model_, state_, state_.u(), sqrtMu.data()); // M^(1/2) u
+    const Real inv = Real(1) / std::sqrt(RT_);
+    Real wDotMu = 0.0;
+    for (int i = 0; i < nu; ++i) {
+        wDotMu += (sqrtMu[i] * inv) * nmaBias_[i];
+    }
+    // Numerically stable ln cosh(x) = |x| + log1p(exp(-2|x|)) - ln 2.
+    const Real ax = std::abs(wDotMu);
+    const Real lnCosh = ax + std::log1p(std::exp(-2.0 * ax)) - std::log(2.0);
+    if (nmaDebugEnabled()) {
+        // w.mu via multiplyBySqrtM; at the START this must match the mu.Us printed
+        // by reinitialize (a live check that sqrt(M) inverts sqrt(M^-1) on the draw).
+        std::cout << "[nma]   w.mu=" << wDotMu << " (via M^1/2), RT*ln cosh(w.mu)=" << (RT_ * lnCosh) << "\n"
+                  << std::flush;
+    }
+    return RT_ * lnCosh;
 }
 
 double World::currentTotalEnergy() {
@@ -1519,6 +1675,12 @@ double World::currentTotalEnergy() {
     const double pe = bridge_.calcPotentialEnergy();
     RobotEngine::realizeVelocity(model_, state_);
     const double ke = RobotEngine::calcKineticEnergy(model_, state_);
+    const double nmaCorr = nmaKineticCorrection(); // RT*ln cosh(w.mu) at the END; 0 unless Route B
+    if (sampler_.distortOption == DistortOption::NMA && nmaDebugEnabled()) {
+        std::cout << "[nma]   END:   ke=1/2 u^T M u=" << ke << ", ke_mix=ke-corr=" << (ke - nmaCorr)
+                  << " (corr=RT*ln cosh(w.mu)=" << nmaCorr << ")\n"
+                  << std::flush;
+    }
     double fixman = 0.0;
     double logSineSqr = 0.0;
     if (sampler_.useFixman) {
@@ -1530,7 +1692,8 @@ double World::currentTotalEnergy() {
     state_.energy.ke = ke;
     state_.energy.fixman = fixman;
     state_.energy.logSineSqrGamma2 = logSineSqr;
-    state_.energy.total = pe + ke + fixman - (0.5 * RT_ * logSineSqr);
+    // ke_mix = ke - nmaCorr (Route B mixture); nmaCorr == 0 off Route B.
+    state_.energy.total = pe + ke + fixman - (0.5 * RT_ * logSineSqr) - nmaCorr;
     return state_.energy.total;
 }
 

@@ -4,7 +4,7 @@ Robosample C++ bindings (robo_bindings)
 from __future__ import annotations
 import collections.abc
 import typing
-__all__: list[str] = ['AcceptRejectMode', 'BondMobility', 'Context', 'ForceGroupEnergy', 'JointType', 'MoveType', 'NonbondedMethod', 'RootMobility', 'Selection', 'SystemTopology', 'World']
+__all__: list[str] = ['AcceptRejectMode', 'BondMobility', 'Context', 'DistortOption', 'ForceGroupEnergy', 'JointType', 'MoveType', 'NonbondedMethod', 'RootMobility', 'Selection', 'SystemTopology', 'World']
 class AcceptRejectMode:
     """
     Members:
@@ -173,6 +173,48 @@ class Context:
         """
         Enable/disable separate OpenMM force groups for each Force.
         """
+class DistortOption:
+    """
+    Members:
+    
+      NMA
+    """
+    NMA: typing.ClassVar[DistortOption]  # value = <DistortOption.NMA: 0>
+    __members__: typing.ClassVar[dict[str, DistortOption]]  # value = {'NMA': <DistortOption.NMA: 0>}
+    @typing.overload
+    def __eq__(self, other: DistortOption) -> bool:
+        ...
+    @typing.overload
+    def __eq__(self, other: typing.Any) -> bool:
+        ...
+    def __getstate__(self) -> int:
+        ...
+    def __hash__(self) -> int:
+        ...
+    def __index__(self) -> int:
+        ...
+    def __init__(self, value: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def __int__(self) -> int:
+        ...
+    @typing.overload
+    def __ne__(self, other: DistortOption) -> bool:
+        ...
+    @typing.overload
+    def __ne__(self, other: typing.Any) -> bool:
+        ...
+    def __repr__(self) -> str:
+        ...
+    def __setstate__(self, state: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def __str__(self) -> str:
+        ...
+    @property
+    def name(self) -> str:
+        ...
+    @property
+    def value(self) -> int:
+        ...
 class ForceGroupEnergy:
     @property
     def energy(self) -> float:
@@ -1123,9 +1165,9 @@ class SystemTopology:
     def z_matrix_l(self, arg0: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> None:
         ...
 class World:
-    def add_sampler(self, timeStep: typing.SupportsFloat | typing.SupportsIndex, mdSteps: typing.SupportsInt | typing.SupportsIndex, acceptRejectMode: AcceptRejectMode, use_nuts: bool, sphere_factor: typing.SupportsFloat | typing.SupportsIndex = 1.0, use_fixman: bool | None = None, always_kick: bool = False, clash_threshold: typing.SupportsFloat | typing.SupportsIndex = 10.0, max_initial_kick_tries: typing.SupportsInt | typing.SupportsIndex = 0) -> World:
+    def add_sampler(self, timeStep: typing.SupportsFloat | typing.SupportsIndex, mdSteps: typing.SupportsInt | typing.SupportsIndex, acceptRejectMode: AcceptRejectMode, use_nuts: bool, sphere_factor: typing.SupportsFloat | typing.SupportsIndex = 1.0, use_fixman: bool | None = None, always_kick: bool = False, clash_threshold: typing.SupportsFloat | typing.SupportsIndex = 10.0, max_initial_kick_tries: typing.SupportsInt | typing.SupportsIndex = 0, distort_option: robo_bindings.DistortOption | None = None, nma_bias_scale: typing.SupportsFloat | typing.SupportsIndex = 1.0) -> World:
         """
-        Configure this world's sampler; returns the world for chaining. sphere_factor scales the auto-sized per-ligand binding sphere (R = R_receptor + sphere_factor*R_ligand). The docking kick relocates a ligand only when its COM leaves the sphere (always_kick=True perturbs every round). A proposed pose is rejected -- in ALL modes, including AlwaysAccept -- if its potential energy is non-finite or |PE| exceeds clash_threshold, so overlapping geometry never passes. use_fixman=None auto-enables Fixman+logSineSqr on non-Cartesian worlds. max_initial_kick_tries>0 enables a pre-round-0 retry loop that keeps drawing random placements until a clash-free starting pose is found (dPE <= maxStartPE), or raises RuntimeError after the budget is exhausted.
+        Configure this world's sampler; returns the world for chaining. sphere_factor scales the auto-sized per-ligand binding sphere (R = R_receptor + sphere_factor*R_ligand). The docking kick relocates a ligand only when its COM leaves the sphere (always_kick=True perturbs every round). A proposed pose is rejected -- in ALL modes, including AlwaysAccept -- if its potential energy is non-finite or |PE| exceeds clash_threshold, so overlapping geometry never passes. use_fixman=None auto-enables Fixman+logSineSqr on non-Cartesian worlds. max_initial_kick_tries>0 enables a pre-round-0 retry loop that keeps drawing random placements until a clash-free starting pose is found (dPE <= maxStartPE), or raises RuntimeError after the budget is exhausted. distort_option=DistortOption.NMA draws the HMC momentum from a symmetric Gaussian mixture biased by +/- nma_bias_scale*uhat (uhat = unit NMA direction); detailed balance is preserved by a matching ln-cosh kinetic term. None (default) leaves the draw a plain Gaussian. nma_bias_scale (alpha, default 1.0) is the directed push in thermal-sigma units along uhat: the bias injects ~1/2 RT alpha^2 of directed energy, so alpha trades proposal boldness against acceptance. Guidance: alpha in [0.3, 1.0] is gentle (acceptance close to plain HMC); 1.0-3.0 is bolder; >5 collapses acceptance under a real Metropolis test. alpha=0 reproduces plain HMC. NOTE: until real soft-mode factors are supplied, uhat is the (physically meaningless) unit direction of the all-ones uScaleFactors, so the bias is safe (alpha-controlled) but not yet a useful soft-mode push.
         """
     def configure_ncmc(self, atom_begin: typing.SupportsInt | typing.SupportsIndex, atom_end: typing.SupportsInt | typing.SupportsIndex, ncmc_steps: typing.SupportsInt | typing.SupportsIndex, hold_fraction: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
         """
@@ -1138,6 +1180,10 @@ class World:
     def set_mass_scale_by_joint(self, joint_type: JointType, scale: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Inflate the spatial inertia used ONLY in the proposal (momentum draw, KE, Fixman ln det M) for every body of the given JointType, raising the stable dt ~sqrt(scale) with zero configurational bias. scale=1.0 is physical (off). Typical: set_mass_scale_by_joint(JointType.Free, 16.0) on a solvent world to tame water libration.
+        """
+    def set_nma_soft_mode_from_hessian(self, atom_pos_ground: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], h: typing.SupportsFloat | typing.SupportsIndex = 1e-05, zero_tol: typing.SupportsFloat | typing.SupportsIndex = 1e-06) -> float:
+        """
+        Build the mass-weighted internal-coordinate Hessian at the given minimized Ground-frame coords (nm, flat x,y,z, global atom order) and load the softest non-trivial mode into the world's NMA uScaleFactors. Call AFTER add_sampler with distort_option=DistortOption.NMA. Returns omega^2 of the chosen mode.
         """
     def set_reversibility_check(self, interval: typing.SupportsInt | typing.SupportsIndex) -> None:
         """

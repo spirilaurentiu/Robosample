@@ -69,6 +69,12 @@ class RobotEngine {
     // velocity seeding: u = sqrt(boostRT) * sqrtMInv * gaussian.
     static void multiplyBySqrtMInv(const RobotModel& m, RobotState& s, const robo::Real* in, robo::Real* out);
 
+    // sqrt(M): exact algebraic inverse of multiplyBySqrtMInv (see RobotEngine.cpp).
+    // Used by the NMA Route B acceptance to recover the white-noise coordinates
+    // w = M^(1/2) u / sqrt(RT) of a trajectory-end velocity. Uses local scratch,
+    // so it does NOT disturb s.V_GB() (safe to call alongside calcKineticEnergy).
+    static void multiplyBySqrtM(const RobotModel& m, RobotState& s, const robo::Real* in, robo::Real* out);
+
     // ---- MASS-MATRIX LOG-DETERMINANT (Fixman) -----------------------------
     // ln|M_phi| = sum_b ln det(D_b), the O(n) articulated-body determinant
     // (port of RigidBodyNodeSpec::calcDetMPass2Outward, which accumulates

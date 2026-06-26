@@ -77,22 +77,35 @@ bonds = context.standard_dihedral_bonds.loc[
     context.standard_dihedral_bonds["dihedral_type"].isin(dihedrals)
 ]
 sele = context.build_flexibilities(bonds, robosample.rb.BondMobility.Torsion, False)
-# context.add_robotic_world(sele).add_sampler(
-#     timeStep=0.04,
-#     mdSteps=25,
-#     acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept,
-#     use_nuts=False,
-#     use_fixman=True,  # required for rigorous Boltzmann sampling of a constrained world
-# )
+w = context.add_robotic_world(sele)
 
-context.add_ncmc_world(
-    sele,
-    molecule_index=0,
-    timestep=0.002,
-    ncmc_steps=1000,
-    hold_fraction=0.2,
-    use_fixman=True,  # rigorous Boltzmann sampling of the constrained world
+w.add_sampler(
+    timeStep=0.002,
+    mdSteps=50,
+    acceptRejectMode=robosample.rb.AcceptRejectMode.MetropolisHastings,
+    use_nuts=False,
+    use_fixman=True,  # required for rigorous Boltzmann sampling of a constrained world
+    distort_option=None,  # robosample.rb.DistortOption.NMA
+    nma_bias_scale=0,  # 1
 )
+
+# minimized Ground-frame coords (nm), same order add_sampler/OpenMM use:
+st = context.system_topology
+pos_flat = []
+for a in range(st.num_atoms):
+    pos_flat += [st.atoms_x[a], st.atoms_y[a], st.atoms_z[a]]
+
+# omega2 = w.set_nma_soft_mode_from_hessian(pos_flat, h=1e-5)
+# print("softest internal mode omega^2 =", omega2)
+
+# context.add_ncmc_world(
+#     sele,
+#     molecule_index=0,
+#     timestep=0.002,
+#     ncmc_steps=1000,
+#     hold_fraction=0.2,
+#     use_fixman=True,  # rigorous Boltzmann sampling of the constrained world
+# )
 
 
 # ---- Run --------------------------------------------------------------------
@@ -102,3 +115,5 @@ context.add_ncmc_world(
 # the hard error to a warning, or minimize first.
 context.initialize([300])
 context.run_rex(args.equil_steps, args.prod_steps, args.write_freq, True)
+
+# (find python/robosample -type f -name '*.py'; find src -type f -name '*.cpp'; find include -type f -name '*.hpp';) | sort | while IFS= read -r f; do echo "<file path=\"$f\">"; cat "$f"; echo; echo "</file>"; echo; done > merged_codebase.xml

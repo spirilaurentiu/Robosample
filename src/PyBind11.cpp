@@ -37,6 +37,10 @@ PYBIND11_MODULE(robo_bindings, m) {
         .value("RigidKick", MoveType::RigidKick)
         .value("NcmcSwitch", MoveType::NcmcSwitch);
 
+    // Velocity-distortion option for the HMC momentum draw (simtk "NMA scaling").
+    // Pass distort_option=DistortOption.NMA to add_sampler; None (default) = off.
+    py::enum_<DistortOption>(m, "DistortOption").value("NMA", DistortOption::NMA);
+
     py::enum_<BondMobility>(m, "BondMobility")
         .value("Rigid", BondMobility::Rigid)
         .value("Torsion", BondMobility::Torsion)
@@ -87,6 +91,9 @@ PYBIND11_MODULE(robo_bindings, m) {
              py::arg("always_kick") = false,     // perturb every round (else: only when COM left sphere)
              py::arg("clash_threshold") = 10.0,  // reject if |peNew|>factor*|pePre| (relative, dimensionless)
              py::arg("max_initial_kick_tries") = 0, // >0: retry kick before round 0 until clash-free
+             py::arg("distort_option") =
+                 py::none(), // None => no velocity distortion; DistortOption.NMA => NMA Route B
+             py::arg("nma_bias_scale") = 1.0, // alpha: NMA bias magnitude in thermal sigmas
              py::return_value_policy::reference,
              "Configure this world's sampler; returns the world for chaining. "
              "sphere_factor scales the auto-sized per-ligand binding sphere "
@@ -98,7 +105,19 @@ PYBIND11_MODULE(robo_bindings, m) {
              "Fixman+logSineSqr on non-Cartesian worlds. "
              "max_initial_kick_tries>0 enables a pre-round-0 retry loop that keeps "
              "drawing random placements until a clash-free starting pose is found "
-             "(dPE <= maxStartPE), or raises RuntimeError after the budget is exhausted.")
+             "(dPE <= maxStartPE), or raises RuntimeError after the budget is exhausted. "
+             "distort_option=DistortOption.NMA draws the HMC momentum from a symmetric "
+             "Gaussian mixture biased by +/- nma_bias_scale*uhat (uhat = unit NMA "
+             "direction); detailed balance is preserved by a matching ln-cosh kinetic "
+             "term. None (default) leaves the draw a plain Gaussian. "
+             "nma_bias_scale (alpha, default 1.0) is the directed push in thermal-sigma "
+             "units along uhat: the bias injects ~1/2 RT alpha^2 of directed energy, so "
+             "alpha trades proposal boldness against acceptance. Guidance: alpha in "
+             "[0.3, 1.0] is gentle (acceptance close to plain HMC); 1.0-3.0 is bolder; "
+             ">5 collapses acceptance under a real Metropolis test. alpha=0 reproduces "
+             "plain HMC. NOTE: until real soft-mode factors are supplied, uhat is the "
+             "(physically meaningless) unit direction of the all-ones uScaleFactors, so "
+             "the bias is safe (alpha-controlled) but not yet a useful soft-mode push.")
         // NEW: kinetic-metric mass scaling (fictitious mass; SAMPLING only).
         // OFF by default (scale 1.0 == physical). Call after the world is created.
         .def("set_mass_scale_by_joint",
@@ -128,6 +147,15 @@ PYBIND11_MODULE(robo_bindings, m) {
              "timestep is too large for the current geometry). Non-destructive; it is a "
              "smoke test for the current configuration only -- the always-on guard is the "
              "per-step corrector throw in the integrator. See THEORY 5.7.")
+        .def("set_nma_soft_mode_from_hessian",
+             &World::setNMASoftModeFromHessian,
+             py::arg("atom_pos_ground"),
+             py::arg("h") = 1e-5,
+             py::arg("zero_tol") = 1e-6,
+             "Build the mass-weighted internal-coordinate Hessian at the given minimized "
+             "Ground-frame coords (nm, flat x,y,z, global atom order) and load the softest "
+             "non-trivial mode into the world's NMA uScaleFactors. Call AFTER add_sampler "
+             "with distort_option=DistortOption.NMA. Returns omega^2 of the chosen mode.")
         .def_property_readonly("index", &World::index)
         .def_property_readonly("is_cartesian", &World::isCartesian)
         .def_property_readonly("is_docking", &World::isDocking);
