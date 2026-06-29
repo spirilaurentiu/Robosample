@@ -11,15 +11,6 @@ namespace py = pybind11;
 PYBIND11_MODULE(robo_bindings, m) {
     m.doc() = "Robosample C++ bindings (robo_bindings)";
 
-    // -- Enums ---------------------------------------------------------------
-    py::enum_<RootMobility>(m, "RootMobility")
-        .value("FREE", RootMobility::Free)
-        .value("CARTESIAN", RootMobility::Cartesian)
-        .value("WELD", RootMobility::Weld)
-        .value("FREE_LINE", RootMobility::FreeLine)
-        .value("BALL", RootMobility::Ball)
-        .value("PIN", RootMobility::Pin);
-
     py::enum_<NonbondedMethod>(m, "NonbondedMethod")
         .value("NoCutoff", NonbondedMethod::NoCutoff)
         .value("CutoffNonPeriodic", NonbondedMethod::CutoffNonPeriodic)
@@ -41,28 +32,21 @@ PYBIND11_MODULE(robo_bindings, m) {
     // Pass distort_option=DistortOption.NMA to add_sampler; None (default) = off.
     py::enum_<DistortOption>(m, "DistortOption").value("NMA", DistortOption::NMA);
 
-    py::enum_<BondMobility>(m, "BondMobility")
-        .value("Rigid", BondMobility::Rigid)
-        .value("Torsion", BondMobility::Torsion)
-        .value("Free", BondMobility::Free)
-        .value("Ball", BondMobility::Ball)
-        .value("Pin", BondMobility::Pin)
-        .value("Slider", BondMobility::Slider)
-        .value("Cylinder", BondMobility::Cylinder)
-        .value("BendStretch", BondMobility::BendStretch);
-
-    // NEW: needed so Python can target mass scaling by joint type.
     py::enum_<JointType>(m, "JointType")
-        .value("Weld", JointType::Weld)
-        .value("Pin", JointType::Pin)
-        .value("Slider", JointType::Slider)
-        .value("Cylinder", JointType::Cylinder)
-        .value("BendStretch", JointType::BendStretch)
-        .value("Translation", JointType::Translation)
-        .value("Ball", JointType::Ball)
-        .value("SphericalCoords", JointType::SphericalCoords)
-        .value("FreeLine", JointType::FreeLine)
-        .value("Free", JointType::Free);
+        .value("Rigid", JointType::Rigid, "No mobility across the joint (Weld): 0 dof.")
+        .value("Torsion", JointType::Torsion, "Rotation about the bond axis (the canonical dihedral): 1 dof.")
+        .value("Slider", JointType::Slider, "Translation along the bond axis: 1 dof.")
+        .value("Cylinder", JointType::Cylinder, "Rotation + translation about/along the bond axis: 2 dof.")
+        .value("BendStretch",
+               JointType::BendStretch,
+               "Rotation perpendicular to the bond + translation along it: 2 dof.")
+        .value("Cartesian", JointType::Cartesian, "3 translations: 3 dof.")
+        .value("Ball", JointType::Ball, "Rotation, q = 4 (quaternion) by default: 3 dof.")
+        .value("SphericalCoords", JointType::SphericalCoords, "BAT (azimuth, zenith, radius): 3 dof.")
+        .value("FreeLine",
+               JointType::FreeLine,
+               "2 rotations (no spin about own line) + 3 translations, q = 7: 5 dof.")
+        .value("Free", JointType::Free, "q = 7 (quaternion + translation): 6 dof.");
 
     py::class_<Selection>(m, "Selection").def(py::init<>());
 
@@ -147,6 +131,13 @@ PYBIND11_MODULE(robo_bindings, m) {
              "timestep is too large for the current geometry). Non-destructive; it is a "
              "smoke test for the current configuration only -- the always-on guard is the "
              "per-step corrector throw in the integrator. See THEORY 5.7.")
+        .def("set_ncmc_teleport",
+             &World::setNcmcTeleport,
+             py::arg("on"),
+             "Enable the NCMC lambda=0 trough teleport: a rigid, KE-preserving long-range "
+             "reposition of the decoupled region at the ghost trough (explicit-solvent analogue "
+             "of the docking RigidKick). Default off. Active only for an acyclic Free-root region "
+             "with a docking site.")
         .def("set_nma_soft_mode_from_hessian",
              &World::setNMASoftModeFromHessian,
              py::arg("atom_pos_ground"),
@@ -158,7 +149,30 @@ PYBIND11_MODULE(robo_bindings, m) {
              "with distort_option=DistortOption.NMA. Returns omega^2 of the chosen mode.")
         .def_property_readonly("index", &World::index)
         .def_property_readonly("is_cartesian", &World::isCartesian)
-        .def_property_readonly("is_docking", &World::isDocking);
+        .def_property_readonly("is_docking", &World::isDocking)
+        .def("set_root_mobility",
+             &World::setRootMobility,
+             py::arg("molecule_index"),
+             py::arg("mobility"),
+             "Override ONE molecule's root attachment to Ground for THIS world only "
+             "(rebuilds this world's model). Root mobility is a per-world property; "
+             "use this (not a Context-level setter) to change an individual molecule. "
+             "Call before add_sampler.")
+        .def("set_root_mobilities",
+             &World::setRootMobilities,
+             py::arg("root_mobilities"),
+             "Replace this world's WHOLE root-mobility vector (one entry per molecule) "
+             "and rebuild ONCE -- the efficient path when many molecules change at once "
+             "(e.g. a solvation shell over thousands of waters). Call before add_sampler.")
+        .def("set_cartesian_solvent",
+             &World::setCartesianSolvent,
+             py::arg("atom_indices"),
+             "Solvent-relaxing NCMC: mark these atoms (global/OpenMM order) to be "
+             "advanced in FLAT Cartesian space by velocity-Verlet driven by OpenMM "
+             "forces INSIDE the proposal, so the contact environment relaxes during "
+             "the move instead of being a welded wall. Bodies stay welded (no Fixman/"
+             "Jacobian contribution); only the per-atom (x,v) move. Empty == the "
+             "welded engine, bit-for-bit. Call AFTER add_sampler/configure_ncmc.");
 
     py::class_<OpenMMContext::ForceGroupEnergy>(m, "ForceGroupEnergy")
         .def_readonly("group", &OpenMMContext::ForceGroupEnergy::group)
@@ -329,11 +343,6 @@ PYBIND11_MODULE(robo_bindings, m) {
              py::arg("write_freq"),
              py::arg("verbose"),
              "Run replica exchange: Gibbs sweep over worlds + adjacent swaps.")
-        .def("set_root_mobility",
-             &Context::setRootMobility,
-             py::arg("molecule_index"),
-             py::arg("mobility"),
-             "Override a molecule's root attachment to Ground.")
         .def("set_mts",
              &Context::setMTS,
              py::arg("enabled"),

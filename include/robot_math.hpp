@@ -246,8 +246,37 @@ struct alignas(8) Vec4 {
 };
 
 // ---------------------------------------------------------------------------
+//  Parent-frame quaternion kinematic map  qdot = N(q) * w_FM   (THEORY S3.4).
+//
+//  INTENDED BEHAVIOR: q represents R_FM (body orientation in the parent frame
+//  F), built by Rotation::fromQuaternion as the STANDARD map. The engine's
+//  generalized angular speed w_FM is expressed in F. The matching qdot map is
+//  therefore the PARENT-frame map (left Hamilton product, qdot = 1/2 (0,w) (x) q):
+//
+//      qdot_w = 1/2 ( -qx*wx - qy*wy - qz*wz )
+//      qdot_x = 1/2 (  qw*wx + qz*wy - qy*wz )
+//      qdot_y = 1/2 ( -qz*wx + qw*wy + qx*wz )
+//      qdot_z = 1/2 (  qy*wx - qx*wy + qw*wz )
+//
+//  This is exactly Simbody's calcUnnormalizedNForQuaternion. The body-frame map
+//  (right product, q (x) (0,w)) negates the off-diagonal cross terms and assumes
+//  w in M; pairing it with the standard R_FM advances the orientation with a
+//  wrong-handed angular velocity and pumps kinetic energy (conflict C-4, fixed).
+//
+//  SINGLE SOURCE OF TRUTH: both Quat::angVelToQdot and
+//  Rotation::convertAngVelToQuaternionDot delegate here, so the two cannot
+//  silently diverge -- the duplication is what let C-4 hide under
+//  self-consistency.
+inline auto quaternionDotFromAngVel(Real qw, Real qx, Real qy, Real qz, const Vec3& w) -> Vec4 {
+    return Vec4(Real(0.5) * ((-qx * w[0]) - (qy * w[1]) - (qz * w[2])),
+                Real(0.5) * ((qw * w[0]) + (qz * w[1]) - (qy * w[2])),
+                Real(0.5) * ((-qz * w[0]) + (qw * w[1]) + (qx * w[2])),
+                Real(0.5) * ((qy * w[0]) - (qx * w[1]) + (qw * w[2])));
+}
+
+// ---------------------------------------------------------------------------
 //  Quaternion (w, x, y, z). q represents R_FM; angVel is w_FM in F (== u[0..2]).
-//  qdot = N(q) * w. GOLDEN-TEST against the SimTK reference.
+//  qdot = N(q) * w (parent-frame, see quaternionDotFromAngVel above).
 // ---------------------------------------------------------------------------
 struct Quat {
     std::array<Real, 4> elems; // w, x, y, z
@@ -277,14 +306,9 @@ struct Quat {
         }
     }
     static auto angVelToQdot(const Quat& quat, const Vec3& angVel) -> Quat {
-        const Real qw = quat.elems[0];
-        const Real qx = quat.elems[1];
-        const Real qy = quat.elems[2];
-        const Real qz = quat.elems[3];
-        return Quat(Real(0.5) * ((-qx * angVel[0]) - (qy * angVel[1]) - (qz * angVel[2])),
-                    Real(0.5) * ((qw * angVel[0]) - (qz * angVel[1]) + (qy * angVel[2])),
-                    Real(0.5) * ((qz * angVel[0]) + (qw * angVel[1]) - (qx * angVel[2])),
-                    Real(0.5) * ((-qy * angVel[0]) + (qx * angVel[1]) + (qw * angVel[2])));
+        const Vec4 d =
+            quaternionDotFromAngVel(quat.elems[0], quat.elems[1], quat.elems[2], quat.elems[3], angVel);
+        return Quat(d[0], d[1], d[2], d[3]);
     }
 };
 using Quaternion = Quat; // SimTK-compatible name
@@ -479,16 +503,10 @@ struct Rotation : Mat33 {
         return rot;
     }
 
-    // qdot = N(quat) * angVel (SimTK Rotation::convertAngVelToQuaternionDot). quat treated as Vec4.
+    // qdot = N(quat) * angVel, parent-frame map (SimTK calcUnnormalizedNForQuaternion).
+    // Delegates to the shared quaternionDotFromAngVel (single source of truth).
     static auto convertAngVelToQuaternionDot(const Vec4& quat, const Vec3& angVel) -> Vec4 {
-        const Real ew = quat[0];
-        const Real ex = quat[1];
-        const Real ey = quat[2];
-        const Real ez = quat[3];
-        return Vec4(Real(0.5) * ((-ex * angVel[0]) - (ey * angVel[1]) - (ez * angVel[2])),
-                    Real(0.5) * ((ew * angVel[0]) - (ez * angVel[1]) + (ey * angVel[2])),
-                    Real(0.5) * ((ez * angVel[0]) + (ew * angVel[1]) - (ex * angVel[2])),
-                    Real(0.5) * ((-ey * angVel[0]) + (ex * angVel[1]) + (ew * angVel[2])));
+        return quaternionDotFromAngVel(quat[0], quat[1], quat[2], quat[3], angVel);
     }
     static auto convertAngVelToQuaternionDot(const Quat& quat, const Vec3& angVel) -> Vec4 {
         return convertAngVelToQuaternionDot(Vec4(quat.elems[0], quat.elems[1], quat.elems[2], quat.elems[3]),

@@ -43,11 +43,3 @@ coverage/
 # tools folder
 tools/demo
 tools/genFlex.old
-
-Doxyfile
-Doxyfile.bak
-draw/
-html/
-latex/
-projman/
-.qodo

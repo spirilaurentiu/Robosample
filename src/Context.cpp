@@ -14,6 +14,7 @@
 
 #include "DCDWriter.hpp"
 #include "OpenMM.h"
+#include "PeriodicBox.hpp"
 
 namespace {
 constexpr double kBoltzmann_kJ = 0.0083144626; // kJ/mol/K
@@ -52,14 +53,9 @@ Context::Context(std::string baseName, std::uint32_t seed)
     , rexRng_(seed ^ 0xD1B54A32D192ED03ULL) {
 }
 
-void Context::setRootMobility(int moleculeIndex, RootMobility mobility) {
-    if (moleculeIndex < 0 || moleculeIndex >= static_cast<int>(systemTopology.rootMobilities.size())) {
-        throw std::out_of_range("setRootMobility: molecule index " + std::to_string(moleculeIndex)
-                                + " out of range (have "
-                                + std::to_string(systemTopology.rootMobilities.size()) + " molecules)");
-    }
-    systemTopology.rootMobilities[moleculeIndex] = mobility;
-}
+// Context::setRootMobility was removed: root mobility is now a per-world
+// property. Use World::setRootMobility / World::setRootMobilities on the world
+// returned by add*World instead (see World.cpp).
 
 // ---------------------------------------------------------------------------
 //  Worlds
@@ -84,18 +80,18 @@ World& Context::addDockingWorld(const std::vector<int>& ligandMoleculeIndices) {
 
     // Per-WORLD root mobilities: ligands Free, everything else Welded. This is
     // local to the docking world and does NOT touch systemTopology.rootMobilities.
-    std::vector<RootMobility> rootMob(numMol, RootMobility::Weld);
+    std::vector<JointType> rootMob(numMol, JointType::Rigid);
     for (int m : ligandMoleculeIndices) {
         if (m < 0 || m >= numMol) {
             throw std::out_of_range("addDockingWorld: ligand molecule index " + std::to_string(m)
                                     + " out of range (have " + std::to_string(numMol) + " molecules)");
         }
-        rootMob[m] = RootMobility::Free;
+        rootMob[m] = JointType::Free;
     }
 
     // Rigid-body docking: every bond stays Rigid (each molecule = one body).
     Selection sel;
-    sel.bondMobility.assign(systemTopology.numBonds, BondMobility::Rigid);
+    sel.bondMobility.assign(systemTopology.numBonds, JointType::Rigid);
 
     const int idx = static_cast<int>(worlds_.size());
     worlds_.push_back(std::make_unique<World>(idx, /*cartesian*/ false, seed));
@@ -126,10 +122,10 @@ World& Context::addDockingWorld(const std::vector<int>& ligandMoleculeIndices) {
 }
 
 Selection Context::buildFlexibilities(const std::optional<std::vector<std::pair<int, int>>>& bonds,
-                                      BondMobility mobility,
+                                      JointType mobility,
                                       bool /*flag*/) {
     Selection sel;
-    sel.bondMobility.assign(systemTopology.numBonds, BondMobility::Rigid);
+    sel.bondMobility.assign(systemTopology.numBonds, JointType::Rigid);
 
     std::set<std::pair<int, int>> want;
     if (bonds.has_value()) {
@@ -279,16 +275,8 @@ void Context::checkStartupGeometry() {
         if (!periodic) {
             return;
         }
-        // c then b then a (bv layout: a=[0..2], b=[3..5], c=[6..8]).
-        double n = std::round(dz / bv[8]);
-        dx -= n * bv[6];
-        dy -= n * bv[7];
-        dz -= n * bv[8];
-        n = std::round(dy / bv[4]);
-        dx -= n * bv[3];
-        dy -= n * bv[4];
-        n = std::round(dx / bv[0]);
-        dx -= n * bv[0];
+        // single source of truth: robo::pbc::minimumImage (PeriodicBox.hpp).
+        robo::pbc::minimumImage(dx, dy, dz, bv.data());
     };
 
     bool anyNaN = false;

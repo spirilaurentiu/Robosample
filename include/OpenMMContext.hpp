@@ -162,6 +162,16 @@ class OpenMMContext {
     [[nodiscard]] auto createUreyBradleyForce(const SystemTopology& systemTopology)
         -> OpenMM::HarmonicBondForce*;
 
+    // PME/explicit-solvent NCMC. Reciprocal space cannot be localized to an
+    // A x rest pair list, so electrostatics are scaled on the MAIN NonbondedForce
+    // via a lambda_inter charge offset (PME-exact), and A's LJ is rebuilt as
+    // soft-core A x rest + hard intra-A custom forces. Mutates `main`; returns the
+    // two custom forces to add. Driven by the SAME lambda_inter global parameter,
+    // so setAlchemicalLambda / ncmcMove need no changes.
+    [[nodiscard]] auto createAlchemyDecouplingForces(const SystemTopology& systemTopology,
+                                                     OpenMM::NonbondedForce* main)
+        -> std::pair<OpenMM::CustomNonbondedForce*, OpenMM::CustomNonbondedForce*>;
+
     std::unique_ptr<OpenMM::Context> context;
     std::unique_ptr<OpenMM::System> system;
     std::unique_ptr<OpenMM::Integrator> integrator;

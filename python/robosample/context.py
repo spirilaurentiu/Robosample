@@ -15,7 +15,6 @@ from .robo_bindings import (
     AcceptRejectMode,
     JointType,
     NonbondedMethod,
-    RootMobility,
     SystemTopology,
 )
 from .robo_bindings import Context as _Context
@@ -64,7 +63,7 @@ class Context(_Context):
             bonds = ctx.standard_dihedral_bonds.loc[
                 ctx.standard_dihedral_bonds["dihedral_type"].isin(["phi", "psi"])
             ]
-            sele = ctx.build_flexibilities(bonds, rb.BondMobility.Torsion, False)
+            sele = ctx.build_flexibilities(bonds, rb.JointType.Torsion, False)
         """
         return self.df_bonds
 
@@ -220,7 +219,7 @@ class Context(_Context):
         # (per molecule or per type) if some molecules should be welded/pinned.
         acc.setdefault("atoms_root_index", [])
         acc.setdefault("root_mobilities", [])
-        default_root_mobility = RootMobility.WELD
+        default_root_mobility = JointType.Rigid
 
         # prmtop_to_global_index maps each 0-based prmtop atom index to its
         # position in the BFS/compound-ordered global flat arrays.
@@ -530,7 +529,7 @@ class Context(_Context):
             # root so it can translate and reorient. A welded solvent molecule
             # would be frozen in place, which is unphysical for explicit solvent.
             self.system_topology.root_mobilities = [
-                RootMobility.FREE
+                JointType.Free
             ] * self.system_topology.num_molecules
         else:
             # Implicit / non-periodic path: honour explicit overrides if given,
@@ -646,36 +645,167 @@ class Context(_Context):
             world.set_reversibility_check(int(reversibility_check_every))
         return world
 
+    @staticmethod
+    def _is_water_composition(beg, end, mass, atomic_number) -> bool:
+        """True iff atoms [beg, end) are one O + two H (+ massless extra points).
+
+        ``mass`` / ``atomic_number`` are the WHOLE-system per-atom arrays (fetch
+        them ONCE by the caller -- each ``system_topology.*`` access copies the
+        full vector, so indexing the property inside a loop is O(N^2)).
+        """
+        n_o = n_h = n_other_massive = 0
+        for a in range(beg, end):
+            if float(mass[a]) <= 0.0:
+                continue  # massless virtual site / extra point (TIP4P/TIP5P EP)
+            z = int(atomic_number[a])
+            if z == 8:
+                n_o += 1
+            elif z == 1:
+                n_h += 1
+            else:
+                n_other_massive += 1
+        return n_o == 1 and n_h == 2 and n_other_massive == 0
+
+    def is_solvent(self, molecule_index: int) -> bool:
+        """Return True iff molecule ``molecule_index`` is a water molecule.
+
+        Assumes AMBER TIP*/SPC water models. A molecule is classified as water
+        when its *massive* atoms are exactly one oxygen and two hydrogens; any
+        remaining atoms must be massless virtual sites / extra points (the EP of
+        TIP4P, TIP4P-Ew, OPC, TIP5P). Detection is by composition, not residue
+        name, so it is robust to tleap naming (WAT / HOH / ...) and deliberately
+        matches ONLY water -- ions and other small molecules (even O/H species
+        like hydroxide or hydronium) are reported as non-solvent (solute).
+        """
+        st = self.system_topology
+        return self._is_water_composition(
+            int(st.atoms_begin[molecule_index]),
+            int(st.atoms_end[molecule_index]),
+            st.atoms_mass,
+            st.atoms_atomic_number,
+        )
+
     def add_ncmc_world(
         self,
         selection,
-        molecule_index,
         timestep,
         ncmc_steps,
         hold_fraction=0.0,
         accept_reject_mode=None,
         use_fixman=None,
+        mass_scale=None,
+        ncmc_teleport=False,
+        relax_solvent=False,
     ):
-        """Add a per-molecule NCMC torsional world.
+        """Add an NCMC torsional world with ALL solvent welded to Ground.
 
-        During each move the intermolecular nonbonded between ``molecule_index``
-        and every other molecule is alchemically softened over a lambda:1->0->1
-        switch, so the molecule strides through the cage of contacting molecules
-        near lambda=0 and is recoupled with the accumulated work paid in the
-        acceptance. The molecule's *intramolecular* physics is untouched.
+        Solute vs solvent
+        -----------------
+        Every non-water molecule is a *solute*. ``molecule_index`` is computed
+        here as the list of all solute (non-solvent) molecule indices (water is
+        detected by :meth:`is_solvent`). During each move the intermolecular
+        nonbonded between the solute atoms and every other molecule is
+        alchemically softened over a lambda:1->0->1 switch, so the solute strides
+        through the cage of contacting molecules near lambda=0 and is recoupled
+        with the accumulated work paid in the acceptance. Intramolecular physics
+        is untouched. The solute atoms must form one contiguous block (true for a
+        tleap-built system: solute first, then solvent); this is checked.
 
-        Vacuum / implicit only (NoCutoff / CutoffNonPeriodic). A periodic/PME
-        system raises at initialize() by design -- explicit-solvent alchemy is a
-        separate effort. ``ncmc_steps`` is the protocol length (more steps =>
-        smoother switch, higher acceptance, slower); ``hold_fraction`` holds
-        lambda=0 for that fraction of the protocol (the uncaged stride).
+        Solvent is WELDed (root mobility -- a per-world property)
+        --------------------------------------------------------
+        Root mobility is set on THIS world only (via ``world.set_root_mobilities``;
+        the shared topology is untouched). In this block **ALL solvent is welded to
+        Ground** (Rigid root, zero DOF), exactly as the solutes' roots are: only
+        the solute's internal (torsional) DOF move, plus the alchemical lambda
+        stride-through. The solvent does NOT relax inside this move and it does not
+        need to -- solvent relaxation and overall ergodicity are owned by the
+        SEPARATE full-atom MD Gibbs block (composition of pi-preserving kernels);
+        alchemy alone provides the stride-through of the welded environment (incl.
+        docking). Welding all solvent is both simpler and removes a latent bias: a
+        freed rigid-quaternion shell water would need its own orientation-Jacobian
+        (logSineSqr) term, which historically was applied to molecule 0 only.
+
+        Explicit solvent is supported: the alchemical decoupling has a PME-exact
+        path (OpenMMContext::createAlchemyDecouplingForces). The one unsupported
+        case is an NBFIX-corrected force field, which raises at initialize() by
+        design. ``ncmc_steps`` is the protocol length (more steps => smoother
+        switch, higher acceptance, slower); ``hold_fraction`` holds lambda=0 for
+        that fraction of the protocol (the uncaged stride).
+
+        Acceptance / the energy-pump caveat
+        -----------------------------------
+        The internal-coordinate integrator is only approximately symplectic, so
+        long/large-dt trajectories can PUMP energy: every step then climbs in H and
+        Metropolis rejects it, and the trajectory barely moves. The per-move
+        ``[ncmc] ... dH=`` value is the acceptance driver (acc ~ exp(-dH/RT)); the
+        ``gap=`` (work - dH) is diagnostic only. Levers, in rough order of effect:
+        a smaller ``timestep``, fewer ``ncmc_steps``, and ``mass_scale`` (a
+        kinetic-metric scaling that raises the stable dt ~sqrt(scale) with NO
+        configurational bias -- Fixman cancels it). ``mass_scale=None`` (default)
+        is physical / off.
         """
-        beg = int(self.system_topology.atoms_begin[molecule_index])
-        end = int(self.system_topology.atoms_end[molecule_index])
+        st = self.system_topology
+        num_mol = int(st.num_molecules)
+
+        # Fetch the per-atom/per-molecule arrays ONCE (each property access
+        # copies the whole vector -- never index the property inside a loop).
+        atoms_begin = list(st.atoms_begin)
+        atoms_end = list(st.atoms_end)
+        mass = list(st.atoms_mass)
+        atomic_number = list(st.atoms_atomic_number)
+
+        # Partition molecules. molecule_index = all solute (non-water) indices.
+        solvent_flags = [
+            self._is_water_composition(
+                atoms_begin[m], atoms_end[m], mass, atomic_number
+            )
+            for m in range(num_mol)
+        ]
+        molecule_index = [m for m in range(num_mol) if not solvent_flags[m]]
+        if not molecule_index:
+            raise ValueError(
+                "add_ncmc_world: no solute (non-water) molecules found; nothing to sample."
+            )
+
+        # NCMC decouples the solute atoms from everything else over the lambda
+        # switch. configure_ncmc takes a single contiguous [begin, end) range, so
+        # the solutes must occupy a contiguous atom block; fail loudly otherwise.
+        for prev, cur in zip(molecule_index, molecule_index[1:]):
+            if atoms_end[prev] != atoms_begin[cur]:
+                raise ValueError(
+                    "add_ncmc_world: solute molecules are not contiguous in atom order "
+                    f"(molecule {prev} ends at atom {atoms_end[prev]} but molecule {cur} "
+                    f"begins at atom {atoms_begin[cur]}). The NCMC alchemical range "
+                    "requires a single contiguous solute block."
+                )
+        beg = atoms_begin[molecule_index[0]]
+        end = atoms_end[molecule_index[-1]]
+
+        # Weld EVERYTHING's root to Ground: all solvent AND all solutes get a Rigid
+        # (zero-DOF) root. Only the solute's internal (torsional) DOF -- supplied by
+        # `selection` -- move, plus the alchemical lambda stride-through. The solvent
+        # is deliberately frozen here; its relaxation + the chain's ergodicity are
+        # owned by the SEPARATE full-atom MD Gibbs block (composition of
+        # pi-preserving kernels). Welding all solvent also removes a latent
+        # orientation-Jacobian (logSineSqr) bias that a freed rigid-quaternion shell
+        # water would otherwise require.
+        root_mob = [JointType.Rigid] * num_mol
+
         world = super().add_robotic_world(selection)
+
+        # Root mobility is a per-world property: apply it to THIS world BEFORE
+        # add_sampler (the rebuild resets per-body sampler state).
+        world.set_root_mobilities(root_mob)
+
+        # Mass scaling MUST come AFTER set_root_mobilities: that rebuild resets
+        # every body's mass scale to 1.0. A kinetic-metric mass scale raises the
+        # stable dt ~sqrt(scale) with ZERO configurational bias (Fixman cancels it
+        # exactly). None (default) = physical/off.
+        self._apply_mass_scale(world, mass_scale)
+
         world.add_sampler(
             timeStep=timestep,
-            mdSteps=0,  # NCMC drives its own protocol loop, not mdSteps
+            mdSteps=1,  # NCMC drives its own protocol loop, not mdSteps
             acceptRejectMode=(
                 accept_reject_mode
                 if accept_reject_mode is not None
@@ -686,4 +816,23 @@ class Context(_Context):
         )
         # configure_ncmc sets moveType=NcmcSwitch LAST (after add_sampler).
         world.configure_ncmc(beg, end, int(ncmc_steps), float(hold_fraction))
+        # The lambda=0 trough teleport (default off, so omitting it reproduces prior
+        # behaviour).
+        if ncmc_teleport:
+            world.set_ncmc_teleport(True)
+
+        # Solvent-relaxing NCMC (docs/specs/ncmc_solvent_relax.md). With
+        # relax_solvent=True the solvent stays WELDED as rigid bodies (no Fixman/
+        # Jacobian contribution, exactly as above) but its atoms are additionally
+        # advanced in FLAT Cartesian space by velocity-Verlet driven by OpenMM
+        # forces INSIDE the proposal -- so the cage relaxes during the lambda
+        # stride instead of being an infinite-mass wall, which is what kills
+        # acceptance in explicit solvent / dense contact. Off (default) ==
+        # welded-frozen solvent, bit-for-bit. Massless EPs are filtered out C++-side.
+        if relax_solvent:
+            solvent_atoms = []
+            for m in range(num_mol):
+                if solvent_flags[m]:
+                    solvent_atoms.extend(range(atoms_begin[m], atoms_end[m]))
+            world.set_cartesian_solvent(solvent_atoms)
         return world

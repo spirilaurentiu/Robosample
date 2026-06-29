@@ -15,6 +15,7 @@
 // ============================================================================
 
 #include <ostream>
+#include <vector>
 
 #include "MemoryArena.hpp"
 #include "RobotModel.hpp"
@@ -22,7 +23,13 @@
 
 struct EnergySnapshot {
     robo::Real pe = 0;
-    robo::Real ke = 0;
+    robo::Real ke = 0; // solute generalized KE  1/2 u^T M(q) u
+    // Cartesian kinetic energy 1/2 sum_s m_s |v_s|^2 of the solvent (or contact
+    // shell) atoms that are integrated in flat Cartesian space by OpenMM forces
+    // INSIDE the proposal (solvent-relaxing NCMC, docs/specs/ncmc_solvent_relax.md).
+    // Zero whenever no atom is Cartesian-integrated, so H reduces exactly to the
+    // welded torsional-HMC Hamiltonian (T0).
+    robo::Real keSolvent = 0;
     robo::Real fixman = 0;
     robo::Real logSineSqrGamma2 = 0;
     robo::Real total = 0;
@@ -33,6 +40,13 @@ class RobotState {
     RobotState() = default;
 
     auto allocateFull(const RobotModel& model) -> void {
+        // Reset the arena first so this is safe to call more than once (a World
+        // rebuild, e.g. after World::setRootMobility, re-runs buildModel which
+        // re-allocates). The arena is one-shot -- reserve() throws after commit()
+        // -- so without this a second allocate would abort. Move-assigning a
+        // fresh arena frees the previous slab. No-op on the first (default) call.
+        arena_ = MemoryArena{};
+
         nq_ = model.nq;
         nu_ = model.nu;
         nAtoms_ = model.numAtoms;
@@ -48,6 +62,12 @@ class RobotState {
 
         hAtomPosG_ = arena_.reserve<robo::Vec3>(nAtoms_);
         hAtomStationG_ = arena_.reserve<robo::Vec3>(nAtoms_);
+        // Per-atom Cartesian velocity / force, used ONLY for atoms that are
+        // Cartesian-integrated (solvent-relaxing NCMC). Allocated unconditionally
+        // in the full layout (negligible vs the body-level slabs); untouched when
+        // no atom is flagged Cartesian (see cartSolventAtoms_ / wantsAtomForces()).
+        hAtomVelG_ = arena_.reserve<robo::Vec3>(nAtoms_);
+        hAtomForceG_ = arena_.reserve<robo::Vec3>(nAtoms_);
 
         hX_GB_ = arena_.reserve<robo::Transform>(nBodies_);
         hX_FM_ = arena_.reserve<robo::Transform>(nBodies_);
@@ -83,6 +103,7 @@ class RobotState {
     }
 
     auto allocateCompact(const RobotModel& model) -> void {
+        arena_ = MemoryArena{}; // re-callable: see allocateFull
         nAtoms_ = model.numAtoms;
         nZRows_ = model.numZRows;
         hAtomPosG_ = arena_.reserve<robo::Vec3>(nAtoms_);
@@ -112,6 +133,14 @@ class RobotState {
     }
     [[nodiscard]] auto atomStationG() const -> robo::Vec3* {
         return arena_.ptr<robo::Vec3>(hAtomStationG_);
+    }
+    // Ground-frame Cartesian velocity / force per atom (full layout only). Valid
+    // for atoms listed in cartSolventAtoms(); other slots are unused scratch.
+    [[nodiscard]] auto atomVelG() const -> robo::Vec3* {
+        return arena_.ptr<robo::Vec3>(hAtomVelG_);
+    }
+    [[nodiscard]] auto atomForceG() const -> robo::Vec3* {
+        return arena_.ptr<robo::Vec3>(hAtomForceG_);
     }
 
     [[nodiscard]] auto X_GB() const -> robo::Transform* {
@@ -214,6 +243,42 @@ class RobotState {
     EnergySnapshot energy;
     robo::Real time = 0;
 
+    // ---- Cartesian-integrated solvent set (per-world, runtime) ---------------
+    // The atoms whose flat-space Cartesian (x,v) are advanced by velocity-Verlet
+    // inside the proposal (solvent-relaxing NCMC). Empty => the world behaves
+    // exactly as the welded torsional engine (every integrator/energy path below
+    // is guarded on emptiness), which is what keeps the existing tests bit-exact.
+    //   cartSolventAtoms_   : the atom indices (drives the O(n_solv) Verlet loops)
+    //   cartSolventInvMass_ : 1/m for each, parallel to cartSolventAtoms_
+    //   cartSolventMask_    : per-atom 0/1 for O(1) skip in fillAtomPositionsFromBodies
+    void setCartSolvent(const std::vector<int>& atoms, const robo::Real* atomMass) {
+        cartSolventAtoms_ = atoms;
+        cartSolventInvMass_.resize(atoms.size());
+        cartSolventMask_.assign(static_cast<std::size_t>(nAtoms_), 0);
+        for (std::size_t j = 0; j < atoms.size(); ++j) {
+            const int a = atoms[j];
+            cartSolventInvMass_[j] = (atomMass[a] > robo::Real(0)) ? (robo::Real(1) / atomMass[a]) : robo::Real(0);
+            if (a >= 0 && a < nAtoms_) {
+                cartSolventMask_[static_cast<std::size_t>(a)] = 1;
+            }
+        }
+    }
+    [[nodiscard]] auto cartSolventAtoms() const -> const std::vector<int>& {
+        return cartSolventAtoms_;
+    }
+    [[nodiscard]] auto cartSolventInvMass() const -> const std::vector<robo::Real>& {
+        return cartSolventInvMass_;
+    }
+    // nullptr when no atom is Cartesian-integrated (so callers do no work).
+    [[nodiscard]] auto cartSolventMask() const -> const char* {
+        return cartSolventMask_.empty() ? nullptr : cartSolventMask_.data();
+    }
+    // True iff per-atom OpenMM forces must be cached into atomForceG() (i.e. some
+    // atom is Cartesian-integrated). Lets ForceBridge skip the copy otherwise.
+    [[nodiscard]] auto wantsAtomForces() const -> bool {
+        return !cartSolventAtoms_.empty();
+    }
+
     auto copyTransferPayloadTo(RobotState& dst) const -> void {
         const robo::Vec3* srcPos = atomPosG();
         robo::Vec3* dstPos = dst.atomPosG();
@@ -228,9 +293,13 @@ class RobotState {
     bool full_ = false;
     int nq_ = 0, nu_ = 0, nAtoms_ = 0, nBodies_ = 0, nZRows_ = 0, nuSq_ = 0;
 
+    std::vector<int> cartSolventAtoms_;
+    std::vector<robo::Real> cartSolventInvMass_;
+    std::vector<char> cartSolventMask_;
+
     using Hnd = MemoryArena::Handle;
     Hnd hQ_{}, hU_{}, hQDot_{}, hUDot_{}, hQDotDot_{};
-    Hnd hAtomPosG_{}, hAtomStationG_{};
+    Hnd hAtomPosG_{}, hAtomStationG_{}, hAtomVelG_{}, hAtomForceG_{};
     Hnd hX_GB_{}, hX_FM_{}, hX_PB_{}, hPhi_{}, hMk_G_{}, hComG_{}, hH_FM_{}, hH_{};
     Hnd hV_FM_{}, hV_PB_G_{}, hV_GB_{}, hA_GB_{}, hGyro_{}, hCoriolisA_{}, hMobCoriolisA_{};
     Hnd hP_{}, hPPlus_{}, hG_{}, hDI_{}, hABCentrifugal_{}, hZ_{}, hZPlus_{}, hEps_{};

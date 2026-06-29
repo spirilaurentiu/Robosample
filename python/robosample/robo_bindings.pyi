@@ -4,7 +4,7 @@ Robosample C++ bindings (robo_bindings)
 from __future__ import annotations
 import collections.abc
 import typing
-__all__: list[str] = ['AcceptRejectMode', 'BondMobility', 'Context', 'DistortOption', 'ForceGroupEnergy', 'JointType', 'MoveType', 'NonbondedMethod', 'RootMobility', 'Selection', 'SystemTopology', 'World']
+__all__: list[str] = ['AcceptRejectMode', 'Context', 'DistortOption', 'ForceGroupEnergy', 'JointType', 'MoveType', 'NonbondedMethod', 'Selection', 'SystemTopology', 'World']
 class AcceptRejectMode:
     """
     Members:
@@ -50,69 +50,6 @@ class AcceptRejectMode:
     @property
     def value(self) -> int:
         ...
-class BondMobility:
-    """
-    Members:
-    
-      Rigid
-    
-      Torsion
-    
-      Free
-    
-      Ball
-    
-      Pin
-    
-      Slider
-    
-      Cylinder
-    
-      BendStretch
-    """
-    Ball: typing.ClassVar[BondMobility]  # value = <BondMobility.Ball: 3>
-    BendStretch: typing.ClassVar[BondMobility]  # value = <BondMobility.BendStretch: 7>
-    Cylinder: typing.ClassVar[BondMobility]  # value = <BondMobility.Cylinder: 6>
-    Free: typing.ClassVar[BondMobility]  # value = <BondMobility.Free: 2>
-    Pin: typing.ClassVar[BondMobility]  # value = <BondMobility.Pin: 4>
-    Rigid: typing.ClassVar[BondMobility]  # value = <BondMobility.Rigid: 0>
-    Slider: typing.ClassVar[BondMobility]  # value = <BondMobility.Slider: 5>
-    Torsion: typing.ClassVar[BondMobility]  # value = <BondMobility.Torsion: 1>
-    __members__: typing.ClassVar[dict[str, BondMobility]]  # value = {'Rigid': <BondMobility.Rigid: 0>, 'Torsion': <BondMobility.Torsion: 1>, 'Free': <BondMobility.Free: 2>, 'Ball': <BondMobility.Ball: 3>, 'Pin': <BondMobility.Pin: 4>, 'Slider': <BondMobility.Slider: 5>, 'Cylinder': <BondMobility.Cylinder: 6>, 'BendStretch': <BondMobility.BendStretch: 7>}
-    @typing.overload
-    def __eq__(self, other: BondMobility) -> bool:
-        ...
-    @typing.overload
-    def __eq__(self, other: typing.Any) -> bool:
-        ...
-    def __getstate__(self) -> int:
-        ...
-    def __hash__(self) -> int:
-        ...
-    def __index__(self) -> int:
-        ...
-    def __init__(self, value: typing.SupportsInt | typing.SupportsIndex) -> None:
-        ...
-    def __int__(self) -> int:
-        ...
-    @typing.overload
-    def __ne__(self, other: BondMobility) -> bool:
-        ...
-    @typing.overload
-    def __ne__(self, other: typing.Any) -> bool:
-        ...
-    def __repr__(self) -> str:
-        ...
-    def __setstate__(self, state: typing.SupportsInt | typing.SupportsIndex) -> None:
-        ...
-    def __str__(self) -> str:
-        ...
-    @property
-    def name(self) -> str:
-        ...
-    @property
-    def value(self) -> int:
-        ...
 class Context:
     system_topology: SystemTopology
     def __init__(self, base_name: str, seed: typing.SupportsInt | typing.SupportsIndex) -> None:
@@ -133,7 +70,7 @@ class Context:
         """
         Alias of add_robotic_world.
         """
-    def build_flexibilities(self, bonds: collections.abc.Sequence[tuple[typing.SupportsInt | typing.SupportsIndex, typing.SupportsInt | typing.SupportsIndex]] | None, mobility: BondMobility, flag: bool) -> Selection:
+    def build_flexibilities(self, bonds: collections.abc.Sequence[tuple[typing.SupportsInt | typing.SupportsIndex, typing.SupportsInt | typing.SupportsIndex]] | None, mobility: JointType, flag: bool) -> Selection:
         """
         Build a per-bond mobility selection (bonds=None => all eligible).
         """
@@ -164,10 +101,6 @@ class Context:
     def set_mts(self, enabled: bool, inner_substeps: typing.SupportsInt | typing.SupportsIndex = 4) -> None:
         """
         Enable r-RESPA multiple-timestep OpenMM MD (Cartesian world): slow forces once per outer step, fast bonded forces inner_substeps times. Call before initialize().
-        """
-    def set_root_mobility(self, molecule_index: typing.SupportsInt | typing.SupportsIndex, mobility: RootMobility) -> None:
-        """
-        Override a molecule's root attachment to Ground.
         """
     def set_separate_force_groups(self, enabled: bool) -> None:
         """
@@ -229,37 +162,37 @@ class JointType:
     """
     Members:
     
-      Weld
+      Rigid : No mobility across the joint (Weld): 0 dof.
     
-      Pin
+      Torsion : Rotation about the bond axis (the canonical dihedral): 1 dof.
     
-      Slider
+      Slider : Translation along the bond axis: 1 dof.
     
-      Cylinder
+      Cylinder : Rotation + translation about/along the bond axis: 2 dof.
     
-      BendStretch
+      BendStretch : Rotation perpendicular to the bond + translation along it: 2 dof.
     
-      Translation
+      Cartesian : 3 translations: 3 dof.
     
-      Ball
+      Ball : Rotation, q = 4 (quaternion) by default: 3 dof.
     
-      SphericalCoords
+      SphericalCoords : BAT (azimuth, zenith, radius): 3 dof.
     
-      FreeLine
+      FreeLine : 2 rotations (no spin about own line) + 3 translations, q = 7: 5 dof.
     
-      Free
+      Free : q = 7 (quaternion + translation): 6 dof.
     """
     Ball: typing.ClassVar[JointType]  # value = <JointType.Ball: 6>
     BendStretch: typing.ClassVar[JointType]  # value = <JointType.BendStretch: 4>
+    Cartesian: typing.ClassVar[JointType]  # value = <JointType.Cartesian: 5>
     Cylinder: typing.ClassVar[JointType]  # value = <JointType.Cylinder: 3>
     Free: typing.ClassVar[JointType]  # value = <JointType.Free: 9>
     FreeLine: typing.ClassVar[JointType]  # value = <JointType.FreeLine: 8>
-    Pin: typing.ClassVar[JointType]  # value = <JointType.Pin: 1>
+    Rigid: typing.ClassVar[JointType]  # value = <JointType.Rigid: 0>
     Slider: typing.ClassVar[JointType]  # value = <JointType.Slider: 2>
     SphericalCoords: typing.ClassVar[JointType]  # value = <JointType.SphericalCoords: 7>
-    Translation: typing.ClassVar[JointType]  # value = <JointType.Translation: 5>
-    Weld: typing.ClassVar[JointType]  # value = <JointType.Weld: 0>
-    __members__: typing.ClassVar[dict[str, JointType]]  # value = {'Weld': <JointType.Weld: 0>, 'Pin': <JointType.Pin: 1>, 'Slider': <JointType.Slider: 2>, 'Cylinder': <JointType.Cylinder: 3>, 'BendStretch': <JointType.BendStretch: 4>, 'Translation': <JointType.Translation: 5>, 'Ball': <JointType.Ball: 6>, 'SphericalCoords': <JointType.SphericalCoords: 7>, 'FreeLine': <JointType.FreeLine: 8>, 'Free': <JointType.Free: 9>}
+    Torsion: typing.ClassVar[JointType]  # value = <JointType.Torsion: 1>
+    __members__: typing.ClassVar[dict[str, JointType]]  # value = {'Rigid': <JointType.Rigid: 0>, 'Torsion': <JointType.Torsion: 1>, 'Slider': <JointType.Slider: 2>, 'Cylinder': <JointType.Cylinder: 3>, 'BendStretch': <JointType.BendStretch: 4>, 'Cartesian': <JointType.Cartesian: 5>, 'Ball': <JointType.Ball: 6>, 'SphericalCoords': <JointType.SphericalCoords: 7>, 'FreeLine': <JointType.FreeLine: 8>, 'Free': <JointType.Free: 9>}
     @typing.overload
     def __eq__(self, other: JointType) -> bool:
         ...
@@ -386,63 +319,6 @@ class NonbondedMethod:
         ...
     @typing.overload
     def __ne__(self, other: typing.SupportsInt | typing.SupportsIndex) -> bool:
-        ...
-    @typing.overload
-    def __ne__(self, other: typing.Any) -> bool:
-        ...
-    def __repr__(self) -> str:
-        ...
-    def __setstate__(self, state: typing.SupportsInt | typing.SupportsIndex) -> None:
-        ...
-    def __str__(self) -> str:
-        ...
-    @property
-    def name(self) -> str:
-        ...
-    @property
-    def value(self) -> int:
-        ...
-class RootMobility:
-    """
-    Members:
-    
-      FREE
-    
-      CARTESIAN
-    
-      WELD
-    
-      FREE_LINE
-    
-      BALL
-    
-      PIN
-    """
-    BALL: typing.ClassVar[RootMobility]  # value = <RootMobility.BALL: 4>
-    CARTESIAN: typing.ClassVar[RootMobility]  # value = <RootMobility.CARTESIAN: 1>
-    FREE: typing.ClassVar[RootMobility]  # value = <RootMobility.FREE: 0>
-    FREE_LINE: typing.ClassVar[RootMobility]  # value = <RootMobility.FREE_LINE: 3>
-    PIN: typing.ClassVar[RootMobility]  # value = <RootMobility.PIN: 5>
-    WELD: typing.ClassVar[RootMobility]  # value = <RootMobility.WELD: 2>
-    __members__: typing.ClassVar[dict[str, RootMobility]]  # value = {'FREE': <RootMobility.FREE: 0>, 'CARTESIAN': <RootMobility.CARTESIAN: 1>, 'WELD': <RootMobility.WELD: 2>, 'FREE_LINE': <RootMobility.FREE_LINE: 3>, 'BALL': <RootMobility.BALL: 4>, 'PIN': <RootMobility.PIN: 5>}
-    @typing.overload
-    def __eq__(self, other: RootMobility) -> bool:
-        ...
-    @typing.overload
-    def __eq__(self, other: typing.Any) -> bool:
-        ...
-    def __getstate__(self) -> int:
-        ...
-    def __hash__(self) -> int:
-        ...
-    def __index__(self) -> int:
-        ...
-    def __init__(self, value: typing.SupportsInt | typing.SupportsIndex) -> None:
-        ...
-    def __int__(self) -> int:
-        ...
-    @typing.overload
-    def __ne__(self, other: RootMobility) -> bool:
         ...
     @typing.overload
     def __ne__(self, other: typing.Any) -> bool:
@@ -991,10 +867,10 @@ class SystemTopology:
     def periodic_torsions_stiffness(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
-    def root_mobilities(self) -> list[RootMobility]:
+    def root_mobilities(self) -> list[JointType]:
         ...
     @root_mobilities.setter
-    def root_mobilities(self, arg0: collections.abc.Sequence[RootMobility]) -> None:
+    def root_mobilities(self, arg0: collections.abc.Sequence[JointType]) -> None:
         ...
     @property
     def scaling14_begin(self) -> list[int]:
@@ -1177,9 +1053,17 @@ class World:
         """
         Per-body form of set_mass_scale_by_joint (scale=1.0 is physical/off).
         """
+    def set_cartesian_solvent(self, atom_indices: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> None:
+        """
+        Solvent-relaxing NCMC: mark these atoms (global/OpenMM order) to be advanced in FLAT Cartesian space by velocity-Verlet driven by OpenMM forces INSIDE the proposal, so the contact environment relaxes during the move instead of being a welded wall. Bodies stay welded (no Fixman/Jacobian contribution); only the per-atom (x,v) move. Empty == the welded engine, bit-for-bit. Call AFTER add_sampler/configure_ncmc.
+        """
     def set_mass_scale_by_joint(self, joint_type: JointType, scale: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Inflate the spatial inertia used ONLY in the proposal (momentum draw, KE, Fixman ln det M) for every body of the given JointType, raising the stable dt ~sqrt(scale) with zero configurational bias. scale=1.0 is physical (off). Typical: set_mass_scale_by_joint(JointType.Free, 16.0) on a solvent world to tame water libration.
+        """
+    def set_ncmc_teleport(self, on: bool) -> None:
+        """
+        Enable the NCMC lambda=0 trough teleport: a rigid, KE-preserving long-range reposition of the decoupled region at the ghost trough (explicit-solvent analogue of the docking RigidKick). Default off. Active only for an acyclic Free-root region with a docking site.
         """
     def set_nma_soft_mode_from_hessian(self, atom_pos_ground: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], h: typing.SupportsFloat | typing.SupportsIndex = 1e-05, zero_tol: typing.SupportsFloat | typing.SupportsIndex = 1e-06) -> float:
         """
@@ -1188,6 +1072,14 @@ class World:
     def set_reversibility_check(self, interval: typing.SupportsInt | typing.SupportsIndex) -> None:
         """
         Low-level setter for the periodic reversibility probe. Prefer the reversibility_check_every=N argument to context.add_*_world(), which forwards here. interval<=0 disables it (default); interval>0 runs RobotEngine::checkReversibility every `interval` rounds (starting at round 0, so it doubles as a startup check), integrating mdSteps forward+back at this world's timestep from the freshly seeded state and logging the relative round-trip residual (~1e-12 ideal; a large or non-finite value means the timestep is too large for the current geometry). Non-destructive; it is a smoke test for the current configuration only -- the always-on guard is the per-step corrector throw in the integrator. See THEORY 5.7.
+        """
+    def set_root_mobilities(self, root_mobilities: collections.abc.Sequence[JointType]) -> None:
+        """
+        Replace this world's WHOLE root-mobility vector (one entry per molecule) and rebuild ONCE -- the efficient path when many molecules change at once (e.g. a solvation shell over thousands of waters). Call before add_sampler.
+        """
+    def set_root_mobility(self, molecule_index: typing.SupportsInt | typing.SupportsIndex, mobility: JointType) -> None:
+        """
+        Override ONE molecule's root attachment to Ground for THIS world only (rebuilds this world's model). Root mobility is a per-world property; use this (not a Context-level setter) to change an individual molecule. Call before add_sampler.
         """
     @property
     def index(self) -> int:

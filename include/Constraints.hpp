@@ -168,6 +168,11 @@ class ConstraintSet {
         -> void;
 
     private:
+    // Test-only access to the private static solvers below. A friend declaration
+    // changes neither layout nor codegen; it lets the unit tests pin solveSmallSpd
+    // / solveCoupling directly in addition to the public SHAKE/RATTLE/Fixman paths.
+    friend struct ConstraintTestAccess;
+
     // Build A = G M^-1 G^T (numC x numC, symmetric) and solve A x = rhs.
     // If logAbsDetOut != nullptr it receives ln|det A| as a free by-product of the
     // factorization (used by calcConstraintLogDet for the loop-closure Fixman term).

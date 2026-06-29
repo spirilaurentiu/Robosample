@@ -1,0 +1,1555 @@
+# Robosample literature index
+# One entry per paper in references/papers/*.md. ASCII only.
+# Fields:
+#   summary       - 2-4 sentences: the gist and why it matters to our HMC/internal-coordinate sampler
+#   tags          - short topic keywords
+#   key_terms     - concepts/definitions the paper introduces
+#   key_equations - named equations the program must obey, short ASCII form
+#   invariants    - obligations those equations impose on the code (Rule 8 tests)
+#   path          - path to the full .md
+# Greek/symbols are spelled out (beta, lambda, Delta, ...). Some sources are OCR-garbled.
+
+papers:
+
+- title: "Numerical Integration of the Cartesian Equations of Motion of a System with Constraints: Molecular Dynamics of n-Alkanes"
+  authors: ["Ryckaert, J.-P.", "Ciccotti, G.", "Berendsen, H. J. C."]
+  year: 1977
+  venue: "Journal of Computational Physics"
+  doi: "10.1016/0021-9991(77)90098-5"
+  path: references/papers/0021-9991_2877_2990098-5.md
+  tags: [constraints, shake, molecular-dynamics, holonomic, lagrange-multipliers, cartesian, n-alkanes, verlet]
+  key_terms:
+    - "Holonomic constraint sigma_k -- bond/angle distance condition (r_i - r_j)^2 - d_ij^2 = 0 that must hold at every step"
+    - "Lagrange multipliers lambda_k -- time-dependent coefficients giving the constraint forces G_i = -sum_k lambda_k grad_i sigma_k"
+    - "Method of undetermined parameters gamma_k -- replaces the highest-order lambda derivative so constraints are satisfied exactly each step"
+    - "SHAKE -- iterative procedure that enforces each constraint in succession, cycling until all satisfied within tolerance"
+    - "Constraint force direction -- correction displacement of atom i is along the bond vector r_ij, equal and opposite on i and j"
+  key_equations:
+    - "Constrained EOM: m_i*r_i_ddot = F_i - sum_k lambda_k*grad_i(sigma_k)"
+    - "Constraint: sigma_k = (r_i - r_j)^2 - d_ij^2 = 0"
+    - "Verlet step: r(t+h) = 2*r(t) - r(t-h) + h^2*F(t)/m"
+    - "Position correction: delta_r_i = (h^2/m_i)*sum_k gamma_k*grad_i(sigma_k) = -(2 h^2/m_i)*sum_k gamma_k*r_ij"
+    - "SHAKE per-constraint multiplier (1st order): g = (s^2 - d^2)/(2*(r.r')*(1/m_i + 1/m_j)), corrections +/- g*r_ij/m applied to i,j"
+  invariants:
+    - "Every constraint sigma_k must equal zero (within tolerance tol) at each integration step, not just initially."
+    - "Constraint corrections preserve the local truncation order of the integrator (O(h^3) per Verlet step); they must not add error beyond the algorithm's own."
+    - "Constraint forces are central: equal magnitude, opposite sign, directed along the constrained bond (g_ij = g_ji), zero for non-constrained pairs."
+    - "SHAKE iteration must loop over all constraints repeatedly until the max violation is below tolerance, since satisfying one constraint perturbs others."
+  summary: >
+    Introduces constrained Cartesian molecular dynamics via Lagrange multipliers and the practical
+    iterative SHAKE algorithm, which freezes fast bond/angle degrees of freedom while keeping atomic
+    Cartesian coordinates. The key idea is to replace the exact constraint forces with undetermined
+    parameters chosen so the holonomic constraints hold exactly at the end of each step, at the same
+    order of accuracy as the unconstrained Verlet integrator. This is the foundational reference for
+    any constraint-projected proposal and for the rigid-bond/rigid-angle reduction underlying BAT/Z-matrix
+    models. Relevant to: constraint solver (SHAKE), constrained-dynamics proposals, internal-coordinate reduction.
+
+- title: "Rattle: A 'Velocity' Version of the Shake Algorithm for Molecular Dynamics Calculations"
+  authors: ["Andersen, H. C."]
+  year: 1983
+  venue: "Journal of Computational Physics"
+  doi: "10.1016/0021-9991(83)90014-1"
+  path: references/papers/0021-9991_2883_2990014-1.md
+  tags: [constraints, rattle, shake, velocity-verlet, molecular-dynamics, holonomic, lagrange-multipliers]
+  key_terms:
+    - "RATTLE -- velocity-Verlet form of constrained dynamics that propagates (r,v) at t to (r,v) at t+h without history"
+    - "Velocity constraint -- time derivative of the position constraint: (r_i_dot - r_j_dot).(r_i - r_j) = 0"
+    - "Two separate constraint approximations -- g_RR enforces position constraints, g_RV enforces velocity constraints, allowed because position and velocity steps may use different multipliers"
+    - "Position-velocity constraint pair -- positions satisfy sigma=0 and velocities satisfy d/dt(sigma)=0 to tolerance at every step"
+  key_equations:
+    - "Velocity-Verlet position: r(t+h) = r(t) + h*r_dot(t) + (h^2/2m)*[F(t) - 2*sum_j lambda_RR_ij*r_ij(t)]"
+    - "Velocity-Verlet velocity: r_dot(t+h) = r_dot(t) + (h/2m)*[F(t) - 2*sum_j lambda_RR_ij*r_ij(t) + F(t+h) - 2*sum_j lambda_RV_ij*r_ij(t+h)]"
+    - "Position constraint: |r_i - r_j|^2 - d_ij^2 = 0"
+    - "Velocity constraint: r_ij(t+h).(r_i_dot - r_j_dot)(t+h) = 0"
+    - "Velocity multiplier: k = r_ij.(r_i_dot - r_j_dot) / (d_ij^2*(1/m_i + 1/m_j))"
+  invariants:
+    - "At every step both the positions (sigma=0) and the velocities (sigma_dot=0) must satisfy the constraints to tolerance."
+    - "Global error remains O(h^2), local error O(h^3), identical to velocity-Verlet for unconstrained dynamics."
+    - "Algorithm must be self-contained: next (r,v) depend only on current (r,v), enabling momentum refreshment / thermostatting between steps."
+    - "Position-stage and velocity-stage multipliers are distinct and solved by separate iterative passes."
+  summary: >
+    Recasts SHAKE in the velocity-Verlet framework so that velocities are explicit state variables and
+    both coordinates and their time derivatives satisfy the constraints at each step. Because momenta
+    appear explicitly and the step needs no prior history, RATTLE is the natural constraint integrator
+    for methods that resample or rescale momenta between steps (thermostats, and Hybrid Monte Carlo
+    momentum refreshment). The clean velocity-constraint projection is exactly what an HMC proposal on a
+    constrained manifold needs to keep momenta tangent to the constraint surface. Relevant to: constrained
+    HMC leapfrog/velocity-Verlet integrator, momentum projection onto the constraint manifold.
+
+- title: "Derivation and Testing of Explicit Equations of Motion for Polymers Described by Internal Coordinates"
+  authors: ["Mazur, A. K.", "Dorofeev, V. E.", "Abagyan, R. A."]
+  year: 1991
+  venue: "Journal of Computational Physics"
+  doi: "10.1016/0021-9991(91)90210-C"
+  path: references/papers/0021-9991_2891_2990210-c.md
+  tags: [internal-coordinates, lagrangian, equations-of-motion, tree-topology, torsion-dynamics, mass-metric, biopolymers, z-matrix]
+  key_terms:
+    - "BKS-tree -- unified rigid-body tree representation of one or more branched non-cyclic molecules, with virtual atoms/bonds imposing tree topology"
+    - "Generalized coordinates theta_k -- non-frozen internal coordinates (bond lengths, valence angles, torsion/phase angles) of the tree"
+    - "Variable-type indicator S_i -- equals 1 for angular (rotation) variables, 0 for bond-length (translation) variables"
+    - "Chain V_alpha -- ordered set of generalized coordinates that determine the position of atom alpha"
+    - "Set d_k -- the atoms whose positions depend on variable theta_k (the outboard subtree moved by theta_k)"
+    - "Variable ordering rule -- if one variable's motion moves another's unit vector, the mover gets the smaller index (inboard before outboard)"
+  key_equations:
+    - "Lagrange EOM: d/dt(dL/dtheta_k_dot) - dL/dtheta_k = 0"
+    - "Atom velocity: r_alpha_dot = sum_i [S_i*e_i x (r_alpha - r_i_theta)*theta_i_dot + (1-S_i)*e_i*theta_i_dot]"
+    - "Velocity Jacobian column: d(r_alpha_dot)/d(theta_k_dot) = S_k*e_k x r_alpha/k + (1-S_k)*e_k"
+    - "Mass-metric system: sum_i a_ki*theta_i_ddot = -dU/dtheta_k - sum_i b_ki*theta_i_dot^2 - sum_i sum_m c_kim*theta_m_dot*theta_i_dot"
+    - "Temperature from internal DOF: T = 2*<K>/(N*k_B), N = number of internal degrees of freedom"
+  invariants:
+    - "Energy, linear momentum, and angular momentum must be conserved along trajectories integrated in internal coordinates (verified by forward/backward runs)."
+    - "Internal-coordinate trajectories of a fully unfrozen molecule must match traditional Cartesian MD."
+    - "The mass-metric matrix a_ki (the inertia/mass tensor in internal coordinates) is configuration-dependent and must be re-formed and solved (here via Cholesky) each step."
+    - "Variable numbering must respect the inboard-to-outboard ordering or the cross/Coriolis terms (b, c coefficients) are wrong."
+  summary: >
+    Derives general explicit Lagrangian equations of motion in internal coordinates (bond lengths,
+    valence angles, torsions) for arbitrarily branched polymers organized as a rigid-body tree, allowing
+    any subset of internal degrees of freedom to be frozen. The resulting configuration-dependent
+    mass-metric matrix M(q) = a_ki and its Coriolis/centrifugal companions (b, c) are precisely the
+    quantities a constrained internal-coordinate sampler must form and apply. Freezing fast vibrations
+    permits much larger time steps, the same payoff that motivates internal-coordinate HMC moves.
+    Relevant to: internal-coordinate (BAT/Z-matrix) engine, mass-metric M(q) construction, tree-topology multibody operators.
+
+- title: "Algorithms for Macromolecular Dynamics and Constraint Dynamics"
+  authors: ["van Gunsteren, W. F.", "Berendsen, H. J. C."]
+  year: 1977
+  venue: "Molecular Physics"
+  doi: "10.1080/00268977700102571"
+  path: references/papers/00268977700102571.md
+  tags: [molecular-dynamics, constraints, shake, predictor-corrector, gear, verlet, integrators, macromolecules]
+  key_terms:
+    - "Constraint-dynamics validity conditions -- eliminated DOF must be frequency-separated from and weakly coupled to remaining motion"
+    - "N-representation (Nordsieck) -- stores y and scaled derivatives; best for non-constraint dynamics and time-step changes"
+    - "F-representation (force) -- stores positions, velocities, present/past forces; the representation that allows SHAKE to be embedded in predictor-corrector schemes"
+    - "Constraint force split -- f_tot = f_free + f_constr, with f_constr recovered from SHAKE-reset positions"
+    - "tol -- accuracy to which SHAKE satisfies constraints; chosen so constraint error stays below integrator truncation error"
+  key_equations:
+    - "EOM: d^2 r_i/dt^2 = F_i/m_i, F_i = -grad_i V"
+    - "Predictor: y_(n+1,p) = A*y_n; Corrector: y_(n+1) = y_(n+1,p) + a*(h^2/2)*[f(y_(n+1,p)) - y''_(n+1,p)]"
+    - "Verlet: y_(n+1) = 2*y_n - y_(n-1) + h^2*y''_n; y'_n = (y_(n+1) - y_(n-1))/2h"
+    - "Constraint force recovery: f_constr = [y_(n+1,tot) - y_(n+1,free)]/(b_0*(h^2/2))"
+    - "Representation transform: B = T*A*T^-1, b = T*a"
+  invariants:
+    - "Constraint dynamics is only physically valid when the constrained (eliminated) frequencies are well separated from and weakly coupled to the retained ones."
+    - "SHAKE tolerance tol must be set so the constraint violation is smaller than the integrator truncation error."
+    - "For SHAKE embedding, the integrator must be in a representation (F-representation) whose stability coefficients b_i>2 vanish, so past y'' values are not retroactively altered."
+    - "Bond-length constraints are recommended (~3x speedup); bond-angle constraints are not (frequencies not separable, SHAKE cost explodes)."
+  summary: >
+    Compares Verlet, Gear, and Beeman integrators for macromolecular MD (BPTI) and gives a general scheme
+    for embedding SHAKE constraints inside multi-value predictor-corrector algorithms via the force
+    representation. Establishes the practical rule that bond-length constraints are worthwhile but
+    bond-angle constraints are not, and that constraints must satisfy frequency-separation/weak-coupling
+    conditions to be physically legitimate. The constraint-tolerance-vs-truncation-error discipline and
+    the constraint-force recovery scheme inform how a sampler should set SHAKE accuracy and validate
+    constrained proposals. Relevant to: integrator selection, SHAKE tolerance settings, constraint legitimacy checks.
+
+- title: "Generalized Coordinate Hybrid Monte Carlo"
+  authors: ["Forrest, B. M.", "Suter, U. W."]
+  year: 1994
+  venue: "Molecular Physics"
+  doi: "10.1080/00268979400100304"
+  path: references/papers/00268979400100304.md
+  tags: [hmc, hybrid-monte-carlo, generalized-coordinates, torsion-sampling, fixman, jacobian, fictitious-momenta, detailed-balance, leapfrog, polymers]
+  key_terms:
+    - "Generalized-coordinate HMC -- HMC on torsional DOF of rigid-bond/rigid-angle chains, sampling only the configurational integral"
+    - "Fictitious momenta pi_k -- auxiliary angular momenta with freely chosen constant effective moments of inertia I_k, giving decoupled Cartesian-like EOM"
+    - "Effective moment of inertia I_k -- constant coefficient that replaces the configuration-dependent inertia tensor; choosing I_k = <J_k> recovers a unique real time scale"
+    - "Instantaneous moment of inertia J_k -- sum over moved beads of m_b*[e_k x (r_b - P_k)]^2 for rotation about axis e_k through P_k"
+    - "Jacobian/Fixman factor D({q}) -- Cartesian-to-generalized Jacobian times the Fixman correction for the rigid (constrained) model; appears in the acceptance ratio"
+    - "Guidance vs acceptance Hamiltonian -- the energy used to propagate may be fictitious, but the actual internal energy must be used in the acceptance dH"
+  key_equations:
+    - "Configurational average: <O> = (1/Z_q) integral dq D({q})*O({q})*exp(-E({q})/k_B T)"
+    - "Metropolis acceptance (general gen-coord MC): P_acc = min{1, (P_S[n->o]*D(q_n)*exp(-E_n/kT)) / (P_S[o->n]*D(q_o)*exp(-E_o/kT))}"
+    - "Augmented Hamiltonian: H_tilde = E({q}) + sum_k pi_k^2/(2*I_k)"
+    - "Decoupled EOM: dpi_k/dt = -dE/dphi_k, dphi_k/dt = pi_k/I_k"
+    - "HMC acceptance with Jacobian: P_acc = min{1, [prod_c sin(phi_2_n)/sin(phi_2_o)] * exp(-beta*dH_tilde)}"
+    - "Identity: <[prod_c sin(phi_2_n)/sin(phi_2_o)]*exp(-dH_tilde/kT)> = 1"
+    - "Time-scale mapping: Delta_t ~ ( <J_k>*<(Delta phi_k)^2> / k_B T )^(1/2)"
+  invariants:
+    - "The proposal integrator (leapfrog) must be time-reversible and phase-space volume preserving: [dq_o][dpi_o] = [dq_n][dpi_n]; other schemes need an extra Jacobian factor."
+    - "Momenta must be refreshed from Maxwell-Boltzmann after every accept/reject decision (whether or not the move was accepted) or detailed balance fails."
+    - "The acceptance test must use the EXACT internal energy in dH even if the propagating (guidance) energy is fictitious; a distorted proposal only lowers acceptance, never biases the stationary distribution."
+    - "The configuration-space Jacobian factor D({q_n})/D({q_o}) (here the sin(phi_2) Euler-angle factor, and in full rigor the Fixman term) must multiply exp(-beta*dH) in the acceptance ratio."
+    - "For any constant choice of effective moments of inertia I_k the algorithm remains canonical; only the sampling efficiency (not correctness) depends on I_k."
+    - "A diagonal fictitious kinetic energy is required for volume preservation; a non-diagonal form introduces an extra Jacobian in the acceptance probability."
+  summary: >
+    Presents HMC in generalized (torsional) coordinates for rigid-bond/rigid-angle polymer chains,
+    using fictitious diagonal momenta with constant effective moments of inertia to obtain decoupled,
+    Cartesian-like, leapfrog-integrable equations of motion while still sampling the correct configurational
+    distribution. It makes explicit that the acceptance ratio must carry the Cartesian-to-generalized
+    Jacobian and Fixman correction D({q}), that momenta must be refreshed each step, and that the
+    guidance Hamiltonian may differ from the exact-energy acceptance Hamiltonian (Duane et al.). This is
+    the closest literature template for Robosample's internal-coordinate HMC, including the I_k = <J_k>
+    choice that maps fictitious to real time and improves mixing. Relevant to: internal-coordinate HMC move,
+    acceptance test with Jacobian/Fixman corrections, mass-metric / effective-inertia assignment, momentum refreshment.
+
+- title: "Hybrid Monte Carlo"
+  authors: ["Duane, S.", "Kennedy, A. D.", "Pendleton, B. J.", "Roweth, D."]
+  year: 1987
+  venue: "Physics Letters B 195(2), 216-222"
+  doi: "10.1016/0370-2693(87)91197-X"
+  path: references/papers/0370-2693_2887_2991197-x.md
+  tags: [hmc, sampling, molecular-dynamics, detailed-balance, metropolis, leapfrog, lattice-field-theory]
+  key_terms:
+    - "Hybrid Monte Carlo (HMC) -- molecular-dynamics proposal followed by a Metropolis accept/reject on the whole configuration"
+    - "guidance vs acceptance Hamiltonian -- H' drives the equations of motion, H defines the equilibrium distribution; they need not be equal"
+    - "leapfrog integrator -- symplectic, exactly reversible and area-preserving map on phase space for any step size"
+    - "momentum refreshment -- conjugate momenta drawn fresh from a unit Gaussian before each trajectory"
+    - "reversibility -- P_H((q,p)->(q',p')) = P_H((q',-p')->(q,-p)), required for detailed balance"
+    - "area preservation -- the proposal map has unit Jacobian so the measure dp dp' is invariant"
+  key_equations:
+    - "Hamiltonian: H(q,p) = (1/2) p^2 + S(q), with S the action (potential)"
+    - "Acceptance: P_A = min(1, exp(-dH)), dH = H(q',p') - H(q,p)"
+    - "Momentum draw: P_G(p) proportional to exp(-p^2/2)"
+    - "Detailed balance: P_S(q) P_M(q->q') = P_S(q') P_M(q'->q)"
+    - "Generalized Metropolis: P_A = min(1, P_S(q')P_C(q'->q) / (P_S(q)P_C(q->q')))"
+  invariants:
+    - "Proposal dynamics must be exactly reversible (momentum-flip symmetry)."
+    - "Proposal map must be volume/area-preserving (unit Jacobian on phase space)."
+    - "Momenta are refreshed from the exact Gaussian each iteration; H is invariant under p -> -p."
+    - "The algorithm samples the correct distribution for ANY dH, even with a guidance potential that differs from the acceptance potential -- a distorted proposal only lowers acceptance, never biases the result."
+  summary: >
+    The founding HMC paper: a molecular-dynamics trajectory with refreshed Gaussian momenta proposes a
+    global move that is accepted with min(1, exp(-dH)) of the exact Hamiltonian, eliminating finite-step-size
+    discretization bias while keeping high acceptance. It proves detailed balance follows solely from
+    reversibility plus volume preservation of the (leapfrog) integrator, and explicitly separates the
+    guidance Hamiltonian (drives the dynamics) from the acceptance Hamiltonian (defines pi). This is the
+    theoretical backbone of Robosample's accept/reject test and the license to use a cheaper or distorted
+    guidance potential. Relevant to: HMC propagator, acceptance test, integrator reversibility/symplecticity.
+
+- title: "Simple quantitative tests to validate sampling from thermodynamic ensembles"
+  authors: ["Shirts, M. R."]
+  year: 2012
+  venue: "arXiv:1208.0910 (later J. Chem. Theory Comput. 2013, 9(2), 909-926)"
+  doi: ""
+  path: references/papers/1208.0910v1.md
+  tags: [sampling, ensemble-validation, canonical, npt, testing, free-energy, statistical-tests]
+  key_terms:
+    - "ensemble consistency -- log-ratio of energy probabilities from two simulations at different beta must be linear in E"
+    - "density of states cancellation -- taking the ratio P(E|beta2)/P(E|beta1) removes the unknown Omega(E)"
+    - "maximum likelihood fit -- histogram-free estimator of the slope via a Fermi/logistic log-likelihood, most reliable method"
+    - "optimal temperature gap -- separate beta1, beta2 by roughly the sum of the distribution standard deviations (Delta T / T = sqrt(2 kB / Cv))"
+    - "necessary-not-sufficient test -- detects ensemble violations but does not certify ergodicity"
+  key_equations:
+    - "Canonical: P(x|beta) proportional to exp(-beta H(p,q))"
+    - "P(E|beta) = Q(beta)^-1 Omega(E) exp(-beta E)"
+    - "ln[P(E|beta2)/P(E|beta1)] = [beta2 A2 - beta1 A1] - (beta2 - beta1) E  (linear, slope = -(beta2-beta1))"
+    - "NPT enthalpy: ln[P(H|beta2,P)/P(H|beta1,P)] = ln(beta1/beta2) + [beta2 G2 - beta1 G1] - (beta2-beta1) H"
+    - "NPT volume: ln[P(V|beta,P2)/P(V|beta,P1)] = ln(P1/P2) + beta(G2-G1) - beta(P2-P1) V"
+    - "Max-likelihood log L = sum_i ln f(-a0 - a1 E_i) + sum_j ln f(a0 + a1 E_j), f(x) = 1/(1+exp(-x))"
+  invariants:
+    - "A correctly sampled canonical ensemble must give a log probability-ratio slope of exactly -(beta2 - beta1)."
+    - "Kinetic and potential energy independently obey the ensemble-validation relation when U is momentum-independent."
+    - "The test is necessary but not sufficient: passing it does not prove ergodicity or full phase-space coverage."
+  summary: >
+    Provides a rigorous, system-agnostic test that a sampler reproduces the target Boltzmann distribution:
+    run two simulations at slightly different beta (or P), and the log-ratio of their energy (or enthalpy/volume)
+    histograms must be linear with slope fixed by the known beta gap, since the unknown density of states cancels.
+    Linear, nonlinear, and especially histogram-free maximum-likelihood fits with analytic/bootstrap error bars
+    detect sub-percent-of-kT errors. This is the practical gate for proving Robosample's HMC, Fixman, and
+    constraint corrections actually sample pi(x) ~ exp(-beta U). Relevant to: ensemble-validation test gate,
+    acceptance-correctness verification.
+
+- title: "Implicit Ligand Theory: Rigorous Binding Free Energies and Thermodynamic Expectations from Molecular Docking"
+  authors: ["Minh, D. D. L."]
+  year: 2012
+  venue: "arXiv:1208.4885 (later J. Chem. Phys. 137, 104106)"
+  doi: ""
+  path: references/papers/1208.4885v1.md
+  tags: [free-energy, binding, docking, implicit-solvent, internal-coordinates, fep, bar, mbar, importance-sampling]
+  key_terms:
+    - "implicit ligand theory -- separates receptor sampling from ligand sampling so receptor configurations are sampled only once"
+    - "binding PMF B(r_R) -- a rigid-receptor free energy of coupling the ligand, estimated per receptor snapshot"
+    - "effective potential U(r_X) = U(r_X) + W(r_X) -- internal energy plus solvation potential of mean force"
+    - "dominant state approximation -- estimate an exponential average by its single lowest-energy term"
+    - "cumulant expansion -- series approximation of -beta^-1 ln <exp(-beta Psi)> in moments of Psi"
+    - "internal vs external coordinates -- r_X are internal (BAT-like) coordinates; xi_L are the 6 rotation/translation DOF, with Jacobians for the Cartesian transform"
+  key_equations:
+    - "Standard binding free energy: dG0 = -beta^-1 ln( (Z_RL / (Z_R Z_L)) (C0 / 8 pi^2) )"
+    - "Binding PMF: B(r_R) = -beta^-1 ln <exp(-beta Psi)>_{L,I} over ligand internal+external coords"
+    - "dG0 = -beta^-1 ln <exp(-beta B)>_R + dG_xi,  dG_xi = -beta^-1 ln(Omega C0 / 8 pi^2)"
+    - "FEP estimator: B_hat(r_R) = -beta^-1 ln (1/N) sum_n exp(-beta Psi(r_RL,n))"
+    - "Importance sampling: <O>_T = <w O>_S / <w>_S, w(r) = q_T(r)/q_S(r)"
+  invariants:
+    - "Jacobians for the Cartesian-to-internal/external coordinate transformation must be carried (omitted in the paper only for brevity)."
+    - "Convergence of the free-energy differences requires phase-space overlap between adjacent (alchemical) states."
+    - "Reservoir/configuration swaps into the lambda=0 state must satisfy detailed balance."
+    - "An exactly Boltzmann-preserving propagator (e.g. Hybrid Monte Carlo) avoids the finite-timestep energy spikes seen with plain MD."
+  summary: >
+    Derives a rigorous separation of receptor and ligand sampling for binding free energies: the binding PMF
+    B(r_R) is a rigid-receptor coupling free energy (computable by FEP/TI/BAR/MBAR), and the standard binding
+    free energy is an exponential average of exp(-beta B) over independently sampled receptor configurations
+    plus a confinement term dG_xi. The formalism works in internal coordinates with separated external DOF and
+    explicitly notes that an exactly Boltzmann-preserving propagator such as HMC removes finite-timestep
+    artifacts. Relevant to: free-energy/binding estimators, internal-coordinate (BAT/Z-matrix) sampling,
+    importance-sampling reweighting.
+
+- title: "Toward canonical ensemble distribution from self-guided Langevin dynamics simulation"
+  authors: ["Wu, X.", "Brooks, B. R."]
+  year: 2011
+  venue: "Journal of Chemical Physics 134, 134108"
+  doi: "10.1063/1.3574397"
+  path: references/papers/1.3574397.md
+  tags: [enhanced-sampling, langevin-dynamics, sgld, reweighting, canonical-ensemble, constraints, shake]
+  key_terms:
+    - "self-guided Langevin dynamics (SGLD) -- adds a guiding force from local-average momentum to accelerate low-frequency motion"
+    - "local/evolving average -- exponentially weighted running average separating low- and high-frequency properties (time scale t_L)"
+    - "guiding factor lambda -- input strength of the guiding force; biases the conformational distribution"
+    - "self-guiding temperature T_sg -- effective search temperature, T_sg = (T_lf/T_hf) T, a heuristic for choosing lambda"
+    - "SGLD reweighting factor w_SGLD -- first-order-perturbation weight that converts the SGLD ensemble back to canonical"
+    - "energy conservation factor xi -- cancels the net energy the guiding force injects"
+  key_equations:
+    - "SGLD equation of motion: p_dot_i = f_i + g_i - gamma_i p_i + R_i"
+    - "Guiding force: g_i(t) = lambda_i gamma_i (p_tilde_i(t) - xi p_i(t))"
+    - "Local average: p_tilde(t) = (1 - dt/t_L) p_tilde(t-dt) + (dt/t_L) p(t)"
+    - "Reweight: <A> = <A w_SGLD>_SGLD / <w_SGLD>_SGLD"
+    - "w_SGLD = exp( (lambda_lf chi_lf - 1)(E_p_tilde/kT) + (lambda_hf (T - chi_lf T_tilde)/(T - T_tilde) - 1)(E_p - E_p_tilde)/kT )"
+  invariants:
+    - "Constraint forces (SHAKE) must be included in the low-frequency force accumulation, computed as f_con = (2 m / dt^2)(r_con - r)."
+    - "The guiding force biases the distribution; canonical averages are recovered only after reweighting by w_SGLD."
+    - "Reweighting is a first-order perturbation and converges only for modest guiding factors / small distribution shifts."
+  summary: >
+    SGLD augments Langevin dynamics with a guiding force built from local-average momentum to boost slow,
+    low-frequency motions and dramatically accelerate conformational search at little extra cost. The paper's
+    contribution is a quantitative split of the partition function into low- and high-frequency parts, yielding
+    a per-configuration reweighting factor w_SGLD that maps the biased self-guided ensemble back to the canonical
+    distribution (valid to first order, for small bias). It also shows how to fold SHAKE constraint forces into
+    the propagator. Relevant to: enhanced-sampling moves, Langevin propagator, reweighting back to pi(x), constraint handling.
+
+- title: "Replica exchange and expanded ensemble simulations as Gibbs sampling: Simple improvements for enhanced mixing"
+  authors: ["Chodera, J. D.", "Shirts, M. R."]
+  year: 2011
+  venue: "Journal of Chemical Physics 135, 194110"
+  doi: "10.1063/1.3660669"
+  path: references/papers/1.3660669.md
+  tags: [replica-exchange, expanded-ensemble, gibbs-sampling, parallel-tempering, mcmc, detailed-balance, mixing, mbar]
+  key_terms:
+    - "Gibbs sampling view -- replica exchange and expanded ensembles are alternating conditional updates of (config x, state index k)"
+    - "reduced potential u_k(x) -- u(x) = beta[H(x) + pV + sum_i mu_i n_i + ...], the state-defining energy"
+    - "independence sampling -- draw the new state index directly from pi(k|x), always accept"
+    - "Metropolized independence sampling -- always propose leaving the current state; provably mixes faster than plain independence sampling (Peskun)"
+    - "restricted range sampling -- propose only among a neighborhood set S_i, cutting cost while preserving detailed balance"
+    - "balance vs detailed balance -- deterministic update order satisfies only the weaker balance condition, still preserving pi(x,k)"
+    - "mixing-time metrics -- second-eigenvalue relaxation time tau_2, state-index autocorrelation tau_ac, end-to-end transit tau_end"
+  key_equations:
+    - "Reduced potential: u(x) = beta[H(x) + pV(x) + sum_i mu_i n_i(x) + ...]"
+    - "Boltzmann density: q_k(x) = exp(-u_k(x)), pi_k(x) = q_k(x)/Z_k"
+    - "Expanded-ensemble joint: pi(x,k) proportional to exp(-u_k(x) + g_k), optimal g_k = -ln Z_k"
+    - "State conditional: pi(k|x) = exp(g_k - u_k(x)) / sum_k' exp(g_k' - u_k'(x))"
+    - "Replica-exchange swap accept: min(1, exp(-[u_i(x_j)+u_j(x_i)]) / exp(-[u_i(x_i)+u_j(x_j)]))"
+  invariants:
+    - "Any state-update scheme must sample the conditional pi(k|x) (or permutation pi(S|X)) to preserve the joint stationary distribution."
+    - "Stochastic update choice obeys detailed balance; deterministic ordering obeys only balance -- both preserve pi(x,k), but history-dependent weights break it."
+    - "Every thermodynamic state must assign finite nonzero density to any configuration (same parameters specified across states)."
+    - "Empirical transition matrix is symmetrized so eigenvalues are real; mu_2 = 1 signals a decomposable (non-mixing) chain."
+  summary: >
+    Recasts replica exchange and expanded/simulated tempering as Gibbs sampling over the joint distribution
+    pi(x,k) of configuration and thermodynamic-state index, which legitimizes cheap alternative state-swap
+    moves -- independence sampling, Metropolized independence sampling, and restricted-range sampling -- that
+    mix far faster than neighbor-only exchange at negligible cost while preserving the target distribution.
+    It supplies concrete mixing-time diagnostics (tau_2, tau_ac, tau_end). For Robosample this underpins any
+    multi-temperature / multi-Hamiltonian (lambda) generalized-ensemble layer on top of HMC. Relevant to:
+    replica-exchange / expanded-ensemble driver, state-swap acceptance, mixing diagnostics.
+
+- title: "Understanding the Hastings Algorithm"
+  authors: ["Minh, David D. L.", "Minh, Do Le (Paul)"]
+  year: 2015
+  venue: "Communications in Statistics - Simulation and Computation (arXiv:1408.4438)"
+  doi: ""
+  path: references/papers/1408.4438v1.md
+  tags: [mcmc, metropolis-hastings, acceptance-test, detailed-balance, proposal, sampling, theory]
+  key_terms:
+    - "Hastings algorithm (HA) -- general MCMC acceptance scheme built on a symmetric function s(x,y) satisfying the Hastings condition"
+    - "Metropolis-Hastings (MH) -- the special case with maximal acceptance; min{1, (gamma(x|y)/p(x))(p(y)/gamma(y|x))}"
+    - "Barker acceptance -- alpha = (1 + (p(x)/gamma(x|y))(gamma(y|x)/p(y)))^-1, always lower acceptance than MH"
+    - "relative majorizing coefficient M(x,y) -- symmetric envelope >= H(x,y) reinterpreting HA as Markovian acceptance-rejection (MAR)"
+    - "L(x,y), H(x,y) -- min and max of the two ratios p(x)/gamma(x|y) and p(y)/gamma(y|x), bracketing the free coefficient k(x,y)"
+    - "un-normalized target p(.) -- normalization constant cancels in the acceptance ratio"
+  key_equations:
+    - "Hastings condition: 0 <= alpha_HA = s(x,y)(1 + (p(x)/gamma(x|y))(gamma(y|x)/p(y)))^-1 <= 1"
+    - "MH acceptance: alpha_MH = min{1, (gamma(x|y) p(y)) / (p(x) gamma(y|x))}"
+    - "Detailed balance: p(x) P(y|x) = p(y) P(x|y)"
+    - "MAR acceptance: alpha = p(y) / (M(x,y) gamma(y|x)), with M(x,y) symmetric and >= H(x,y)"
+  invariants:
+    - "Transition kernel must satisfy detailed balance with respect to the un-normalized p(.) for pi to be invariant."
+    - "The symmetric function s(x,y) (equivalently the majorizing coefficient M(x,y)) must be symmetric to preserve flow balance between x and y."
+    - "MH maximizes acceptance among all Hastings algorithms (set C(x,y)=1); any larger envelope only rejects more proposals."
+  summary: >
+    Provides two intuitive, equivalent derivations (Algorithm M with a free symmetric coefficient k(x,y), and Markovian
+    acceptance-rejection with a relative majorizing coefficient) that unify the Hastings, Metropolis-Hastings, Barker,
+    and Stein acceptance rules and prove all satisfy detailed balance. It shows Metropolis-Hastings has the highest
+    acceptance probability of any reversible scheme. This grounds the exact acceptance test used after every HMC proposal,
+    including the general asymmetric-proposal form needed when guidance and acceptance potentials differ. Relevant to: the
+    acceptance/Metropolis test in the HMC sampler.
+
+- title: "Hamiltonian Monte Carlo Without Detailed Balance"
+  authors: ["Sohl-Dickstein, Jascha", "Mudigonda, Mayur", "DeWeese, Michael R."]
+  year: 2014
+  venue: "Proceedings of the 31st International Conference on Machine Learning (ICML), JMLR W&CP 32 (arXiv:1409.5191)"
+  doi: ""
+  path: references/papers/1409.5191v5.md
+  tags: [hmc, sampling, detailed-balance, momentum-flip, leapfrog, mixing, reversibility, volume-preservation]
+  key_terms:
+    - "LAHMC (Look Ahead HMC) -- on would-be rejection, apply leapfrog L additional times (up to K) instead of flipping momentum"
+    - "fixed-point equation -- the weaker stationarity condition integral p(x) T(x'|x) dx = p(x'), which LAHMC satisfies without detailed balance"
+    - "momentum flip operator F -- reverses v; its own inverse, energy- and volume-preserving"
+    - "leapfrog operator L -- discrete reversible volume-preserving integrator; L^-1 = F L F"
+    - "momentum randomization R(beta) -- partial Gaussian refresh v' = v sqrt(1-beta) + n sqrt(beta), persistent for beta<1"
+    - "generalized detailed balance -- p(zeta) pi_La(zeta) = p(F L^a zeta) pi_La(F L^a zeta), a non-reversible balance that avoids random-walk mixing"
+  key_equations:
+    - "Joint density: p(x,v) ~ exp(-H), H(x,v) = E(x) + (1/2) v^T v"
+    - "Standard HMC acceptance: pi_accept = min(1, p(zeta')/p(zeta)) with zeta' = F L zeta (proposal terms cancel)"
+    - "LAHMC transition prob: pi_La(zeta) = min[ 1 - sum_{b<a} pi_Lb(zeta), (p(F L^a zeta)/p(zeta))(1 - sum_{b<a} pi_Lb(F L^a zeta)) ]"
+    - "Remaining mass to flip: pi_F(zeta) = 1 - sum_a pi_La(zeta)"
+  invariants:
+    - "The leapfrog integrator must be exactly reversible (L^-1 = F L F) and volume-preserving (|det| = 1)."
+    - "The momentum flip F must be an involution that leaves H invariant and preserves volume."
+    - "Transition probabilities must satisfy the fixed-point (stationarity) equation; generalized detailed balance suffices and reversibility/detailed balance is not required."
+  summary: >
+    Recasts HMC operators (leapfrog L, flip F, randomization R) on a discrete state ladder and builds a sampler that, in
+    situations that would normally reject, extends the trajectory with more leapfrog steps rather than flipping the
+    momentum, satisfying the fixed-point equation via generalized detailed balance instead of detailed balance. This
+    suppresses random-walk behavior and wasted gradient evaluations, more than doubling mixing speed. The reversibility
+    and volume-preservation requirements it isolates are exactly the integrator invariants an internal-coordinate HMC must
+    honor. Relevant to: HMC trajectory integration, momentum handling, and non-reversible enhanced-sampling moves.
+
+- title: "Brownian dynamics study of a polymer chain of linked rigid bodies"
+  authors: ["Pear, M. R.", "Weiner, J. H."]
+  year: 1979
+  venue: "The Journal of Chemical Physics, 71(1), 212"
+  doi: "10.1063/1.438119"
+  path: references/papers/1.438119.md
+  tags: [constraints, fixman-potential, metric-determinant, internal-coordinates, jacobian, rigid-body, mass-metric, bat]
+  key_terms:
+    - "rigid model -- bond lengths and valence angles held as exact holonomic constraints; only dihedrals vary"
+    - "flexible model -- same geometry maintained by stiff harmonic potentials; gives uniform dihedral distribution"
+    - "metric determinant g(phi) -- determinant of the covariant mass-metric tensor G_ij on the constrained hypersurface"
+    - "Fixman compensating potential -- U = kB T ln sqrt(g(phi)) added to the rigid model to recover the flexible (uniform) distribution"
+    - "Fixman determinant theorem -- g computed from H_ij = sum_r (2/m_r)(dc_i/dx_r . dc_j/dx_r) over the constrained coordinates c_i"
+    - "linked-rigid-body (Wittenburg) formulation -- tree-structured articulated dynamics in dihedral generalized coordinates"
+  key_equations:
+    - "Covariant mass metric: G_ij = (1/2) sum_r m_r (dx_r/dphi_i . dx_r/dphi_j), with g(phi) = det(G_ij)"
+    - "Rigid configurational distribution: rho_R(phi) = C_R sqrt(g(phi))"
+    - "Fixman potential: U(phi) = kB T ln sqrt(g(phi)) restores rho_RF(phi) = 1/2pi"
+    - "Fixman determinant via constraints: H_ij = sum_r (2/m_r)(dc_i/dx_r . dc_j/dx_r), g related to det H"
+    - "Gaussian momentum integral: integral d(phidot) exp(-beta G_ij phidot_i phidot_j) = pi^(n/2) / (beta^(n/2) sqrt(g))"
+  invariants:
+    - "A hard-constrained (rigid) internal-coordinate distribution carries a sqrt(det M(q)) = sqrt(g(phi)) metric factor that a stiff-spring (flexible) model does not."
+    - "To make the constrained-coordinate sampler reproduce the unconstrained/flexible canonical distribution, add the Fixman potential kB T ln sqrt(g) (equivalently subtract (1/2) kB T ln det M from the effective energy)."
+    - "The metric determinant of the free coordinates equals (up to mass factors) the determinant of the constraint-gradient matrix H_ij."
+  summary: >
+    Establishes that fixing bond lengths and valence angles as rigid constraints introduces a metric-determinant factor
+    sqrt(g(phi)) into the configuration-space distribution that strong harmonic (flexible) models lack, and that adding
+    the Fixman compensating potential kB T ln sqrt(g) exactly cancels it to recover the flexible/canonical distribution,
+    confirmed by Brownian-dynamics simulation of a three-bond chain. It also gives Fixman's theorem for computing g from
+    constraint gradients. This is the foundational justification for the Fixman/mass-metric correction in any
+    internal-coordinate or constraint-based sampler. Relevant to: the Fixman term and the U_Jacobian mass-metric
+    correction in BAT/Z-matrix sampling.
+
+- title: "Replica exchanging self-guided Langevin dynamics for efficient and accurate conformational sampling"
+  authors: ["Wu, Xiongwu", "Hodoscek, Milan", "Brooks, Bernard R."]
+  year: 2012
+  venue: "The Journal of Chemical Physics, 137(4), 044106"
+  doi: "10.1063/1.4737094"
+  path: references/papers/1.4737094.md
+  tags: [enhanced-sampling, replica-exchange, langevin, reweighting, acceptance-test, basin-hopping, conformational-search]
+  key_terms:
+    - "SGLD -- self-guided Langevin dynamics; a low-frequency guiding force enhances slow collective modes without raising temperature"
+    - "guiding force g_i = lambda_i gamma_i (ptilde_i - xi p_i) -- driven by local-averaged (low-frequency) momentum"
+    - "energy-conservation factor xi -- chosen so the guiding force does no net work on the system"
+    - "low/high-frequency local average -- Ptilde(t) = (1 - dt/tL) Ptilde(t-dt) + (dt/tL) P(t), an exponential filter"
+    - "SGLD reweighting factor w_SGLD -- converts the biased SGLD ensemble back to the canonical ensemble"
+    - "self-guiding temperature T_SG -- effective enhanced-sampling temperature without actually heating high-frequency modes"
+  key_equations:
+    - "Self-guided Langevin: pdot_i = f_i + g_i - gamma_i p_i + R_i, with <R_i(0)R_i(t)> = 2 m_i kT gamma_i delta(t)"
+    - "SGLD partition function: Theta_SGLD ~ sum exp(-(lambda_lf chi_lf Eptilde)/kT - (lambda_hf chi_hf (Ep - Eptilde))/kT)"
+    - "Reweight: <P>_LD = <P w_SGLD>_SGLD / <w_SGLD>_SGLD"
+    - "Exchange acceptance: min{1, pi_RX} with pi_RX = exp(-(mutilde_m - mutilde_n) Delta Eptilde - (mu_m - mu_n) Delta Ep)"
+    - "Momentum rescale on swap: s_mn = sqrt(T_n/T_m), separately for full and low-frequency momenta"
+  invariants:
+    - "The replica-exchange acceptance must use the SGLD partition function (both low- and high-frequency energy terms), not the bare Boltzmann ratio, or the base stage will not sample the canonical ensemble."
+    - "The guiding force must inject zero net energy (enforced by xi) so it redistributes energy across modes rather than heating the system."
+    - "On an accepted swap, momenta must be rescaled by sqrt(T_n/T_m) to remain consistent with each stage's temperature."
+    - "Base stage (no guiding) must reproduce pi(x) ~ exp(-beta U); guided stages are sampled only to accelerate barrier crossing."
+  summary: >
+    Introduces a replica-exchange scheme whose stages differ in a low-frequency guiding force (self-guiding temperature)
+    rather than in real temperature, with the exchange acceptance derived from the SGLD partition function so the base
+    stage still yields the exact canonical distribution while slow conformational modes cross barriers faster. Because
+    only low-frequency motion is perturbed, exchange probabilities stay high and the method is size-extensive. The
+    pattern -- a biased guidance dynamics plus an exact reweighting/acceptance that restores the target -- mirrors the
+    HMC guidance-vs-acceptance separation. Relevant to: enhanced-sampling and replica-exchange moves layered on the HMC
+    sampler.
+
+- title: "Maintain rigid structures in Verlet based Cartesian molecular dynamics simulations"
+  authors: ["Tao, Peng", "Wu, Xiongwu", "Brooks, Bernard R."]
+  year: 2012
+  venue: "The Journal of Chemical Physics, 137(13), 134110"
+  doi: "10.1063/1.4756796"
+  path: references/papers/1.4756796.md
+  tags: [constraints, rigid-body, shake, rattle, integrator, angular-momentum, verlet, symplectic]
+  key_terms:
+    - "SHAPE -- rigid-body constraint method that corrects coordinates by a rotation each step instead of solving Lagrange multipliers"
+    - "Lagrange-multiplier avoidance -- cost independent of particle count M (vs 3M-6 multiplier equations in SHAKE for large bodies)"
+    - "body-fixed COM frame -- separates rigid motion into COM translation (linear momentum) and rotation about COM (angular momentum)"
+    - "Rodrigues rotation / matrix exponential -- R = exp(theta_hat) builds the per-step rotation from angular velocity"
+    - "SHAKE/RATTLE -- standard holonomic constraint integrators that SHAPE is interchangeable with"
+    - "shared-atom cyclic iteration -- bodies sharing an atom (e.g. C-alpha between peptide planes) converged by cyclic application like multiple SHAKE constraints"
+  key_equations:
+    - "Angular-momentum match: L^rig(t+dt/2) = L^non(t+dt/2), the equation SHAPE solves iteratively"
+    - "omega from inertia: omega^rig = I^-1 sum_i r_i^b x (m_i (r_i^non(t+dt) - r_i^b(t))/dt)"
+    - "Rotation update: r_i^rig,b(t+dt) = R r_i^b(t), R = exp(theta_hat), theta = ||omega|| dt"
+    - "Half-step root approximation: (R^(n))^(1/2) ~ (1/2)(1 + R^(n))"
+    - "Local error O(dt^3) per step, global error O(dt^2)"
+  invariants:
+    - "Linear and angular momentum must be conserved by the constraint correction (linear via the body-fixed COM frame, angular via the iterated L match)."
+    - "The method is holonomic and symplectic, interchangeable with SHAKE, and conserves total energy with minimal drift over long runs."
+    - "Rigid structures sharing an atom require cyclic iteration to mutual convergence, exactly as overlapping SHAKE constraints do."
+    - "Use the Taylor-expanded rotation matrix when ||theta|| is small to avoid the 1/||theta|| numerical instability in Rodrigues' formula."
+  summary: >
+    Presents SHAPE, a Verlet-compatible rigid-body integrator that, after each unconstrained step, rotates the body's
+    atoms about their center of mass to restore rigidity while matching the unconstrained angular momentum, conserving
+    linear and angular momentum and total energy without computing Lagrange multipliers. It is fully interchangeable with
+    SHAKE/RATTLE, scales independently of body size, handles linear/planar/large bodies and atoms shared between bodies,
+    and is third-order accurate per step (O(dt^2) global). This is directly applicable to imposing rigid groups and
+    SHAKE/RATTLE-style holonomic constraints inside a constraint-based sampler. Relevant to: the constraint/RATTLE-SHAKE
+    layer and rigid-body definition in the multibody engine.
+
+- title: "A simple molecular mechanics integrator in mixed rigid body and dihedral angle space"
+  authors: ["Vitalis, A.", "Pappu, R. V."]
+  year: 2014
+  venue: "Journal of Chemical Physics, 141, 034105"
+  doi: "10.1063/1.4887339"
+  path: references/papers/1.4887339.md
+  tags: [internal-coordinates, torsional-dynamics, rigid-body, mass-metric-tensor, fixman, integrator, sampling, z-matrix]
+  key_terms:
+    - "Mass-metric tensor (MMT) G = J^T M J -- metric of generalized coordinates whose determinant biases configurational statistics"
+    - "MMT artifact -- phi-dependence of det(G_S) introduced when a subset of coordinates is constrained, distorting the equilibrium distribution"
+    - "Mixed rigid-body/dihedral coordinates -- Z-matrix torsions plus Cartesian coordinates of the first three atoms per molecule (the base)"
+    - "Diagonal effective-mass approximation -- stipulated diagonal I_D (translational mass, rotational inertia, per-dihedral inertia I_phi) replacing the true coupled mass matrix"
+    - "Bias torques -- terms from dJ/dt that appear when propagating generalized momenta; lumped here into time-dependence of effective masses"
+    - "Base of motion -- the reference rigid body (terminus or chain middle) carrying the external degrees of freedom"
+  key_equations:
+    - "Cartesian Hamilton eqns: p_dot = -grad U(r), r_dot = M^-1 p"
+    - "Generalized kinetic energy: E_k = (1/2) p_phi^T (J^T M J)^-1 p_phi, with G = J^T M J the mass-metric tensor"
+    - "Partition function after momentum integration: Q = integral sqrt(det G) exp(-beta U(phi)) dphi"
+    - "Diagonal-mass approximate KE: E'_k = (1/2) sum_k I_kk omega_k^2 (not equal to (1/2) p^T M^-1 p)"
+    - "Per-DOF energy-conserving update (leap-frog-like): omega_k(t2) from quadratic in I_kk(t1), I_kk(t2), F_phi,k"
+    - "Underlying EOM in Omega_k = I_kk^1/2 omega_k: I_kk^1/2 Omega_dot_k = -dU/dphi_k, I_kk^1/2 phi_dot_k = Omega_k"
+    - "Resulting partition function: Q_S = C(T) integral exp(-beta U(phi)) dphi -- no det(G) weighting, hence flat free-DOF distributions"
+  invariants:
+    - "Coordinate map must be a reversible bijection phi = A(r), r = A^-1(phi) with tree-like (Z-matrix) build order."
+    - "Auxiliary computations (effective masses I_kk, generalized forces F_phi) must scale O(N_at) via recursion."
+    - "The I_kk^1/2 factors are exactly what preserve volume in phi-space; by construction det(G_S) never enters, so MMT artifacts are absent in the zero-potential limit (flat dihedral distributions)."
+    - "Per-DOF equipartition: <omega_k^2 I_kk> = 1/beta (k_B T)."
+    - "Linear momentum is conserved under the diagonal-mass approximation in the absence of external forces."
+  summary: >
+    Proposes a torsional/rigid-body integrator that deliberately replaces the true coupled
+    mass-metric tensor with a diagonal effective-mass matrix and enforces per-degree-of-freedom
+    energy conservation, so the proposal samples exp(-beta U(phi)) with no det(M(q)) Jacobian
+    weighting and no Fixman correction -- it sidesteps mass-metric-tensor artifacts by construction
+    rather than compensating for them, at the cost of physical dynamics. Validated as thermodynamically
+    (not kinetically) correct against MC and constrained-Cartesian references. Directly relevant to
+    how Robosample treats the mass metric M(q), the Fixman/U_Jacobian term, and whether a constrained
+    internal-coordinate proposal needs a determinant correction.
+    Relevant to: internal-coordinate proposal / mass-metric and Fixman subsystem.
+
+- title: "Overcoming potential energy distortions in constrained internal coordinate molecular dynamics simulations"
+  authors: ["Kandel, S.", "Salomon-Ferrer, R.", "Larsen, A. B.", "Jain, A.", "Vaidehi, N."]
+  year: 2016
+  venue: "Journal of Chemical Physics, 144, 044112"
+  doi: "10.1063/1.4939532"
+  path: references/papers/1.4939532.md
+  tags: [fixman, internal-coordinates, ICMD, torsional-dynamics, BAT, mass-matrix, constraints, spatial-operator, GNEIMO, hybrid-ICMD]
+  key_terms:
+    - "Intrinsic distortion -- mass-matrix-determinant bias from the reduced phase space of constrained torsional dynamics; force-field independent"
+    - "Extrinsic distortion -- bias from force-field coupling between frozen bond angles and free torsions; NOT removed by the Fixman potential"
+    - "Fixman potential U_f -- (1/2) kT ln( det M(alpha,q0) / det M_B(alpha,q0) ), compensates intrinsic distortion"
+    - "BAT coordinates -- bond/angle/torsion internal coordinates; 3n total partitioned into N free (alpha) and 3n-N constrained (q)"
+    - "Hybrid ICMD -- selectively unfreezing key backbone bond angles (e.g. C-N-Calpha and N-Calpha-C) to remove extrinsic distortion"
+    - "GNEIMO -- Generalized Newton-Euler Inverse Mass Operator spatial-operator-algebra engine giving O(n) recursive M^-1 and Fixman torque"
+    - "Hellinger distance -- metric used to quantify difference between constrained and flexible (phi,psi) probability densities"
+  key_equations:
+    - "Unconstrained config pdf: rho_u(alpha,q) proportional to det(M_B^(1/2)(alpha,q)) exp(-U(alpha,q)/kT)"
+    - "Full mass-matrix determinant factorizes: det(M_B) = sin^2(gamma2) d2^4 prod_{i=3}^n d_i^4 sin^2(theta_i) prod m_i^3 = f1(alpha) f2(q); independent of torsions"
+    - "Constrained pdf: rho_c(alpha,q0) proportional to det(M^(1/2)(alpha,q0)) exp(-U(alpha,q0)/kT), where det(M) does NOT factorize"
+    - "Fixman potential: U_f(alpha) = (1/2) kT ln[ det M(alpha,q0) / det M_B(alpha,q0) ]"
+    - "Compensated pdf: rho_f(alpha,q0) proportional to det(M_B^(1/2)) exp(-U/kT); for pure TMD reduces to rho_f proportional to exp(-U(alpha,q0)/kT)"
+    - "Constrained transition-state barrier-crossing rate retains S^-1(alpha0) = [M^-1(alpha0)]_alpha even after Fixman correction"
+  invariants:
+    - "Fixman potential exactly restores the unconstrained CONFIGURATIONAL pdf only when U=0, when alpha and q are separable, or when the constrained DOFs sit in a very steep well around q0."
+    - "Fixman correction removes intrinsic (mass-matrix) bias but only PARTIALLY corrects velocity-dependent quantities (barrier-crossing rates) and does NOT remove extrinsic force-field coupling."
+    - "det(M_B) is torsion-independent and separable per individual bond length/angle; det(M) of the constrained model is not separable."
+    - "For realistic AMBER-scale angle stiffness (k_theta ~ 30-100 kcal), torsion/angle coupling is non-negligible, so Fixman alone is insufficient -- key bond angles must be opened."
+  summary: >
+    Decomposes the statistical bias of constrained internal-coordinate MD into a mass-matrix
+    intrinsic distortion (curable by the Fixman det-ratio potential) and a force-field extrinsic
+    distortion (not curable by Fixman), and shows via C4 chains and dipeptides that the Fixman
+    potential exactly fixes torsional pdfs but only partially fixes velocity-dependent barrier
+    rates; opening a few key backbone angles (hybrid ICMD) is needed to recover the all-atom
+    free-energy surface. This is the canonical justification and exact form of the Fixman/U_Jacobian
+    term and clarifies when a BAT/Z-matrix constrained proposal is and is not corrected by it.
+    Relevant to: Fixman correction, U_Jacobian, constrained BAT/Z-matrix proposals and acceptance.
+
+- title: "Identifying the Optimal Integration Time in Hamiltonian Monte Carlo"
+  authors: ["Betancourt, M."]
+  year: 2016
+  venue: "arXiv preprint arXiv:1507.03703"
+  doi: ""
+  path: references/papers/1507.03703v2.md
+  tags: [hmc, sampling, integration-time, NUTS, symplectic-integrator, detailed-balance, microcanonical, exhaustion, trajectory]
+  key_terms:
+    - "Microcanonical disintegration -- foliation of the cotangent bundle into constant-energy level sets; canonical measure splits into uniform microcanonical distributions plus a marginal energy distribution"
+    - "Integration time T(z) -- the tunable trajectory length; too short gives diffusive (Langevin) exploration, too long wastes computation"
+    - "Modified (shadow) Hamiltonian H-tilde -- the Hamiltonian a symplectic integrator exactly conserves; H-tilde = H + epsilon^k G + O(epsilon^(k+2))"
+    - "Exhaustion -- family of integration times bounding the temporal average of the virial rate dG/dt below threshold delta"
+    - "Virial G = q^i p_i -- the only scalar canonical to a generic Hamiltonian system usable to build a termination criterion"
+    - "No-U-Turn (NUTS) criterion -- terminates when g_q^-1(p, rho_T) < 0; Euclidean case is standard NUTS"
+    - "Multiplicative (binary-tree) trajectory expansion -- doubles trajectory length, needs only log(L) termination checks and log(L) states in memory"
+  key_equations:
+    - "Lifted target is canonical on cotangent bundle: pi_H = exp(-H) Omega, H = K + V"
+    - "Single-state Metropolis acceptance with involution R: a = min(1, exp(H(R(z_L)) - H(z_0)))"
+    - "Trajectory-sampling weights for detailed balance: P[z|t] = exp(-H(z)) / sum_{z' in t} exp(-H(z'))"
+    - "Detailed-balance sufficiency condition: P[t|z1] = P[t|z2] for all t containing both z1 and z2 (uniform trajectory sampling gives P[t|z]=1/L)"
+    - "Exhaustion criterion: | (G(phi_T(z)) - G(z)) / T_delta | < delta for all z"
+    - "Birkhoff ergodic average: lim_{T->inf} (1/T) integral_0^T f(phi_t(z)) dt = E_microcanonical[f]"
+  invariants:
+    - "A raw forward-integrated symplectic trajectory is NOT a valid Metropolis proposal; it must be made an involution (compose with momentum-flip R) so that R after flow after R = Identity."
+    - "Sampling a state from a multi-state trajectory preserves pi only if states are weighted by exp(-H(z)) AND trajectory selection satisfies P[t|z1]=P[t|z2] (else detailed balance breaks)."
+    - "Symplectic integrators preserve the symplectic volume form exactly; volume preservation keeps numerical trajectories oscillating near the true flow without long-term drift."
+    - "Dynamic-length trajectories require checking the termination criterion on all internal subtrees and rejecting expansions reachable-from-only-some states, to keep detailed balance."
+  summary: >
+    A geometric treatment of HMC showing that the canonical (Boltzmann) distribution is the
+    invariant measure of the symplectic Hamiltonian flow and that performance hinges on the
+    integration time, which is optimally set by an autocorrelation/termination criterion
+    (exhaustion via the virial, or the No-U-Turn criterion) rather than a fixed length. It
+    spells out exactly how to keep detailed balance when accepting a state sampled from a
+    forward/backward trajectory: involution-corrected acceptance min(1, exp(-Delta H)) and
+    exp(-H)-weighted state selection. Directly informs how Robosample sets HMC trajectory
+    length, the velocity-flip reversibility requirement, and the exact dH acceptance test.
+    Relevant to: HMC proposal, trajectory-length tuning, reversibility/acceptance test.
+
+- title: "Alchemical Grid Dock (AlGDock): Binding Free Energy Calculations between Flexible Ligands and Rigid Receptors"
+  authors: ["Minh, D. D. L."]
+  year: 2016
+  venue: "arXiv preprint arXiv:1601.00225"
+  doi: ""
+  path: references/papers/1601.00225v1.md
+  tags: [free-energy, BPMF, alchemical, replica-exchange, HMC, hamiltonian-monte-carlo, thermodynamic-length, MBAR, docking, jacobian, implicit-ligand-theory]
+  key_terms:
+    - "Binding potential of mean force (BPMF) -- binding free energy between a flexible ligand and a fixed receptor conformation, a ratio of configurational integrals"
+    - "Implicit ligand theory (ILT) -- reweights BPMFs over receptor conformations to obtain standard binding free energies"
+    - "Reduced potential energy u = U/(k_B T) -- temperature-incorporating log-probability used across states at different T"
+    - "Grid interpolation -- precomputed electrostatic (Poisson-Boltzmann) and van der Waals grids make receptor-ligand energy O(1) in receptor size"
+    - "Soft-core grids / hyperbolic-tangent cap v_max tanh(v_o/v_max) -- avoid the alchemical end-point catastrophe"
+    - "Thermodynamic length L -- path integral of the Fisher-information metric used to space states for near-maximal replica-exchange acceptance"
+    - "Sampling vs target force field -- proposals generated with one (grid, ligand-only solvent) force field, acceptance/estimation against another (direct, full solvent)"
+  key_equations:
+    - "BPMF: B(r_R) = -beta^-1 ln[ integral I(xi) J(xi) exp(-beta U(r_RL)) dr_L dxi / integral I(xi) J(xi) exp(-beta(U(r_L)+U(r_R))) dr_L dxi ]"
+    - "J(xi) is the Jacobian for transforming Cartesian into the external (translation/rotation) coordinate system"
+    - "Replica-exchange acceptance: p_acc = min(1, exp(-u_a(y) - u_b(x) + u_a(x) + u_b(y)))"
+    - "Alchemical switching: u_alpha(r_RL) = (1/k_B T(alpha))[U_s(r_L)+U_s(r_R)+alpha_sg Psi_sg + alpha_g Psi_g]"
+    - "Thermodynamic length: L = integral_0^1 sqrt( sum_ij (dgamma^i/dalpha) g_ij (dgamma^j/dalpha) ) dalpha, g_ij from Fisher information"
+    - "Seed reweighting (sampling importance resampling): weight proportional to exp(u_k(x_i) - u_{k+1}(x_i))"
+  invariants:
+    - "Configurational integrals carry the Jacobian J(xi) of the Cartesian-to-internal/external coordinate transform; it must appear in both numerator and denominator of the BPMF."
+    - "HMC trial moves are velocity-Verlet trajectories accepted by the Metropolis criterion, preserving the Boltzmann distribution."
+    - "Replica-exchange swap acceptance preserves the Boltzmann distribution in both states (it is a Gibbs/MCMC move)."
+    - "Final BPMF must be independent of the (Desolvated vs Full) alchemical pathway in the limit of asymptotic sampling; pathway disagreement diagnoses false convergence."
+    - "Free-energy precision requires configuration-space overlap between adjacent thermodynamic states (roughly equal thermodynamic length)."
+  summary: >
+    Describes BPMF (single-conformation binding free energy) computation by alchemically scaling
+    grid-based receptor-ligand interactions and temperature, combining Hamiltonian Monte Carlo,
+    external-coordinate MC moves, and Hamiltonian replica exchange with states adaptively spaced by
+    thermodynamic length and estimated by MBAR/FEP. It is a worked example of multi-state alchemical
+    sampling where the proposal (sampling) force field differs from the acceptance (target) force
+    field and where the coordinate-transform Jacobian J enters the configurational integral.
+    Relevant to: alchemical/lambda protocols, replica-exchange acceptance, HMC moves, and the
+    coordinate-transform Jacobian in free-energy estimation.
+
+- title: "Simbody: multibody dynamics for biomedical research"
+  authors: ["Sherman, M. A.", "Seth, A.", "Delp, S. L."]
+  year: 2011
+  venue: "Procedia IUTAM, 2, 241-261 (2011 Symposium on Human Body Dynamics)"
+  doi: ""
+  path: references/papers/1-s2.0-S2210983811000241-main.md
+  tags: [multibody, spatial-operator-algebra, internal-coordinates, mobilizer, constraints, mass-matrix, O-n-dynamics, integrator, frames, lagrange-multipliers]
+  key_terms:
+    - "Mobilizer -- the inboard internal-coordinate joint giving a body 0..6 DOF relative to its parent; tree of mobilized bodies is the minimal-coordinate model"
+    - "Generalized speeds u vs coordinates q -- related by the kinematic differential equation q_dot = N(q) u (N block diagonal, often quaternion-normalizing)"
+    - "Spatial operator algebra (Rodriguez/Jain) -- recursive O(n) articulated-body method; M and M^-1 applied as operators, never assembled"
+    - "Differential equation on a manifold (DEM) -- constraints kept satisfied via the condition c=0 implies c_dot=0, enabling ODE integrators"
+    - "Coordinate projection -- projects the integrated state back onto the constraint manifold (superior to Baumgarte stabilization; no gains to tune)"
+    - "Acceleration constraint Jacobian G = [P V A]^T -- assembles holonomic/nonholonomic/acceleration-only constraints"
+    - "System/State/Study + realization cache -- stateless model, all variability in State, staged invalidation of cached computations"
+  key_equations:
+    - "Time-stepper view: y_dot = f(d;t,y), 0 = c(d;t,y), 0 = e(d;t,y); DEM condition c=0 => c_dot=0"
+    - "Kinematic differential equation: q_dot = N(q) u"
+    - "Equations of motion: M u_dot + G^T lambda = f_applied - f_inertial"
+    - "Constraint multiplier solve: G M^-1 G^T lambda = G u0_dot - b, with u0_dot = M^-1 (f_applied - f_inertial)"
+    - "Least-squares (redundant-constraint) multipliers: lambda = Y^+ g0, Y = G M^-1 G^T"
+    - "M^-1 v available in O(n); forming Y costs O(mn + m^2); multiplier solve O(m^3 + mn + m^2)"
+  invariants:
+    - "M(q) is the n-by-n symmetric positive-definite internal-coordinate mass matrix; it is never explicitly formed or inverted -- only the O(n) M^-1 operator is applied."
+    - "Constraints kept on-manifold via DEM (c=0 => c_dot=0) plus coordinate projection normal to the manifold; projection both removes drift and reduces ODE error estimate."
+    - "Minimal-coordinate internal joints (mobilizers) eliminate most constraints so n >> m, keeping the O(m^3) multiplier term negligible."
+    - "Redundant constraints yield a least-squares (pseudoinverse) lambda so every redundant constraint carries part of the load rather than being dropped."
+    - "f_inertial collects velocity-dependent Coriolis/gyroscopic generalized forces and must be subtracted in the acceleration solve."
+  summary: >
+    The architecture and multibody theory paper for Simbody, the O(n) spatial-operator-algebra
+    engine underlying Robosample's articulated-body dynamics: tree of mobilized bodies with
+    minimal internal coordinates, kinematic map q_dot = N(q)u, equations of motion
+    M u_dot + G^T lambda = f_applied - f_inertial, and constraints handled as a differential
+    equation on a manifold with coordinate projection and least-squares Lagrange multipliers.
+    It establishes the load-bearing conventions Robosample inherits -- never assembling M, M^-1,
+    or det M, applying them only as recursive O(n) operators, and the frame/constraint machinery.
+    Relevant to: the O(n) multibody engine, mass-matrix operators, mobilizer/frame conventions, and constraint handling.
+
+- title: "The Molecular Modeling Toolkit: A New Approach to Molecular Simulations"
+  authors: ["Hinsen, K."]
+  year: 2000
+  venue: "Journal of Computational Chemistry, 21(2), 79-85"
+  doi: "10.1002/(SICI)1096-987X(20000130)21:2<79::AID-JCC1>3.0.CO;2-B"
+  path: references/papers/_28sici_291096-987x_2820000130_2921_3A2_3C79_3A_3Aaid-jcc1_3E3.0.co_3B2-b.md
+  tags: [software, molecular-simulation, python, force-field, infrastructure, trajectory-io]
+  key_terms:
+    - "MMTK -- object-oriented Python library for biomolecular simulation with C kernels for force fields"
+    - "InfiniteUniverse/Universe -- container holding molecules, geometry, force field, thermostats/barostats"
+    - "Amber94 force field -- primary built-in molecular mechanics potential with analytic first and second derivatives"
+    - "netCDF trajectory -- machine-independent self-describing on-disk trajectory format"
+    - "Velocity-Verlet (Kneller-Mulders) -- MD integrator with optional distance constraints, Nose thermostat, Andersen barostat"
+    - "constraints -- distance constraints and fixed atoms as mechanical constraint objects"
+  key_equations:
+    - "Potential energy U and its gradient/Hessian available per force field; electrostatics via direct, cutoff+charge-neutralization, or Ewald summation"
+  invariants:
+    - "Trajectories must be written directly to disk (often exceed RAM) and remain self-describing including full system topology."
+    - "Force field evaluation (time-critical) must be in C; new force fields added without recompiling existing code."
+  summary: >
+    Describes MMTK, a modular Python molecular-simulation library with C force-field
+    kernels, supporting Amber94, Ewald electrostatics, constrained Velocity-Verlet MD,
+    normal modes, and netCDF trajectories. It is historically the host library that the
+    Spiridon-Minh CDHMC sampler (Gmolmodel) plugged into, supplying potentials, forces,
+    and trajectory I/O. Relevant to: the Python molecular library, force-field/energy
+    interface, and trajectory output subsystems.
+
+- title: "Hamiltonian Monte Carlo with Constrained Molecular Dynamics as Gibbs Sampling"
+  authors: ["Spiridon, L.", "Minh, D. D. L."]
+  year: 2017
+  venue: "Journal of Chemical Theory and Computation (Just Accepted)"
+  doi: "10.1021/acs.jctc.7b00570"
+  path: references/papers/acs.jctc.7b00570.md
+  tags: [hmc, cdhmc, constrained-dynamics, fixman, gibbs-sampling, internal-coordinates, mass-metric, foundational]
+  key_terms:
+    - "CDHMC -- Hamiltonian Monte Carlo whose trial moves come from constrained (e.g. torsional) MD"
+    - "mass metric tensor M_phi = J^T M J -- position-dependent generalized-coordinate mass matrix, J_kl = dq_k/dphi_l"
+    - "Fixman potential -- compensating term that corrects constrained vs unconstrained marginal densities"
+    - "Fixman torque -- gradient of the Fixman potential; shown to be unnecessary in the propagator"
+    - "Gibbs sampling of constraints -- alternating torsional (CDHMC) and fully-flexible (UDHMC) moves to restore ergodicity"
+    - "guidance vs acceptance potential -- dynamics may use U while acceptance uses U' = U + U_F (Duane et al.)"
+    - "Shirts test -- log ratio of energy histograms at two temperatures must be linear with slope -(beta2-beta1)"
+  key_equations:
+    - "Marginal density: rho(phi) proportional to |M_phi|^(1/2) exp(-beta U(phi))"
+    - "Fixman potential: U_F(phi_f) = (1/2) beta^-1 ln( |M_Nf| / |M_3N| )"
+    - "Modified Hamiltonian: H'(phi,p) = (1/2) p^T M^-1 p + U(phi) + U_F(phi)"
+    - "Acceptance: A = min(1, exp[-beta( H'(phi_N*,p_N*) - H'(phi_0*,p_0) )])"
+    - "Initial momenta: p_0* ~ Normal(0, kB T * M^-1(phi))"
+    - "Energy histogram (Shirts): ln[pi(U|beta2)/pi(U|beta1)] = ln[Z(beta1)/Z(beta2)] - (beta2-beta1) U"
+  invariants:
+    - "The Fixman potential MUST appear in the Metropolis-Hastings acceptance Hamiltonian; omitting it distorts the torsion-angle distribution."
+    - "Constrained MD integrator must be reversible and satisfy constraints via projection (proj) on positions and momenta to tolerance eta."
+    - "Acceptance uses exact dH of the (Fixman-corrected) Hamiltonian; the guidance potential may differ from the acceptance potential without biasing the stationary distribution, only lowering acceptance."
+    - "Ergodicity requires alternating which DOF are constrained (Gibbs moves); a single fixed constraint set cannot sample all configuration space."
+  summary: >
+    The direct theoretical and algorithmic basis for Robosample: it implements HMC on
+    constrained (torsional) molecular dynamics as a Gibbs-sampling move, using the Fixman
+    potential in the acceptance test to recover the correct Boltzmann marginal |M_phi|^(1/2)
+    exp(-beta U). It shows the Fixman torque can be dropped from the propagator (guidance
+    vs acceptance Hamiltonian), that mixing constrained and fully-flexible moves restores
+    ergodicity, and validates correctness via uniform torsion histograms, Shirts' test, and
+    alanine-dipeptide free-energy landscapes. Relevant to: the CDHMC sampler, Fixman/mass-metric
+    correction, acceptance test, and mixed/Gibbs move scheduling.
+
+- title: "A Family of MCMC Methods on Implicitly Defined Manifolds"
+  authors: ["Brubaker, M. A.", "Salzmann, M.", "Urtasun, R."]
+  year: 2012
+  venue: "Proceedings of the 15th International Conference on Artificial Intelligence and Statistics (AISTATS), JMLR W&CP 22, 161-172"
+  doi: ""
+  path: references/papers/AISTATS12.md
+  tags: [hmc, constrained-hmc, manifold, detailed-balance, rattle, symplectic, mass-metric, theory]
+  key_terms:
+    - "CHMC -- Constrained Hamiltonian Monte Carlo on a manifold M = {q : c(q)=0}"
+    - "constraint Jacobian C(q) = dc/dq -- assumed full rank everywhere; defines tangent/cotangent spaces"
+    - "acceptance vs guidance Hamiltonian -- H accepts (encodes target), H-hat (any potential) only guides simulation"
+    - "RATTLE -- symmetric, symplectic, order-2 constrained integrator generalizing Leapfrog to manifolds"
+    - "momentum projection -- draw p ~ Normal(0,M(q)) then project onto cotangent space C(q) M^-1 p = 0"
+    - "state-dependent mass matrix M(q) -- naturally handled, generalizing Riemann-manifold HMC"
+  key_equations:
+    - "Hamiltonian: H(p,q) = (1/2) p^T M(q)^-1 p + U(q) + lambda^T c(q)"
+    - "Acceptance potential: U(q) = (1/2) log|M(q)| - log pi(q), so exp(-H) = pi(q) Normal(p|0,M(q))"
+    - "Acceptance: min(1, exp{ H(p_0,q_0) - H(p_L,q_L) })"
+    - "Symplectic condition: F(x)^T J F(x) = J, implying det(F)^2 = 1 (volume preservation)"
+    - "Detailed balance: integral pi(q) T(q->q') = integral pi(q') T(q'->q)"
+  invariants:
+    - "Integrator must be symmetric, symplectic, and consistent (order r>=1) and respect both position constraints c(q)=0 and momentum constraints C(q) dH/dp = 0."
+    - "Volume preservation plus symmetry (rho-reversibility under (p,q)->(-p,q)) yield detailed balance regardless of the guidance Hamiltonian."
+    - "The (1/2)log|M(q)| term in the acceptance potential is required so the position marginal equals pi(q); convergence also needs connectivity, full-rank C, positive-definite M, and strictly positive smooth pi."
+  summary: >
+    Generalizes HMC to sample distributions defined on implicit constraint manifolds,
+    proving detailed balance, irreducibility, aperiodicity, and convergence given a
+    symmetric/symplectic/consistent constrained integrator (RATTLE) and the explicit
+    separation of an acceptance Hamiltonian from an arbitrary guidance Hamiltonian. Its
+    acceptance potential U = (1/2)log|M(q)| - log pi(q) is precisely the mass-metric
+    (Fixman-type) Jacobian correction Robosample must apply, and it formalizes the
+    momentum-projection and reversibility requirements. Relevant to: the constrained-HMC
+    proposal, RATTLE/SHAKE integrator correctness proofs, mass-metric acceptance term,
+    and detailed-balance guarantees.
+
+- title: "Tackling the conformational sampling of larger flexible compounds and macrocycles in pharmacology and drug discovery"
+  authors: ["Chen, I-J.", "Foloppe, N."]
+  year: 2013
+  venue: "Bioorganic & Medicinal Chemistry, 21, 7898-7920"
+  doi: ""
+  path: references/papers/bioorgmedchem-21-7898-13.md
+  tags: [conformational-sampling, macrocycles, benchmark, low-mode, torsional, drug-discovery, validation]
+  key_terms:
+    - "low-mode search (LMOD/LLMOD) -- moves along low-frequency vibrational eigenvectors to cross energy barriers between minima"
+    - "LowModeMD -- channels/amplifies atomic motion along low-curvature directions via short MD bursts (MOE)"
+    - "MT/LMOD -- mixed torsional plus low-mode sampling (MacroModel default)"
+    - "MD/LLMOD -- high-temperature simulated-annealing MD followed by large-scale low-mode for macrocycles"
+    - "macrocycle -- ring of at least 9 atoms; known to be hard to sample"
+    - "bioactive-structure reproduction (%BioConf_Rep) -- fraction of X-ray poses reproduced within an RMSD threshold"
+    - "global energy minimum convergence -- consistency of independent stochastic runs locating the lowest-energy conformer"
+  key_equations:
+    - "Radius of gyration Rgyr used to quantify conformer compactness/extendedness"
+    - "RMSD-to-bioactive thresholds {0.5, 1.0, 1.5, 2.0} Angstrom used to score reproduction"
+  invariants:
+    - "Sampling quality judged by reproduction of bioactive X-ray poses, coverage (NbConfs, 3D pharmacophores, Rgyr range), and reproducible location of the global energy minimum."
+    - "Energy window DE and solvation (Diel vs GB) strongly affect coverage; enhanced (non-default) parameters needed for flexible/macrocyclic compounds."
+  summary: >
+    A benchmark study comparing mainstream conformational-search methods (LowModeMD,
+    Stochastic Search, LMOD/LLMOD/MT-LMOD, MD/LLMOD) on curated drug-like, flexible, and
+    macrocycle compound sets, establishing metrics for sampling quality: bioactive-pose
+    reproduction, conformer coverage/diversity, and global-minimum convergence. It is the
+    reference set of hard macrocyclic test systems and validation criteria that the
+    Robosample CDHMC sampler targets for enhanced intra-basin and basin-hopping sampling.
+    Relevant to: validation/benchmarking of the sampler on macrocycles and the choice of
+    coverage and convergence metrics.
+
+- title: "Protein Structure Refinement of CASP Target Proteins Using GNEIMO Torsional Dynamics Method"
+  authors: ["Larsen, A. B.", "Wagner, J. R.", "Jain, A.", "Vaidehi, N."]
+  year: 2014
+  venue: "Journal of Chemical Information and Modeling, 54, 508-517"
+  doi: "10.1021/ci400484c"
+  path: references/papers/ci400484c.md
+  tags: [internal-coordinates, torsional-dynamics, gneimo, constrained-dynamics, replica-exchange, refinement, articulated-body]
+  key_terms:
+    - "GNEIMO -- generalized Newton-Euler inverse mass operator; internal-coordinate constrained MD"
+    - "rigid clusters and torsional hinges -- protein modeled as user-defined rigid bodies joined by 1-6 DOF hinges"
+    - "O(n) recursive dynamics -- inverse-mass-operator scaling linear (not cubic) in number of DOF"
+    - "holonomic constraints -- high-frequency DOF frozen rigid, focusing search on low-frequency torsions"
+    - "REXMD -- temperature replica exchange (32 replicas, 310-415 K) to cross barriers"
+    - "Lobatto integrator -- constrained internal-coordinate time-propagation with 5-10 fs steps"
+  key_equations:
+    - "Replica-exchange swaps accepted by the Metropolis criterion (sorted every 5 ps)"
+    - "Coupled internal-coordinate equations of motion cost scales O(n) via the inverse mass operator vs O(n^3) naively"
+  invariants:
+    - "High-frequency DOF held rigid by hard holonomic constraints; only torsional hinges move, allowing larger (5-10 fs) time steps."
+    - "Inverse-mass-operator must be applied as an O(n) articulated-body operator rather than assembling/inverting the mass matrix."
+    - "Replica-exchange swaps must obey the Metropolis acceptance to preserve each replica's canonical distribution."
+  summary: >
+    Applies GNEIMO internal-coordinate (torsional) constrained MD with temperature
+    replica exchange to refine 30 CASP homology models, demonstrating that focusing
+    sampling on low-frequency torsional DOF with O(n) recursive multibody dynamics and
+    large time steps outperforms unrestrained Cartesian MD. It is the articulated-body /
+    internal-coordinate dynamics engine and rigid-cluster + torsional-hinge model that
+    Robosample's O(n) multibody operators and enhanced-sampling (replica-exchange) moves
+    build on. Relevant to: the internal-coordinate multibody engine, rigid-body/torsional
+    topology, O(n) inverse-mass operators, and replica-exchange enhanced sampling.
+
+- title: "Equipartition Principle for Internal Coordinate Molecular Dynamics"
+  authors: ["Jain, A.", "Park, I.-H.", "Vaidehi, N."]
+  year: 2012
+  venue: "Journal of Chemical Theory and Computation, 8, 2581-2587"
+  doi: "10.1021/ct3002046"
+  path: references/papers/ct3002046.md
+  tags: [internal-coordinate, icmd, bat, mass-metric, velocity-initialization, fixman, spatial-operators, equipartition, sampling]
+  key_terms:
+    - "ICMD mass matrix M(theta) -- configuration-dependent, dense, symmetric positive-definite generalized-coordinate inertia, M = J^T M_cart J"
+    - "BAT coordinates -- bond/angle/torsion internal coordinates; for full BAT N = 3n and Jacobian J is square/invertible"
+    - "TAMD -- torsion-angle MD; BAT with holonomic constraints freezing bonds/angles so N < 3n and J is non-square"
+    - "Modal coordinates nu -- noncanonical velocity coordinates nu = m^T(theta) thetadot that diagonalize the kinetic energy"
+    - "Fixman/U_Jacobian term -- U_c(theta) = (1/2) ln det M(theta) appearing when changing integration variable from p to nu"
+    - "Spatial-operator factorization -- M = [I + H phi K] D [I + H phi K]^T giving O(N) recursive transforms without assembling M"
+    - "non-separable Hamiltonian -- ICMD kinetic energy depends on both p and theta, unlike Cartesian"
+  key_equations:
+    - "ICMD Hamiltonian: H(theta,p) = (1/2) p^T M^-1(theta) p + U(theta)"
+    - "Generalized equipartition: <y_i dH/dy_j> = kT delta_ij (only for canonical coordinates)"
+    - "Mass factorization: M(theta) = m(theta) m^T(theta); modal coords nu = m^T thetadot = l(theta) p"
+    - "Decoupled Hamiltonian: H(theta,nu) = (1/2) nu^T nu + U(theta)"
+    - "Volume / Jacobian change: dp_1...dp_N = det{M(theta)}^(1/2) dnu_1...dnu_N"
+    - "Effective potential with Fixman-type term: U'(theta) = U(theta) + (1/2) ln det M(theta)"
+    - "Modal equipartition: <nu_i nu_j> = kT delta_ij, i.e. <nu nu^T> = kT I_N"
+    - "Constrained velocity map: thetadot = P xdot with P = M^-1 H phi M_cart^(1/2) so m^T P P^T m = I"
+  invariants:
+    - "Canonical (theta,p) ICMD coordinates do NOT satisfy a Cartesian-like kinetic equipartition; only noncanonical modal nu do."
+    - "Initializing velocities by drawing nu ~ Boltzmann (mean kT/2 each) then mapping nu -> thetadot is the thermodynamically rigorous way; ad hoc projection of Cartesian velocities is wrong for constrained models."
+    - "The det M(theta) factor (Fixman term) must accompany the configurational measure when transforming momentum integrals to modal coordinates."
+    - "M, M^-1, sqrt(M), det M are applied as O(N) articulated-body operators, never assembled."
+  summary: >
+    Derives that the standard kinetic-energy equipartition kT/2 per coordinate fails for internal-coordinate
+    (BAT/TAMD) models because the mass matrix M(theta) is configuration-dependent and couples coordinates, making
+    the Hamiltonian non-separable. By introducing noncanonical modal velocities nu = m^T(theta) thetadot from a
+    factorization M = m m^T, it recovers <nu nu^T> = kT I, giving a rigorous Boltzmann velocity-initialization
+    recipe and exposing the (1/2) ln det M(theta) Fixman/Jacobian term. Spatial-operator algebra yields O(N)
+    recursive transforms between physical and modal velocities without ever forming M or its inverse.
+    Relevant to: velocity initialization, the mass-metric M(q) and Fixman/U_Jacobian correction, and the O(n)
+    articulated-body operators of the multibody engine.
+
+- title: "Equation of State Calculations by Fast Computing Machines"
+  authors: ["Metropolis, N.", "Rosenbluth, A. W.", "Rosenbluth, M. N.", "Teller, A. H.", "Teller, E."]
+  year: 1953
+  venue: "Journal of Chemical Physics, 21, 1087-1092"
+  doi: "10.1063/1.1699114"
+  path: references/papers/EquationOfState.md
+  tags: [monte-carlo, metropolis, detailed-balance, acceptance-test, canonical-ensemble, sampling, importance-sampling]
+  key_terms:
+    - "Metropolis Monte Carlo -- importance sampling that draws configurations with probability proportional to exp(-E/kT) and weights them evenly"
+    - "Acceptance rule -- accept if Delta E < 0, else accept with probability exp(-Delta E / kT)"
+    - "Symmetric proposal -- a priori move probabilities satisfy P_rs = P_sr (uniform displacement in a box of side 2 alpha)"
+    - "Ergodicity -- a large enough number of moves reaches any point in configuration space"
+    - "Rejected-move counting -- a forbidden move re-counts the original configuration in the average"
+    - "Maximum displacement alpha -- tuning knob trading move size against acceptance fraction"
+  key_equations:
+    - "Canonical average: F_bar = integral F exp(-E/kT) d^2N p d^2N q / integral exp(-E/kT) d^2N p d^2N q"
+    - "Energy: E = (1/2) sum_i sum_{j != i} V(d_ij)"
+    - "Proposal: X -> X + alpha xi_1, Y -> Y + alpha xi_2 with xi in (-1,1)"
+    - "Acceptance: accept Delta E < 0 always; else accept if xi_3 < exp(-Delta E / kT)"
+    - "Estimator: F_bar = (1/M) sum_{j=1}^M F_j over all (accepted or rejected) configurations"
+    - "Stationary target: nu_r proportional to exp(-E_r / kT)"
+  invariants:
+    - "Proposal must be symmetric (P_rs = P_sr) for the bare exp(-Delta E/kT) acceptance to give the canonical distribution."
+    - "After a rejected move the original configuration is counted again in the average; omitting it biases populations."
+    - "The chain must be ergodic so any state is reachable from any other."
+    - "Momentum integrals factor out for velocity-independent potentials; only configuration space need be sampled."
+  summary: >
+    The foundational paper introducing the Metropolis Monte Carlo algorithm: sample configuration space so that
+    states appear with their Boltzmann weight by proposing a symmetric random move and accepting it with
+    probability min(1, exp(-Delta E/kT)). It proves the scheme is ergodic and drives the ensemble to the
+    canonical distribution nu_r ~ exp(-E_r/kT), and notes rejected moves must still be counted. This is the
+    detailed-balance acceptance test at the heart of any HMC/MCMC sampler.
+    Relevant to: the Metropolis acceptance criterion and detailed-balance correctness of the HMC move proposal/acceptance step.
+
+- title: "MMB-GUI: a fast morphing method demonstrates a possible ribosomal tRNA translocation trajectory"
+  authors: ["Tek, A.", "Korostelev, A. A.", "Flores, S. C."]
+  year: 2016
+  venue: "Nucleic Acids Research, 44, 95-105"
+  doi: "10.1093/nar/gkv1457"
+  path: references/papers/gkv1457.md
+  tags: [internal-coordinate, multiscale, morphing, rigid-body, flexibility-zones, ribosome, modeling-tool]
+  key_terms:
+    - "MMB -- internal-coordinate, multiscale macromolecular modeling code; rigid regions become a single kinematic body"
+    - "Flexibility zones / physics zones -- user-defined regions where DOF are free and where an MD force field is active; rest is rigid"
+    - "Multiscale speedup -- making regions rigid yields up to ~2000-fold time savings vs all-atom MD"
+    - "Morphing -- a clash-free interpolated trajectory connecting two endpoint conformations via springs pulling a flexible start toward a rigid target"
+    - "Collision-detecting spheres -- placed at hinges/interfaces to prevent steric clashes during the morph"
+    - "Improvement score -- RMSD-based measure of how closely a morph recapitulates a known intermediate"
+  key_equations:
+    - "improvement = (min[rmsd(AB), rmsd(CB)] - min[rmsd(iB)]) / min[rmsd(AB), rmsd(CB)] x 100%"
+  invariants:
+    - "Rigidified regions move as one kinematic body, reducing DOF while maintaining bond geometry (no bond distortion, unlike Cartesian elastic-network morphs)."
+    - "Morphing generates a single directed trajectory and cannot compute thermodynamic quantities (not a substitute for MD/importance sampling)."
+  summary: >
+    Describes a Chimera-based GUI for MMB, an internal-coordinate multiscale modeling code where the user freezes
+    most DOF into rigid bodies connected by flexible hinges, gaining up to 2000-fold speedups and enabling
+    spring-driven morphing of huge complexes (the 70S ribosome, ~150k-250k atoms) without steric clashes. It is
+    a modeling/visualization tool, not a statistical sampler -- morphs are single directed trajectories that
+    cannot yield Boltzmann-weighted thermodynamics. Of interest mainly for its internal-coordinate rigid-cluster
+    decomposition shared with Robosample's multibody approach.
+    Relevant to: internal-coordinate rigid-body (cluster) world construction and flexibility-zone topology, not the acceptance/Hamiltonian path.
+
+- title: "Internal Coordinate Molecular Dynamics: A Foundation for Multiscale Dynamics"
+  authors: ["Vaidehi, N.", "Jain, A."]
+  year: 2015
+  venue: "Journal of Physical Chemistry B, 119, 1233-1242 (Feature Article)"
+  doi: "10.1021/jp509136y"
+  path: references/papers/internal-coordinate-molecular-dynamics-a-foundation-for-multiscale-dynamics.md
+  tags: [internal-coordinate, icmd, gneimo, torsional-md, fixman, spatial-operators, mass-metric, multiscale, enhanced-sampling, constraints]
+  key_terms:
+    - "ICMD / torsional MD -- MD in BAT coordinates; freezing bonds/angles removes high-frequency DOF and permits larger time steps"
+    - "GNEIMO -- generalized Newton-Euler inverse mass operator method; spatial-operator algebra giving O(N) equations of motion instead of O(N^3)"
+    - "Fixman compensating potential U_f -- corrects partition-function bias from treating stiff bond/angle DOF as rigid"
+    - "Coupled ICMD equations of motion -- M(theta) thetaddot + C(theta,thetadot) = T(theta), with C the Coriolis term"
+    - "Cluster / dynamic clustering -- rigid bodies (atom to whole domain) connected by 1-6 DOF hinges, frozen/thawed on the fly"
+    - "Modal coordinates -- noncanonical velocities enabling an ICMD equipartition principle for correct velocity initialization"
+    - "Constrained ICMD is not the stiff-Cartesian limit -- rigid constraints alter the PES/FES and dihedral transition rates"
+  key_equations:
+    - "Equations of motion: M(theta) thetaddot + C(theta,thetadot) = T(theta)"
+    - "Spatial-operator acceleration: thetaddot = [I - H psi K]^T D^-1 [T - H psi(K T + P a + b)] - K^T psi^T a"
+    - "Fixman potential: U_f(theta) = (1/2) kT ln( det{M(theta)} / det{M_B(theta, q_0)} )"
+    - "Nose-Hoover ICMD: M(theta) thetaddot + C(theta,thetadot) + F(theta,thetadot) = T(theta); etadot = (1/tau^2)(T/T_B - 1)"
+  invariants:
+    - "Treating stiff, uncoupled bond/angle DOF as rigid biases the probability density; the Fixman potential (ratio of det M of constrained vs full BAT mass matrix) must be added to recover the all-atom Cartesian distribution."
+    - "Soft bond angles strongly coupled to torsions/nonbonded terms are NOT corrected by Fixman and should be left flexible (hybrid ICMD)."
+    - "The dense mass matrix is never inverted directly; spatial-operator factorization gives O(N) cost."
+    - "Freeze/thaw (dynamic clustering) can alter the simulated pathway, so it is valid only for conformational search, not for thermodynamics."
+  summary: >
+    A review of the GNEIMO internal-coordinate MD framework: BAT/torsional coordinates let high-frequency DOF be
+    frozen for larger time steps and better low-frequency sampling, with spatial-operator algebra reducing the
+    equations of motion from O(N^3) to O(N) without inverting the dense mass matrix M(theta). It stresses two
+    bottlenecks and their fixes -- computational cost (GNEIMO) and the constraint-induced partition-function bias,
+    corrected by the Fixman potential U_f = (1/2)kT ln(det M / det M_B) and its torque, validated on alanine
+    dipeptide. Also presents the modal-coordinate equipartition for velocity initialization and enhanced sampling
+    (REMD, aMD) in torsion space.
+    Relevant to: the mass-metric M(q), Fixman/U_Jacobian correction, BAT/Z-matrix flexibility model, and the O(n) articulated-body engine.
+
+- title: "Correcting for the free energy costs of bond or angle constraints in molecular dynamics simulations"
+  authors: ["Konig, G.", "Brooks, B. R."]
+  year: 2015
+  venue: "Biochimica et Biophysica Acta (BBA) - General Subjects, 1850, 932-943"
+  doi: "10.1016/j.bbagen.2014.09.001"
+  path: references/papers/j.bbagen.2014.09.001.md
+  tags: [constraints, free-energy, jacobian, shake, rattle, bar, normal-mode-analysis, fixman-related, qm-mm, sampling]
+  key_terms:
+    - "Constraint correction -- post-processing free energy cost of adding/removing a bond/angle constraint via harmonic analysis"
+    - "SHAKE/RATTLE/LINCS/Shape -- constraint algorithms that rigidify fast DOF to allow larger time steps"
+    - "Hard vs soft DOF -- hard (bond/angle, harmonic, correctable) treated as functions of soft (dihedral/translation/rotation) DOF, following Go-Scheraga"
+    - "Reduced-basis harmonic analysis -- project full 3n x 3n Hessian into the constrained subspace C, eigendecompose to get force constants"
+    - "Jacobian factor -- entropic term from internal-to-Cartesian transformation; J_r = r^2 for bonds, J_theta = sin(theta) for angles"
+    - "Phase-space overlap -- variance of BAR free energy is tied to overlap; constraints increase overlap (e.g. 0.15% -> ~2%)"
+    - "Bennett acceptance ratio (BAR) -- free energy estimator whose precision improves with overlap"
+  key_equations:
+    - "Harmonic oscillator free energy: G^ho = U_0 - beta^-1 ln sqrt(2 pi / (beta K))"
+    - "Free energy of imposing constraint: Delta G_cons = Delta H + Delta G_harm + Delta G_Jacobian"
+    - "Enthalpy (anharmonic, Newton-Raphson): Delta H ~ U'(q_cons)^2 / (2 U''(q_cons))"
+    - "Vibrational entropy: Delta G_harm ~ beta^-1 ln sqrt(2 pi / (beta U''(q_cons)))"
+    - "Reduced Hessian / gradient: H = C^T F C, g = C^T f, Lambda = U^T H U"
+    - "Jacobian change on release: Delta G_Jacobian = -beta^-1 ln( product_i J_i^after / J_i^before ), with J_r = r_ik^2, J_theta = sin(theta_jkl)"
+    - "Release free energy via Zwanzig: Delta G_rls = beta^-1 ln < exp(-beta Delta G_cons(x_cons)) >_cons"
+  invariants:
+    - "Releasing/imposing a constraint carries three free energy contributions -- enthalpy (>= 0), vibrational entropy (always negative), and a Jacobian term (either sign); all three matter and must not be dropped."
+    - "The Jacobian factor accounts for internal-to-Cartesian measure (longer bonds/obtuse angles have more phase space) and is needed only for DOF that change."
+    - "Correction is valid only for hard (near-harmonic) DOF close to the energy minimum and weakly coupled to soft DOF; soft DOF cannot be corrected this way without biasing the Boltzmann weight."
+    - "Constraints raise BAR phase-space overlap, lowering free energy variance (precision ~ 1/sqrt(frames))."
+  summary: >
+    Provides a harmonic-analysis post-processing method to compute the free energy cost of bond/angle constraints
+    (SHAKE), splitting it into enthalpy, vibrational entropy, and a Jacobian (internal-to-Cartesian) term with
+    J_r = r^2 and J_theta = sin(theta), combined via the Zwanzig/exponential average over constrained samples.
+    Treating hard DOF as harmonic functions of soft DOF (Go-Scheraga) it reaches near-machine-precision on
+    analytic benchmarks and cuts free energy errors ~10x, while constraints raise BAR phase-space overlap and
+    precision. The Jacobian and det-of-metric reasoning directly parallels the Fixman/U_Jacobian correction a
+    constraint-based sampler must apply.
+    Relevant to: SHAKE/RATTLE constraint handling, the Jacobian/U_Jacobian and Fixman corrections, and the dH used in the acceptance test.
+
+- title: "Robosample: A rigid-body molecular simulation program based on robot mechanics"
+  authors: ["Spiridon, L.", "Sulea, T. A.", "Minh, D. D. L.", "Petrescu, A.-J."]
+  year: 2020
+  venue: "Biochimica et Biophysica Acta (BBA) - General Subjects, 1864(8):129616"
+  doi: "10.1016/j.bbagen.2020.129616"
+  path: references/papers/j.bbagen.2020.129616.md
+  tags: [hmc, sampling, constrained-dynamics, gibbs-sampling, internal-coordinates, fixman, multibody, spatial-operator-algebra, robosample, glycan]
+  key_terms:
+    - "CDHMC -- Constrained Dynamics Hamiltonian Monte Carlo used as a Gibbs-sampling move over a subset of coordinates"
+    - "World -- a defined set of rigid bodies and joints (one Simbody multibody chain) mapped onto the same Molmodel chemical graph"
+    - "Gibbs sampling -- alternate blocks of flexible coordinates (worlds) so every DOF is modifiable by at least one move, restoring ergodicity"
+    - "Fixman potential -- correcting potential added so constrained marginal density matches the fully flexible one"
+    - "Fixman torque -- derivative of the Fixman potential, applied during MD so trajectories sample the Boltzmann distribution"
+    - "Mass matrix tensor M_tot = J^T M J -- generalized-coordinate inertia built from Cartesian mass matrix M and Jacobian J = dx/dphi"
+    - "Spatial Operator Algebra (SOA) -- O(N) recursive multibody formulation giving det, gradient, log, sqrt of the mass-matrix tensor"
+    - "Spherical/cylindrical joints -- Ball (3 rotational DOF, Euler/quaternion) and Cylinder (translation+rotation) mobilizers capturing torsion-bond/torsion-angle coupling"
+    - "Ramachandran dynamics -- only phi and psi torsions mobile; accelerates the slowest transition by an order of magnitude"
+  key_equations:
+    - "Hamiltonian (reduced coords): H = p_f^T M(phi_f) p_f + U(phi_f)"
+    - "Flexible marginal config density: rho(phi_f,phi_v) proportional to |M_tot(phi)|^(-1/2) exp(-beta U)"
+    - "Reduced marginal config density: rho(phi_f) proportional to |M(phi_f)|^(-1/2) exp(-beta U)"
+    - "Fixman potential: U'(phi_f) = kT ln( |M_tot(phi)| / |M(phi_f)| )^(1/2)"
+    - "Corrected reduced Hamiltonian: H = p_f^T M(phi_f) p_f + U(phi_f) + U'(phi_f)"
+    - "Optimal HMC acceptance rate ~ 0.651"
+  invariants:
+    - "Each Gibbs move draws from the conditional Boltzmann distribution; velocities initialized per a generalized-coordinate equipartition theorem."
+    - "Every DOF must be modifiable by at least one move (include a fully flexible world per cycle) to ensure ergodicity."
+    - "Final configuration of each deterministic MD trajectory accepted/rejected by Metropolis-Hastings."
+    - "M, M^-1, det M, sqrt M obtained via O(N) SOA recursions, never by assembling/inverting the dense tensor."
+  summary: >
+    Describes the Robosample program itself: a multibody, constraint-based Hamiltonian Monte Carlo
+    sampler that mixes fully flexible and constrained (torsional, cylindrical, spherical) dynamics as
+    Gibbs moves across "worlds," using the Fixman potential/torque and O(N) spatial operator algebra so
+    constrained MD samples the correct conditional Boltzmann distribution. It validates free-energy-surface
+    recovery on alanine dipeptide and enhanced conformational coverage on a glycan, and gives the parameter-
+    tuning workflow (integration time, time step, ~0.651 acceptance). This is the canonical reference for the
+    code's statistical-mechanics foundation. Relevant to: the whole sampler -- World/Gibbs scheme, Fixman correction, mass-metric operators, acceptance test.
+
+- title: "ICFF: A New Method to Incorporate Implicit Flexibility into an Internal Coordinate Force Field"
+  authors: ["Katritch, V.", "Totrov, M.", "Abagyan, R."]
+  year: 2003
+  venue: "Journal of Computational Chemistry, 24(2):254-265"
+  doi: "10.1002/jcc.10091"
+  path: references/papers/jcc.10091.md
+  tags: [internal-coordinates, force-field, torsion-space, rigid-geometry, projection, fixed-bond-geometry, mmff94]
+  key_terms:
+    - "ICFF -- internal-coordinate force field that projects a Cartesian force field onto a fixed-bond-geometry torsion model"
+    - "Implicit flexibility -- bond stretch/bend, out-of-plane, and 1-4 vdW effects absorbed into torsion parameters so the rigid model mimics the flexible one"
+    - "Torsion fragment -- the two bonded atoms plus immediate neighbors, reoptimized at each torsion value to build a torsion energy profile"
+    - "1-5,1-6 soft repulsion -- empirical polynomial term replacing hard vdW between atoms 4-5 bonds apart to mimic bond flexibility"
+    - "Local-energy covalent geometry -- fixed bond lengths/angles set by Cartesian minimization using only bonded + 1-4 terms"
+  key_equations:
+    - "Torsion term (sixfold Fourier series): E_tor = C_0 + sum_{k=0..6} (A_k cos(k*theta) + B_k sin(k*theta))"
+    - "Soft 1-5/1-6 repulsion: E = eps_IJ [ C ((R-R*)/(R0-R*))^2 - 1 ) + (1-C)(((R-R*)/(R0-R*))^3 - 1) ] for R < R*, with C ~ 0.55"
+    - "Constraint potential for fixed torsion in profiling: E_r = C_r (theta - theta0)^2, C_r = 10000 kcal"
+  invariants:
+    - "Soft 1-5,1-6 term equals eps_IJ with zero derivative at R=R* and crosses zero at R=R0, joining continuously with the unchanged attractive vdW branch."
+    - "Torsion parameters are independent of the initial covalent geometry because the fragment is reoptimized at each torsion value."
+    - "1-4 vdW folded into the torsion term; interactions 6+ bonds apart keep the original hard vdW."
+  summary: >
+    Introduces the projection method that turns a flexible Cartesian force field into a fixed-geometry
+    internal-coordinate (torsion-only) force field, absorbing bond/angle/1-4 flexibility into a sixfold
+    Fourier torsion term and softening 1-5/1-6 clashes, cutting free variables ~10-fold while keeping
+    sub-kcal accuracy. It matters because constrained/torsional sampling on a Cartesian force field
+    distorts the potential surface, and this is the foundational fix later extended for protein dynamics.
+    Relevant to: the guidance potential used in constrained (torsional/rigid) worlds when bonds and angles are frozen.
+
+- title: "Application of Torsion Angle Molecular Dynamics for Efficient Sampling of Protein Conformations"
+  authors: ["Chen, J.", "Im, W.", "Brooks, C. L., III"]
+  year: 2005
+  venue: "Journal of Computational Chemistry, 26(15):1565-1578"
+  doi: "10.1002/jcc.20293"
+  path: references/papers/jcc.20293.md
+  tags: [torsion-dynamics, internal-coordinates, neimo, spatial-operator-algebra, force-field, sampling, replica-exchange, charmm, integrator]
+  key_terms:
+    - "TAMD -- torsion angle molecular dynamics; MD in torsion space eliminating bond/angle DOF for larger time steps"
+    - "NEIMO -- Newton-Euler Inverse Mass Operator; O(n) recursive solution of internal-coordinate equations of motion"
+    - "Newton-Euler operator factorization -- mass matrix Omega = H Phi M Phi^T H^T using spatial operators"
+    - "Innovations operator factorization -- alternative factorization Omega = [1+H Phi K] D [1+H Phi K]^T giving O(n) inverse"
+    - "CMAP crossterm correction -- 2D phi/psi, phi/chi1, psi/chi1 maps correcting residual rigid-geometry barriers"
+    - "Cluster/hinge tree -- molecule as rigid clusters connected by single-DOF torsional hinges with parent/child topology"
+  key_equations:
+    - "Internal-coord EOM: Omega(theta) theta_ddot + C(theta, theta_dot) = T(theta)"
+    - "Mass matrix: Omega(theta) = H Phi M Phi^T H^T"
+    - "Coriolis/force vector: C(theta,theta_dot) = H Phi (M Phi^T a + b - F^(c))"
+    - "Inverse: Omega^-1 = [1 - H Phi K]^T D^-1 [1 - H Phi K], O(n) cost, D diagonal positive-definite for single-DOF hinges"
+    - "Recursion: V = Phi^T H^T theta_dot (spatial velocities)"
+    - "Energy fluctuation metric: deltaE = (<E^2> - <E>^2)/<E_k>"
+  invariants:
+    - "Mass matrix is dense and configuration-dependent; explicit assembly avoided, all operators applied recursively (O(n))."
+    - "Base cluster connected to inertial frame by a six-DOF hinge; orientation propagated via quaternion EOM (Fincham implicit algorithm)."
+    - "Velocities assigned from a Cartesian Gaussian then mapped onto internal coordinates."
+    - "Time step ultimately limited not by energy conservation alone but by collective torsion motions and long-range collisions."
+  summary: >
+    Extends the ICFF projection to proteins and couples it with NEIMO/spatial-operator-algebra torsion-angle
+    MD, showing the O(n) recursive mass-matrix factorization and inverse, plus softened nonbonded interactions
+    and CMAP crossterm corrections that restore implicit flexibility so TAMD reproduces Cartesian phi/psi and
+    chi1 surfaces. It demonstrates larger time steps (up to ~20 fs for simple peptides) and several-fold sampling
+    gains, but warns that achievable time step is limited by collective torsion-space motion, not just energy
+    conservation. Relevant to: the O(n) articulated-body mass-matrix operators and integrator/time-step choices for torsional worlds.
+
+- title: "Quantum Mechanical Calculation of the Effects of Stiff and Rigid Constraints in the Conformational Equilibrium of the Alanine Dipeptide"
+  authors: ["Echenique, P.", "Calvo, I.", "Alonso, J. L."]
+  year: 2006
+  venue: "Journal of Computational Chemistry, 27(14):1733-1747"
+  doi: "10.1002/jcc.20467"
+  path: references/papers/jcc.20467.md
+  tags: [constraints, fixman, mass-metric-tensor, stiff-vs-rigid, jacobian, internal-coordinates, z-matrix, alanine-dipeptide, ab-initio, statistical-mechanics]
+  key_terms:
+    - "Stiff model -- constraints enforced by a steep potential; orthogonal (hard) velocities remain active as heat containers"
+    - "Rigid model -- constraints treated as exact holonomic; orthogonal velocities vanish"
+    - "Mass-metric tensor G -- G_{nu,rho} = sum_sigma (dx/dq^nu) m_sigma (dx/dq^rho); reduced tensor g restricted to soft+external coords"
+    - "Fixman compensating potential -- correction added to rigid MD to reproduce the stiff equilibrium distribution"
+    - "Soft vs hard coordinates -- soft = important (e.g. phi,psi); hard = constrained (bonds, angles, stiff dihedrals)"
+    - "Hessian correction -- det H of the constraining potential w.r.t. hard coords contributes a configurational entropy term in the stiff model"
+    - "SASMIC / Z-matrix coordinates -- branched internal coordinates giving a closed product form for det G"
+  key_equations:
+    - "Mass-metric tensor: G_{nu rho}(q) = sum_sigma (dx^sigma/dq^nu) m_sigma (dx^sigma/dq^rho)"
+    - "Stiff free energy: F_s = V_Sigma(q^i) - T(S_s^c + S_s^k), with S_s^c = -(R/2) ln det H(q^i), S_s^k = (R/2) ln det G"
+    - "Rigid free energy: F_r = V_Sigma(q^i) - T S_r^k, with S_r^k = (R/2) ln det g(q^u)"
+    - "Fixman compensating potential: V_F = (RT/2) ln[ det G / ( det H * det g ) ]"
+    - "Closed-form determinant: det G = (prod_alpha m_alpha^3) sin^2(theta) (prod_{alpha>=2} r_alpha^4)(prod_{alpha>=3} sin^2(theta_alpha))"
+  invariants:
+    - "Naive exp(-beta V_Sigma) is NOT the correct marginal density; det G, det g, and det H correction terms must be included or shown negligible."
+    - "External (overall translation/rotation) coordinates factorize out of det G and det g, so the Fixman potential is independent of external coordinates."
+    - "det G depends on bond lengths r_alpha and bond angles theta_alpha but not explicitly on dihedrals (only via hard coordinates)."
+    - "Corrections are non-negligible over the full Ramachandran space but negligible within the low-energy secondary-structure region for peptides of considerable length."
+  summary: >
+    Derives, from first principles and with MP2 ab initio energies on the alanine dipeptide, the exact
+    statistical-mechanics corrections that constraints impose on the internal-coordinate marginal density:
+    the stiff vs rigid mass-metric determinants (det G, det g), the constraining-potential Hessian term
+    (det H), and their combination as the Fixman compensating potential. It supplies the closed-form Z-matrix
+    determinant of G and quantifies when these Jacobian/Fixman terms can be dropped. This is the rigorous
+    theory behind the program's Fixman correction. Relevant to: Fixman potential/torque correctness and the mass-metric Jacobian terms in the acceptance test.
+
+- title: "Advanced Techniques for Constrained Internal Coordinate Molecular Dynamics"
+  authors: ["Wagner, J. R.", "Balaraman, G. S.", "Niesen, M. J. M.", "Larsen, A. B.", "Jain, A.", "Vaidehi, N."]
+  year: 2013
+  venue: "Journal of Computational Chemistry, 34(11):904-914"
+  doi: "10.1002/jcc.23200"
+  path: references/papers/jcc.23200.md
+  tags: [constrained-dynamics, internal-coordinates, gneimo, spatial-operator-algebra, equipartition, velocity-initialization, integrator, fixman, coarse-graining, flying-ice-cube, thermostat]
+  key_terms:
+    - "CICMD / GNEIMO -- constrained internal-coordinate MD via Generalized Newton-Euler Inverse Mass Operator, O(N) SOA-based"
+    - "Modal velocity coordinates -- independent coordinates v in which the CICMD equipartition principle holds, enabling Boltzmann velocity assignment"
+    - "Flying ice cube effect -- numerical drain of thermal energy into translational/low-frequency modes; shown to also arise with Nose-Hoover"
+    - "CM velocity nulling -- composite-body spatial-inertia method to reset accumulated linear/angular momentum"
+    - "Freeze-and-thaw / dynamic clustering -- on-the-fly coarse graining that rigidifies/releases DOF (e.g. STRIDE-detected secondary structure)"
+    - "Nonseparable Hamiltonian -- kinetic energy depends on configuration, requiring RK4/Lobatto/CVODE rather than Verlet"
+  key_equations:
+    - "Thermal energy target: KE = (1/2)(N - 6) k T"
+    - "Kinetic energy via factored mass matrix: KE = (1/2) theta_dot^* M theta_dot = (1/2) theta_dot^* [I + H Phi K] D [I + H Phi K]^* theta_dot"
+    - "Modal velocity transform: v = D^(1/2) [I + H Phi K]^* theta_dot, with KE = (1/2) sum_k v(k)^2"
+    - "Inverse transform: theta_dot = [I - H Psi K]^* D^(-1/2) v"
+    - "CM velocity solve: M_S V_CM = h_S, with system spatial inertia M_S = R(n)"
+    - "Nose-Hoover CM growth: V_CM(t) = V_CM(0) exp(-ln s_t); negative ln s_t drives the flying ice cube"
+  invariants:
+    - "Standard equipartition fails for CICMD (intra-cluster atom velocities are fully correlated); use modal coordinates instead."
+    - "Velocities assigned as zero-mean unit-variance normals in modal coords, recovered to theta_dot via O(N) base-to-tips recursion, then CM velocity reset and rescaled to target T."
+    - "CM linear and angular momentum must be periodically nulled or the flying ice cube effect freezes internal motion at large time steps."
+    - "Fixman correction potential is required to remove the systematic thermodynamic bias from holonomic constraints (noted as future numerical work)."
+  summary: >
+    Addresses the practical correctness issues unique to constrained internal-coordinate MD in the GNEIMO/SOA
+    framework: a rigorous modal-coordinate velocity initialization that satisfies a CICMD equipartition
+    principle, an O(N) composite-inertia method to null center-of-mass momentum, identification and cure of a
+    Nose-Hoover flying-ice-cube effect, suitable integrators (RK4, Lobatto, CVODE) for the nonseparable
+    Hamiltonian, and adaptive freeze/thaw coarse graining. It explicitly flags the Fixman compensating potential
+    as needed to remove constraint bias. Relevant to: generalized-coordinate velocity initialization (equipartition), momentum nulling, thermostat/integrator choice, and the Fixman correction.
+
+- title: "GneimoSim: A Modular Internal Coordinates Molecular Dynamics Simulation Package"
+  authors: ["Larsen, A. B.", "Wagner, J. R.", "Kandel, S.", "Salomon-Ferrer, R.", "Vaidehi, N.", "Jain, A."]
+  year: 2014
+  venue: "Journal of Computational Chemistry, 35, 2245-2255"
+  doi: "10.1002/jcc.23743"
+  path: references/papers/jcc.23743.md
+  tags: [icmd, torsional-md, internal-coordinates, fixman, soa, gneimo, constraints, enhanced-sampling, software, multiscale]
+  key_terms:
+    - "GNEIMO -- generalized Newton-Euler inverse mass operator method for internal-coordinate MD"
+    - "cluster -- group of atoms treated as one rigid body; granularity knob for the model"
+    - "hinge -- 1-to-6 DOF joint connecting clusters; torsion-only hinge gives torsional MD (TMD)"
+    - "BAT coordinates -- bond/angle/torsion relative (internal) coordinates"
+    - "Fixman potential -- compensating potential removing statistical bias from hard constraints"
+    - "equipartition principle for ICMD -- thermodynamically correct velocity initialization under constraints"
+    - "dynamic clustering -- freezing/thawing DOF during a run to change model coarseness"
+    - "spatial operator algebra (SOA) -- O(N) recursive multibody dynamics from robotics"
+  key_equations:
+    - "Constrained EOM: M(theta)*theta_ddot + C(theta,theta_dot) = T(theta)"
+    - "Mass matrix mass-metric M(theta) is configuration-dependent and dense in internal coordinates"
+    - "Fixman compensating potential V_c(theta) = (1/2)*ln det{M(theta)} (added to the force field)"
+  invariants:
+    - "Acceptance/statistical correctness requires the Fixman det-mass-matrix correction when bond angles are frozen."
+    - "Solving the EOM exactly in O(N) avoids assembling or inverting M(theta)."
+    - "Constrained (ODE) internal-coordinate model replaces the DAE form of constrained Cartesian dynamics."
+  summary: >
+    Describes the GneimoSim software implementing the SOA-based O(N) GNEIMO internal-coordinate MD
+    method, where molecules are rigid clusters joined by 1-6 DOF hinges (torsional MD when bonds and
+    angles are frozen). Its load-bearing scientific content for sampling is the configuration-dependent
+    mass-metric M(theta), the O(N) recursive solver that never assembles M, and the Fixman compensating
+    potential (1/2)*ln det{M} that removes the systematic bias hard constraints inject into the
+    equilibrium pdf. Relevant to: internal-coordinate engine, constraints, Fixman/Jacobian correction.
+
+- title: "A Fast Recursive Algorithm for Molecular Dynamics Simulation"
+  authors: ["Jain, A.", "Vaidehi, N.", "Rodriguez, G."]
+  year: 1993
+  venue: "Journal of Computational Physics, 106, 258-268"
+  doi: ""
+  path: references/papers/JCompPhys-1993-v106-n2-p258-JainRodriguez-OrderNMolecularDynamics-1.md
+  tags: [internal-coordinates, soa, spatial-operator-algebra, mass-matrix, articulated-body, on-algorithm, clusters, hinges, recursive-dynamics]
+  key_terms:
+    - "spatial operator algebra -- coordinate-free 6D operator formalism for multibody dynamics"
+    - "cluster/hinge model -- rigid atom subunits coupled by 0-6 DOF hinges, tree topology"
+    - "phi (rigid-body propagation operator) -- lower-triangular spatial transform between hinge frames"
+    - "H (hinge map operator) -- 6-by-m matrix giving relative motion across a hinge; angular-over-linear ordering"
+    - "Newton-Euler factorization -- M = H*phi*M_link*phi^transpose*H^transpose"
+    - "innovations factorization -- square invertible LDL* factorization of M via articulated-body Riccati recursion"
+    - "articulated-body inertia P(k) -- solution of discrete Riccati recursion outboard of hinge k"
+  key_equations:
+    - "EOM: M(theta)*theta_ddot + C(theta,theta_dot) = T(theta)"
+    - "Newton-Euler factorization: M = H*phi*M*phi^*  *H^*"
+    - "Innovations factorization: M = [I + H*phi*K] D [I + H*phi*K]^*"
+    - "Inverse factor: [I + H*phi*K]^-1 = [I - H*psi*K]"
+    - "Mass matrix inverse: M^-1 = [I - H*psi*K]^* D^-1 [I - H*psi*K]"
+    - "Riccati recursion: P(k) = phi(k,k-1) P+(k-1) phi*(k,k-1) + M(k); D(k)=H(k)P(k)H*(k); G(k)=P(k)H*(k)D^-1(k)"
+  invariants:
+    - "M, M^-1, and their factors are applied as O(N) tip-to-base/base-to-tip recursions, never assembled."
+    - "Forces enter as Cartesian atom gradients folded into spatial cluster forces; no gradient of potential w.r.t. internal coords is needed."
+    - "Phi (force transform) vs Phi^* (velocity transform) sign/transpose convention must be preserved; angular-over-linear spatial ordering."
+    - "Only tree-topology (branched, no closed loops among clusters) models give pure ODEs."
+  summary: >
+    Foundational SOA paper deriving the O(N) recursive solution of the internal-coordinate equations of
+    motion, reducing cost from O(N^3) to linear by exploiting the innovations (square LDL*) factorization
+    of the mass matrix and its closed-form inverse, computed via an articulated-body (Kalman/Riccati)
+    recursion. This is exactly the operator machinery a constraint-based internal-coordinate HMC engine
+    uses to apply M, M^-1 and sqrt(M) as O(N) operators rather than assembling them. Relevant to:
+    O(n) multibody engine, mass-metric operators, articulated-body inertia.
+
+- title: "Compensating Mass Matrix Potential for Constrained Molecular Dynamics"
+  authors: ["Jain, A."]
+  year: 1997
+  venue: "Journal of Computational Physics, 136, 289-297"
+  doi: "10.1006/jcph.1997.5731"
+  path: references/papers/jcph.1997.5731.md
+  tags: [fixman, metric-tensor, compensating-potential, constraints, soa, mass-matrix-determinant, articulated-body, on-algorithm, jacobian-correction]
+  key_terms:
+    - "compensating mass-matrix (metric-tensor) potential -- V_c = (1/2) ln det{M(theta)}"
+    - "compensating hinge torque T_c -- gradient of V_c needed as added force in constrained MD"
+    - "mass-matrix sensitivity M_theta(i) -- closed-form derivative of M w.r.t. hinge angle theta_i"
+    - "articulated-body inertia P(k), D(k) -- byproducts of the O(N) solver reused for V_c and T_c"
+    - "NEIMO -- Newton-Euler inverse mass operator software implementing the algorithm"
+  key_equations:
+    - "Modified potential: V'(theta) = V(theta) + V_c(theta), V_c = (1/2) ln det{M(theta)}"
+    - "Constrained partition function carries det{M^(1/2)(theta)}: Z = c * integral det{M^(1/2)} exp(-V/kT) dtheta"
+    - "Compensating torque: T_c(k) = (1/2) Trace{ M^-1(theta) * dM/dtheta(k) }"
+    - "Closed form: V_c(theta) = (1/2) sum_i ln det{D(i)} since det{M} = det{D}"
+    - "Simplified torque: T_c(i) = Trace{P(i) Y(i) H(i)} = -h*(i) F[Q11 + Q22]"
+  invariants:
+    - "Constrained-coordinate ensemble averages are biased by det{M^(1/2)(theta)} unless V_c is added."
+    - "det{I + H*phi*K} = 1, hence det{M} = det{D}; det only needs the block-diagonal D(i) from the solver."
+    - "Adding V_c restores the unconstrained equilibrium pdf and barrier-crossing rates."
+    - "T_c for the six base-cluster DOF is zero."
+  summary: >
+    Derives a tractable O(N) algorithm for the Fixman compensating potential V_c = (1/2) ln det{M(theta)}
+    and its gradient (the compensating torque) for arbitrary tree-topology molecules, using the same SOA
+    articulated-body quantities (P, D) already produced by the constrained-dynamics solver. The key
+    results det{M} = det{D} and T_c(k) = (1/2) Trace{M^-1 dM/dtheta(k)} are precisely the metric-tensor
+    correction an internal-coordinate sampler must include to keep its stationary distribution unbiased.
+    Relevant to: Fixman/U_Jacobian correction, mass-metric determinant, acceptance test.
+
+- title: "Fixman compensating potential for general branched molecules"
+  authors: ["Jain, A.", "Kandel, S.", "Wagner, J.", "Larsen, A.", "Vaidehi, N."]
+  year: 2013
+  venue: "Journal of Chemical Physics, 139, 244103"
+  doi: "10.1063/1.4851315"
+  path: references/papers/JCPSA6-000139-244103_1.md
+  tags: [fixman, bat-coordinates, mass-matrix-determinant, constraints, torsional-md, jacobian, gneimo, soa, branched-molecules, pdf-recovery, validation]
+  key_terms:
+    - "BAT mass matrix M_B = J_B^* M_c J_B -- internal-coordinate metric from Cartesian masses via Jacobian J_B"
+    - "Go-Scheraga Jacobian determinant -- det{J_B} = sin(theta_ex) d2^2 prod d_i^2 sin(theta_i), independent of torsions"
+    - "Fixman potential U_f = (1/2) kT ln( det{M(alpha)} / det{M_B(alpha,q0)} )"
+    - "Fixman torque T(i) = -dU_f/dalpha_i, added to constrained EOM"
+    - "FLEXIBLE / TORSIONAL / FIXMAN -- three simulation sets validating uniform-torsion-pdf recovery"
+    - "D(i) scalars -- block-diagonal byproducts giving det{M} cheaply"
+  key_equations:
+    - "Hamiltonian: H = (1/2) p^* M_B^-1(alpha,q) p + U(alpha,q)"
+    - "Configuration pdf (flexible): rho(alpha,q) proportional to det{M_B^(1/2)(alpha,q)} exp(-U/kT)"
+    - "Constrained pdf: rho(alpha) proportional to det{M^(1/2)(alpha)} exp(-U(alpha,q0)/kT)"
+    - "Fixman potential (torsions only): U_f(alpha) = c_f + (1/2) ln det{M(alpha)}"
+    - "det{M} = det{D(0)} * prod_{i=1}^{N-6} D(i)"
+    - "Fixman torque: T(i) = h^*(i) F[Q11 + Q22], P(i)Y(i) = [[Q11,Q12],[Q21,Q22]]"
+  invariants:
+    - "Hard constraints make torsion pdfs non-uniform (bimodal); adding U_f recovers the flexible-model uniform pdf and free-energy surface."
+    - "det{J_B} (and the M_B contribution) is independent of torsion angles; only det{M(alpha)} carries torsion dependence."
+    - "GNEIMO-Fixman keeps overall cost O(N); measured ~24% solver overhead (~2.24x vs 2x flexible per step)."
+    - "Acceptance/equilibrium correctness requires the Fixman det-mass-matrix term for angle-constrained models."
+  summary: >
+    Validates the SOA GNEIMO-Fixman algorithm that evaluates the Fixman potential U_f and torque for
+    branched molecules of arbitrary size at O(N) cost, using det{M} = prod D(i) from the constrained
+    solver. Langevin simulations on C4-C15 chains and alanine/valine dipeptide and chignolin show that
+    constraining bonds/angles biases torsion pdfs (bimodal) and that adding U_f restores the uniform
+    flexible-model distribution and free-energy surface. This is the direct recipe and numerical evidence
+    for the metric correction in an internal-coordinate sampler. Relevant to: Fixman/U_Jacobian term,
+    BAT/Z-matrix Jacobian, mass-metric determinant, detailed-balance correctness.
+
+- title: "Constant Temperature Constrained Molecular Dynamics: The Newton-Euler Inverse Mass Operator Method"
+  authors: ["Vaidehi, N.", "Jain, A.", "Goddard, W. A., III"]
+  year: 1996
+  venue: "Journal of Physical Chemistry, 100, 10508-10517"
+  doi: "10.1021/jp953043o"
+  path: references/papers/jp953043o.md
+  tags: [neimo, nose-hoover, thermostat, canonical-ensemble, internal-coordinates, constraints, soa, mass-matrix, torsional-md, time-step]
+  key_terms:
+    - "NEIMO -- Newton-Euler inverse mass operator, O(N) constrained internal-coordinate solver"
+    - "Nose extended system -- adds bath DOF s and momentum p_s to sample the canonical (T,V,N) ensemble"
+    - "Hoover real-time reformulation -- friction coefficient zeta replaces virtual-time scaling"
+    - "Nose mass Q / relaxation time tau_s -- heat-bath coupling parameter, tau_s^2 = Q/(N k T_B)"
+    - "cluster/hinge tree -- rigid bodies joined by 1-6 DOF hinges; base cluster has 6 DOF"
+    - "innovations LDL* factorization -- closed-form M^-1 used by the recursive solver"
+  key_equations:
+    - "Constrained EOM: M(theta)*theta_ddot + C(theta,theta_dot) = T(theta)"
+    - "M^-1 = [I - H*psi*K]^transpose D^-1 [I - H*psi*K]"
+    - "Hoover accel: theta_ddot = M^-1 [T - C_H] - zeta*theta_dot"
+    - "Bath EOM (Hoover): zeta_dot = (1/tau_s^2) (T/T_B - 1), with g = N"
+    - "Nose g = N + 1 gives correct canonical partition function of the physical subsystem"
+    - "KE = (1/2) theta_dot^* M(theta) theta_dot = (1/2) N k T"
+  invariants:
+    - "Correct canonical distribution requires g = N+1 (Nose) / g = N (Hoover, Liouville-conserving)."
+    - "Mass matrix M is never inverted explicitly; M^-1 applied via O(N) innovations recursion."
+    - "Recommended bath coupling 0.05 ps < tau_s < 0.07 ps; tau_s must exceed ~1.6*dt for stability."
+    - "Constraining bonds/angles permits ~10x larger time steps (20-30 fs) than Cartesian dynamics."
+  summary: >
+    Extends the O(N) NEIMO constrained internal-coordinate solver to the canonical ensemble by deriving
+    the Nose and Hoover thermostatted equations of motion in torsional coordinates, adding only a
+    friction-like term zeta*M*theta_dot folded into the Coriolis force. It fixes the bath-coupling
+    constant (tau_s) for stable thermostatted torsional MD and confirms 10x larger time steps. Useful as
+    the temperature-control and configuration-dependent mass-metric (M(theta), KE = (1/2) theta_dot^* M theta_dot)
+    reference for a canonical internal-coordinate sampler. Relevant to: thermostat/canonical sampling,
+    mass-metric M(q), O(n) solver.
+
+- title: "On the Use of Classical Statistical Mechanics in the Treatment of Polymer Chain Conformation"
+  authors: ["Go, Nobuhiro", "Scheraga, Harold A."]
+  year: 1976
+  venue: "Macromolecules, 9(4), 535-542"
+  doi: "10.1021/ma60052a001"
+  path: references/papers/ma60052a001.md
+  tags: [statistical-mechanics, internal-coordinates, jacobian, mass-metric, constraints, partition-function, dihedral, fixman]
+  key_terms:
+    - "classical rigid model -- bond lengths/angles fixed as hard constraints from the outset; gives a det(G) weight in the partition function"
+    - "classical flexible model -- hard variables conceptually allowed to vibrate under strong potential, then integrated out; gives no metric weight"
+    - "hard vs soft variables -- hard = bond lengths and bond angles (high-frequency); soft = dihedral angles plus external (rigid-body) DOF"
+    - "G matrix -- the m-by-m mass-metric (kinetic-energy) matrix in dihedral coordinates, G = (H0)^-1, the Schur complement of the full mass matrix"
+    - "det G -- conformation-dependent determinant of the dihedral mass-metric; the metric correction term that distinguishes the two models"
+    - "Jacobian D -- Cartesian-to-internal coordinate transform Jacobian; product of factors depending only on hard and external variables, independent of dihedrals"
+  key_equations:
+    - "Flexible-model partition function: Z = const * integral exp(-beta*F0(Q)) dQ (no metric weight)"
+    - "Rigid-model partition function: Z = const * integral (1/det G)^(1/2) exp(-beta*F0(Q)) dQ"
+    - "Kinetic energy in dihedral momenta: K_r = (1/2) P^T G P with G = (H0)^-1 = G0 - G' (G'')^-1 (G')^T"
+    - "Jacobian: D = [det G * det G'' * (product m_k)^3]^(-1/2)"
+    - "Rigid vs flexible link: Z_flexible = Z_rigid times product_i (kT / (2*pi*hbar*nu_i)), the conformation-dependent harmonic-oscillator factors"
+    - "Cartesian-to-internal Jacobian factorizes: D = sin(Theta) * product_k d_k^2 * product_k sin(theta_k), independent of dihedral angles"
+  invariants:
+    - "The two classical constraint treatments are NOT equivalent: fixing bond lengths/angles a priori (rigid) introduces a (det G)^(-1/2) mass-metric weight that the flexible model lacks."
+    - "If the conformation dependence of the hard-mode vibrational frequencies is neglected, rigid and flexible models coincide."
+    - "The metric weight det G depends on the soft (dihedral) variables and cannot be pulled outside the configurational integral."
+    - "Jacobian of the Cartesian-to-internal transform is independent of the dihedral angles (depends only on hard and external variables)."
+  summary: >
+    The foundational paper establishing that constraining bond lengths and bond angles
+    rigidly versus letting them vibrate and integrating them out yields two non-equivalent
+    partition functions, differing by the conformation-dependent mass-metric factor
+    (det G)^(-1/2) over the dihedral coordinates. This det G (equivalently the Fixman /
+    mass-metric determinant) is exactly the correction an internal-coordinate sampler must
+    apply to recover pi(x) ~ exp(-beta*U) when sampling in constrained torsion space.
+    The authors argue the flexible model (no metric weight) is the better physical
+    approximation, but the rigid-model metric is what a hard-constrained HMC proposal
+    actually distributes over. Relevant to: Fixman/U_Jacobian correction and the
+    mass-metric M(q) treatment for internal-coordinate proposals.
+
+- title: "Fast Flexible Modeling of RNA Structure Using Internal Coordinates"
+  authors: ["Flores, Samuel Coulbourn", "Sherman, Michael A.", "Bruns, Christopher M.", "Eastman, Peter", "Altman, Russ Biagio"]
+  year: 2011
+  venue: "IEEE/ACM Transactions on Computational Biology and Bioinformatics, 8(5), 1247-1257"
+  doi: "10.1109/TCBB.2010.104"
+  path: references/papers/nihms641725.md
+  tags: [internal-coordinates, multibody, simbody, molmodel, constraints, O-n-dynamics, rigid-body, RNA, mobilizer]
+  key_terms:
+    - "mobilizer -- joint that explicitly grants 1-6 DOF between a parent and child rigid body; no motion exists unless granted (opposite of Cartesian-then-constrain)"
+    - "internal/generalized coordinates q -- nonlinear joint coordinates relating each body to its parent in an open tree topology"
+    - "composite system mass matrix M(q) -- n-by-n articulated mass matrix; applied as an O(n) operator, never assembled"
+    - "kinematic coupling matrix N(q) -- block-diagonal map from generalized speeds u to coordinate derivatives qdot"
+    - "constraint Jacobian G = dg/dq -- with Lagrange multipliers lambda for inter-body loop constraints g(t,q)=0"
+    - "O(n) recursive multibody -- equations of motion solved in time linear in number of bodies (vs claimed O(n^3) for naive internal-coordinate MD)"
+  key_equations:
+    - "Unconstrained EOM: qdot = N(q) u ; M(q) udot = f(t,q,u)"
+    - "Constrained EOM (DAE index 3): qdot = N(q) u ; M(q) udot = f(t,q,u) - G^T lambda ; g(t,q) = 0"
+    - "Base-pair alignment rotation: A1_R_B2 = (G_R_A1)^-1 * G_R_B2, with G_R_A1 = G_R_B1 * B1_R_A1"
+  invariants:
+    - "Degrees of freedom exist only where a mobilizer grants them; rigidifying bonds reduces DOF and cost (the more rigid, the cheaper)."
+    - "Constrained system is a mixed DAE of index 3, distinct from the pure-ODE unconstrained case; constraints stabilized by coordinate projection."
+    - "Computational cost scales O(n) in the number of mobilities, not the number of atoms."
+  summary: >
+    Describes the Simbody/Molmodel O(n) internal-coordinate multibody engine that
+    Robosample is built on: atoms are partitioned onto rigid bodies joined by mobilizers
+    (pin/torsion/free joints), so only granted joint DOF move and bond lengths/angles stay
+    fixed without SHAKE/LINCS-style constraints. It gives the canonical EOM form
+    qdot = N(q)u, M(q)udot = f - G^T*lambda with the articulated mass matrix M(q) applied
+    as an O(n) operator and never explicitly formed. Relevant to: the multibody engine,
+    frame chains F/M, mobilizers, and the M(q) articulated-body operators used by World.
+
+- title: "Self-Guided Langevin Dynamics via Generalized Langevin Equation"
+  authors: ["Wu, Xiongwu", "Brooks, Bernard R.", "Vanden-Eijnden, Eric"]
+  year: 2016
+  venue: "Journal of Computational Chemistry, 37(6), 595-601"
+  doi: "10.1002/jcc.24015"
+  path: references/papers/nihms-706794.md
+  tags: [enhanced-sampling, langevin, detailed-balance, guiding-force, canonical-ensemble, GLE, fluctuation-dissipation, reweighting]
+  key_terms:
+    - "guiding force g_i -- extra force on low-frequency (running-averaged) momentum that accelerates slow modes without changing the energy surface or temperature"
+    - "low-frequency momentum p-tilde -- exponential running average of momentum over a local-averaging time t_L; acts as a low-pass filter"
+    - "guiding factor lambda -- strength of the guiding force; energy-conservation factor xi cancels net work"
+    - "memory kernel K(t-tau) -- non-Markovian friction kernel of a generalized Langevin equation tied to noise by fluctuation-dissipation"
+    - "SGLD-GLE -- modified random force restoring detailed balance so NVT/NPT are sampled exactly without reweighting"
+    - "detailed-balance breaking -- plain SGLD is non-equilibrium; its stationary 'SGLD ensemble' is not known explicitly and needs reweighting"
+  key_equations:
+    - "SGLD EOM: pdot_i = f_i + g_i - gamma*p_i + R_i, with <R_i(0)R_j(t)> = 2*m_i*kT*gamma*delta(t)*delta_ij"
+    - "Guiding force: g_i = lambda*gamma*p-tilde_i - xi*gamma*p_i (xi cancels net work)"
+    - "GLE form: pdot_i = f_i - gamma * integral K(t-tau) p_i(tau) dtau + eta_i, with <eta_i(t)eta_j(t')> = delta_ij*m_i*kT*gamma*K(t-t')"
+    - "Detailed-balance-restoring kernel: K(t) = 2*delta(t) - (lambda/t_L)*exp(-t/t_L), with lambda = mu*(2-mu)"
+    - "Exact stationary density: rho ~ exp(-(1/kT)(E_p + sum_i(|p_i|^2/2m_i + t_L|g_i|^2/(2*m_i*gamma*mu^2))))"
+  invariants:
+    - "A guiding force that breaks detailed balance produces an unknown stationary distribution and requires reweighting to recover the canonical ensemble."
+    - "Restoring detailed balance via fluctuation-dissipation (modifying the random force to match the friction kernel) recovers exact NVT/NPT sampling."
+    - "The guiding force must do zero net work (orthogonal to momentum) to avoid heating/cooling the system."
+  summary: >
+    Shows how to accelerate low-frequency conformational motions with a guiding force while
+    preserving the exact canonical distribution: ordinary self-guided Langevin dynamics
+    breaks detailed balance (hence needs reweighting), but recasting it as a generalized
+    Langevin equation whose noise satisfies fluctuation-dissipation (kernel
+    K(t)=2*delta(t)-(lambda/t_L)exp(-t/t_L)) restores detailed balance and samples NVT/NPT
+    exactly. The lesson maps directly onto the guidance-vs-acceptance Hamiltonian split:
+    a distorted/guided proposal is legitimate only if the stationary target is preserved,
+    otherwise a correction (reweighting or an acceptance test) is mandatory.
+    Relevant to: enhanced-sampling moves and the guidance-vs-acceptance distinction in the HMC acceptance test.
+
+- title: "Torsion Angle Dynamics: Reduced Variable Conformational Sampling Enhances Crystallographic Structure Refinement"
+  authors: ["Rice, Luke M.", "Brunger, Axel T."]
+  year: 1994
+  venue: "Proteins: Structure, Function, and Genetics, 19(4), 277-290"
+  doi: "10.1002/prot.340190403"
+  path: references/papers/rice_brunger_proteins_1994.md
+  tags: [torsion-angle-dynamics, internal-coordinates, constraints, simulated-annealing, recursive-dynamics, bae-haug, refinement, sampling]
+  key_terms:
+    - "torsion-angle dynamics -- MD restricted to dihedral DOF (about 1/10 of Cartesian DOF), eliminating high-frequency bond/angle vibrations"
+    - "Bae-Haug recursive formulation -- exact constrained EOM for arbitrary holonomic constraints, derived via D'Alembert's principle, using small 6x6 matrices"
+    - "spatial-operator / aggregation -- inward sweep aggregates tip-body inertia into inboard bodies, then outward sweep recovers accelerations (recursive O(n))"
+    - "system inertia matrix M and generalized force Q -- acceleration a = M^-1(r) Q(r,rdot) with M depending on positions, becoming velocity-dependent"
+    - "spatial velocity Y_i = [rdot_i; w_i] -- stacked translational and angular velocity 6-vector per body"
+    - "high-temperature sampling -- removing stiff vibrations permits stable MD at 5000-10000 K, greatly enlarging the radius of convergence"
+  key_equations:
+    - "Newton EOM: m_i * d2 r_i/dt2 = -dE/dr_i"
+    - "Constrained acceleration: a(r,rdot) = M^-1(r) Q(r,rdot)"
+    - "Angular velocity constraint across a torsion bond: w_j = w_i + h_hat_ij * qdot_ij"
+    - "Velocity recursion: Y_j = B_ij^(1) Y_i + B_ij^(2) qdot_ij (B^(1) = [[I, -r_tilde_ij],[O, I]])"
+    - "D'Alembert principle: sum_k delta_Z_k^T (M_k Ydot_k - Q_k) = 0 for all constraint-satisfying virtual displacements"
+    - "Refinement target: E = E_chem + w_xray * E_xray"
+  invariants:
+    - "Only relative motion permitted between two bonded bodies is rotation about the connecting bond axis (fixed bond length/angle)."
+    - "Virtual work of applied forces vanishes for all virtual displacements that do not violate the holonomic constraints (D'Alembert)."
+    - "Constraining bond lengths/angles removes the high-frequency vibrations that limit the integration timestep/temperature, enabling much higher sampling temperatures."
+    - "Closed loops (e.g. disulfides) are not exactly handled by the open-tree recursion; treated approximately via harmonic distance restraints."
+  summary: >
+    Introduces high-temperature molecular dynamics constrained to torsion angles, solved
+    exactly with the Bae-Haug recursive (O(n)) constrained-dynamics formulation that maps
+    Cartesian gradients into internal accelerations via small 6x6 spatial matrices and
+    D'Alembert's principle. Reducing to dihedral DOF and eliminating stiff bond/angle
+    vibrations permits stable dynamics at 5000-10000 K, dramatically enlarging the radius
+    of convergence for crystallographic refinement. This is the algorithmic ancestor of
+    internal-coordinate/rigid-body propagation: spatial-vector velocities (angular over
+    linear), tree topology, inboard/outboard aggregation, and the M^-1*Q articulated
+    solve. Relevant to: the O(n) multibody propagator and torsion-space proposal moves.
+
+- title: "Torsion-Angle Molecular Dynamics as a New Efficient Tool for NMR Structure Calculation"
+  authors: ["Stein, Evan G.", "Rice, Luke M.", "Brunger, Axel T."]
+  year: 1997
+  venue: "Journal of Magnetic Resonance, 124(1), 154-164"
+  doi: "10.1006/jmre.1996.1027"
+  path: references/papers/Stein1997.md
+  tags: [torsion-angle-dynamics, internal-coordinates, constraints, simulated-annealing, bae-haug, NMR-refinement, sampling, annealing-protocol]
+  key_terms:
+    - "torsion-angle MD -- dihedral-space dynamics (Bae-Haug recursion) reducing adjustable parameters ~10-fold for a better observable-to-parameter ratio"
+    - "four-stage annealing protocol -- high-T torsion MD (50000 K), slow-cool torsion MD, Cartesian slow-cool, conjugate-gradient minimization"
+    - "hybrid energy function E = E_chem + E_nmr -- chemical restraints plus NOE distance and J-coupling dihedral restraints"
+    - "soft repulsive nonbonded -- purely repulsive quartic potential replacing Lennard-Jones to avoid trapping/instability at high T"
+    - "ring-closure approximation -- non-rigid closed bonding networks (ribose rings) need one bond allowed to vibrate, forcing lower T for nucleic acids"
+    - "temperature coupling -- pseudo-friction f = beta_i*(T0/T - 1)*v_i adds/removes heat to hold the bath temperature"
+  key_equations:
+    - "Hybrid energy: E = E_chem + E_nmr, with E_nmr = w_NOE*E_NOE + w_dihedral*E_dihedral"
+    - "Temperature-coupled EOM: m_i * d2 r_i/dt2 = -dE/dr_i + beta_i*(T0/T - 1)*v_i"
+    - "Angular velocity across torsion bond: w_j = w_i + h_hat_ij * qdot_ij (same recursion as Rice-Brunger 1994)"
+    - "NOE restraint: flat-bottomed parabolic well with soft asymptote beyond d_upper + 0.5"
+    - "Quartic repulsive vdW: E_vdw = [(0.8*sigma*2^(1/6))^2 - R^2]^2"
+  invariants:
+    - "Fixed bond lengths and angles must be regularized before torsion-space dynamics; only dihedral DOF evolve during the high-T stages."
+    - "Closed rings cannot be enforced exactly by the open-tree recursion; one ring bond is left flexible, which limits the safe simulation temperature for nucleic acids."
+    - "Reducing to torsion DOF improves the observable-to-parameter ratio and permits much higher annealing temperatures than Cartesian MD."
+  summary: >
+    Applies torsion-angle molecular dynamics (the Bae-Haug recursive constrained-dynamics
+    engine of Rice-Brunger) to NMR structure calculation, folding extended strands to
+    correct structures with higher success rate and efficiency than Cartesian MD or
+    distance-geometry, even reaching B-form DNA. It demonstrates a concrete simulated
+    annealing protocol over internal coordinates: high-T torsion MD (up to 50000 K) with
+    a soft quartic nonbonded potential, slow cooling, then Cartesian relaxation. The work
+    confirms that dihedral-space propagation with fixed bond lengths/angles is a robust,
+    high-temperature conformational sampler, and flags the ribose ring-closure
+    approximation that internal-coordinate codes must handle. Relevant to: torsion-space
+    sampling moves, annealing schedules, and ring-closure handling in the multibody engine.

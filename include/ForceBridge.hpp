@@ -74,6 +74,13 @@ class ForceBridge {
         for (int i = 0; i < model_.nu; ++i) {
             mob[i] = robo::Real(0);
         }
+        // When some atoms are Cartesian-integrated inside the proposal
+        // (solvent-relaxing NCMC), the velocity-Verlet for those atoms needs the
+        // raw per-atom Cartesian force. Cache it here (the only place the per-atom
+        // force vector exists) so the integrator can read it back. Skipped
+        // entirely otherwise -- the welded engine never allocates/reads it.
+        const bool cacheAtomForces = s.wantsAtomForces();
+        robo::Vec3* atomForce = cacheAtomForces ? s.atomForceG() : nullptr;
         const robo::Vec3* posG = s.atomPosG();
         const robo::Transform* X_GB = s.X_GB();
         for (int a = 0; a < model_.numAtoms; ++a) {
@@ -92,6 +99,9 @@ class ForceBridge {
             }
             const int b = model_.atomBody[a];
             const robo::Vec3 f(forces[a][0], forces[a][1], forces[a][2]);
+            if (atomForce) {
+                atomForce[a] = f; // per-atom Cartesian force for the solvent Verlet
+            }
             const robo::Vec3 r = posG[a] - X_GB[b].p(); // station in Ground, about body origin
             BF[b][1] += f;                              // linear (force)
             BF[b][0] += r % f;                          // angular (moment about origin); SimTK % == cross

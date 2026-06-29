@@ -208,29 +208,32 @@ auto OpenMMContext::initialize(const SystemTopology& systemTopology) -> bool {
         system->addForce(force);
     };
 
-    // Slow (long-range) forces -> outer tier.
-    addForce(createNonbondedForce(systemTopology), "NonbondedForce", /*slow*/ true);
+    // Slow (long-range) forces -> outer tier. Capture the main NonbondedForce: the
+    // PME path mutates it in place (charge offsets) for alchemy.
+    auto* mainNonbonded = createNonbondedForce(systemTopology);
+    addForce(mainNonbonded, "NonbondedForce", /*slow*/ true);
     if (gbsaUsable) {
         addForce(createGBSAOBCForce(systemTopology), "GBSAOBCForce", /*slow*/ true);
     }
     if (systemTopology.hasNBfix) {
         addForce(createCustomNonbondedForce(systemTopology), "CustomNonbondedForce", /*slow*/ true);
     }
-    // NCMC: per-molecule intermolecular decoupling correction (vacuum/implicit only).
+    // NCMC: per-molecule intermolecular decoupling.
     if (alchemyEnabled) {
-        if (systemTopology.nonbondedMethod == NonbondedMethod::Ewald
-            || systemTopology.nonbondedMethod == NonbondedMethod::PME
-            || systemTopology.nonbondedMethod == NonbondedMethod::CutoffPeriodic) {
-            throw std::runtime_error(
-                "NCMC alchemy is not supported for periodic/PME nonbonded yet: reciprocal "
-                "space couples all atoms, so a per-molecule correction force is not exact. "
-                "Use NoCutoff/CutoffNonPeriodic (vacuum/implicit).");
-        }
         if (systemTopology.hasNBfix) {
             throw std::runtime_error("NCMC alchemy + NBFIX is not supported in v1.");
         }
-        alchemyForce = createAlchemyCorrectionForce(systemTopology);
-        addForce(alchemyForce, "AlchemyCorrection", /*slow*/ true);
+        if (isPeriodic(systemTopology.nonbondedMethod)) {
+            // Explicit solvent (PME/Ewald/CutoffPeriodic): see createAlchemyDecouplingForces.
+            auto [soft, hard] = createAlchemyDecouplingForces(systemTopology, mainNonbonded);
+            addForce(soft, "AlchemySoftcoreAxR", /*slow*/ true);
+            addForce(hard, "AlchemyIntraAxA", /*slow*/ true);
+            alchemyForce = nullptr; // lambda is driven through mainNonbonded's offset
+        } else {
+            // Vacuum/implicit: exact linear A x rest scaling (unchanged).
+            alchemyForce = createAlchemyCorrectionForce(systemTopology);
+            addForce(alchemyForce, "AlchemyCorrection", /*slow*/ true);
+        }
     }
 
     // Fast (bonded) forces -> inner tier.
@@ -643,4 +646,85 @@ auto OpenMMContext::createUreyBradleyForce(const SystemTopology& systemTopology)
                        systemTopology.ureyBradleyStiffness[index] * 2.0);
     }
     return force;
+}
+
+auto OpenMMContext::createAlchemyDecouplingForces(const SystemTopology& sys, OpenMM::NonbondedForce* main)
+    -> std::pair<OpenMM::CustomNonbondedForce*, OpenMM::CustomNonbondedForce*> {
+    constexpr double kSoftcoreAlpha = 0.5; // Beutler soft-core; standard value
+
+    // (1) MAIN (PME) force. Electrostatics: charge(lambda)=lambda_inter*q via a
+    // parameter offset (base set to 0, scale = q) -- this is the ONLY route that
+    // scales the reciprocal-space sum correctly. It scales A's charge against
+    // everything, so intra-A electrostatics are ANNIHILATED for lambda<1 (a
+    // documented departure from pure decoupling; exact at lambda=1, hence
+    // unbiased -- the protocol is guidance only, acceptance is full H at lambda=1).
+    // Sterics: zero A's epsilon so MAIN computes no LJ involving A; rebuilt below.
+    // 1-4/exclusion exceptions are intramolecular and left untouched.
+    main->addGlobalParameter("lambda_inter", 1.0);
+    for (int i = alchemyBegin; i < alchemyEnd; ++i) {
+        double q = 0.0, sig = 0.0, eps = 0.0;
+        main->getParticleParameters(i, q, sig, eps);
+        main->setParticleParameters(i, 0.0, sig, 0.0);
+        main->addParticleParameterOffset("lambda_inter", i, q, 0.0, 0.0);
+    }
+
+    std::set<int> aSet, restSet;
+    for (int i = 0; i < sys.numAtoms; ++i) {
+        (i >= alchemyBegin && i < alchemyEnd ? aSet : restSet).insert(i);
+    }
+
+    // (2) Soft-core A x rest LJ, scaled by lambda_inter. lambda=1 -> exact LJ;
+    // lambda=0 -> 0; finite for all r at lambda<1 (no overlap singularity).
+    auto* soft = new OpenMM::CustomNonbondedForce("lambda_inter*4*eps*(1/(d*d) - 1/d);"
+                                                  "d = alpha*(1 - lambda_inter) + (r/sig)^6;"
+                                                  "eps = sqrt(eps1*eps2); sig = 0.5*(sig1 + sig2)");
+    soft->addGlobalParameter("lambda_inter", 1.0);
+    soft->addGlobalParameter("alpha", kSoftcoreAlpha);
+    soft->addPerParticleParameter("sig");
+    soft->addPerParticleParameter("eps");
+    for (int i = 0; i < sys.numAtoms; ++i) {
+        soft->addParticle({sys.atomsSigma[i], sys.atomsEpsilon[i]});
+    }
+    soft->addInteractionGroup(aSet, restSet); // A x rest only; no intermolecular exceptions exist
+
+    // (3) Hard intra-A LJ (lambda-independent). Restores the intra-solute LJ that
+    // (1) removed from MAIN, so lambda=1 reproduces the unmodified field. Excludes
+    // every intra-A pair MAIN carries as an exception (1-2/1-3 and 1-4) so they are
+    // not double-counted.
+    auto* hard = new OpenMM::CustomNonbondedForce(
+        "4*eps*((sig/r)^12 - (sig/r)^6); eps = sqrt(eps1*eps2); sig = 0.5*(sig1 + sig2)");
+    hard->addPerParticleParameter("sig");
+    hard->addPerParticleParameter("eps");
+    for (int i = 0; i < sys.numAtoms; ++i) {
+        hard->addParticle({sys.atomsSigma[i], sys.atomsEpsilon[i]});
+    }
+    hard->addInteractionGroup(aSet, aSet); // A x A only
+    const auto bothAlch = [&](int a, int b) {
+        return a >= alchemyBegin && a < alchemyEnd && b >= alchemyBegin && b < alchemyEnd;
+    };
+    for (int k = 0; k < sys.numScaling14; ++k) {
+        if (bothAlch(sys.scaling14I[k], sys.scaling14L[k])) {
+            hard->addExclusion(sys.scaling14I[k], sys.scaling14L[k]);
+        }
+    }
+    for (int k = 0; k < sys.numExclusions; ++k) {
+        if (bothAlch(sys.exclusionI[k], sys.exclusionJ[k])) {
+            hard->addExclusion(sys.exclusionI[k], sys.exclusionJ[k]);
+        }
+    }
+
+    // Match MAIN's LJ treatment (cutoff under any periodic method).
+    for (auto* f : {soft, hard}) {
+        if (isPeriodic(sys.nonbondedMethod)) {
+            f->setNonbondedMethod(OpenMM::CustomNonbondedForce::CutoffPeriodic);
+        } else if (sys.nonbondedMethod == NonbondedMethod::CutoffNonPeriodic) {
+            f->setNonbondedMethod(OpenMM::CustomNonbondedForce::CutoffNonPeriodic);
+        } else {
+            f->setNonbondedMethod(OpenMM::CustomNonbondedForce::NoCutoff);
+        }
+        if (f->getNonbondedMethod() != OpenMM::CustomNonbondedForce::NoCutoff) {
+            f->setCutoffDistance(sys.nonbondedCutoff);
+        }
+    }
+    return {soft, hard};
 }

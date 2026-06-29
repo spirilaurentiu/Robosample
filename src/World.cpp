@@ -21,8 +21,11 @@
 #include <numeric>
 #include <queue>
 #include <stdexcept>
+#include <string>
 
+#include "NCMCProtocol.hpp" // robo::ncmc::protocolLambda -- ONE schedule, prod + tests
 #include "NMA.hpp"
+#include "RobotIntegrator.hpp" // templated verletStep/stepTo/checkReversibility
 
 using robo::Real;
 using robo::Rotation;
@@ -73,8 +76,8 @@ struct DSU {
     }
 };
 
-bool isFlexible(BondMobility m) {
-    return m != BondMobility::Rigid;
+bool isFlexible(JointType m) {
+    return RobotModel::jointIsFlexible(m); // flexible == not Weld (== not Rigid)
 }
 
 inline void atomFrameFromGeometry(const Vec3* tgt,
@@ -245,8 +248,11 @@ World& World::add_sampler(double timeStep,
                      index_,
                      sampler_.timeStep);
     }
-    // AUTO default: Fixman + logSineSqr ON for non-Cartesian (torsional + docking)
-    // worlds, OFF for Cartesian (flat space => constant metric => no correction).
+    // AUTO default: Fixman ON for non-Cartesian (torsional + docking) worlds, OFF
+    // for Cartesian (flat space => constant metric => no correction). The
+    // orientational Jacobian (useOrientationJacobian) stays at its struct default
+    // (OFF) -- it is the Euler-angle factor and is wrong for quaternion roots; see
+    // SamplerConfig and World::calcLogSineSqrGamma2.
     sampler_.useFixman = useFixman.has_value() ? (*useFixman && !cartesian_) : !cartesian_;
     sampler_.moveType = docking_ ? MoveType::RigidKick : MoveType::MdHmc;
     return *this;
@@ -335,7 +341,26 @@ double World::setNMASoftModeFromHessian(const std::vector<double>& atomPosGFlat,
 // ----------------------------------------------------------------------------
 void World::buildModel(const SystemTopology& sys,
                        const Selection& sel,
-                       const std::vector<RootMobility>& rootMobilities) {
+                       const std::vector<JointType>& rootMobilities) {
+    // Retain the inputs so setRootMobility(ies) can rebuild this world in place.
+    // sys is Context-owned and outlives the World; sel / rootMobilities become
+    // this world's own copies. Guard the self-rebuild aliasing case (a setter
+    // passes &rootMobilities_ back in) so the copy stays well defined.
+    sys_ = &sys;
+    if (&sel != &sel_) {
+        sel_ = sel;
+    }
+    if (&rootMobilities != &rootMobilities_) {
+        rootMobilities_ = rootMobilities;
+    }
+
+    // These three are the only append-only (push_back, no prior clear/assign)
+    // members below; clearing them here is what makes buildModel idempotent and
+    // therefore safe to re-run on a root-mobility change.
+    model_.bodyChildren.clear();
+    model_.bodyAtoms.clear();
+    model_.quaternionQStart.clear();
+
     const int nAtoms = sys.numAtoms;
     model_.numAtoms = nAtoms;
 
@@ -352,8 +377,7 @@ void World::buildModel(const SystemTopology& sys,
         if (sys.bondsRingClosing[k]) {
             continue;
         }
-        const BondMobility mob =
-            (k < (int)sel.bondMobility.size()) ? sel.bondMobility[k] : BondMobility::Rigid;
+        const JointType mob = (k < (int)sel.bondMobility.size()) ? sel.bondMobility[k] : JointType::Rigid;
         if (!isFlexible(mob)) {
             dsu.join(sys.bondsI[k], sys.bondsJ[k]);
         }
@@ -379,17 +403,17 @@ void World::buildModel(const SystemTopology& sys,
 
     struct Edge {
         int bi, bj, ai, aj;
+        JointType jt; // the per-bond joint type (was previously discarded -> always Torsion)
     };
     std::vector<Edge> jointEdges;
     for (int k = 0; k < sys.numBonds; ++k) {
         if (sys.bondsRingClosing[k]) {
             continue;
         }
-        const BondMobility mob =
-            (k < (int)sel.bondMobility.size()) ? sel.bondMobility[k] : BondMobility::Rigid;
+        const JointType mob = (k < (int)sel.bondMobility.size()) ? sel.bondMobility[k] : JointType::Rigid;
         if (isFlexible(mob)) {
             const int ai = sys.bondsI[k], aj = sys.bondsJ[k];
-            jointEdges.push_back({atomBody[ai], atomBody[aj], ai, aj});
+            jointEdges.push_back({atomBody[ai], atomBody[aj], ai, aj, mob});
         }
     }
 
@@ -400,37 +424,39 @@ void World::buildModel(const SystemTopology& sys,
     }
 
     std::vector<int> rootBodyOfMol;
-    std::vector<RootMobility> rootMobOfBody(B, RootMobility::Weld);
+    std::vector<JointType> rootMobOfBody(B, JointType::Rigid);
     std::vector<int> rootAtomOfBody(B, -1);
     for (int mol = 0; mol < sys.numMolecules; ++mol) {
         const int rootAtom = sys.atomsBegin[mol];
         const int rb = atomBody[rootAtom];
         rootBodyOfMol.push_back(rb);
-        rootMobOfBody[rb] = (mol < (int)rootMobilities.size()) ? rootMobilities[mol] : RootMobility::Weld;
+        const JointType rm = (mol < (int)rootMobilities.size()) ? rootMobilities[mol] : JointType::Rigid;
+        // Validate: only the former-RootMobility subset is meaningful as a
+        // molecule-root attachment to Ground (Slider/Cylinder/BendStretch/
+        // SphericalCoords need a bond axis that does not exist at the Ground
+        // hinge). One enum, one rule -- fail loud instead of degrading to Weld.
+        if (!RobotModel::jointIsLegalRoot(rm)) {
+            throw std::invalid_argument(
+                "World::buildModel: molecule " + std::to_string(mol)
+                + " has an illegal root JointType (value " + std::to_string(static_cast<int>(rm))
+                + "); legal roots are Free, Translation(Cartesian), Weld(Rigid), FreeLine, Ball, Torsion");
+        }
+        rootMobOfBody[rb] = rm;
         rootAtomOfBody[rb] = rootAtom;
     }
 
     model_.bodyParent.assign(B, -1);
     model_.bodyLevel.assign(B, 0);
-    model_.bodyJoint.assign(B, JointType::Weld);
+    model_.bodyJoint.assign(B, JointType::Rigid);
     model_.bodyRootAtom.assign(B, -1);
     std::vector<bool> placed(B, false);
     placed[0] = true;
     std::queue<int> bfs;
 
-    auto rootJointType = [](RootMobility rm) {
-        switch (rm) {
-            case RootMobility::Free:
-                return JointType::Free;
-            case RootMobility::Cartesian:
-                return JointType::Translation;
-            case RootMobility::Pin:
-                return JointType::Pin;
-            case RootMobility::Weld:
-            default:
-                return JointType::Weld;
-        }
-    };
+    // Root mobility IS a JointType now (validated above), so the former
+    // RootMobility->JointType switch is gone -- it is used directly. Cartesian
+    // is just the alias spelling of Translation; both arrive here as the same
+    // value, so the old silent "FreeLine/Ball -> Weld" degradation cannot recur.
 
     for (int rb : rootBodyOfMol) {
         if (placed[rb]) {
@@ -438,7 +464,7 @@ void World::buildModel(const SystemTopology& sys,
         }
         model_.bodyParent[rb] = 0;
         model_.bodyLevel[rb] = 1;
-        model_.bodyJoint[rb] = rootJointType(rootMobOfBody[rb]);
+        model_.bodyJoint[rb] = rootMobOfBody[rb];
         model_.bodyRootAtom[rb] = rootAtomOfBody[rb];
         placed[rb] = true;
         bfs.push(rb);
@@ -453,7 +479,7 @@ void World::buildModel(const SystemTopology& sys,
                 }
                 model_.bodyParent[v] = u;
                 model_.bodyLevel[v] = model_.bodyLevel[u] + 1;
-                model_.bodyJoint[v] = JointType::Pin;
+                model_.bodyJoint[v] = ed.jt; // the per-bond JointType (was hardcoded Torsion)
                 model_.bodyRootAtom[v] = (ed.bi == u) ? ed.aj : ed.ai;
                 placed[v] = true;
                 bfs.push(v);
@@ -479,7 +505,7 @@ void World::buildModel(const SystemTopology& sys,
             newId[order[i]] = i + 1;
         }
         std::vector<int> np(B, -1), nlvl(B, 0), nra(B, -1);
-        std::vector<JointType> njt(B, JointType::Weld);
+        std::vector<JointType> njt(B, JointType::Rigid);
         for (int b = 1; b < B; ++b) {
             const int nb = newId[b];
             const int op = model_.bodyParent[b];
@@ -514,33 +540,15 @@ void World::buildModel(const SystemTopology& sys,
         model_.bodyChildrenEnd[b] = (int)model_.bodyChildren.size();
     }
 
+    // q/u sizes come from the single source of truth (RobotModel::jointNQ/NU),
+    // so every joint type is counted -- the former local lambdas silently
+    // returned 0/0 for everything past Free, zeroing out Slider/Cylinder/
+    // BendStretch/Ball/SphericalCoords/FreeLine.
     auto nqOf = [](JointType jt) {
-        switch (jt) {
-            case JointType::Weld:
-                return 0;
-            case JointType::Pin:
-                return 1;
-            case JointType::Translation:
-                return 3;
-            case JointType::Free:
-                return 7;
-            default:
-                return 0;
-        }
+        return RobotModel::jointNQ(jt);
     };
     auto nuOf = [](JointType jt) {
-        switch (jt) {
-            case JointType::Weld:
-                return 0;
-            case JointType::Pin:
-                return 1;
-            case JointType::Translation:
-                return 3;
-            case JointType::Free:
-                return 6;
-            default:
-                return 0;
-        }
+        return RobotModel::jointNU(jt);
     };
     model_.bodyQIndex.assign(B, 0);
     model_.bodyNQ.assign(B, 0);
@@ -556,7 +564,13 @@ void World::buildModel(const SystemTopology& sys,
         model_.bodyUIndex[b] = uc;
         model_.bodyNU[b] = nu;
         model_.bodyUSqIndex[b] = usq;
-        if (jt == JointType::Free) {
+        // Register the 4-wide quaternion slot of EVERY quaternion body so it is
+        // renormalized each step. Previously only Free was pushed, so a Ball (or
+        // FreeLine) body's orientation drifted off the unit sphere unchecked --
+        // the latent bug isQuaternionBody() already advertised. The quaternion is
+        // always the FIRST 4 q of the body (Ball: q0..3; FreeLine/Free: q0..3,
+        // translation after), so qc is the quaternion start.
+        if (RobotModel::jointUsesQuaternion(jt)) {
             model_.quaternionQStart.push_back(qc);
         }
         qc += nq;
@@ -668,6 +682,45 @@ void World::buildModel(const SystemTopology& sys,
 }
 
 // ----------------------------------------------------------------------------
+//  setRootMobility / setRootMobilities  -- per-world root attachment override
+// ----------------------------------------------------------------------------
+//  Root mobility is a property of THIS world only. Both mutate this world's own
+//  rootMobilities_ copy and rebuild the model from the retained sys_/sel_; the
+//  shared SystemTopology is never touched, so the same molecule can have a
+//  different root in another world (e.g. Free in a solvation shell, Welded in
+//  the bulk). buildModel() is idempotent (it clears its append-only tables), so
+//  the rebuild is a full, clean replacement of model_ + state_.
+//
+//  Must be called after buildModel() (which captures sys_) and BEFORE
+//  add_sampler / mass scaling, because the rebuild resets per-body sampler
+//  state (bodyMassScale, NMA factors) to their defaults.
+void World::setRootMobility(int moleculeIndex, JointType mobility) {
+    if (sys_ == nullptr) {
+        throw std::logic_error("World::setRootMobility called before buildModel");
+    }
+    if (moleculeIndex < 0 || moleculeIndex >= (int)rootMobilities_.size()) {
+        throw std::out_of_range("World::setRootMobility: molecule index " + std::to_string(moleculeIndex)
+                                + " out of range (have " + std::to_string(rootMobilities_.size())
+                                + " molecules)");
+    }
+    rootMobilities_[moleculeIndex] = mobility;
+    buildModel(*sys_, sel_, rootMobilities_);
+}
+
+void World::setRootMobilities(const std::vector<JointType>& rootMobilities) {
+    if (sys_ == nullptr) {
+        throw std::logic_error("World::setRootMobilities called before buildModel");
+    }
+    if ((int)rootMobilities.size() != (int)rootMobilities_.size()) {
+        throw std::invalid_argument("World::setRootMobilities: expected "
+                                    + std::to_string(rootMobilities_.size()) + " entries, got "
+                                    + std::to_string(rootMobilities.size()));
+    }
+    rootMobilities_ = rootMobilities;
+    buildModel(*sys_, sel_, rootMobilities_);
+}
+
+// ----------------------------------------------------------------------------
 //  setAtomsLocationsInGround
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
@@ -759,8 +812,18 @@ void World::recomputeGeometry(const robo::Vec3* targets) {
             model_.X_PF[b] = T_X_B;
             model_.X_BM[b] = Transform();
         } else {
+            // Per-joint axis convention, ported from molmodel calc_XPF_XBM_new:
+            //   group A  (bond axis -> joint Z): Torsion, Translation, Free,
+            //            Cylinder, Ball, FreeLine  -> apply X_to_Z.
+            //   group B  (bond axis stays on X):  Slider, BendStretch,
+            //            SphericalCoords           -> no axis switch.
+            // (Weld never reaches here as a non-root flexible joint.)
+            const JointType jt = model_.bodyJoint[b];
+            const bool axisToZ =
+                (jt == JointType::Torsion || jt == JointType::Cartesian || jt == JointType::Free
+                 || jt == JointType::Cylinder || jt == JointType::Ball || jt == JointType::FreeLine);
             const Transform Proot_X_root = (~frameFlat_[model_.bodyRootAtom[p]]) * T_X_B;
-            model_.X_BM[b] = xpcFlat_[root] * X_to_Z;
+            model_.X_BM[b] = axisToZ ? Transform(xpcFlat_[root] * X_to_Z) : xpcFlat_[root];
             model_.X_PF[b] = Proot_X_root * model_.X_BM[b];
         }
     }
@@ -863,10 +926,31 @@ static bool freeRootAbsRotation(const RobotModel& m, const RobotState& s, int b,
 }
 
 double World::calcLogSineSqrGamma2() const {
-    // Sum over EVERY free root body (parent == Ground, Free joint). gamma2_b is
-    // the pitch of the body's TRUE orientation in space (freeRootAbsRotation),
-    // NOT X_GB[b].R() -- which the per-block reset pins to identity (q = 0) at
-    // the start of every move, flooring J for all roots (see helper).
+    // External-rotation Jacobian J(q) = -(1/2) RT sum_b ln sin^2(gamma2_b), the
+    // sin(theta) polar volume factor of an EULER/SPHERICAL parameterization of
+    // orientation. This is gated by sampler_.useOrientationJacobian, DEFAULT OFF,
+    // because Robosample's free/ball roots are parameterized by UNIT QUATERNIONS,
+    // not Euler angles, and for a quaternion root the term does NOT belong:
+    //
+    //   The flat (uniform) measure on the unit 3-sphere S^3 -- i.e. drawing the
+    //   quaternion uniformly subject to ||q|| = 1 -- pushes forward to EXACTLY
+    //   the Haar (rotation-invariant) measure on SO(3). "Flat in quaternion
+    //   space" and "Haar-uniform on rotations" are the same distribution; there
+    //   is no Jacobian between them. The quaternion exp-map integrator
+    //   (RobotIntegrator advanceQuatExp) is the geodesic flow of the
+    //   left-invariant kinetic metric, and for a single free body with constant
+    //   body inertia det M(q) is orientation-independent, so GC-HMC with U = 0
+    //   already samples orientation Haar-uniformly with NO correction term. The
+    //   sin^2(gamma2) factor is the correct Jacobian only if one sampled in Euler
+    //   angles; applied on top of the quaternion parameterization it biases the
+    //   marginal toward the poles. See tests/TestEnsembleOrientation.cpp, which
+    //   demonstrates: OFF -> Haar-uniform; ON -> measurably biased.
+    //
+    // The term is retained behind the flag for any future Euler-parameterized
+    // joint where it WOULD be correct. gamma2_b is the pitch of the body's TRUE
+    // orientation in space (freeRootAbsRotation), NOT X_GB[b].R() -- which the
+    // per-block reset Torsions to identity (q = 0) at the start of every move,
+    // flooring J for all roots (see helper).
     double acc = 0.0;
     for (int b = 1; b < model_.numBodies; ++b) {
         if (model_.bodyParent[b] != 0 || model_.bodyJoint[b] != JointType::Free) {
@@ -882,62 +966,6 @@ double World::calcLogSineSqrGamma2() const {
         acc += safeLogSineSqr(std::asin(sinPitch));
     }
     return acc;
-}
-
-// ---------------------------------------------------------------------------
-//  TEMPORARY DIAGNOSTIC -- remove once the J / logSineSqr term is confirmed.
-//
-//  Prints the per-free-root pitch sine that feeds the external-rotation
-//  Jacobian J, now read from the body's TRUE orientation (freeRootAbsRotation),
-//  the same quantity calcLogSineSqrGamma2 uses. Called once in reinitialize()
-//  (START of move) and once in currentTotalEnergy() (END). After the fix BOTH
-//  should show ordinary, non-floored values and nearly the same sum (the pose
-//  barely moves in one block) -- i.e. floored=0 at "reinit", and J no longer
-//  dominates dH.
-static void dbgPrintFreeRootPitches(const char* where, const RobotModel& m, const RobotState& s) {
-    int nFree = 0, nFloored = 0, shown = 0;
-    double totLss = 0.0;
-    std::fprintf(stderr, "[Jdbg %-6s] per-free-root sinPitch (first few shown):\n", where);
-    for (int b = 1; b < m.numBodies; ++b) {
-        if (m.bodyParent[b] != 0 || m.bodyJoint[b] != JointType::Free) {
-            continue;
-        }
-        ++nFree;
-        Rotation Rabs;
-        if (!freeRootAbsRotation(m, s, b, Rabs)) {
-            continue;
-        }
-        Real w, x, y, z;
-        rotationToQuaternion(Rabs, w, x, y, z);
-        const Real sinPitch = std::clamp(Real(2.0) * ((w * y) - (z * x)), Real(-1.0), Real(1.0));
-        const Real s2 = sinPitch * sinPitch;
-        const Real lss = safeLogSineSqr(std::asin(sinPitch));
-        totLss += lss;
-        if (s2 < Real(1e-12)) {
-            ++nFloored;
-        }
-        if (shown < 5) {
-            std::fprintf(stderr,
-                         "[Jdbg %-6s]   body=%-5d quat=(%+.4f %+.4f %+.4f %+.4f) "
-                         "sinPitch=%+.3e sin^2=%.3e ln(sin^2)=%+8.3f\n",
-                         where,
-                         b,
-                         w,
-                         x,
-                         y,
-                         z,
-                         sinPitch,
-                         s2,
-                         lss);
-            ++shown;
-        }
-    }
-    std::fprintf(stderr,
-                 "[Jdbg %-6s] freeRoots=%d  floored(sin^2<1e-12)=%d  sum ln(sin^2)=%.1f\n",
-                 where,
-                 nFree,
-                 nFloored,
-                 totLss);
 }
 
 // ----------------------------------------------------------------------------
@@ -1051,7 +1079,7 @@ bool World::repositionLigands(bool forceAll) {
     // The kick is a PURE proposal: it relocates the ligand and does nothing else.
     // There is NO acceptance here -- the whole move (kick + dynamics) is judged in
     // generateSample, where Hold is referenced to the pre-kick state and an
-    // overlapping placement is rejected on the energy validity check.
+    // overlapTorsiong placement is rejected on the energy validity check.
     // CONTAINMENT (forceAll == false): fire only when the COM has left the sphere.
     // alwaysKick (forceAll == true): fire every round regardless.
     for (int g = 0; g < (int)ligandGroups_.size(); ++g) {
@@ -1269,7 +1297,7 @@ bool World::generateSample() {
     // Internal-coordinate Generalized-Coordinate HMC over the (here: external)
     // DOF. The kick (above) is part of THIS move's proposal, not a separate
     // accept/reject: we save the pre-kick q + energy and reference Hold to the
-    // pre-kick potential, so an overlapping placement is penalised by dH AND
+    // pre-kick potential, so an overlapTorsiong placement is penalised by dH AND
     // caught by the energy validity check below -- and the whole move is rejected
     // back to the clean pre-kick state.
     savedQ_.assign(state_.q(), state_.q() + model_.nq); // pre-move (pre-kick) q
@@ -1289,6 +1317,8 @@ bool World::generateSample() {
         pePre = bridge_.calcPotentialEnergy();
         if (sampler_.useFixman) {
             fixPre = calcFixman();
+        }
+        if (sampler_.useOrientationJacobian) {
             lssPre = calcLogSineSqrGamma2();
         }
         dockPotPre = pePre + fixPre - (0.5 * RT_ * lssPre);
@@ -1359,7 +1389,7 @@ bool World::generateSample() {
     // *change* in potential is enormous (or already non-finite). Handing such a
     // pose to the Verlet integrator is fatal: a single step against an ~Inf LJ
     // force turns finite q into NaN -- the "Particle coordinate is NaN" crash
-    // seen when the proposal overlaps the receptor. So reject BEFORE stepping.
+    // seen when the proposal overlaps the receptor. So reject BEFORE stepTorsiong.
     // Gate on the move-INDUCED change (pePost - pePre), not the absolute total:
     // the rigid receptor may carry a large constant internal energy (e.g. an
     // unminimized protein at ~1e7 kJ/mol) that the ligand world neither created
@@ -1510,6 +1540,55 @@ bool World::generateSample() {
     return false;
 }
 
+void World::setCartesianSolvent(const std::vector<int>& atomIndices) {
+    // Keep only real (massive) atoms: massless virtual sites/EPs have no
+    // independent Cartesian DOF (OpenMM reconstructs them from their parents), so
+    // they must NOT be Verlet-integrated here. The mask also drives the skip in
+    // fillAtomPositionsFromBodies, so it must list exactly the integrated atoms.
+    std::vector<int> kept;
+    kept.reserve(atomIndices.size());
+    for (int a : atomIndices) {
+        if (a >= 0 && a < model_.numAtoms && model_.atomMass[a] > robo::Real(0)) {
+            kept.push_back(a);
+        }
+    }
+    state_.setCartSolvent(kept, model_.atomMass.data());
+    std::fprintf(stderr,
+                 "[ncmc] world %d: Cartesian-integrated solvent atoms = %d (of %d requested); the "
+                 "contact environment now relaxes inside the proposal.\n",
+                 index_,
+                 static_cast<int>(kept.size()),
+                 static_cast<int>(atomIndices.size()));
+}
+
+void World::drawSolventVelocities() {
+    // Maxwell-Boltzmann v_s ~ N(0, RT/m_s) per Cartesian component. Mirrors the
+    // generalized-momentum draw in reinitialize() (a Gibbs update of the velocity
+    // marginal), so the move needs no explicit momentum flip. No-op when empty.
+    const std::vector<int>& solv = state_.cartSolventAtoms();
+    const std::vector<robo::Real>& invM = state_.cartSolventInvMass();
+    robo::Vec3* velG = state_.atomVelG();
+    for (std::size_t j = 0; j < solv.size(); ++j) {
+        const robo::Real sigma = std::sqrt(RT_ * invM[j]); // sqrt(RT/m)
+        robo::Vec3& v = velG[solv[j]];
+        v = robo::Vec3(sigma * gaussian_(rng_), sigma * gaussian_(rng_), sigma * gaussian_(rng_));
+    }
+}
+
+double World::calcSolventKE() const {
+    // 1/2 sum_s m_s |v_s|^2 over the Cartesian-integrated atoms (flat metric).
+    const std::vector<int>& solv = state_.cartSolventAtoms();
+    const std::vector<robo::Real>& invM = state_.cartSolventInvMass();
+    const robo::Vec3* velG = state_.atomVelG();
+    double ke = 0.0;
+    for (std::size_t j = 0; j < solv.size(); ++j) {
+        const robo::Real m = (invM[j] > robo::Real(0)) ? (robo::Real(1) / invM[j]) : robo::Real(0);
+        const robo::Vec3& v = velG[solv[j]];
+        ke += m * (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    }
+    return 0.5 * ke;
+}
+
 void World::reinitialize() {
     RobotEngine::realizePosition(model_, state_);
     RobotEngine::realizeArticulatedBodyInertias(model_, state_);
@@ -1595,6 +1674,10 @@ void World::reinitialize() {
         u[i] = scale * seeded[i];
     }
 
+    // Draw the Cartesian solvent velocities from the same Maxwell-Boltzmann
+    // marginal (independent of the generalized draw -- flat diagonal metric).
+    drawSolventVelocities();
+
     if (!constraints_.empty()) {
         RobotEngine::realizeVelocity(model_, state_);
         constraints_.enforceVelocityConstraints(model_, state_);
@@ -1621,16 +1704,21 @@ void World::reinitialize() {
     double logSineSqr = 0.0;
     if (sampler_.useFixman) {
         fixman = calcFixman();
-        logSineSqr = calcLogSineSqrGamma2();
-        // dbgPrintFreeRootPitches("reinit", model_, state_); // TEMP: J-term diagnostic
     }
+    if (sampler_.useOrientationJacobian) {
+        logSineSqr = calcLogSineSqrGamma2();
+    }
+    const double keSolvent = calcSolventKE(); // 0 when no Cartesian solvent
     state_.energy.pe = pe;
     state_.energy.ke = ke;
+    state_.energy.keSolvent = keSolvent;
     state_.energy.fixman = fixman;
     state_.energy.logSineSqrGamma2 = logSineSqr;
     // ke_mix = ke - nmaCorr replaces the kinetic term for the NMA Route B mixture
     // draw (nmaCorr == 0 for ordinary HMC, so Hold_ is unchanged off Route B).
-    Hold_ = pe + ke + fixman - (0.5 * RT_ * logSineSqr) - nmaCorr;
+    // keSolvent is the flat-space solvent kinetic energy (0 off solvent-relaxing
+    // NCMC), so Hold_ stays identical to the welded path when there is no solvent.
+    Hold_ = pe + ke + keSolvent + fixman - (0.5 * RT_ * logSineSqr) - nmaCorr;
     state_.energy.total = Hold_;
 }
 
@@ -1685,15 +1773,19 @@ double World::currentTotalEnergy() {
     double logSineSqr = 0.0;
     if (sampler_.useFixman) {
         fixman = calcFixman(); // realizes ABI internally; position already current
-        logSineSqr = calcLogSineSqrGamma2();
-        // dbgPrintFreeRootPitches("postMD", model_, state_); // TEMP: J-term diagnostic
     }
+    if (sampler_.useOrientationJacobian) {
+        logSineSqr = calcLogSineSqrGamma2();
+    }
+    const double keSolvent = calcSolventKE(); // 0 when no Cartesian solvent
     state_.energy.pe = pe;
     state_.energy.ke = ke;
+    state_.energy.keSolvent = keSolvent;
     state_.energy.fixman = fixman;
     state_.energy.logSineSqrGamma2 = logSineSqr;
-    // ke_mix = ke - nmaCorr (Route B mixture); nmaCorr == 0 off Route B.
-    state_.energy.total = pe + ke + fixman - (0.5 * RT_ * logSineSqr) - nmaCorr;
+    // ke_mix = ke - nmaCorr (Route B mixture); nmaCorr == 0 off Route B. keSolvent
+    // is the flat-space solvent KE (0 off solvent-relaxing NCMC).
+    state_.energy.total = pe + ke + keSolvent + fixman - (0.5 * RT_ * logSineSqr) - nmaCorr;
     return state_.energy.total;
 }
 
@@ -1723,23 +1815,78 @@ void World::configureNcmc(int atomBegin, int atomEnd, int ncmcSteps, double hold
     bridge_.enableAlchemy(atomBegin, atomEnd);
 }
 
-double World::protocolLambda(int s) const {
-    // s in [0, ncmcSteps): triangle 1 -> 0 -> 1 with an optional flat lambda=0 hold.
-    const int N = sampler_.ncmcSteps;
-    int hold = static_cast<int>(sampler_.ncmcHoldFraction * N);
-    int ramp = (N - hold) / 2;
-    if (ramp < 1) {
-        ramp = 1;
+auto World::protocolLambda(int step) const -> double {
+    // Delegate to the pure, unit-tested schedule (include/NCMCProtocol.hpp) so
+    // production and the tests exercise ONE palindromic 1 -> 0 -> 1 schedule and
+    // can never drift. Palindromic + endpoints pinned to lambda = 1 is what makes
+    // the composed NCMC map F-reversible (see ncmcMove's acceptance comment).
+    return robo::ncmc::protocolLambda(step, sampler_.ncmcSteps, sampler_.ncmcHoldFraction);
+}
+
+int World::ncmcTeleportRoot() const {
+    // The tree root (parent == Ground) of the body carrying the first NCMC atom,
+    // iff it is a Free joint (so a rigid reposition is one quaternion+translation).
+    if (sampler_.ncmcAtomBegin < 0 || sampler_.ncmcAtomBegin >= model_.numAtoms) {
+        return -1;
     }
-    if (s < ramp) {
-        return 1.0 - static_cast<double>(s) / ramp; // 1 -> 0
+    int b = model_.atomBody[sampler_.ncmcAtomBegin];
+    while (b > 0 && model_.bodyParent[b] != 0) {
+        b = model_.bodyParent[b];
     }
-    if (s < ramp + hold) {
-        return 0.0; // the uncaged stride
+    if (b > 0 && model_.bodyJoint[b] == JointType::Free) {
+        return b;
     }
-    const int up = s - ramp - hold;
-    const double l = static_cast<double>(up) / ramp; // 0 -> 1
-    return (l > 1.0) ? 1.0 : l;
+    return -1;
+}
+
+void World::ncmcApplyTroughTeleport(int rootBody) {
+    // Rigid reposition of the region root at the λ=0 ghost trough. Mirrors the
+    // engine-validated tests/TeleportMove.hpp teleportFreeRoot: set the root
+    // orientation (Haar) and translation (uniform in the docking sphere), and
+    // CO-ROTATE the root's angular AND linear speeds by ΔR = Rnew R_oldᵀ so KE is
+    // exactly preserved (M_ang(q) is orientation-dependent). Operates on q/u
+    // directly -- NO setAtomsLocationsInGround -- so the live momenta stay valid.
+    robo::Real* q = state_.q();
+    robo::Real* u = state_.u();
+    const int qOff = model_.bodyQIndex[rootBody];
+    const int uOff = model_.bodyUIndex[rootBody];
+
+    const Rotation Rold = quatToRotation(q[qOff], q[qOff + 1], q[qOff + 2], q[qOff + 3]);
+    const Rotation Rnew = sampleUniformRotation();
+    const Rotation dR(Rnew * Rold.transpose());
+
+    const Vec3 site = atomSetCentroid(siteAtoms_);
+    const double radius = atomSetRadius(siteAtoms_, site);
+    const Vec3 target = site + sampleUniformInSphere(radius);
+
+    Real w, x, y, z;
+    rotationToQuaternion(Rnew, w, x, y, z);
+    q[qOff + 0] = w;
+    q[qOff + 1] = x;
+    q[qOff + 2] = y;
+    q[qOff + 3] = z;
+    q[qOff + 4] = target[0];
+    q[qOff + 5] = target[1];
+    q[qOff + 6] = target[2];
+
+    const Vec3 wR = dR * Vec3(u[uOff + 0], u[uOff + 1], u[uOff + 2]);
+    const Vec3 vR = dR * Vec3(u[uOff + 3], u[uOff + 4], u[uOff + 5]);
+    u[uOff + 0] = wR[0];
+    u[uOff + 1] = wR[1];
+    u[uOff + 2] = wR[2];
+    u[uOff + 3] = vR[0];
+    u[uOff + 4] = vR[1];
+    u[uOff + 5] = vR[2];
+
+    // re-realize geometry and re-seed the derivative chain for the next Verlet step
+    RobotEngine::realizePosition(model_, state_);
+    RobotEngine::fillAtomPositionsFromBodies(model_, state_);
+    bridge_.evaluate(state_);
+    RobotEngine::realizeVelocity(model_, state_);
+    RobotEngine::realizeArticulatedBodyInertias(model_, state_);
+    RobotEngine::calcUDot(model_, state_);
+    RobotEngine::calcQDot(model_, state_, state_.qdot());
+    RobotEngine::calcQDotDot(model_, state_);
 }
 
 bool World::ncmcMove() {
@@ -1753,6 +1900,17 @@ bool World::ncmcMove() {
     // coverage, THEORY 13.5); a co-mobilized local shell would let it relax inside
     // the move too (documented efficiency follow-up).
     savedQ_.assign(state_.q(), state_.q() + model_.nq);
+    // Save the Cartesian solvent positions for a clean rollback on reject: the
+    // body->atom fill skips these atoms, so restoring q alone would leave the
+    // solvent at its (rejected) end pose. Empty/no-op off solvent-relaxing NCMC.
+    {
+        const std::vector<int>& solv = state_.cartSolventAtoms();
+        const robo::Vec3* posG = state_.atomPosG();
+        savedSolventPosG_.resize(solv.size());
+        for (std::size_t j = 0; j < solv.size(); ++j) {
+            savedSolventPosG_[j] = posG[solv[j]];
+        }
+    }
     bridge_.setAlchemicalLambda(1.0);
     reinitialize(); // draws p ~ N(0, RT M(q0)); sets Hold_ = V1 + K + F + J
     const double Hstart = Hold_;
@@ -1767,15 +1925,40 @@ bool World::ncmcMove() {
 
     const robo::Real h = sampler_.timeStep;
     // DIAGNOSTIC ONLY (NOT used in acceptance): protocol work w = sum over the
-    // PERTURBATION substeps of dV at fixed q (Nilmeier et al. 2011, Eq. 16). For a
-    // deterministic, reversible, volume-preserving propagator (THEORY 5.5) the heat
-    // satisfies dS = 0, so w == Hend - Hstart up to the small non-symplectic drift;
-    // logging the gap w - (Hend - Hstart) is a free consistency check (a large gap
-    // flags a non-converged corrector / dt too large for this configuration).
+    // PERTURBATION substeps of dV at fixed q (Nilmeier et al. 2011, Eq. 16).
+    // NOTE: w is NOT equal to Hend - Hstart at finite dt. Two distinct effects open
+    // the gap, and NEITHER biases acceptance (acceptance is on Hend - Hstart):
+    //   (i)  integrator heat Q != 0 -- the fixed-lambda Verlet steps are only
+    //        near-symplectic, so each pumps a little shadow energy that is in
+    //        Hend - Hstart but never in w (w only sees the fixed-q perturbations);
+    //   (ii) the Fixman + orientation-Jacobian state-function drift F(qend)-F(q0)
+    //        and J(qend)-J(q0), which ARE in Hend - Hstart (currentTotalEnergy) but
+    //        are excluded from w by construction.
+    // So logging gap = w - (Hend - Hstart) is a free consistency check only: a
+    // large gap flags a too-large dt / non-converged corrector, not a sampling bug.
     double work = 0.0;
     bool ok = true;
     double Vprev = bridge_.calcPotentialEnergy(); // V at lambda=1, current q
     double lamPrev = 1.0;
+    const double peStart = state_.energy.pe; // for the per-move dPE/dKE breakdown
+    const double keStart = state_.energy.ke;
+    const double keSolvStart = state_.energy.keSolvent; // solvent Cartesian KE at start
+
+    // λ=0 trough teleport (default off; tests/TestNcmcTeleport). Centered in the
+    // λ=0 hold so the 1->0->1 protocol stays its own reverse; applied only for an
+    // ACYCLIC Free-root region with a defined target region (docking site), where
+    // there is no constraint-manifold branch ambiguity (CHMC Thm 3) to guard.
+    const int teleHold = static_cast<int>(sampler_.ncmcHoldFraction * sampler_.ncmcSteps);
+    const int teleRamp = std::max((sampler_.ncmcSteps - teleHold) / 2, 1);
+    const int teleStep = teleRamp + teleHold / 2; // center of the hold
+    const int teleRoot = ncmcTeleportRoot();
+    const bool doTele = sampler_.ncmcTeleport && teleHold > 0 && teleRoot > 0 && !siteAtoms_.empty()
+                        && constraints_.empty();
+    if (sampler_.ncmcTeleport && !doTele) {
+        std::fprintf(stderr,
+                     "[ncmc] teleport requested but inactive (needs hold>0, a Free-root region, a "
+                     "docking site, and an acyclic system) -- using the plain uncaged stride\n");
+    }
 
     for (int s = 0; ok && s < sampler_.ncmcSteps; ++s) {
         // (i) PERTURB: change lambda at FIXED q; accumulate work = V(lam_new) - V(lam_old).
@@ -1791,6 +1974,11 @@ bool World::ncmcMove() {
             work += Vnew - Vprev;
             Vprev = Vnew;
             lamPrev = lam;
+        }
+        // (i.5) TELEPORT at the λ=0 trough (free: ghost, KE preserved by co-rotation).
+        if (doTele && s == teleStep) {
+            ncmcApplyTroughTeleport(teleRoot);
+            Vprev = bridge_.calcPotentialEnergy(); // λ=0 => unchanged; refresh for the heat bookkeeping
         }
         // (ii) PROPAGATE one Verlet step at fixed lambda (deterministic, reversible).
         ok = RobotEngine::stepTo(model_, state_, bridge_, constraints_, state_.time + h);
@@ -1815,29 +2003,45 @@ bool World::ncmcMove() {
         bridge_.setAlchemicalLambda(1.0);
         const double Hend = currentTotalEnergy(); // V1(qend) + K + F + J at lambda=1
 
-        // Acceptance for DETERMINISTIC, reversible, volume-preserving propagation
-        // (THEORY 5.5 => path-action dS = 0): accept on the FULL Hamiltonian
-        // difference at the lambda=1 endpoints, NOT on the work (Nilmeier et al.
-        // 2011, Eq. 20; bistable-dimer Eq. 28). For such integrators w == Hend -
-        // Hstart, so adding work would DOUBLE-COUNT. The alchemical cost is already
-        // inside Hend - Hstart: a slow protocol lets the mobile DOF relax as lambda
-        // returns to 1, lowering Hend; a fast one does not. The thermodynamic
-        // (alchemical) perturbation has unit coordinate Jacobian (alpha-ratio = 1)
-        // and the 1->0->1 protocol is its own reverse (protocol ratio = 1), so no
-        // extra factors enter dH. GATE: lambda == 1 throughout => work == 0 and
-        // Hend - Hstart is the plain Verlet dH => reduces EXACTLY to the
+        // ACCEPTANCE: this NCMC trajectory is a valid HMC proposal -- a
+        // DETERMINISTIC, volume-preserving map T on (q,p) that is momentum-flip
+        // reversible, F T F == T^-1. T is the composition of the per-substep
+        // fixed-lambda Verlet steps (the fixed-q lambda perturbations do not move
+        // the state); each step is F-reversible, so the composition is reversible
+        // BECAUSE the lambda schedule is a PALINDROME pinned to lambda = 1 at both
+        // endpoints (protocolLambda / NCMCProtocol.hpp). We therefore accept on the
+        // FULL Hamiltonian difference at the lambda=1 endpoints (Nilmeier et al.
+        // 2011, Eq. 20; bistable-dimer Eq. 28), NOT on the work. The protocol being
+        // its own reverse sets the protocol ratio to 1 and the fixed-q perturbation
+        // has unit coordinate Jacobian (alpha-ratio = 1), so no extra factors enter
+        // dH. NOTE the work `w` is NOT equal to Hend - Hstart at finite dt (it omits
+        // the integrator heat AND the Fixman/Jacobian state-function drift that ARE
+        // in Hend - Hstart) -- which is exactly why acceptance uses Hend - Hstart
+        // and the work is diagnostic only. GATE: lambda == 1 throughout => work == 0
+        // and Hend - Hstart is the plain Verlet dH => reduces EXACTLY to the
         // torsional-HMC metropolis test, which is the existing metropolis() call.
         const double dH = Hend - Hstart;
+        // Per-move diagnostic breakdown (Phase 0): the gap = work - dH flags
+        // integrator energy pumping (propagator: dt / mass-scale) plus the Fixman/
+        // Jacobian drift, while the recoupling potential change dPE isolates the
+        // irreducible reorganization (insertion) cost. dKE should stay ~0.
+        const double dPE = state_.energy.pe - peStart;
+        const double dKE = state_.energy.ke - keStart;
+        const double dKEsolv = state_.energy.keSolvent - keSolvStart;
         std::fprintf(stderr,
                      "[ncmc] world %d: Hstart=%.2f Hend=%.2f dH=%+.2f kJ/mol  "
-                     "work(diag)=%.2f gap=%+.2f (steps=%d)\n",
+                     "dPE=%+.2f dKE=%+.2f dKEsolv=%+.2f work(diag)=%.2f gap=%+.2f (steps=%d, teleport=%s)\n",
                      index_,
                      Hstart,
                      Hend,
                      dH,
+                     dPE,
+                     dKE,
+                     dKEsolv,
                      work,
                      work - dH,
-                     sampler_.ncmcSteps);
+                     sampler_.ncmcSteps,
+                     doTele ? "on" : "off");
         if (std::isfinite(dH) && metropolis(Hstart, Hend)) {
             RobotEngine::fillAtomPositionsFromBodies(model_, state_);
             accepted = true;
@@ -1851,6 +2055,12 @@ bool World::ncmcMove() {
         std::copy(savedQ_.begin(), savedQ_.end(), state_.q());
         RobotEngine::realizePosition(model_, state_);
         RobotEngine::fillAtomPositionsFromBodies(model_, state_);
+        // Restore the Cartesian solvent pose (the fill above skips these atoms).
+        const std::vector<int>& solv = state_.cartSolventAtoms();
+        robo::Vec3* posG = state_.atomPosG();
+        for (std::size_t j = 0; j < solv.size(); ++j) {
+            posG[solv[j]] = savedSolventPosG_[j];
+        }
     }
     lastAccepted_ = accepted;
     return accepted;

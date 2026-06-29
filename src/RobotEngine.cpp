@@ -17,7 +17,7 @@
 //    calcUDot pass1/2 ......................... RigidBodyNodeSpec.cpp
 //    multiplyByMInv pass1/2 ................... RigidBodyNodeSpec.cpp
 //    multiplyBySqrtMInvPassOutward ............ RigidBodyNodeSpec.cpp
-//    per-joint H_FM / X_FM / qdot ............. RigidBodyNodeSpec_{Pin,Translation,Free}.h
+//    per-joint H_FM / X_FM / qdot ............. RigidBodyNodeSpec_{Torsion,Translation,Free}.h
 //
 //  VALIDATION GATE: every operator below must be diffed against the still-
 //  present Simbody build (random q,u; all mobilizer types) to tolerance before
@@ -31,11 +31,12 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
 #include "Constraints.hpp"
+#include "JointKernels.hpp"
+#include "robot_math.hpp"
 
 using robo::ArticulatedInertia;
 using robo::Mat33;
@@ -95,7 +96,7 @@ inline robo::Real logDetSymPD(const robo::Real* A, int n) {
 //  DEBUG LOGGING
 //  ROBO_DEBUG   : master switch (0 disables every probe with zero overhead).
 //  ROBO_VERBOSE : 0 = only the first-NaN dump + the D/DI dump at the failing
-//                     body (recommended: pinpoints the origin, low spam);
+//                     body (recommended: Torsionpoints the origin, low spam);
 //                 1 = + a one-line per-step growth summary;
 //                 2 = + per-body X_GB/X_FM every step (huge; short runs only).
 //  Override at compile time, e.g.  -DROBO_VERBOSE=1 .
@@ -275,7 +276,7 @@ inline Real spatialDot(const SpatialVec& a, const SpatialVec& b) {
 }
 
 // Dense inverse of an n x n block (n in {1,3,6}), row-major in/out.
-// n == 1 is closed form (the Pin-joint hot path); n >= 2 goes through LAPACK
+// n == 1 is closed form (the Torsion-joint hot path); n >= 2 goes through LAPACK
 // LU (dgetrf/dgetri). Always returns a finite result (singular -> regularized).
 static void jacobiSymEig(const Real* Ain, int n, Real* d, Real* V); // defined below
 
@@ -303,7 +304,7 @@ static void jacobiSymEig(const Real* Ain, int n, Real* d, Real* V); // defined b
 void invertDense(const Real* A, int n, Real* Ainv) {
     const Real lockTol = Real(1e-12); // |eigenvalue| <= this is treated as null
 
-    // Dominant case: 1-DOF Pin. Closed form, with a lock instead of a clamp.
+    // Dominant case: 1-DOF Torsion. Closed form, with a lock instead of a clamp.
     if (n == 1) {
         const Real d = A[0];
         Ainv[0] = (std::abs(d) > lockTol) ? (Real(1) / d) : Real(0);
@@ -449,90 +450,6 @@ void symSqrtInv(const Real* A, int n, Real* S) {
     }
 }
 
-// -------- exact unit-quaternion advance (exponential map) ------------------
-// Advance a unit quaternion under a constant angular velocity w_F expressed in
-// the PARENT (F) frame, consistent with the engine's qdot = 1/2 (0,w_F) (x) q
-// (left multiply; matches convertAngVelToQuaternionDot / N(q)). With theta =
-// 1/2 |w| h: Dq = (cos theta, sin theta * w_hat) and q1 = Dq (x) q0. Both
-// operands are unit, so q1 is unit BY CONSTRUCTION -- the |q|^2 -> Inf ->
-// q/sqrt(Inf) = 0 overflow path of the linear "q += h*qdot" drift cannot occur.
-// Reversible: negating w gives Dq^-1, so q0 = Dq^-1 (x) q1 (HMC needs this).
-// As h -> 0 it reduces to q0 + h * (1/2 (0,w) (x) q0) = q0 + h * qdot0.
-inline void advanceQuatExp(const Real* q0, const Vec3& wF, Real h, Real* q1) {
-    const Real wn = std::sqrt(wF[0] * wF[0] + wF[1] * wF[1] + wF[2] * wF[2]);
-    Real a, b, c, d; // Dq = (a, b, c, d)
-    if (wn > Real(1e-12)) {
-        const Real theta = Real(0.5) * wn * h;
-        const Real ssc = std::sin(theta) / wn; // sin(theta) / |w|
-        a = std::cos(theta);
-        b = ssc * wF[0];
-        c = ssc * wF[1];
-        d = ssc * wF[2];
-    } else {
-        a = Real(1); // small-angle limit: Dq ~ (1, 1/2 h w)
-        b = Real(0.5) * h * wF[0];
-        c = Real(0.5) * h * wF[1];
-        d = Real(0.5) * h * wF[2];
-    }
-    const Real w = q0[0], x = q0[1], y = q0[2], z = q0[3];
-    // Hamilton product Dq (x) q0
-    q1[0] = a * w - b * x - c * y - d * z;
-    q1[1] = a * x + b * w + c * z - d * y;
-    q1[2] = a * y - b * z + c * w + d * x;
-    q1[3] = a * z + b * y - c * x + d * w;
-}
-
-// -------- per-joint cross-mobilizer transform X_FM(q) ----------------------
-// Faithful to RigidBodyNodeSpec_{Pin,Translation,Free}.h / RigidBodyNode_Weld.
-Transform jointX_FM(JointType jt, const Real* q, int qOff) {
-    switch (jt) {
-        case JointType::Weld:
-            return Transform(); // identity
-        case JointType::Pin: {
-            Rotation R;
-            R.setRotationFromAngleAboutZ(q[qOff]);
-            return Transform(R, Vec3(0));
-        }
-        case JointType::Translation:
-            return Transform(Rotation(), Vec3(q[qOff], q[qOff + 1], q[qOff + 2]));
-        case JointType::Free: {
-            // q = [q0 q1 q2 q3 x y z], quaternion (normalized) + translation.
-            const Vec4 qv(q[qOff], q[qOff + 1], q[qOff + 2], q[qOff + 3]);
-            Quaternion quat(qv); // normalizes
-            Rotation R;
-            R.setRotationFromQuaternion(quat);
-            return Transform(R, Vec3(q[qOff + 4], q[qOff + 5], q[qOff + 6]));
-        }
-        default:
-            return Transform();
-    }
-}
-
-// -------- per-joint H_FM columns (in F), written into Hcol[0..dof-1] --------
-void jointH_FM(JointType jt, SpatialVec* Hcol) {
-    switch (jt) {
-        case JointType::Weld:
-            break;
-        case JointType::Pin:
-            Hcol[0] = SpatialVec(Vec3(0, 0, 1), Vec3(0));
-            break;
-        case JointType::Translation:
-            Hcol[0] = SpatialVec(Vec3(0), Vec3(1, 0, 0));
-            Hcol[1] = SpatialVec(Vec3(0), Vec3(0, 1, 0));
-            Hcol[2] = SpatialVec(Vec3(0), Vec3(0, 0, 1));
-            break;
-        case JointType::Free:
-            Hcol[0] = SpatialVec(Vec3(1, 0, 0), Vec3(0));
-            Hcol[1] = SpatialVec(Vec3(0, 1, 0), Vec3(0));
-            Hcol[2] = SpatialVec(Vec3(0, 0, 1), Vec3(0));
-            Hcol[3] = SpatialVec(Vec3(0), Vec3(1, 0, 0));
-            Hcol[4] = SpatialVec(Vec3(0), Vec3(0, 1, 0));
-            Hcol[5] = SpatialVec(Vec3(0), Vec3(0, 0, 1));
-            break;
-        default:
-            break;
-    }
-}
 
 } // namespace
 
@@ -566,14 +483,14 @@ void RobotEngine::realizePosition(const RobotModel& m, RobotState& s) {
         const int dof = m.bodyNU[b];
 
         // X_FM, then X_PB = X_PF * X_FM * X_MB, X_GB = X_GP * X_PB.
-        X_FM[b] = jointX_FM(jt, q, qOff);
+        X_FM[b] = robo::jointX_FM(jt, q, qOff);
         const Transform X_MB = ~m.X_BM[b];
         const Transform X_FB = X_FM[b] * X_MB;
         X_PB[b] = m.X_PF[b] * X_FB;
         X_GB[b] = X_GB[p] * X_PB[b];
 
         // H_FM (in F) and H_PB_G (in Ground): RigidBodyNodeSpec.cpp.
-        jointH_FM(jt, &HFM[uOff]);
+        jointH_FM(jt, X_FM[b], &HFM[uOff]);
         const Rotation R_GF = X_GB[p].R() * m.X_PF[b].R();
         // r_MB is the vector from Mo to Bo expressed in M, i.e. X_MB.p() (Simbody
         // getX_MB().p()), NOT X_BM.p(). X_BM.p() is Mo's position in B (the
@@ -645,6 +562,7 @@ void RobotEngine::realizeVelocity(const RobotModel& m, RobotState& s) {
         const int p = m.bodyParent[b];
         const int uOff = m.bodyUIndex[b];
         const int dof = m.bodyNU[b];
+        const JointType jt = m.bodyJoint[b];
 
         SpatialVec vfm(Vec3(0), Vec3(0));
         SpatialVec vpb(Vec3(0), Vec3(0));
@@ -691,8 +609,8 @@ void RobotEngine::realizeVelocity(const RobotModel& m, RobotState& s) {
         // (M) frame origin coincides with the body (B) origin. Simbody's
         // calcParentToChildVelocityJacobianInGroundDot carries an extra HDot_MB_F
         // contribution whenever r_MB = X_MB.p() != 0 (true for every non-root
-        // Pin/torsion body, where r_MB is the bond length). With the per-joint
-        // H_FM constant in F (Pin/Free/Translation/Weld all have HDot_FM = 0),
+        // Torsion/torsion body, where r_MB is the bond length). With the per-joint
+        // H_FM constant in F (Torsion/Free/Translation/Weld all have HDot_FM = 0),
         // that contribution reduces to the classic centripetal term
         //     R_GF * ( w_FM x (w_FM x r_MB_F) ),   r_MB_F = R_FM * r_MB,
         // and belongs in the LINEAR row of A_mob. Omitting it leaves the joint
@@ -704,7 +622,28 @@ void RobotEngine::realizeVelocity(const RobotModel& m, RobotState& s) {
         const Rotation R_GF = X_GB[p].R() * m.X_PF[b].R();  // F orientation in Ground
         const Vec3 centripetal_G = R_GF * (w_FM % (w_FM % r_MB_F));
 
-        const SpatialVec A_mob(w_GP % w_PB_G, w_GP % (v_GB - v_GP) + w_GP % v_PB_G + centripetal_G);
+        // For the seven joints with H_FM constant in F, dH_FM/dt = 0 and the
+        // mobilizer bias is exactly the line above (this branch is skipped),
+        // so those joints stay BIT-IDENTICAL to the prior engine. The three
+        // q-dependent joints (BendStretch/SphericalCoords/FreeLine) add the
+        // intrinsic dH_FM/dt*u term that the constant-H derivation dropped:
+        //   extraAng_F = sum_j Hdot_ang(j) u_j
+        //   extraLin_F = sum_j (Hdot_lin(j) - r_MB_F x Hdot_ang(j)) u_j
+        // (The -rdot_MB_F x H_ang(j) part of the full d/dt(H_MB_F) is already
+        //  captured by centripetal_G, so it is NOT re-added here.)
+        Vec3 extraAng_F(0, 0, 0), extraLin_F(0, 0, 0);
+        if (!RobotModel::jointHasConstantHFM(jt)) {
+            std::array<SpatialVec, 5> Hdot; // max dof = 5 (FreeLine)
+            jointHDot_FM(jt, X_FM[b], V_FM[b], Hdot.data());
+            for (int j = 0; j < dof; ++j) {
+                const Real uj = u[uOff + j];
+                extraAng_F += Hdot[j][0] * uj;
+                extraLin_F += (Hdot[j][1] - (r_MB_F % Hdot[j][0])) * uj;
+            }
+        }
+
+        const SpatialVec A_mob(w_GP % w_PB_G + R_GF * extraAng_F,
+                               w_GP % (v_GB - v_GP) + w_GP % v_PB_G + centripetal_G + R_GF * extraLin_F);
         a_mob[b] = A_mob;
 
         // Total coriolis accel a = ~Phi * a_parent + A_mob.
@@ -721,6 +660,34 @@ void RobotEngine::calcQDot(const RobotModel& m, const RobotState& s, Real* qdotO
         const int uOff = m.bodyUIndex[b];
         const int dof = m.bodyNU[b];
         switch (m.bodyJoint[b]) {
+            case JointType::Ball: {
+                // 3 dof rotation: quaternion qdot = N(q) * w_FM. No translation.
+                const Vec4 quat(q[qOff], q[qOff + 1], q[qOff + 2], q[qOff + 3]);
+                const Vec3 w_FM(u[uOff], u[uOff + 1], u[uOff + 2]);
+                const Vec4 qd = Rotation::convertAngVelToQuaternionDot(quat, w_FM);
+                qdotOut[qOff] = qd[0];
+                qdotOut[qOff + 1] = qd[1];
+                qdotOut[qOff + 2] = qd[2];
+                qdotOut[qOff + 3] = qd[3];
+                break;
+            }
+            case JointType::FreeLine: {
+                // 2 rotational speeds are (x,y) of w_FM expressed in M, so
+                // w_FM (in F) = R_FM * (u0, u1, 0); qdot_quat = N(q) * w_FM.
+                // The 3 translational speeds (u2..4) are qdot of x,y,z directly.
+                const Vec4 quat(q[qOff], q[qOff + 1], q[qOff + 2], q[qOff + 3]);
+                const Rotation& R_FM = X_FM[b].R();
+                const Vec3 w_FM = R_FM * Vec3(u[uOff], u[uOff + 1], 0);
+                const Vec4 qd = Rotation::convertAngVelToQuaternionDot(quat, w_FM);
+                qdotOut[qOff] = qd[0];
+                qdotOut[qOff + 1] = qd[1];
+                qdotOut[qOff + 2] = qd[2];
+                qdotOut[qOff + 3] = qd[3];
+                qdotOut[qOff + 4] = u[uOff + 2];
+                qdotOut[qOff + 5] = u[uOff + 3];
+                qdotOut[qOff + 6] = u[uOff + 4];
+                break;
+            }
             case JointType::Free: {
                 // quaternion qdot = N(q)*w ; translation qdot = v.
                 const Vec4 quat(q[qOff], q[qOff + 1], q[qOff + 2], q[qOff + 3]);
@@ -735,7 +702,7 @@ void RobotEngine::calcQDot(const RobotModel& m, const RobotState& s, Real* qdotO
                 qdotOut[qOff + 6] = u[uOff + 5];
                 break;
             }
-            default: // Weld/Pin/Translation: qdot == u
+            default: // Weld/Torsion/Slider/Cylinder/Translation/BendStretch/SphericalCoords: qdot == u
                 for (int j = 0; j < dof; ++j) {
                     qdotOut[qOff + j] = u[uOff + j];
                 }
@@ -1130,12 +1097,101 @@ Real RobotEngine::calcKineticEnergy(const RobotModel& m, const RobotState& s) {
 }
 
 // ============================================================================
+//  MOBILIZER REACTION FORCES   (port of calcMobilizerReactionForces)
+//
+//  The reaction transmitted to body b across its inboard mobilizer, in Ground,
+//  is rigid Newton-Euler with the TRUE accelerations A_GB plus what the children
+//  pass back inward:
+//      reac_b@Bo = Mk_b A_GB_b + gyro_b - F_ext_b + sum_c Phi[c] reac_c@Bo
+//  F_ext_b is the applied spatial force on b: the body force from the bridge
+//  (bodyForceG) plus the applied mobility (generalized joint) force mapped to
+//  spatial through this body's hinge map H (the same H calcUDot pairs against z).
+//  Phi[c] (offset = parent->child origin in Ground) shifts a child's force from
+//  the child origin to b's origin -- identical to calcUDot's pass-1 transmission.
+// ============================================================================
+void RobotEngine::calcMobilizerReactionForces(const RobotModel& m,
+                                              const RobotState& s,
+                                              SpatialVec* reactionAtBoInG,
+                                              SpatialVec* reactionAtMInG) {
+    const SpatialInertia* Mk = s.Mk_G();
+    const SpatialVec* A_GB = s.A_GB();
+    const SpatialVec* gyro = s.gyro();
+    const SpatialVec* bodyF = s.bodyForceG();
+    const Real* mobF = s.mobilityForce();
+    const SpatialVec* H = s.H();
+    const PhiMatrix* Phi = s.Phi();
+    const Transform* X_GB = s.X_GB();
+
+    // reaction at body origin, accumulated inward. Local scratch so the operator
+    // is side-effect free on the cache (callers may not want a dedicated slot).
+    std::vector<SpatialVec> reacBo(static_cast<std::size_t>(m.numBodies), SpatialVec(Vec3(0), Vec3(0)));
+
+    for (int b = m.numBodies - 1; b >= 1; --b) {
+        const int uOff = m.bodyUIndex[b];
+        const int dof = m.bodyNU[b];
+
+        // applied spatial force on b = bridge body force + mobility force through H.
+        SpatialVec fExt = bodyF[b];
+        for (int j = 0; j < dof; ++j) {
+            fExt += H[uOff + j] * mobF[uOff + j];
+        }
+
+        // rigid Newton-Euler residual at Bo, in Ground.
+        SpatialVec reac = (Mk[b] * A_GB[b]) + gyro[b] - fExt;
+
+        // add what the outboard children transmit inward (shift child Bo -> b Bo).
+        for (int ci = m.bodyChildrenBeg[b]; ci < m.bodyChildrenEnd[b]; ++ci) {
+            const int c = m.bodyChildren[ci];
+            reac += Phi[c] * reacBo[static_cast<std::size_t>(c)];
+        }
+
+        reacBo[static_cast<std::size_t>(b)] = reac;
+        if (reactionAtBoInG != nullptr) {
+            reactionAtBoInG[b] = reac;
+        }
+        if (reactionAtMInG != nullptr) {
+            // shift the spatial force from Bo to the outboard frame origin Mo:
+            //   p_BoMo_G = R_GB * X_BM.p ;  [t;f]@Bo -> [t - p x f ; f]@Mo.
+            const Vec3 p_BoMo_G = X_GB[b].R() * m.X_BM[b].p();
+            reactionAtMInG[b] = SpatialVec(reac.angular - (p_BoMo_G % reac.linear), reac.linear);
+        }
+    }
+
+    if (reactionAtBoInG != nullptr) {
+        reactionAtBoInG[0] = SpatialVec(Vec3(0), Vec3(0)); // Ground: no inboard joint
+    }
+    if (reactionAtMInG != nullptr) {
+        reactionAtMInG[0] = SpatialVec(Vec3(0), Vec3(0));
+    }
+}
+
+SpatialVec
+RobotEngine::findMobilizerReactionOnBodyAtMInGround(const RobotModel& m, const RobotState& s, int body) {
+    std::vector<SpatialVec> atM(static_cast<std::size_t>(m.numBodies), SpatialVec(Vec3(0), Vec3(0)));
+    calcMobilizerReactionForces(m, s, nullptr, atM.data());
+    if (body < 0 || body >= m.numBodies) {
+        return SpatialVec(Vec3(0), Vec3(0));
+    }
+    return atM[static_cast<std::size_t>(body)];
+}
+
+
+// ============================================================================
 //  TRANSFER: internal bodies -> per-atom Cartesian (accept path)
 // ============================================================================
 void RobotEngine::fillAtomPositionsFromBodies(const RobotModel& m, RobotState& s) {
     const Transform* X_GB = s.X_GB();
     Vec3* posG = s.atomPosG();
+    // Atoms that are Cartesian-integrated inside the proposal (solvent-relaxing
+    // NCMC) own their Ground positions directly in posG -- they are NOT placed by
+    // any rigid body, so the body->atom fill must leave them untouched (otherwise
+    // each step would snap them back onto the welded body and undo the relaxation).
+    // mask == nullptr in the welded engine, so this is a no-op there.
+    const char* cartMask = s.cartSolventMask();
     for (int a = 0; a < m.numAtoms; ++a) {
+        if (cartMask && cartMask[a]) {
+            continue;
+        }
         const int b = m.atomBody[a];
         posG[a] = X_GB[b].p() + X_GB[b].R() * m.atomStation_B[a];
     }
@@ -1164,401 +1220,43 @@ void RobotEngine::normalizeQuaternions(const RobotModel& m, RobotState& s) {
     }
 }
 
-// ============================================================================
-//  VERLET  (fixed step)   VerletIntegrator.cpp::attemptDAEStep
-// ============================================================================
-bool RobotEngine::verletStep(const RobotModel& m,
-                             RobotState& s,
-                             ForceBridge& bridge,
-                             const robo::ConstraintSet& cset,
-                             Real h) {
-    const int nq = m.nq, nu = m.nu;
-    Real* q = s.q();
-    Real* u = s.u();
-    Real* qdot = s.qdot();
-    Real* udot = s.udot();
-    Real* qdd = s.qdotdot();
 
-    std::vector<Real> q0(q, q + nq);
-    std::vector<Real> u0(u, u + nu);
-    std::vector<Real> qdot0(qdot, qdot + nq);
-    std::vector<Real> udot0(udot, udot + nu);
-    std::vector<Real> qdd0(qdd, qdd + nq);
-
-    // True iff every per-body spatial force is finite. OpenMM returns Inf forces
-    // for a hard steric overlap (LJ r^-12); integrating against those is what
-    // produced the "Particle coordinate is NaN" crash. Catch it here, at the
-    // source, and signal the caller to reject this step's pose.
-    auto forcesFinite = [&]() -> bool {
-        const SpatialVec* bf = s.bodyForceG();
-        for (int b = 1; b < m.numBodies; ++b) {
-            if (!std::isfinite(bf[b][0][0]) || !std::isfinite(bf[b][0][1]) || !std::isfinite(bf[b][0][2])
-                || !std::isfinite(bf[b][1][0]) || !std::isfinite(bf[b][1][1])
-                || !std::isfinite(bf[b][1][2])) {
-                return false;
-            }
-        }
-        return true;
-    };
-
-    // forcesFinite() only catches OpenMM Inf. A CFL-unstable step (e.g. a stiff
-    // explicit-solvent contact at too-large dt) amplifies u geometrically while
-    // it is still finite, then overflows the quaternion. Cap ||u|| relative to
-    // the freshly-seeded momentum norm so a runaway is rejected early, while a
-    // merely hot trajectory (||u|| growing a few x) passes.
-    Real uSeedNorm2 = 0;
-    for (int i = 0; i < nu; ++i) {
-        uSeedNorm2 += u0[i] * u0[i];
-    }
-    const Real uCap2 = (uSeedNorm2 + Real(1e-30)) * Real(1e6);
-    auto velocitiesSane = [&]() -> bool {
-        Real n2 = 0;
-        for (int i = 0; i < nu; ++i) {
-            if (!std::isfinite(u[i])) {
-                return false;
-            }
-            n2 += u[i] * u[i];
-        }
-        return n2 <= uCap2;
-    };
-
-    auto restorePreStep = [&]() {
-        std::copy(q0.begin(), q0.end(), q);
-        std::copy(u0.begin(), u0.end(), u);
-        std::copy(qdot0.begin(), qdot0.end(), qdot);
-        std::copy(udot0.begin(), udot0.end(), udot);
-        std::copy(qdd0.begin(), qdd0.end(), qdd);
-        realizePosition(m, s);
-        fillAtomPositionsFromBodies(m, s);
-    };
-
-    // ---- position drift ----
-    // Scalar DOFs (Pin, Translation, and the Free TRANSLATION block): 2nd-order
-    // Taylor q1 = q0 + h*qdot0 + (h^2/2)*qddot0 (local error O(h^3); global method
-    // order 2 -- see THEORY 5.2).
-    //
-    // Quaternion DOFs (Free, Ball): EXACT exponential-map advance from the
-    // midpoint angular velocity wHalf = u0 + (h/2)*udot0, applied as a left
-    // Hamilton product onto q0. This DELIBERATELY diverges from Simbody's
-    // linear-Taylor-plus-renormalize quaternion update, and is NOT a bug to be
-    // "matched away": it keeps |q| = 1 by construction, is reversible, reduces to
-    // the linear update as h -> 0 (so it changes only the proposal, not the target
-    // -- THEORY 5.4), and -- crucially -- it advances the orientation purely from
-    // the angular velocity, BYPASSING the quaternion second derivative qddot.
-    // The linear-Taylor update instead leans on qddot (calcQDotDot); with the
-    // port's reimplemented Free-joint kinematics that path injects kinetic energy
-    // through the root body and (via the articulated recursion) the whole tree --
-    // an observed ~+1300 kJ/mol/traj KE pump even at 1 fs. The exp-map is robust to
-    // that latent N/qddot inconsistency. ROOT-CAUSE TODO: golden-test the Free-joint
-    // quaternion kinematics (N, Ndot, qddot) against Simbody on a single free body
-    // (THEORY 3.4); until that is closed, the exp-map is the correct propagator.
-    for (int i = 0; i < nq; ++i) {
-        q[i] = q0[i] + h * qdot0[i] + (h * h / 2) * qdd0[i];
-    }
-    for (int b = 1; b < m.numBodies; ++b) {
-        if (!m.isQuaternionBody(b)) {
-            continue;
-        }
-        const int qOff = m.bodyQIndex[b];
-        const int uOff = m.bodyUIndex[b];
-        Vec3 wHalf(u0[uOff] + Real(0.5) * h * udot0[uOff],
-                   u0[uOff + 1] + Real(0.5) * h * udot0[uOff + 1],
-                   u0[uOff + 2] + Real(0.5) * h * udot0[uOff + 2]); // w_FM in F, step start
-        Real qnew[4];
-        advanceQuatExp(&q0[qOff], wHalf, h, qnew); // overrides the 4 quaternion slots
-        q[qOff + 0] = qnew[0];
-        q[qOff + 1] = qnew[1];
-        q[qOff + 2] = qnew[2];
-        q[qOff + 3] = qnew[3];
-        // translation block q[qOff+4..6] keeps its Taylor update from the loop above
-    }
-    normalizeQuaternions(m, s); // mops up ~1e-16 rounding after the exp-map; never rescues an overflow
-
-    auto refreshPos = [&]() {
-        realizePosition(m, s);
-        fillAtomPositionsFromBodies(m, s);
-    };
-    refreshPos();
-    cset.enforcePositionConstraints(m, s, refreshPos); // localProjectQ
-
-    // ---- velocity: implicit trapezoid + functional iteration ----
-    for (int i = 0; i < nu; ++i) {
-        u[i] = u0[i] + h * udot0[i]; // u1_est
-    }
-
-    auto evalDerivs = [&]() -> bool {
-        realizePosition(m, s);
-        ROBO_CHECK("realizePosition");
-        bridge.evaluate(s);
-        ROBO_CHECK("bridge.evaluate");
-        if (!forcesFinite()) {
-            return false; // non-finite force -> abort before it corrupts udot/q
-        }
-        realizeVelocity(m, s);
-        ROBO_CHECK("realizeVelocity");
-        realizeArticulatedBodyInertias(m, s);
-        calcUDot(m, s);
-        ROBO_CHECK("calcUDot");
-        for (int i = 0; i < nu; ++i) {
-            if (!std::isfinite(udot[i])) {
-                return false; // finite-but-diverging udot -> reject before it propagates
-            }
-        }
-        calcQDot(m, s, qdot);
-        calcQDotDot(m, s);
-        return true;
-    };
-    if (!evalDerivs()) {
-        restorePreStep();
-        return false;
-    }
-
-    // Simbody: tol = min(1e-4, 0.1*accuracy). For fixed-step HMC (default accuracy
-    // ~1e-3) this evaluates to 1e-4. Plain functional iteration, no under-relaxation,
-    // max 10 sweeps -- matching VerletIntegrator::attemptDAEStep exactly.
-    const Real tol = Real(1e-4);
-    Real prevChange = std::numeric_limits<Real>::infinity();
-    Real lastChange = std::numeric_limits<Real>::infinity(); // for the dt-too-large message
-    int usedIters = 0;
-    bool converged = false;
-
-    for (int iter = 0; iter < 10; ++iter) {
-        ++usedIters;
-        Real num = 0, den = 0; // Simbody's relative 2-norm change
-        for (int i = 0; i < nu; ++i) {
-            const Real un = u0[i] + (h / 2) * (udot0[i] + udot[i]);
-            const Real d = un - u[i];
-            num += d * d;
-            den += u[i] * u[i];
-            u[i] = un;
-        }
-        // Genuine non-finite / runaway. In Simbody this is the realize()/project()
-        // exception path: caught, and in fixed-step mode the step still "succeeds",
-        // propagating the bad state to the move-level energy validation, which
-        // rejects the MOVE. We short-circuit to the same outcome by rejecting here.
-        if (!velocitiesSane()) {
-            restorePreStep();
-            return false;
-        }
-        if (!evalDerivs()) {
-            restorePreStep();
-            return false;
-        }
-
-        const Real change = std::sqrt(num) / (std::sqrt(den) + Real(1e-30));
-        lastChange = change;
-        if (!std::isfinite(change) || change > Real(1e6)) {
-            restorePreStep();
-            return false;
-        }
-
-        if (change <= tol) {
-            converged = true;
-            break; // converged
-        }
-
-        // Functional iteration stopped contracting (after iter > 1, to skip the
-        // crude forward-Euler seed's first non-monotone blip). We stop iterating
-        // here; whether to take the step or reject is decided after the loop.
-        if (iter > 1 && change > prevChange) {
-            break;
-        }
-
-        prevChange = change;
-    }
-
-    // dt-too-large guard (deliberately STRICTER than Simbody's "take the step").
-    // Reaching here without convergence means the implicit-trapezoid corrector
-    // could not find its fixed point at this dt for the CURRENT configuration --
-    // a FINITE, bounded solve that simply will not contract. This is distinct from
-    // a steric clash (non-finite force / runaway u), which is handled above as a
-    // move rejection (return false) because clashes are a normal, transient part of
-    // sampling. A non-converged corrector instead means the proposal map is no
-    // longer the converged, reversible trapezoidal map that HMC correctness and
-    // energy conservation rest on (THEORY 5.5/5.6): silently taking it pumps energy.
-    // Because the convergence radius -- and hence the largest reversible dt -- is
-    // configuration dependent (it scales with the metric M(q) and the local force
-    // stiffness; THEORY 5.5), this can fire only in stiffer regions even when the
-    // startup geometry integrated cleanly. We fail loud rather than corrupt the run.
-    if (!converged) {
-        restorePreStep();
-        char msg[320];
-        std::snprintf(msg,
-                      sizeof(msg),
-                      "RobotEngine::verletStep: velocity corrector did not converge at "
-                      "dt=%.6g ps (relative change %.3e > tol %.3e after %d iterations). "
-                      "The timestep is too large for the current configuration; reduce "
-                      "this world's timestep. (Steric clashes are handled separately as "
-                      "move rejections; this is a genuine non-convergence of the implicit "
-                      "trapezoid solve -- see THEORY 5.5.)",
-                      (double)h,
-                      (double)lastChange,
-                      (double)tol,
-                      usedIters);
-        throw std::runtime_error(msg);
-    }
-
-    cset.enforceVelocityConstraints(m, s); // localProjectU (RATTLE)
-    realizeVelocity(m, s);                 // refresh V/KE at the projected u
-    s.time += h;
-    return true;
-}
-
-bool RobotEngine::stepTo(const RobotModel& m,
-                         RobotState& s,
-                         ForceBridge& bridge,
-                         const robo::ConstraintSet& cset,
-                         Real tEnd) {
-    const Real h = tEnd - s.time;
-    if (h <= 0) {
-        return true;
-    }
-    return verletStep(m, s, bridge, cset, h);
-}
-
-// ============================================================================
-//  Reversibility diagnostic (HMC proposal sanity check)
-// ============================================================================
-// Integrate nSteps forward at fixed step h, flip every generalized speed
-// (u -> -u), integrate nSteps "back", flip again. For a time-reversible map the
-// state returns to its start to within ~machine epsilon amplified by the work
-// done; a too-large h (the non-reversible, energy-pumping regime) returns a
-// residual of order the trajectory size. Returns the RELATIVE round-trip
-// residual ||(q,u)_returned - (q,u)_start|| / ||(q,u)_start||.
-//
-// Two properties of this probe matter for how it is used:
-//   * It is NON-DESTRUCTIVE: the state s is restored to its entry value before
-//     returning, so it can be called at startup or mid-run without perturbing
-//     the chain.
-//   * It certifies h ONLY for the configuration it is run from. The integrator
-//     map depends on q through the configuration-dependent mass metric M(q) and
-//     the local force stiffness, so the largest reversible h varies across
-//     configuration space (THEORY 5.5). A startup call is therefore a smoke test
-//     -- "is dt in the right ballpark for this geometry?" -- NOT a whole-run
-//     guarantee. The ongoing, per-configuration guard is the corrector-
-//     convergence throw inside verletStep, which tests the CURRENT geometry on
-//     every step.
-//
-// If the corrector throws mid-probe (dt already non-convergent here), that is
-// caught and reported as an infinite residual rather than aborting the probe.
-//
-// Quaternion DOF are compared with a double-cover-aware chordal distance
-// min(|q - q0|, |q + q0|), since q and -q are the same rotation on S^3 (THEORY
-// 3.4); scalar coordinates and the velocity vector use the plain Euclidean norm.
-Real RobotEngine::checkReversibility(const RobotModel& m,
-                                     RobotState& s,
-                                     ForceBridge& bridge,
-                                     const robo::ConstraintSet& cset,
-                                     int nSteps,
-                                     Real h) {
-    const int nq = m.nq, nu = m.nu;
-
-    // Snapshot the entry state (for comparison and for restoration).
-    std::vector<Real> qStart(s.q(), s.q() + nq);
-    std::vector<Real> uStart(s.u(), s.u() + nu);
-    std::vector<Real> qdotStart(s.qdot(), s.qdot() + nq);
-    std::vector<Real> udotStart(s.udot(), s.udot() + nu);
-    std::vector<Real> qddStart(s.qdotdot(), s.qdotdot() + nq);
-    const Real timeStart = s.time;
-
-    auto restoreStart = [&]() {
-        std::copy(qStart.begin(), qStart.end(), s.q());
-        std::copy(uStart.begin(), uStart.end(), s.u());
-        std::copy(qdotStart.begin(), qdotStart.end(), s.qdot());
-        std::copy(udotStart.begin(), udotStart.end(), s.udot());
-        std::copy(qddStart.begin(), qddStart.end(), s.qdotdot());
-        s.time = timeStart;
-        realizePosition(m, s);
-        realizeVelocity(m, s);
-        fillAtomPositionsFromBodies(m, s);
-    };
-
-    // Momentum-flip involution S: negate all generalized speeds and refresh the
-    // velocity-dependent derived quantities against -u.
-    auto flipMomenta = [&]() {
-        Real* u = s.u();
-        for (int i = 0; i < nu; ++i) {
-            u[i] = -u[i];
-        }
-        realizeVelocity(m, s);
-        realizeArticulatedBodyInertias(m, s);
-        calcUDot(m, s);
-        calcQDot(m, s, s.qdot());
-        calcQDotDot(m, s);
-    };
-
-    // Forward leg, flip, back leg, flip. Any non-finite rejection or corrector
-    // throw means h is already not integrable/reversible here -> infinite residual.
-    try {
-        for (int i = 0; i < nSteps; ++i) {
-            if (!verletStep(m, s, bridge, cset, h)) {
-                restoreStart();
-                return std::numeric_limits<Real>::infinity();
-            }
-        }
-        flipMomenta();
-        for (int i = 0; i < nSteps; ++i) {
-            if (!verletStep(m, s, bridge, cset, h)) {
-                restoreStart();
-                return std::numeric_limits<Real>::infinity();
-            }
-        }
-        flipMomenta();
-    } catch (const std::exception&) {
-        restoreStart();
-        return std::numeric_limits<Real>::infinity();
-    }
-
-    // Round-trip residual. Quaternion blocks: double-cover chordal distance.
-    const Real* q = s.q();
-    const Real* u = s.u();
-    Real resid2 = 0, scale2 = 0;
-
-    std::vector<bool> isQuatSlot(nq, false);
-    for (int b = 1; b < m.numBodies; ++b) {
-        if (!m.isQuaternionBody(b)) {
-            continue;
-        }
-        const int qOff = m.bodyQIndex[b];
-        Real dPlus2 = 0, dMinus2 = 0;
-        for (int k = 0; k < 4; ++k) {
-            isQuatSlot[qOff + k] = true;
-            const Real a = q[qOff + k], b0 = qStart[qOff + k];
-            dPlus2 += (a - b0) * (a - b0);
-            dMinus2 += (a + b0) * (a + b0);
-            scale2 += b0 * b0;
-        }
-        resid2 += std::min(dPlus2, dMinus2); // q == -q on S^3
-    }
-    for (int i = 0; i < nq; ++i) {
-        if (isQuatSlot[i]) {
-            continue;
-        }
-        const Real d = q[i] - qStart[i];
-        resid2 += d * d;
-        scale2 += qStart[i] * qStart[i];
-    }
-    for (int i = 0; i < nu; ++i) {
-        const Real d = u[i] - uStart[i];
-        resid2 += d * d;
-        scale2 += uStart[i] * uStart[i];
-    }
-
-    restoreStart(); // non-destructive probe
-    return std::sqrt(resid2) / (std::sqrt(scale2) + Real(1e-30));
-}
-
-// ---- calcQDotDot: qddot = N qddot-coupling. Pin/Translation: udot; Free: quat. ----
+// ---- calcQDotDot: qddot = N qddot-coupling. Scalar joints: udot; quaternion ----
+//      bodies (Ball/FreeLine/Free): quaternion second derivative. ----
 void RobotEngine::calcQDotDot(const RobotModel& m, RobotState& s) {
     const Real* u = s.u();
     const Real* udot = s.udot();
     const Real* q = s.q();
+    const Transform* X_FM = s.X_FM();
     Real* qdd = s.qdotdot();
     for (int b = 1; b < m.numBodies; ++b) {
         const int qOff = m.bodyQIndex[b];
         const int uOff = m.bodyUIndex[b];
         const int dof = m.bodyNU[b];
-        if (m.bodyJoint[b] == JointType::Free) {
+        const JointType jt = m.bodyJoint[b];
+        if (jt == JointType::Ball) {
+            const Vec4 quat(q[qOff], q[qOff + 1], q[qOff + 2], q[qOff + 3]);
+            const Vec3 w(u[uOff], u[uOff + 1], u[uOff + 2]);
+            const Vec3 wd(udot[uOff], udot[uOff + 1], udot[uOff + 2]);
+            const Vec4 qdd4 = Rotation::convertAngVelDotToQuaternionDotDot(quat, w, wd);
+            for (int k = 0; k < 4; ++k) {
+                qdd[qOff + k] = qdd4[k];
+            }
+        } else if (jt == JointType::FreeLine) {
+            // w_FM = R_FM*(u0,u1,0); wdot_FM = R_FM*(udot0,udot1,0) (the
+            // R_FM_dot*(u0,u1,0) term is w_FM x w_FM = 0, see derivation).
+            const Vec4 quat(q[qOff], q[qOff + 1], q[qOff + 2], q[qOff + 3]);
+            const Rotation& R_FM = X_FM[b].R();
+            const Vec3 w = R_FM * Vec3(u[uOff], u[uOff + 1], 0);
+            const Vec3 wd = R_FM * Vec3(udot[uOff], udot[uOff + 1], 0);
+            const Vec4 qdd4 = Rotation::convertAngVelDotToQuaternionDotDot(quat, w, wd);
+            for (int k = 0; k < 4; ++k) {
+                qdd[qOff + k] = qdd4[k];
+            }
+            qdd[qOff + 4] = udot[uOff + 2];
+            qdd[qOff + 5] = udot[uOff + 3];
+            qdd[qOff + 6] = udot[uOff + 4];
+        } else if (jt == JointType::Free) {
             const Vec4 quat(q[qOff], q[qOff + 1], q[qOff + 2], q[qOff + 3]);
             const Vec3 w(u[uOff], u[uOff + 1], u[uOff + 2]);
             const Vec3 wd(udot[uOff], udot[uOff + 1], udot[uOff + 2]);

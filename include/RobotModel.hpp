@@ -24,36 +24,17 @@
 
 #include "robot_math.hpp"
 
-// Joint type per body. Mirrors the mobility->MobilizedBody mapping in
-// World::modelOneCompound. NO SimTK enum on the hot path.
 enum class JointType : std::uint8_t {
-    Weld = 0,    // 0 dof
-    Pin,         // 1 dof  (Torsion bond mobility)
-    Slider,      // 1 dof
-    Cylinder,    // 2 dof
-    BendStretch, // 2 dof
-    Translation, // 3 dof  (Cartesian)
-    Ball,        // 3 dof, q = 4 (quaternion) by default
-    SphericalCoords,
-    FreeLine, // 5 dof
-    Free,     // 6 dof, q = 7 (quaternion + translation)
-};
-
-// How a molecule's root body attaches to Ground (mirrors SimTK::RootMobility).
-// RootMobility is the SAME enum the topology + Python bindings already use
-// (SimTK::RootMobility, defined in molmodel CompoundSystem.h with
-// Free=0,Cartesian=1,Weld=2,FreeLine=3,Ball=4,Pin=5). We forward-declare it
-// (opaque scoped enum with fixed underlying type == a complete type) and alias
-// it so the engine shares ONE enum with the bound topology -- no parallel
-// values, and no Molmodel header pulled into this foundational file. The full
-// definition arrives via TopologyElements.hpp in the .cpp that need enumerators.
-enum class RootMobility : std::uint8_t {
-    Free,
-    Cartesian,
-    Weld,
-    FreeLine,
-    Ball,
-    Pin
+    Rigid = 0,       // 0 dof
+    Torsion,         // 1 dof  rotation about the bond axis (the canonical dihedral)
+    Slider,          // 1 dof  translation along the bond axis
+    Cylinder,        // 2 dof  rotation + translation about/along the bond axis
+    BendStretch,     // 2 dof  rotation perpendicular to the bond + translation along it
+    Cartesian,       // 3 dof  3 translations
+    Ball,            // 3 dof  rotation, q = 4 (quaternion) by default
+    SphericalCoords, // 3 dof  BAT (azimuth, zenith, radius)
+    FreeLine,        // 5 dof  2 rotations (no spin about own line) + 3 translations, q = 7
+    Free,            // 6 dof  q = 7 (quaternion + translation)
 };
 
 // ----------------------------------------------------------------------------
@@ -165,6 +146,89 @@ struct RobotModel {
 
     // ---- convenience -------------------------------------------------------
     [[nodiscard]] bool isQuaternionBody(int b) const {
-        return bodyJoint[b] == JointType::Ball || bodyJoint[b] == JointType::Free;
+        return jointUsesQuaternion(bodyJoint[b]);
+    }
+
+    // ---- joint-type facts: the SINGLE source of truth -----------------------
+    // Every place that needs per-joint sizes/flags (the builder's dof counting,
+    // the engine's q/u layout, the quaternion renormalizer) reads these, so a
+    // new joint is defined in exactly one spot. nq differs from nu only for the
+    // quaternion bodies (orientation stored as a 4-wide unit quaternion).
+    [[nodiscard]] static constexpr int jointNU(JointType jt) {
+        switch (jt) {
+            case JointType::Rigid:
+                return 0;
+            case JointType::Torsion:
+            case JointType::Slider:
+                return 1;
+            case JointType::Cylinder:
+            case JointType::BendStretch:
+                return 2;
+            case JointType::Cartesian:
+            case JointType::Ball:
+            case JointType::SphericalCoords:
+                return 3;
+            case JointType::FreeLine:
+                return 5;
+            case JointType::Free:
+                return 6;
+        }
+        return 0;
+    }
+    [[nodiscard]] static constexpr int jointNQ(JointType jt) {
+        // Quaternion bodies inflate the orientation block from 3 (rotational u)
+        // to 4 (unit quaternion q): Ball (4), FreeLine (4 + 3 trans = 7), Free
+        // (4 + 3 trans = 7). All others have nq == nu.
+        switch (jt) {
+            case JointType::Ball:
+                return 4;
+            case JointType::FreeLine:
+            case JointType::Free:
+                return 7;
+            default:
+                return jointNU(jt);
+        }
+    }
+    [[nodiscard]] static constexpr bool jointUsesQuaternion(JointType jt) {
+        return jt == JointType::Ball || jt == JointType::FreeLine || jt == JointType::Free;
+    }
+    [[nodiscard]] static constexpr bool jointIsFlexible(JointType jt) {
+        return jt != JointType::Rigid; // Weld/Rigid welds its two atoms into one rigid unit
+    }
+    // H_FM is CONSTANT in the F (inboard) frame for these, so HDot_FM == 0 and
+    // the engine's mobilizer-bias acceleration uses the cheap centripetal path.
+    // The other three (BendStretch, SphericalCoords, FreeLine) have q-dependent
+    // H_FM and go through the general HDot_FM*u term.
+    [[nodiscard]] static constexpr bool jointHasConstantHFM(JointType jt) {
+        switch (jt) {
+            case JointType::Rigid:
+            case JointType::Torsion:
+            case JointType::Slider:
+            case JointType::Cylinder:
+            case JointType::Cartesian:
+            case JointType::Ball:
+            case JointType::Free:
+                return true;
+            default: // BendStretch, SphericalCoords, FreeLine
+                return false;
+        }
+    }
+    // Only these joints are meaningful as a molecule-root attachment to Ground
+    // (the former RootMobility set). Slider/Cylinder/BendStretch/SphericalCoords
+    // are defined against a BOND axis that does not exist at the Ground hinge, so
+    // they are rejected there (validated in World::buildModel). This is a rule on
+    // ONE enum, not a second enum.
+    [[nodiscard]] static constexpr bool jointIsLegalRoot(JointType jt) {
+        switch (jt) {
+            case JointType::Free:
+            case JointType::Cartesian: // == Cartesian
+            case JointType::Rigid:     // == Rigid
+            case JointType::FreeLine:
+            case JointType::Ball:
+            case JointType::Torsion:
+                return true;
+            default:
+                return false;
+        }
     }
 };

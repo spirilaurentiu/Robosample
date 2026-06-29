@@ -60,27 +60,26 @@ enum class DistortOption : std::uint8_t {
     NMA = 0
 };
 
-enum class BondMobility : std::uint8_t {
-    Rigid = 0,
-    Torsion,
-    Free,
-    Ball,
-    Pin,
-    Slider,
-    Cylinder,
-    BendStretch
-};
-
-// Per-bond mobility selection produced by Context::build_flexibilities.
+// Per-bond mobility selection produced by Context::build_flexibilities. The
+// per-bond joint type is now a JointType (the former BondMobility enum is gone;
+// Rigid/Torsion remain usable as JointType aliases). Default Weld (== Rigid)
+// welds the two bonded atoms into the same rigid unit.
 struct Selection {
-    std::vector<BondMobility> bondMobility; // [numBonds]; default Rigid
+    std::vector<JointType> bondMobility; // [numBonds]; default Weld (== Rigid)
 };
 
 struct SamplerConfig {
     double timeStep = 0.001;
     int mdSteps = 0;
     AcceptRejectMode acceptRejectMode = AcceptRejectMode::AlwaysAccept;
-    bool useFixman = false; // include the Fixman potential + logSineSqr in H
+    bool useFixman = false; // include the Fixman potential (1/2 RT ln det M) in H
+    // External-rotation Jacobian -(1/2)RT ln sin^2(gamma2) for free/ball roots.
+    // DEFAULT OFF: it is the Euler-angle (sin theta) volume factor and is WRONG
+    // for Robosample's UNIT-QUATERNION roots, where the flat S^3 measure already
+    // equals Haar on SO(3) (no correction needed). See World::calcLogSineSqrGamma2
+    // and tests/TestEnsembleOrientation.cpp. Kept as a flag for any future
+    // Euler-parameterized joint where the term would be correct.
+    bool useOrientationJacobian = false;
     MoveType moveType = MoveType::MdHmc;
     bool useNuts = false;
 
@@ -95,6 +94,11 @@ struct SamplerConfig {
     // alpha^2, NOT nu). Larger alpha => bolder proposals, lower acceptance. See
     // add_sampler docstring for guidance; 1.0 is one thermal sigma.
     double nmaBiasScale = 1.0;
+    // NCMC λ=0 trough teleport (tests/TestNcmcTeleport): at the decoupled (ghost)
+    // trough, rigidly reposition the region root with KE-preserving velocity
+    // co-rotation, giving the implicit-docking long-range teleport with explicit-
+    // solvent correctness. DEFAULT OFF (the existing uncaged-stride behaviour).
+    bool ncmcTeleport = false;
     // Docking: the binding sphere is sized automatically, per ligand, as
     //   R_i = R_receptor + sphereFactor * R_ligand_i
     // (R_receptor / R_ligand_i = max extent of each set from its centroid, from
@@ -181,9 +185,34 @@ class World {
     // root-mobility vector is now a PER-WORLD argument (Context passes a global
     // default for ordinary worlds and a docking-specific one for docking
     // worlds), which is what makes "root mobility is a world property" true.
-    void buildModel(const SystemTopology& sys,
-                    const Selection& sel,
-                    const std::vector<RootMobility>& rootMobilities);
+    void
+    buildModel(const SystemTopology& sys, const Selection& sel, const std::vector<JointType>& rootMobilities);
+
+    // Override this world's root attachment to Ground. Root mobility is a
+    // PER-WORLD property: these mutate only THIS world's copy of the
+    // root-mobility vector and rebuild this world's RobotModel in place; they
+    // never touch the shared SystemTopology, so different worlds can give the
+    // same molecule different roots (e.g. a solvation shell where near waters
+    // are Free and the bulk is Welded). buildModel(...) MUST have been called
+    // once (by Context::add*World) first. Call these BEFORE add_sampler / mass
+    // scaling, since rebuilding resets the per-body sampler state.
+    //
+    //   setRootMobility   : change ONE molecule (rebuilds once).
+    //   setRootMobilities : replace the WHOLE vector and rebuild ONCE -- the
+    //                       O(N)-not-O(N^2) path for setting many molecules
+    //                       (e.g. thousands of solvent molecules at once).
+    void setRootMobility(int moleculeIndex, JointType mobility);
+    void setRootMobilities(const std::vector<JointType>& rootMobilities);
+
+    // Solvent-relaxing NCMC (docs/specs/ncmc_solvent_relax.md). Mark a set of
+    // atoms (global/OpenMM order) to be advanced in FLAT Cartesian space by
+    // velocity-Verlet driven by OpenMM forces INSIDE the proposal, so the contact
+    // environment relaxes during the move instead of being a welded wall. The
+    // atoms stay welded as rigid bodies (zero generalized DOF, no Fixman/Jacobian
+    // contribution); only their per-atom Cartesian (x,v) move. Empty set (default)
+    // == the welded engine, bit-for-bit. Call AFTER add_sampler (the rebuild in
+    // setRootMobilities clears per-body state but not this runtime set).
+    void setCartesianSolvent(const std::vector<int>& atomIndices);
 
     // Python: world.add_sampler(timeStep, mdSteps, acceptRejectMode, use_nuts,
     //                           sphere_factor=1.0, use_fixman=None)
@@ -295,6 +324,11 @@ class World {
     // starting at round 0. Bound to Python as world.set_reversibility_check(...).
     void setReversibilityCheck(int interval);
 
+    // Enable the NCMC λ=0 trough teleport (default off). See SamplerConfig::ncmcTeleport.
+    void setNcmcTeleport(bool on) {
+        sampler_.ncmcTeleport = on;
+    }
+
     // Compute the Route B mass-weighted internal-coordinate Hessian at the given
     // (minimized) Ground-frame coordinates and store the softest non-trivial mode
     // as the per-DOF NMA direction consumed by reinitialize(). atomPosGFlat is
@@ -309,13 +343,18 @@ class World {
     void reinitialize(); // seed velocities, record initial H (incl. Fixman)
     bool metropolis(double Hold, double Hnew);
     double currentTotalEnergy(); // PE (OpenMM) + KE (engine) [+ Fixman - 1/2 RT logSineSqr]
+    // Cartesian solvent helpers (no-ops when no atom is Cartesian-integrated).
+    void drawSolventVelocities(); // v_s ~ N(0, RT/m_s) Maxwell-Boltzmann
+    double calcSolventKE() const; // 1/2 sum_s m_s |v_s|^2  -> state_.energy.keSolvent
     // NMA Route B kinetic correction RT*ln cosh(w.mu), w = M^(1/2) u / sqrt(RT).
     // Subtracted from the kinetic term in both Hold_ and Hnew so the acceptance
     // uses ke_mix = -RT*ln g(u|q) for the biased-mixture momentum draw. Returns 0
     // (strict no-op) unless DistortOption::NMA is active and nmaBias_ is set.
     double nmaKineticCorrection();
     bool ncmcMove();                    // the lambda-protocol HMC move (NcmcSwitch)
-    double protocolLambda(int s) const; // lambda schedule, s in [0, ncmcSteps)
+    double protocolLambda(int s) const;     // lambda schedule, s in [0, ncmcSteps)
+    int ncmcTeleportRoot() const;           // Free-joint tree root of the NCMC region, or -1
+    void ncmcApplyTroughTeleport(int rootBody); // rigid λ=0 teleport + KE co-rotation
     void recomputeGeometry(const robo::Vec3* targets);
 
     // --- Fixman / coordinate-Jacobian corrections (torsional worlds only) ---
@@ -388,9 +427,20 @@ class World {
     std::vector<robo::Real> nmaBias_;
 
     std::vector<robo::Vec3> savedPosG_;
+    // Cartesian solvent positions saved at the start of an NCMC move and restored
+    // on reject (the body->atom fill does not touch Cartesian-integrated atoms).
+    std::vector<robo::Vec3> savedSolventPosG_;
     std::vector<double> savedQ_;
     double Hold_ = 0;
 
     std::vector<robo::Transform> frameFlat_;
     std::vector<robo::Transform> xpcFlat_;
+
+    // Build inputs retained so setRootMobility(ies) can rebuild this world's
+    // model in isolation. sys_ points at the Context-owned SystemTopology
+    // (outlives every World); sel_ and rootMobilities_ are this world's own
+    // copies. Captured on the first buildModel() call.
+    const SystemTopology* sys_ = nullptr;
+    Selection sel_;
+    std::vector<JointType> rootMobilities_;
 };

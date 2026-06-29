@@ -28,9 +28,12 @@ class Context {
     SystemTopology systemTopology;
 
     // ---- modeling --------------------------------------------------------
-    // Override a molecule's root attachment to Ground (default Free, set by
-    // load_amber). Writes systemTopology.rootMobilities, which the worlds read.
-    void setRootMobility(int moleculeIndex, RootMobility mobility);
+    // Root mobility is a PER-WORLD property. systemTopology.rootMobilities is
+    // only the build-time DEFAULT each world seeds from (set by load_amber);
+    // there is deliberately no Context-level mutator. To change an individual
+    // molecule's root attachment, call World::setRootMobility(...) on the world
+    // returned by add*World (see World.hpp), which rebuilds that world's model
+    // in isolation -- the same mechanism addDockingWorld already uses.
 
     // Add a Cartesian world (pure OpenMM MD on device) or a robotic/torsional
     // world (internal-coordinate HMC). Both return a reference to the new world
@@ -54,7 +57,7 @@ class Context {
     // (non-ring, non-terminal) bond gets `mobility`; otherwise only the listed
     // (i,j) bonds do. Ring-closing bonds always remain Rigid.
     Selection buildFlexibilities(const std::optional<std::vector<std::pair<int, int>>>& bonds,
-                                 BondMobility mobility,
+                                 JointType mobility,
                                  bool flag);
 
     // ---- run -------------------------------------------------------------

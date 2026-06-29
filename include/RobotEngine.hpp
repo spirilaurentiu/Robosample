@@ -88,6 +88,35 @@ class RobotEngine {
     // Port of SimbodyMatterSubsystemRep::calcKineticEnergy ( 1/2 u^T M u ).
     static robo::Real calcKineticEnergy(const RobotModel& m, const RobotState& s);
 
+    // ---- MOBILIZER REACTION FORCES ----------------------------------------
+    // Port of SimbodyMatterSubsystemRep::calcMobilizerReactionForces. The
+    // reaction on body b is the spatial force its INBOARD mobilizer transmits to
+    // it, expressed in Ground. It is obtained by a rigid Newton-Euler inward
+    // sweep using the TRUE body accelerations A_GB (so calcUDot must be current):
+    //   reac_b@Bo = Mk_b A_GB_b + gyro_b - F_ext_b + sum_children Phi[c] reac_c@Bo
+    // where F_ext_b = bodyForceG[b] + (applied mobility force mapped through H).
+    // No articulated inertia is used; this is exact rigid force transmission.
+    //
+    // reactionAtBoInG[b] (length numBodies, [0]=Ground unused) receives the
+    // reaction reported AT THE BODY ORIGIN Bo in Ground. Pass nullptr to skip.
+    // reactionAtMInG[b] receives the SAME reaction shifted to the outboard
+    // mobilizer frame origin Mo in Ground (Simbody's findMobilizerReactionOn-
+    // BodyAtMInGround convention): [t;f] at Bo -> [t - p_BoMo_G x f; f] at Mo.
+    // Pass nullptr to skip. At least one output must be non-null.
+    //
+    // PRECONDITION: realizePosition, realizeVelocity, realizeArticulatedBody-
+    // Inertias, and calcUDot all current (reads Mk_G, A_GB, gyro, Phi, H,
+    // bodyForceG, mobilityForce). Ground (body 0) has no inboard joint; its slot
+    // is left zero.
+    static void calcMobilizerReactionForces(const RobotModel& m,
+                                            const RobotState& s,
+                                            robo::SpatialVec* reactionAtBoInG,
+                                            robo::SpatialVec* reactionAtMInG);
+
+    // Convenience: the reaction on body b at its M frame origin, in Ground.
+    static robo::SpatialVec
+    findMobilizerReactionOnBodyAtMInGround(const RobotModel& m, const RobotState& s, int body);
+
     // ---- INTEGRATOR -------------------------------------------------------
     // Port of VerletIntegrator.cpp::attemptDAEStep, FIXED step. Sequence:
     //   q1 = q0 + h*qdot0 + (h^2/2)*qdotdot0
@@ -100,17 +129,19 @@ class RobotEngine {
     // or coordinate appeared during the step (e.g. a hard steric overlap drove an
     // LJ force to Inf); in that case the pre-step q/u are restored so the caller
     // sees a finite, unmodified state to reject from -- never a NaN it must chase.
+    template <class Bridge>
     static bool verletStep(const RobotModel& m,
                            RobotState& s,
-                           ForceBridge& bridge,
+                           Bridge& bridge,
                            const robo::ConstraintSet& cset,
                            robo::Real h);
 
     // Drives verletStep until t_end. Port of TimeStepper::stepTo for the fixed-
     // step velocity-Verlet path Robosample uses. Returns success.
+    template <class Bridge>
     static bool stepTo(const RobotModel& m,
                        RobotState& s,
-                       ForceBridge& bridge,
+                       Bridge& bridge,
                        const robo::ConstraintSet& cset,
                        robo::Real tEnd);
 
@@ -123,9 +154,10 @@ class RobotEngine {
     // h is configuration dependent (M(q), force stiffness), so this is a startup/
     // periodic smoke test, not a whole-run guarantee. The per-step corrector
     // throw in verletStep is the ongoing guard. See THEORY 5.5.
+    template <class Bridge>
     static robo::Real checkReversibility(const RobotModel& m,
                                          RobotState& s,
-                                         ForceBridge& bridge,
+                                         Bridge& bridge,
                                          const robo::ConstraintSet& cset,
                                          int nSteps,
                                          robo::Real h);

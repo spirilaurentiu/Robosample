@@ -54,7 +54,7 @@ struct SystemTopology {
     std::vector<int> exclusionBegin;
     std::vector<int> exclusionEnd;
     std::vector<int> atomsRootIndex;
-    std::vector<RootMobility> rootMobilities;
+    std::vector<JointType> rootMobilities;
 
     // -------------------------------------------------------------------------
     // Atom arrays  (BFS order, unit-converted)

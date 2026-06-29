@@ -1,5 +1,6 @@
 from sys import stdout
 
+import parmed
 from openmm.app import *
 from openmm.unit import *
 
@@ -8,8 +9,11 @@ from openmm import *
 # -------------------------
 # Load AMBER system
 # -------------------------
-prmtop = AmberPrmtopFile("2ala.prmtop")
-inpcrd = AmberInpcrdFile("2ala.rst7")
+PRMTOP_FILE = "10ala.prmtop"
+INPCRD_FILE = "10ala.rst7"
+
+prmtop = AmberPrmtopFile(PRMTOP_FILE)
+inpcrd = AmberInpcrdFile(INPCRD_FILE)
 
 # -------------------------
 # Build system (NVT first)
@@ -27,7 +31,7 @@ def make_integrator():
 # -------------------------
 # MINIMIZATION + NVT
 # -------------------------
-NVT_STEPS = 250000  # 0.5 ns @ 2 fs
+NVT_STEPS = 250_000  # 0.5 ns @ 2 fs
 
 integrator = make_integrator()
 simulation = Simulation(prmtop.topology, system, integrator, platform=platform)
@@ -67,11 +71,11 @@ e1 = simulation.context.getState(
 ).getPotentialEnergy()
 print("  PE after: ", e1)
 
-print("NVT equilibration...")
-simulation.context.setVelocitiesToTemperature(300 * kelvin)
-simulation.step(NVT_STEPS)
+# print("NVT equilibration...")
+# simulation.context.setVelocitiesToTemperature(300 * kelvin)
+# simulation.step(NVT_STEPS)
 
-# Save NVT state (box vectors come for free, no kwarg needed)
+# # Save NVT state (box vectors come for free, no kwarg needed)
 state = simulation.context.getState(
     getPositions=True, getVelocities=True, enforcePeriodicBox=True
 )
@@ -82,7 +86,7 @@ box = state.getPeriodicBoxVectors()
 # -------------------------
 # NPT SETUP (NEW CONTEXT)
 # -------------------------
-NPT_STEPS = 1000000  # 2 ns @ 2 fs
+NPT_STEPS = 50_000
 
 print("Switching to NPT...")
 system.addForce(MonteCarloBarostat(1 * bar, 300 * kelvin, 25))
@@ -132,11 +136,7 @@ print("Final box size (nm):", a, b, c)
 # -------------------------
 # SAVE STATE
 # -------------------------
-import parmed
-
-parm = parmed.load_file("2ala.prmtop", "2ala.rst7")
+parm = parmed.load_file(PRMTOP_FILE, INPCRD_FILE)
 parm.positions = positions
 parm.box_vectors = box_vectors
 parm.save("equilibrated.rst7", overwrite=True)
-
-print("Done. Wrote equilibrated_state.xml and equilibrated.rst7")

@@ -21,12 +21,12 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/python/robosam65ple"
+                "PYTHONPATH": "${workspaceFolder}/python/robosample"
             },
             "args": [
                 "2ala",
                 "${workspaceFolder}/tip3p/2ala.prmtop",
-                "${workspaceFolder}/tip3p/equilibrated.rst7",
+                "${workspaceFolder}/tip3p/2ala.rst7",
                 "6000",
                 "0",
                 "100",
@@ -44,7 +44,7 @@
                 "${workspaceFolder}/python/robosample/run.py",
                 "2ala",
                 "${workspaceFolder}/tip3p/2ala.prmtop",
-                "${workspaceFolder}/tip3p/equilibrated.rst7",
+                "${workspaceFolder}/tip3p/2ala.rst7",
                 "6000",
                 "0",
                 "100",

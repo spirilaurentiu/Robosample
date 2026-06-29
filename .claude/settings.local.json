@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('configure:', [p['name'] for p in d.get\\('configurePresets',[]\\)]\\); print\\('build:', [p['name'] for p in d.get\\('buildPresets',[]\\)]\\)\")",
+      "Bash(cmake --build --preset cuda-release)",
+      "Bash(cmake --preset cuda-tests)",
+      "Bash(cmake --build build/cuda-tests --target TestNCMCWork)",
+      "Bash(ASAN_OPTIONS=protect_shadow_gap=0:detect_leaks=0:new_delete_type_mismatch=0 ./TestNCMCWork --gtest_filter='NcmcProtocol.*:NcmcReversibility.*:NcmcCrooks.*:NcmcFixman.*:NcmcWork.*:NcmcJacobian.*')",
+      "Bash(ASAN_OPTIONS=protect_shadow_gap=0:detect_leaks=0:new_delete_type_mismatch=0 ./TestNCMCWork --gtest_filter='NcmcProtocol.*:NcmcReversibility.*:NcmcCrooks.*:NcmcFixman.*')",
+      "Bash(ASAN_OPTIONS=protect_shadow_gap=0:detect_leaks=0:new_delete_type_mismatch=0 ./TestNCMCWork)",
+      "Bash(cmake --build build/cuda-tests --target TestIntegrator TestAlchemy)",
+      "Bash(git *)",
+      "Bash(nox *)",
+      "Bash(python3 *)",
+      "Bash(ROBOSAMPLE_SLOW_TESTS=1 /home/victor/Robosample/build/cuda-tests/TestFixmanBoltzmann --gtest_list_tests)",
+      "Bash(ROBOSAMPLE_SLOW_TESTS=1 /home/victor/Robosample/build/cuda-tests/TestEnsembleOrientation --gtest_list_tests)",
+      "Bash(ROBOSAMPLE_SLOW_TESTS=1 /home/victor/Robosample/build/cuda-tests/TestMassScaleInvariance --gtest_list_tests)",
+      "Bash(ROBOSAMPLE_SLOW_TESTS=1 /home/victor/Robosample/build/cuda-tests/TestNcmcTeleport --gtest_list_tests)",
+      "Bash(ROBOSAMPLE_SLOW_TESTS=1 /home/victor/Robosample/build/cuda-tests/TestEnsembleValidation *)"
+    ]
+  }
+}

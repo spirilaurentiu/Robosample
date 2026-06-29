@@ -4,10 +4,11 @@ import shutil
 from pathlib import Path
 
 import nox
+from nox.command import CommandFailed
 
 BUILD_DIR = Path("build")
 
-TEST_PRESET = "cuda-relwithdebinfo"
+TEST_PRESET = "cuda-tests"
 BUILD_RELWITHDEBINFO = BUILD_DIR / TEST_PRESET
 
 PROFILE_DIR = Path("profile-data")
@@ -51,8 +52,6 @@ TEST_SYSTEMS = [
 @nox.session(python=False)
 def tests(session):
     """Run CMake builds, pytest with xdist, and generate unified coverage."""
-
-    # Ensure we are actually in the expected environment
     if "CONDA_PREFIX" not in os.environ:
         session.error(
             "CONDA_PREFIX not found. Please activate your mamba environment first."
@@ -60,52 +59,59 @@ def tests(session):
     else:
         session.log(f"Using CONDA_PREFIX: {os.environ['CONDA_PREFIX']}")
 
-    # Clean previous coverage data and builds
     session.log("Cleaning old coverage data...")
     if os.path.exists("coverage"):
         shutil.rmtree("coverage")
     os.makedirs("coverage", exist_ok=True)
     shutil.rmtree(BUILD_RELWITHDEBINFO)
 
-    # Build
     session.log("Configuring and Building with CMake...")
     session.run("cmake", "--preset", TEST_PRESET)
     session.run("cmake", "--build", "--preset", TEST_PRESET)
 
-    # Run C++ tests with CTest
-    session.log("Running C++ tests with CTest...")
-    session.run(
-        "ctest",
-        "--test-dir",
-        BUILD_RELWITHDEBINFO,
-        "-j",
-        success_codes=[0, 8],  # 8 = tests failed
-    )
+    tests_failed = False
 
-    # Run pytest in parallel with coverage
+    # --- C++ tests: exit 8 = tests failed (tolerated). Any OTHER nonzero is a
+    # real ctest error and should still abort. Detect "tests failed" from the
+    # log ctest writes; the build dir was just wiped, so it can't be stale.
+    session.log("Running C++ tests with CTest...")
+    session.run("ctest", "--test-dir", BUILD_RELWITHDEBINFO, "-j", success_codes=[0, 8])
+    if (
+        BUILD_RELWITHDEBINFO / "Testing" / "Temporary" / "LastTestsFailed.log"
+    ).exists():
+        tests_failed = True
+        session.warn("Some C++ tests failed (continuing to coverage).")
+
+    # --- Python tests: catch the failure so coverage still runs. A pytest
+    # error (usage/internal) also lands here and rightly keeps the session red.
     session.log("Running Python tests in parallel...")
     session.env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
-    session.run(
-        "pytest",
-        "-p",
-        "xdist",
-        "-p",
-        "pytest_cov",
-        "-n",
-        "auto",
-        "--cov=python/robosample/",
-        "--cov-report=xml:coverage/python_coverage.xml",
-        *session.posargs,
-    )
+    try:
+        session.run(
+            "pytest",
+            "-p",
+            "xdist",
+            "-p",
+            "pytest_cov",
+            "-n",
+            "auto",
+            "--cov=python/robosample/",
+            "--cov-report=xml:coverage/python_coverage.xml",
+            *session.posargs,
+            success_codes=[0, 5],
+        )  # 5 = no tests collected, treat as ok
+    except CommandFailed:
+        tests_failed = True
+        session.warn("Some Python tests failed (continuing to coverage).")
 
-    # C++ / GCOV Coverage
+    # --- Coverage + badge: now always reached. ---
     session.log("Processing C++ coverage...")
     session.run(
         "gcovr",
         "-j",
-        "0",  # Use all cores
+        "0",
         "--exclude",
-        r"tests/",  # Exclude test sources from coverage
+        r"tests/",
         "--xml",
         "coverage/cpp_coverage.xml",
         "--gcov-ignore-parse-errors",
@@ -115,7 +121,6 @@ def tests(session):
         BUILD_RELWITHDEBINFO,
     )
 
-    # Merge and report
     session.log("Merging coverage and generating HTML...")
     session.run(
         "gcovr",
@@ -130,8 +135,6 @@ def tests(session):
         "coverage/summary.json",
     )
 
-    # Badge generation
-    # We use a single bash string here to allow the $(jq ...) subshell to work
     session.log("Generating coverage badge...")
     badge_cmd = (
         "anybadge --value=$(jq '.line_percent' coverage/summary.json) "
@@ -139,6 +142,11 @@ def tests(session):
         "--overwrite 50=red 75=orange 90=yellow 102=green"
     )
     session.run("bash", "-c", badge_cmd, external=True)
+
+    if tests_failed:
+        session.error(
+            "Test failures occurred — coverage and badge were still generated above."
+        )
 
 
 def is_perf_unrestricted():

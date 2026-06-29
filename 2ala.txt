@@ -1,0 +1,328 @@
+[INFO] Periodic box set: a=2.96158 b=3.10364 c=2.61663 nm; method=PME, cutoff=1 nm.
+Created OpenMM context with CUDA platform with relative speed 100
+[INFO] Initialized OpenMM. Using version 8.5.
+OpenMM per-force-group comparison [kJ/mol]
+  force class                           C++        reference     abs diff
+  ------------------------ ---------------- ---------------- ------------
+  CMAPTorsionForce                 2.183634         2.183632    1.451e-06
+  HarmonicAngleForce              54.994659        54.994712    5.306e-05
+  HarmonicBondForce               20.286298        20.286339    4.091e-05
+  NonbondedForce              -31884.991595    -31884.993815    2.220e-03
+  PeriodicTorsionForce            19.590567        19.590544    2.297e-05
+  ------------------------ ---------------- ---------------- ------------
+  TOTAL                       -31787.936452    -31787.938588    2.136e-03
+  total rel diff   : 6.720e-08
+  per-group match  : PASS
+  result           : PASS
+[validate] C++ PME PE = -31787.936452 kJ/mol
+[validate] ref PME PE = -31787.938588 kJ/mol
+[validate] per-force-group match: OK
+[validate]   CMAPTorsionForce         cpp=        2.1836  ref=        2.1836  d=+1.4508e-06
+[validate]   HarmonicAngleForce       cpp=       54.9947  ref=       54.9947  d=-5.3058e-05
+[validate]   HarmonicBondForce        cpp=       20.2863  ref=       20.2863  d=-4.0909e-05
+[validate]   NonbondedForce           cpp=   -31884.9916  ref=   -31884.9938  d=+2.2196e-03
+[validate]   PeriodicTorsionForce     cpp=       19.5906  ref=       19.5905  d=+2.2973e-05
+[INFO] Periodic box set: a=2.96158 b=3.10364 c=2.61663 nm; method=PME, cutoff=1 nm.
+Created OpenMM context with CUDA platform with relative speed 100
+[INFO] Initialized OpenMM. Using version 8.5.
+[init] startup geometry check: nAtoms=2387  initial PE=-3.178e+04 kJ/mol  min non-bonded distance=0.1533 nm  hard clashes(<0.08 nm)=0
+[ncmc] world 0: Hstart=-39252.66 Hend=-39194.96 dH=+57.70 kJ/mol  dPE=+57.15 dKE=+0.44 work(diag)=192.02 gap=+134.32 (steps=20, teleport=off)
+[rex] round=0 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31724.4720 KE=275.3637 Fix=-7745.8508 H=-39194.9590
+[rex] round=0 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39178.56 Hend=-39112.96 dH=+65.60 kJ/mol  dPE=+60.21 dKE=+5.39 work(diag)=182.16 gap=+116.56 (steps=20, teleport=off)
+[rex] round=1 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31721.4083 KE=354.4124 Fix=-7745.9644 H=-39112.9603
+[rex] round=1 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39238.55 Hend=-39204.24 dH=+34.31 kJ/mol  dPE=+31.45 dKE=+2.80 work(diag)=173.08 gap=+138.77 (steps=20, teleport=off)
+[rex] round=2 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31750.1704 KE=291.8356 Fix=-7745.9064 H=-39204.2412
+[rex] round=2 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39193.33 Hend=-39154.34 dH=+38.99 kJ/mol  dPE=+33.25 dKE=+5.88 work(diag)=176.28 gap=+137.28 (steps=20, teleport=off)
+[rex] round=3 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31748.3705 KE=340.1320 Fix=-7746.1019 H=-39154.3404
+[rex] round=3 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39178.58 Hend=-39110.24 dH=+68.34 kJ/mol  dPE=+110.39 dKE=-42.09 work(diag)=192.88 gap=+124.54 (steps=20, teleport=off)
+[rex] round=4 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31671.2318 KE=306.9045 Fix=-7745.9124 H=-39110.2396
+[rex] round=4 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39253.17 Hend=-39159.43 dH=+93.74 kJ/mol  dPE=+85.74 dKE=+7.96 work(diag)=215.83 gap=+122.09 (steps=20, teleport=off)
+[rex] round=5 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31695.8786 KE=282.3715 Fix=-7745.9242 H=-39159.4313
+[rex] round=5 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39226.66 Hend=-39166.32 dH=+60.34 kJ/mol  dPE=+57.61 dKE=+2.84 work(diag)=187.51 gap=+127.16 (steps=20, teleport=off)
+[rex] round=6 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31724.0078 KE=303.7599 Fix=-7746.0718 H=-39166.3196
+[rex] round=6 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39173.77 Hend=-39129.55 dH=+44.22 kJ/mol  dPE=+65.05 dKE=-20.89 work(diag)=184.37 gap=+140.15 (steps=20, teleport=off)
+[rex] round=7 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31716.5665 KE=332.9276 Fix=-7745.9063 H=-39129.5452
+[rex] round=7 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39226.72 Hend=-39155.44 dH=+71.28 kJ/mol  dPE=+70.10 dKE=+1.12 work(diag)=188.26 gap=+116.98 (steps=20, teleport=off)
+[rex] round=8 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31711.5202 KE=301.9801 Fix=-7745.8962 H=-39155.4363
+[rex] round=8 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39245.57 Hend=-39193.75 dH=+51.82 kJ/mol  dPE=+25.11 dKE=+26.82 work(diag)=184.93 gap=+133.11 (steps=20, teleport=off)
+[rex] round=9 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31756.5073 KE=308.8327 Fix=-7746.0742 H=-39193.7488
+[rex] round=9 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39204.66 Hend=-39153.23 dH=+51.43 kJ/mol  dPE=+73.25 dKE=-21.89 work(diag)=187.76 gap=+136.32 (steps=20, teleport=off)
+[rex] round=10 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31708.3676 KE=301.0252 Fix=-7745.8856 H=-39153.2280
+[rex] round=10 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39158.43 Hend=-39112.55 dH=+45.88 kJ/mol  dPE=+73.46 dKE=-27.56 work(diag)=173.83 gap=+127.95 (steps=20, teleport=off)
+[rex] round=11 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31708.1593 KE=341.5959 Fix=-7745.9873 H=-39112.5507
+[rex] round=11 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39263.59 Hend=-39224.20 dH=+39.39 kJ/mol  dPE=+9.99 dKE=+29.51 work(diag)=172.15 gap=+132.76 (steps=20, teleport=off)
+[rex] round=12 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31771.6255 KE=293.5016 Fix=-7746.0734 H=-39224.1973
+[rex] round=12 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39235.12 Hend=-39190.00 dH=+45.12 kJ/mol  dPE=+20.88 dKE=+24.10 work(diag)=184.24 gap=+139.12 (steps=20, teleport=off)
+[rex] round=13 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31760.7415 KE=316.5607 Fix=-7745.8148 H=-39189.9956
+[rex] round=13 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39220.60 Hend=-39160.72 dH=+59.88 kJ/mol  dPE=+67.94 dKE=-8.00 work(diag)=184.41 gap=+124.53 (steps=20, teleport=off)
+[rex] round=14 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31713.6747 KE=298.9767 Fix=-7746.0210 H=-39160.7189
+[rex] round=14 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39182.83 Hend=-39084.70 dH=+98.13 kJ/mol  dPE=+76.75 dKE=+21.19 work(diag)=209.40 gap=+111.27 (steps=20, teleport=off)
+[rex] round=15 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31704.8726 KE=365.9440 Fix=-7745.7695 H=-39084.6981
+[rex] round=15 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39181.09 Hend=-38970.92 dH=+210.17 kJ/mol  dPE=+221.35 dKE=-11.26 work(diag)=236.47 gap=+26.30 (steps=20, teleport=off)
+[rex] round=16 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31560.2686 KE=335.2306 Fix=-7745.8846 H=-38970.9226
+[rex] round=16 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39233.70 Hend=-39177.52 dH=+56.18 kJ/mol  dPE=+33.71 dKE=+22.34 work(diag)=184.21 gap=+128.03 (steps=20, teleport=off)
+[rex] round=17 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31747.9115 KE=316.2147 Fix=-7745.8248 H=-39177.5216
+[rex] round=17 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39179.42 Hend=-39123.29 dH=+56.13 kJ/mol  dPE=+79.49 dKE=-23.13 work(diag)=184.83 gap=+128.70 (steps=20, teleport=off)
+[rex] round=18 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31702.1324 KE=325.0390 Fix=-7746.1948 H=-39123.2881
+[rex] round=18 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39213.71 Hend=-38990.14 dH=+223.57 kJ/mol  dPE=+206.27 dKE=+17.38 work(diag)=230.10 gap=+6.53 (steps=20, teleport=off)
+[rex] round=19 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31575.3451 KE=331.2575 Fix=-7746.0481 H=-38990.1356
+[rex] round=19 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39238.68 Hend=-39213.76 dH=+24.93 kJ/mol  dPE=-4.82 dKE=+29.55 work(diag)=172.04 gap=+147.11 (steps=20, teleport=off)
+[rex] round=20 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31786.4355 KE=318.4488 Fix=-7745.7699 H=-39213.7566
+[rex] round=20 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39257.92 Hend=-39221.78 dH=+36.15 kJ/mol  dPE=+7.13 dKE=+29.05 work(diag)=177.34 gap=+141.20 (steps=20, teleport=off)
+[rex] round=21 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31774.4874 KE=298.7084 Fix=-7745.9968 H=-39221.7757
+[rex] round=21 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39204.68 Hend=-39144.99 dH=+59.68 kJ/mol  dPE=+67.87 dKE=-8.37 work(diag)=191.99 gap=+132.31 (steps=20, teleport=off)
+[rex] round=22 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31713.7429 KE=314.5363 Fix=-7745.7860 H=-39144.9927
+[rex] round=22 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39226.23 Hend=-39163.23 dH=+63.00 kJ/mol  dPE=+65.06 dKE=-2.20 work(diag)=192.24 gap=+129.25 (steps=20, teleport=off)
+[rex] round=23 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31716.5587 KE=299.1618 Fix=-7745.8300 H=-39163.2270
+[rex] round=23 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39215.29 Hend=-39183.64 dH=+31.65 kJ/mol  dPE=+18.25 dKE=+13.29 work(diag)=175.84 gap=+144.19 (steps=20, teleport=off)
+[rex] round=24 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31763.3645 KE=325.5853 Fix=-7745.8578 H=-39183.6370
+[rex] round=24 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39283.33 Hend=-39231.05 dH=+52.29 kJ/mol  dPE=-10.89 dKE=+63.14 work(diag)=185.32 gap=+133.03 (steps=20, teleport=off)
+[rex] round=25 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31792.5044 KE=307.3905 Fix=-7745.9313 H=-39231.0452
+[rex] round=25 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39277.49 Hend=-39190.86 dH=+86.62 kJ/mol  dPE=+70.64 dKE=+15.87 work(diag)=201.77 gap=+115.15 (steps=20, teleport=off)
+[rex] round=26 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31710.9783 KE=265.9670 Fix=-7745.8522 H=-39190.8635
+[rex] round=26 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39234.06 Hend=-39117.65 dH=+116.40 kJ/mol  dPE=+74.82 dKE=+41.60 work(diag)=198.25 gap=+81.85 (steps=20, teleport=off)
+[rex] round=27 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31706.7942 KE=335.1194 Fix=-7745.9802 H=-39117.6549
+[rex] round=27 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39202.38 Hend=-39073.88 dH=+128.50 kJ/mol  dPE=+160.61 dKE=-32.05 work(diag)=203.15 gap=+74.66 (steps=20, teleport=off)
+[rex] round=28 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31621.0079 KE=293.1551 Fix=-7746.0277 H=-39073.8805
+[rex] round=28 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39199.64 Hend=-39158.99 dH=+40.64 kJ/mol  dPE=+49.08 dKE=-8.41 work(diag)=181.63 gap=+140.99 (steps=20, teleport=off)
+[rex] round=29 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31732.5393 KE=319.5358 Fix=-7745.9903 H=-39158.9939
+[rex] round=29 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39232.99 Hend=-39169.39 dH=+63.60 kJ/mol  dPE=+49.02 dKE=+14.47 work(diag)=199.08 gap=+135.48 (steps=20, teleport=off)
+[rex] round=30 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31732.5958 KE=309.0553 Fix=-7745.8543 H=-39169.3948
+[rex] round=30 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39228.41 Hend=-39164.27 dH=+64.15 kJ/mol  dPE=+58.67 dKE=+5.56 work(diag)=187.22 gap=+123.07 (steps=20, teleport=off)
+[rex] round=31 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31722.9470 KE=304.7352 Fix=-7746.0538 H=-39164.2656
+[rex] round=31 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39245.32 Hend=-39211.33 dH=+33.99 kJ/mol  dPE=+24.83 dKE=+9.13 work(diag)=168.27 gap=+134.29 (steps=20, teleport=off)
+[rex] round=32 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31756.7837 KE=291.3897 Fix=-7745.9404 H=-39211.3345
+[rex] round=32 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39190.81 Hend=-39084.46 dH=+106.35 kJ/mol  dPE=+71.66 dKE=+34.84 work(diag)=216.97 gap=+110.62 (steps=20, teleport=off)
+[rex] round=33 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31709.9609 KE=371.6188 Fix=-7746.1186 H=-39084.4606
+[rex] round=33 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39143.62 Hend=-39031.90 dH=+111.72 kJ/mol  dPE=+114.42 dKE=-2.62 work(diag)=209.74 gap=+98.02 (steps=20, teleport=off)
+[rex] round=34 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31667.1949 KE=381.3396 Fix=-7746.0477 H=-39031.9030
+[rex] round=34 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39233.47 Hend=-39163.98 dH=+69.49 kJ/mol  dPE=+41.15 dKE=+28.13 work(diag)=204.71 gap=+135.22 (steps=20, teleport=off)
+[rex] round=35 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31740.4632 KE=322.2372 Fix=-7745.7548 H=-39163.9808
+[rex] round=35 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39194.06 Hend=-39165.03 dH=+29.03 kJ/mol  dPE=+65.05 dKE=-36.03 work(diag)=168.76 gap=+139.74 (steps=20, teleport=off)
+[rex] round=36 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31716.5655 KE=297.4959 Fix=-7745.9569 H=-39165.0266
+[rex] round=36 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39238.16 Hend=-39193.08 dH=+45.08 kJ/mol  dPE=+17.17 dKE=+27.83 work(diag)=180.08 gap=+135.00 (steps=20, teleport=off)
+[rex] round=37 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31764.4513 KE=317.2521 Fix=-7745.8838 H=-39193.0830
+[rex] round=37 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39207.95 Hend=-39115.14 dH=+92.81 kJ/mol  dPE=+103.22 dKE=-10.54 work(diag)=203.28 gap=+110.47 (steps=20, teleport=off)
+[rex] round=38 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31678.4016 KE=309.0930 Fix=-7745.8341 H=-39115.1427
+[rex] round=38 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39208.55 Hend=-39127.76 dH=+80.79 kJ/mol  dPE=+80.78 dKE=+0.02 work(diag)=203.56 gap=+122.77 (steps=20, teleport=off)
+[rex] round=39 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31700.8341 KE=319.0532 Fix=-7745.9783 H=-39127.7592
+[rex] round=39 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39208.00 Hend=-39134.43 dH=+73.57 kJ/mol  dPE=+84.26 dKE=-10.71 work(diag)=188.89 gap=+115.32 (steps=20, teleport=off)
+[rex] round=40 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31697.3546 KE=308.8697 Fix=-7745.9452 H=-39134.4301
+[rex] round=40 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39244.64 Hend=-39202.79 dH=+41.85 kJ/mol  dPE=+40.08 dKE=+1.70 work(diag)=183.17 gap=+141.31 (steps=20, teleport=off)
+[rex] round=41 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31741.5426 KE=284.6430 Fix=-7745.8900 H=-39202.7895
+[rex] round=41 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39199.07 Hend=-39041.25 dH=+157.82 kJ/mol  dPE=+162.81 dKE=-5.10 work(diag)=216.82 gap=+59.00 (steps=20, teleport=off)
+[rex] round=42 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31618.8109 KE=323.4126 Fix=-7745.8528 H=-39041.2511
+[rex] round=42 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39259.74 Hend=-39221.28 dH=+38.47 kJ/mol  dPE=+32.02 dKE=+6.36 work(diag)=177.54 gap=+139.07 (steps=20, teleport=off)
+[rex] round=43 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31749.6008 KE=274.2003 Fix=-7745.8774 H=-39221.2779
+[rex] round=43 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39229.85 Hend=-39114.26 dH=+115.59 kJ/mol  dPE=+89.27 dKE=+26.31 work(diag)=207.24 gap=+91.65 (steps=20, teleport=off)
+[rex] round=44 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31692.3474 KE=324.0400 Fix=-7745.9526 H=-39114.2600
+[rex] round=44 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39234.01 Hend=-39189.30 dH=+44.71 kJ/mol  dPE=+23.64 dKE=+20.90 work(diag)=185.14 gap=+140.43 (steps=20, teleport=off)
+[rex] round=45 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31757.9806 KE=314.4757 Fix=-7745.7958 H=-39189.3008
+[rex] round=45 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39180.38 Hend=-39103.91 dH=+76.48 kJ/mol  dPE=+62.01 dKE=+14.31 work(diag)=200.08 gap=+123.61 (steps=20, teleport=off)
+[rex] round=46 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31719.6033 KE=361.5124 Fix=-7745.8170 H=-39103.9079
+[rex] round=46 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39245.75 Hend=-39189.88 dH=+55.87 kJ/mol  dPE=+31.49 dKE=+24.42 work(diag)=191.21 gap=+135.34 (steps=20, teleport=off)
+[rex] round=47 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31750.1249 KE=306.2481 Fix=-7746.0049 H=-39189.8817
+[rex] round=47 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39236.35 Hend=-39158.15 dH=+78.20 kJ/mol  dPE=+61.64 dKE=+16.59 work(diag)=201.17 gap=+122.97 (steps=20, teleport=off)
+[rex] round=48 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31719.9738 KE=307.8238 Fix=-7745.9973 H=-39158.1473
+[rex] round=48 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39187.68 Hend=-39138.67 dH=+49.01 kJ/mol  dPE=+51.42 dKE=-2.45 work(diag)=180.60 gap=+131.59 (steps=20, teleport=off)
+[rex] round=49 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31730.1989 KE=337.4517 Fix=-7745.9266 H=-39138.6738
+[rex] round=49 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39237.16 Hend=-39173.84 dH=+63.32 kJ/mol  dPE=+74.17 dKE=-10.73 work(diag)=190.52 gap=+127.20 (steps=20, teleport=off)
+[rex] round=50 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31707.4431 KE=279.6968 Fix=-7746.0933 H=-39173.8396
+[rex] round=50 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39207.90 Hend=-39146.57 dH=+61.33 kJ/mol  dPE=+53.37 dKE=+7.97 work(diag)=200.83 gap=+139.50 (steps=20, teleport=off)
+[rex] round=51 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31728.2499 KE=327.6596 Fix=-7745.9778 H=-39146.5681
+[rex] round=51 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39279.70 Hend=-39229.36 dH=+50.34 kJ/mol  dPE=+31.62 dKE=+18.62 work(diag)=187.02 gap=+136.68 (steps=20, teleport=off)
+[rex] round=52 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31749.9994 KE=266.5060 Fix=-7745.8666 H=-39229.3600
+[rex] round=52 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39255.60 Hend=-39170.71 dH=+84.88 kJ/mol  dPE=+69.17 dKE=+15.75 work(diag)=201.23 gap=+116.35 (steps=20, teleport=off)
+[rex] round=53 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31712.4522 KE=287.7339 Fix=-7745.9967 H=-39170.7150
+[rex] round=53 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39148.65 Hend=-39092.17 dH=+56.48 kJ/mol  dPE=+44.45 dKE=+12.13 work(diag)=188.98 gap=+132.50 (steps=20, teleport=off)
+[rex] round=54 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31737.1670 KE=391.0602 Fix=-7746.0623 H=-39092.1692
+[rex] round=54 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39225.91 Hend=-39178.84 dH=+47.07 kJ/mol  dPE=+45.50 dKE=+1.67 work(diag)=179.87 gap=+132.80 (steps=20, teleport=off)
+[rex] round=55 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31736.1164 KE=303.3471 Fix=-7746.0717 H=-39178.8410
+[rex] round=55 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39245.96 Hend=-39161.55 dH=+84.41 kJ/mol  dPE=+75.51 dKE=+8.66 work(diag)=199.01 gap=+114.60 (steps=20, teleport=off)
+[rex] round=56 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31706.1055 KE=290.2800 Fix=-7745.7239 H=-39161.5493
+[rex] round=56 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39214.66 Hend=-39173.55 dH=+41.11 kJ/mol  dPE=+35.00 dKE=+6.13 work(diag)=177.72 gap=+136.61 (steps=20, teleport=off)
+[rex] round=57 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31746.6144 KE=319.0516 Fix=-7745.9883 H=-39173.5510
+[rex] round=57 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39205.43 Hend=-39133.78 dH=+71.65 kJ/mol  dPE=+71.61 dKE=+0.19 work(diag)=184.60 gap=+112.95 (steps=20, teleport=off)
+[rex] round=58 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31710.0052 KE=322.3434 Fix=-7746.1148 H=-39133.7766
+[rex] round=58 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39209.09 Hend=-39124.93 dH=+84.16 kJ/mol  dPE=+94.95 dKE=-10.96 work(diag)=198.13 gap=+113.97 (steps=20, teleport=off)
+[rex] round=59 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31686.6671 KE=307.5335 Fix=-7745.7959 H=-39124.9296
+[rex] round=59 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39267.39 Hend=-39055.84 dH=+211.55 kJ/mol  dPE=+177.92 dKE=+33.66 work(diag)=251.48 gap=+39.93 (steps=20, teleport=off)
+[rex] round=60 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31603.6941 KE=293.8495 Fix=-7745.9947 H=-39055.8393
+[rex] round=60 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39187.56 Hend=-39109.68 dH=+77.87 kJ/mol  dPE=+48.45 dKE=+29.32 work(diag)=204.08 gap=+126.21 (steps=20, teleport=off)
+[rex] round=61 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31733.1658 KE=369.3453 Fix=-7745.8623 H=-39109.6828
+[rex] round=61 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39261.41 Hend=-39217.72 dH=+43.69 kJ/mol  dPE=+22.32 dKE=+21.32 work(diag)=180.98 gap=+137.29 (steps=20, teleport=off)
+[rex] round=62 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31759.2960 KE=287.4972 Fix=-7745.9185 H=-39217.7173
+[rex] round=62 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39207.52 Hend=-39154.86 dH=+52.66 kJ/mol  dPE=+78.65 dKE=-26.07 work(diag)=183.39 gap=+130.73 (steps=20, teleport=off)
+[rex] round=63 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31702.9668 KE=293.9924 Fix=-7745.8832 H=-39154.8576
+[rex] round=63 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39257.94 Hend=-39137.44 dH=+120.49 kJ/mol  dPE=+93.78 dKE=+26.44 work(diag)=223.86 gap=+103.37 (steps=20, teleport=off)
+[rex] round=64 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31687.8381 KE=296.0881 Fix=-7745.6918 H=-39137.4417
+[rex] round=64 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39188.08 Hend=-39145.39 dH=+42.69 kJ/mol  dPE=+62.74 dKE=-19.98 work(diag)=176.66 gap=+133.96 (steps=20, teleport=off)
+[rex] round=65 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31718.8799 KE=319.5232 Fix=-7746.0332 H=-39145.3900
+[rex] round=65 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39240.44 Hend=-39196.33 dH=+44.11 kJ/mol  dPE=+3.14 dKE=+41.04 work(diag)=178.28 gap=+134.17 (steps=20, teleport=off)
+[rex] round=66 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31778.4801 KE=328.1894 Fix=-7746.0392 H=-39196.3299
+[rex] round=66 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39196.94 Hend=-39137.94 dH=+59.00 kJ/mol  dPE=+90.59 dKE=-31.77 work(diag)=194.06 gap=+135.06 (steps=20, teleport=off)
+[rex] round=67 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31691.0249 KE=298.8680 Fix=-7745.7859 H=-39137.9428
+[rex] round=67 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39255.02 Hend=-39226.80 dH=+28.21 kJ/mol  dPE=+4.23 dKE=+23.97 work(diag)=173.91 gap=+145.70 (steps=20, teleport=off)
+[rex] round=68 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31777.3886 KE=296.5317 Fix=-7745.9453 H=-39226.8022
+[rex] round=68 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39225.74 Hend=-39086.80 dH=+138.94 kJ/mol  dPE=+158.57 dKE=-19.61 work(diag)=219.86 gap=+80.92 (steps=20, teleport=off)
+[rex] round=69 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31623.0442 KE=282.2317 Fix=-7745.9849 H=-39086.7975
+[rex] round=69 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39190.56 Hend=-39148.79 dH=+41.76 kJ/mol  dPE=+72.82 dKE=-31.23 work(diag)=178.99 gap=+137.23 (steps=20, teleport=off)
+[rex] round=70 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31708.7929 KE=305.7949 Fix=-7745.7960 H=-39148.7940
+[rex] round=70 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39242.50 Hend=-39193.23 dH=+49.27 kJ/mol  dPE=+30.38 dKE=+18.85 work(diag)=179.74 gap=+130.48 (steps=20, teleport=off)
+[rex] round=71 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31751.2355 KE=303.9282 Fix=-7745.9261 H=-39193.2334
+[rex] round=71 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39234.61 Hend=-39163.43 dH=+71.18 kJ/mol  dPE=+40.98 dKE=+30.12 work(diag)=193.10 gap=+121.92 (steps=20, teleport=off)
+[rex] round=72 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31740.6349 KE=323.0950 Fix=-7745.8866 H=-39163.4265
+[rex] round=72 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39240.78 Hend=-39167.27 dH=+73.51 kJ/mol  dPE=+43.41 dKE=+30.18 work(diag)=194.72 gap=+121.21 (steps=20, teleport=off)
+[rex] round=73 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31738.2045 KE=316.9809 Fix=-7746.0500 H=-39167.2736
+[rex] round=73 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39222.71 Hend=-39173.30 dH=+49.40 kJ/mol  dPE=+40.14 dKE=+9.40 work(diag)=186.88 gap=+137.48 (steps=20, teleport=off)
+[rex] round=74 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31741.4789 KE=314.2715 Fix=-7746.0974 H=-39173.3048
+[rex] round=74 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39253.42 Hend=-39165.36 dH=+88.06 kJ/mol  dPE=+67.94 dKE=+19.90 work(diag)=202.14 gap=+114.08 (steps=20, teleport=off)
+[rex] round=75 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31713.6762 KE=294.0594 Fix=-7745.7386 H=-39165.3554
+[rex] round=75 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39248.56 Hend=-39207.50 dH=+41.06 kJ/mol  dPE=+23.67 dKE=+17.49 work(diag)=173.78 gap=+132.72 (steps=20, teleport=off)
+[rex] round=76 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31757.9450 KE=296.5083 Fix=-7746.0646 H=-39207.5013
+[rex] round=76 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39251.69 Hend=-39170.75 dH=+80.94 kJ/mol  dPE=+66.14 dKE=+14.93 work(diag)=200.34 gap=+119.40 (steps=20, teleport=off)
+[rex] round=77 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31715.4780 KE=290.8270 Fix=-7746.0950 H=-39170.7461
+[rex] round=77 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39226.14 Hend=-39167.86 dH=+58.27 kJ/mol  dPE=+70.10 dKE=-11.90 work(diag)=181.52 gap=+123.25 (steps=20, teleport=off)
+[rex] round=78 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31711.5153 KE=289.5429 Fix=-7745.8909 H=-39167.8633
+[rex] round=78 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39245.39 Hend=-39194.90 dH=+50.49 kJ/mol  dPE=+8.73 dKE=+41.57 work(diag)=187.37 gap=+136.88 (steps=20, teleport=off)
+[rex] round=79 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31772.8918 KE=323.7666 Fix=-7745.7728 H=-39194.8980
+[rex] round=79 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39198.85 Hend=-39150.34 dH=+48.51 kJ/mol  dPE=+69.88 dKE=-21.33 work(diag)=179.98 gap=+131.47 (steps=20, teleport=off)
+[rex] round=80 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31711.7332 KE=307.4041 Fix=-7746.0082 H=-39150.3373
+[rex] round=80 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39205.08 Hend=-39141.60 dH=+63.48 kJ/mol  dPE=+64.29 dKE=-0.81 work(diag)=189.47 gap=+125.99 (steps=20, teleport=off)
+[rex] round=81 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31717.3311 KE=321.6931 Fix=-7745.9609 H=-39141.5990
+[rex] round=81 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39220.57 Hend=-39155.91 dH=+64.66 kJ/mol  dPE=+65.43 dKE=-0.65 work(diag)=196.58 gap=+131.92 (steps=20, teleport=off)
+[rex] round=82 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31716.1924 KE=306.3678 Fix=-7746.0848 H=-39155.9094
+[rex] round=82 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39242.15 Hend=-39185.18 dH=+56.97 kJ/mol  dPE=+36.57 dKE=+20.18 work(diag)=189.76 gap=+132.79 (steps=20, teleport=off)
+[rex] round=83 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31745.0478 KE=305.6070 Fix=-7745.7429 H=-39185.1837
+[rex] round=83 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39266.36 Hend=-39210.91 dH=+55.44 kJ/mol  dPE=+29.31 dKE=+26.21 work(diag)=177.35 gap=+121.91 (steps=20, teleport=off)
+[rex] round=84 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31752.3126 KE=287.4367 Fix=-7746.0389 H=-39210.9148
+[rex] round=84 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39235.96 Hend=-39091.51 dH=+144.45 kJ/mol  dPE=+119.81 dKE=+24.56 work(diag)=213.63 gap=+69.18 (steps=20, teleport=off)
+[rex] round=85 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31661.8063 KE=316.1880 Fix=-7745.8882 H=-39091.5064
+[rex] round=85 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39208.73 Hend=-39063.64 dH=+145.09 kJ/mol  dPE=+127.88 dKE=+17.09 work(diag)=224.26 gap=+79.17 (steps=20, teleport=off)
+[rex] round=86 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31653.7412 KE=335.9472 Fix=-7745.8430 H=-39063.6371
+[rex] round=86 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39244.08 Hend=-39195.32 dH=+48.76 kJ/mol  dPE=+39.11 dKE=+9.57 work(diag)=183.39 gap=+134.64 (steps=20, teleport=off)
+[rex] round=87 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31742.5090 KE=293.0758 Fix=-7745.8854 H=-39195.3185
+[rex] round=87 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39255.35 Hend=-39187.62 dH=+67.73 kJ/mol  dPE=+27.82 dKE=+40.01 work(diag)=187.52 gap=+119.79 (steps=20, teleport=off)
+[rex] round=88 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31753.7965 KE=312.2462 Fix=-7746.0670 H=-39187.6174
+[rex] round=88 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39212.25 Hend=-39067.59 dH=+144.66 kJ/mol  dPE=+143.33 dKE=+1.56 work(diag)=208.15 gap=+63.49 (steps=20, teleport=off)
+[rex] round=89 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31638.2902 KE=316.8905 Fix=-7746.1921 H=-39067.5918
+[rex] round=89 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39280.04 Hend=-39209.86 dH=+70.18 kJ/mol  dPE=+24.10 dKE=+46.09 work(diag)=186.57 gap=+116.39 (steps=20, teleport=off)
+[rex] round=90 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31757.5224 KE=293.6275 Fix=-7745.9664 H=-39209.8613
+[rex] round=90 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39266.22 Hend=-39212.15 dH=+54.07 kJ/mol  dPE=+34.36 dKE=+19.72 work(diag)=184.59 gap=+130.51 (steps=20, teleport=off)
+[rex] round=91 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31747.2616 KE=281.0829 Fix=-7745.9695 H=-39212.1482
+[rex] round=91 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39238.92 Hend=-39217.68 dH=+21.24 kJ/mol  dPE=+26.34 dKE=-5.16 work(diag)=166.08 gap=+144.84 (steps=20, teleport=off)
+[rex] round=92 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31755.2816 KE=283.4991 Fix=-7745.8967 H=-39217.6792
+[rex] round=92 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39276.74 Hend=-39245.78 dH=+30.96 kJ/mol  dPE=-6.20 dKE=+37.15 work(diag)=168.01 gap=+137.04 (steps=20, teleport=off)
+[rex] round=93 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31787.8216 KE=287.9893 Fix=-7745.9500 H=-39245.7823
+[rex] round=93 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39213.01 Hend=-39147.45 dH=+65.57 kJ/mol  dPE=+70.90 dKE=-5.32 work(diag)=196.65 gap=+131.08 (steps=20, teleport=off)
+[rex] round=94 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31710.7223 KE=309.2540 Fix=-7745.9774 H=-39147.4457
+[rex] round=94 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39257.50 Hend=-39228.63 dH=+28.87 kJ/mol  dPE=-16.55 dKE=+45.39 work(diag)=170.55 gap=+141.68 (steps=20, teleport=off)
+[rex] round=95 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31798.1726 KE=315.4744 Fix=-7745.9335 H=-39228.6318
+[rex] round=95 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39212.86 Hend=-39163.19 dH=+49.67 kJ/mol  dPE=+15.83 dKE=+33.72 work(diag)=184.64 gap=+134.96 (steps=20, teleport=off)
+[rex] round=96 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31765.7899 KE=348.4382 Fix=-7745.8414 H=-39163.1931
+[rex] round=96 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39248.48 Hend=-39207.22 dH=+41.26 kJ/mol  dPE=+27.60 dKE=+13.61 work(diag)=182.26 gap=+141.00 (steps=20, teleport=off)
+[rex] round=97 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31754.0173 KE=292.7124 Fix=-7745.9159 H=-39207.2209
+[rex] round=97 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39234.22 Hend=-39186.33 dH=+47.89 kJ/mol  dPE=+32.27 dKE=+15.59 work(diag)=191.48 gap=+143.59 (steps=20, teleport=off)
+[rex] round=98 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31749.3476 KE=308.9483 Fix=-7745.9286 H=-39186.3279
+[rex] round=98 replica=0 T=300.0 PE=-31781.6177 kJ/mol
+[ncmc] world 0: Hstart=-39240.73 Hend=-39092.31 dH=+148.42 kJ/mol  dPE=+114.16 dKE=+34.20 work(diag)=229.55 gap=+81.13 (steps=20, teleport=off)
+[rex] round=99 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-31667.4589 KE=321.0540 Fix=-7745.9025 H=-39092.3074
+[rex] round=99 replica=0 T=300.0 PE=-31781.6177 kJ/mol
