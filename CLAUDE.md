@@ -16,19 +16,15 @@ The systems it is supposed to simulate are to **1M atoms** clustered in up to **
 - FFAR1 (GPCR) in implicit solvent and with explicit membrane nanodisc
 - Spliceosome in explicit solvent
 
-## Authoritative references (read on demand, never wholesale)
+## Agents and references
 
-- `.claude/CODING_RULES.md`: general coding rules and targeted hardware.
+- `.claude/agents/researcher.md`
 
-- `.claude/HPC_OPTIMIZE.md`: performance doctrine. Used only by the `optimizer` agent.
+- `.claude/agents/coder.md`
 
-- `.claude/Z_MATRIX.md`: internal coordinates description and construction.
+- `.claude/agents/reviewer.md`
 
-- `.claude/ROBOTICS.md`: rationale, physics and implementation details of the robotics library.
-
-- `.claude/GCHMC.md`: implementation details and physics of Gibbs sampling coupled with Hamiltoninan Monte Carlo.
-
-- `.claude/ENHANCED_SAMPLING.md`: comparison of enhanced sampling methods.
+- `.claude/agents/optimizer.md`
 
 - `references/index.yaml`: summary of all papers Robosample is based on with link to their Markdown versions stored locally.
 
