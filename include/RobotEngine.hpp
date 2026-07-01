@@ -7,10 +7,12 @@
 //  Simbody's RigidBodyNode virtual dispatch.
 //
 //  EVERY method here is a *faithful port* of a named Simbody routine. The point
-//  is behavior preservation: build this beside Simbody, diff each operator to
-//  tolerance over random states and every mobilizer type, and only then remove
-//  Simbody (MIGRATION_DESIGN.md §6). Bodies are left unimplemented here on
-//  purpose — they are transcriptions, not inventions, and must be validated.
+//  is behavior preservation. NOTE: the migration is complete and Simbody has
+//  been removed from the build, so the old "build beside Simbody and diff each
+//  operator" gate no longer exists (see the VALIDATION note in RobotEngine.cpp
+//  for the analytic / finite-difference / statistical oracle-of-record that
+//  replaced it). These routines are transcriptions, not inventions, and are
+//  validated against physics and against each other, not against a live Simbody.
 //
 //  Tree order invariant: model.bodyParent[b] < b. Outward sweep = forward
 //  iteration over bodies; inward sweep = reverse iteration. Ground == body 0.
@@ -94,7 +96,10 @@ class RobotEngine {
     // it, expressed in Ground. It is obtained by a rigid Newton-Euler inward
     // sweep using the TRUE body accelerations A_GB (so calcUDot must be current):
     //   reac_b@Bo = Mk_b A_GB_b + gyro_b - F_ext_b + sum_children Phi[c] reac_c@Bo
-    // where F_ext_b = bodyForceG[b] + (applied mobility force mapped through H).
+    // where F_ext_b = bodyForceG[b] ONLY. Applied mobility (generalized joint)
+    // forces are NOT subtracted -- matching Simbody, they end up included in the
+    // reported reaction (SimbodyMatterSubsystemRep.cpp:6061-6062); see the
+    // definition's doc comment in RobotEngine.cpp for the full note.
     // No articulated inertia is used; this is exact rigid force transmission.
     //
     // reactionAtBoInG[b] (length numBodies, [0]=Ground unused) receives the

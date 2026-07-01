@@ -105,7 +105,7 @@ class Context(_Context):
         prmtop_path: str | os.PathLike[str],
         inpcrd_path: str | os.PathLike[str],
         *,
-        explicit_solvent: bool = False,
+        use_gbsa_obc2: bool | None = None,
         nonbonded_method: NonbondedMethod | None = None,
         nonbonded_cutoff: float | None = None,
         ewald_error_tolerance: float | None = None,
@@ -114,26 +114,37 @@ class Context(_Context):
         Read an AMBER ``.prmtop`` + coordinate file and populate
         ``self.system_topology``.
 
-        Solvent model
-        -------------
-        By default (``explicit_solvent=False``) the system is built for implicit
-        solvent: GBSA-OBC2 with a non-periodic, no-cutoff nonbonded treatment --
-        the historical Robosample default, unchanged.
+        Solvent model (auto-detected, OpenMM-style)
+        -------------------------------------------
+        The solvent model follows the periodic box the same way OpenMM's
+        ``createSystem`` does -- it is read from the topology/coordinates, not
+        passed by hand:
 
-        Set ``explicit_solvent=True`` for a solvated (periodic) box. This:
-          * selects PME for electrostatics (overridable via ``nonbonded_method``),
-          * disables GBSA (implicit and explicit solvent are mutually exclusive),
-          * reads the periodic box from the coordinate file and stores the three
-            reduced lattice vectors (nm) on ``system_topology.box_vectors``,
-          * sets a 1.0 nm cutoff by default (overridable), and
-          * gives **every** molecule a FREE (6-DOF) root, so solvent molecules can
-            translate and reorient (a welded water would be frozen in place).
+          * **Box present** (a solvated system: ``IFBOX`` > 0 / the rst7 carries
+            box vectors) -> explicit solvent. PME electrostatics under periodic
+            boundary conditions, GBSA off, the box stored as three reduced
+            lattice vectors (nm) on ``system_topology.box_vectors``, a 1.0 nm
+            cutoff by default, and **every** molecule given a FREE (6-DOF) root
+            so solvent can translate and reorient (a welded water would be frozen
+            in place).
+          * **No box** -> implicit solvent. GBSA-OBC2 with a non-periodic,
+            no-cutoff nonbonded treatment (the historical Robosample default).
 
-        The individual ``nonbonded_*`` / ``ewald_error_tolerance`` arguments
-        override the explicit-solvent defaults when given.
+        ``use_gbsa_obc2`` overrides the implicit-solvent force:
+          * ``None`` (default) -- auto: GBSA-OBC2 on when there is no box, off
+            when there is one.
+          * ``False`` -- force GBSA-OBC2 off (e.g. a gas-phase run with no
+            implicit solvent at all).
+          * ``True``  -- force GBSA-OBC2 on. This is implicit solvation and is
+            mutually exclusive with a periodic box, so if the system carries a
+            box (explicit-solvent PME) this raises ``ValueError``.
+
+        The ``nonbonded_method`` / ``nonbonded_cutoff`` / ``ewald_error_tolerance``
+        arguments override the auto-selected defaults when given. A periodic
+        ``nonbonded_method`` without a box, or a non-periodic one with a box, is a
+        contradiction and raises.
         """
         self.system_topology = SystemTopology()
-        self.system_topology.use_gbsa_obc2 = True
         self.system_topology.gbsa_solute_dielectric = 1.0
         self.system_topology.gbsa_solvent_dielectric = 78.5
 
@@ -485,26 +496,50 @@ class Context(_Context):
 
         # --------------------------------------------------------------------
         #  Solvent / periodicity configuration.
+        #
+        #  OpenMM-style auto-detection: a periodic box in the topology/coords
+        #  selects explicit solvent (PME under PBC, GBSA off); its absence
+        #  selects implicit solvent (GBSA-OBC2, non-periodic). The caller never
+        #  passes an "explicit_solvent" flag -- it follows the box.
         # --------------------------------------------------------------------
-        want_periodic = explicit_solvent or (
-            nonbonded_method is not None
-            and nonbonded_method
-            in (
-                NonbondedMethod.CutoffPeriodic,
-                NonbondedMethod.Ewald,
-                NonbondedMethod.PME,
-            )
+        periodic_methods = (
+            NonbondedMethod.CutoffPeriodic,
+            NonbondedMethod.Ewald,
+            NonbondedMethod.PME,
         )
+        has_box = parm.box_vectors is not None
 
-        if want_periodic:
+        # Guard the two ways an explicit override contradicts the detected box.
+        if not has_box and nonbonded_method in periodic_methods:
+            raise ValueError(
+                "A periodic nonbonded_method (CutoffPeriodic/Ewald/PME) was requested, but the "
+                "coordinate/topology has no periodic box. Provide a solvated inpcrd/rst7 (with box "
+                "information), or drop the nonbonded_method override to use implicit solvent."
+            )
+        if has_box and nonbonded_method is not None and nonbonded_method not in periodic_methods:
+            raise ValueError(
+                "The system carries a periodic box (explicit solvent), but a non-periodic "
+                "nonbonded_method was requested. Explicit solvent requires a periodic method "
+                "(PME/Ewald/CutoffPeriodic); drop the override to use the PME default."
+            )
+
+        if has_box:
             # Explicit solvent: PME by default, GBSA off, real box, FREE roots.
+            # Implicit GBSA-OBC2 is mutually exclusive with a periodic box: real
+            # waters carry the solvation, so forcing it on here is an error.
+            if use_gbsa_obc2:
+                raise ValueError(
+                    "use_gbsa_obc2=True (implicit GBSA-OBC2 solvent) is incompatible with a "
+                    "periodic box: this system is solvated, so it runs as explicit-solvent PME "
+                    "under PBC and implicit solvation must be off. Remove use_gbsa_obc2=True."
+                )
+            self.system_topology.use_gbsa_obc2 = False
             method = (
                 nonbonded_method
                 if nonbonded_method is not None
                 else NonbondedMethod.PME
             )
             self.system_topology.nonbonded_method = method
-            self.system_topology.use_gbsa_obc2 = False
             self.system_topology.nonbonded_cutoff = (
                 nonbonded_cutoff if nonbonded_cutoff is not None else 1.0
             )
@@ -513,14 +548,7 @@ class Context(_Context):
 
             # Box: pass ParmEd's three REDUCED lattice vectors straight through,
             # converted to nm and flattened row-major [a.xyz b.xyz c.xyz].
-            box = parm.box_vectors
-            if box is None:
-                raise ValueError(
-                    "explicit_solvent=True (or a periodic nonbonded method) was requested, "
-                    "but the coordinate file has no periodic box. Provide an inpcrd/rst7 with "
-                    "box information, or use the implicit-solvent path."
-                )
-            box_nm = box.value_in_unit(pmd.unit.nanometer)
+            box_nm = parm.box_vectors.value_in_unit(pmd.unit.nanometer)
             self.system_topology.box_vectors = [
                 float(component) for vec in box_nm for component in vec
             ]
@@ -532,8 +560,13 @@ class Context(_Context):
                 JointType.Free
             ] * self.system_topology.num_molecules
         else:
-            # Implicit / non-periodic path: honour explicit overrides if given,
-            # otherwise leave the historical defaults (GBSA-OBC2, NoCutoff) intact.
+            # Implicit / non-periodic path. GBSA-OBC2 is on by default and can be
+            # switched off with use_gbsa_obc2=False (gas phase). Honour explicit
+            # method/cutoff overrides; otherwise leave the historical defaults
+            # (GBSA-OBC2, NoCutoff) intact.
+            self.system_topology.use_gbsa_obc2 = (
+                True if use_gbsa_obc2 is None else bool(use_gbsa_obc2)
+            )
             if nonbonded_method is not None:
                 self.system_topology.nonbonded_method = nonbonded_method
             if nonbonded_cutoff is not None:

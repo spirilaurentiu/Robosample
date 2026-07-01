@@ -3,8 +3,10 @@
 // ============================================================================
 //  RobotState - the single aligned slab holding every per-step quantity, SoA.
 //  Replaces SimTK::State + the SBTree*Cache caches (Simbody01/Simbody/src/
-//  SimbodyTreeState.h). Field names track those caches so the engine port can
-//  be diffed 1:1 against Simbody.
+//  SimbodyTreeState.h). Field names track those caches as provenance only;
+//  Simbody has been removed from the build, so there is no longer a live
+//  1:1 diff against it (see the VALIDATION note in RobotEngine.cpp for the
+//  oracle-of-record that replaced it).
 //
 //  H_FM / H / G are stored as SpatialVec COLUMNS: column j of a body lives at
 //  index (bodyUIndex + j). One SpatialVec == 2 Vec3, so an array of `nu`

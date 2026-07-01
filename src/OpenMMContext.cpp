@@ -482,6 +482,13 @@ auto OpenMMContext::createGBSAOBCForce(const SystemTopology& systemTopology) -> 
     auto* force = new OpenMM::GBSAOBCForce();
     force->setSolventDielectric(systemTopology.gbsaSolventDielectric); // default 78.5
     force->setSoluteDielectric(systemTopology.gbsaSoluteDielectric);   // default 1.0
+    // Match OpenMM's app-layer implicit solvent. `createSystem(implicitSolvent=
+    // OBC2)` builds a CustomGBForce with the POLAR GB term only -- it has NO
+    // nonpolar surface-area term. The built-in GBSAOBCForce, by contrast, adds
+    // an ACE SA term by default (surfaceAreaEnergy = 2.25936 kJ/mol/nm^2). That
+    // term is exactly the ~15 kJ/mol that made our implicit-solvent energy
+    // diverge from the OpenMM reference, so zero it to reproduce app.OBC2.
+    force->setSurfaceAreaEnergy(0.0);
     force->setNonbondedMethod(gbsaForceMethod);
     force->setCutoffDistance(systemTopology.nonbondedCutoff);
     for (int index = 0; index < systemTopology.numAtoms; ++index) {

@@ -19,9 +19,22 @@
 //    multiplyBySqrtMInvPassOutward ............ RigidBodyNodeSpec.cpp
 //    per-joint H_FM / X_FM / qdot ............. RigidBodyNodeSpec_{Torsion,Translation,Free}.h
 //
-//  VALIDATION GATE: every operator below must be diffed against the still-
-//  present Simbody build (random q,u; all mobilizer types) to tolerance before
-//  Simbody is removed. See validate_robotics notes.
+//  VALIDATION: Simbody has been REMOVED from the build (no find_package, no
+//  SimTK/ Simbody01 tree, no live MobilizedBody code anywhere in src/ or tests/).
+//  The historical "diff every operator against the still-present Simbody build"
+//  gate therefore NO LONGER EXISTS and was never wired into the suite. The
+//  oracle-of-record for these recursions is now:
+//    * analytic closed forms (single/free rigid body, physical pendulum, KE),
+//    * finite-difference cross-checks (H<->X_FM, V<->X_GB, A<->V, HDot<->H,
+//      logDetM<->Cholesky of the forward-built dense M),
+//    * operator round-trips (M*M^-1==I, sqrtMInv/sqrtM mutual inverse,
+//      u^T M u == w^T w for u = multiplyBySqrtMInv(w)),
+//    * statistical ensembles (equipartition, Fixman/Boltzmann marginal),
+//    * frozen Simbody-golden CONSTANTS transcribed into TestSpatialAlgebra /
+//      TestInertia (numbers, not a live diff), and
+//    * a live OpenMM/ParmEd differential for POTENTIAL energy only.
+//  Field/routine names below still track their Simbody originals (source map
+//  above) purely as provenance, not as a runtime comparison.
 // ============================================================================
 
 #include "RobotEngine.hpp"
@@ -1103,9 +1116,18 @@ Real RobotEngine::calcKineticEnergy(const RobotModel& m, const RobotState& s) {
 //  is rigid Newton-Euler with the TRUE accelerations A_GB plus what the children
 //  pass back inward:
 //      reac_b@Bo = Mk_b A_GB_b + gyro_b - F_ext_b + sum_c Phi[c] reac_c@Bo
-//  F_ext_b is the applied spatial force on b: the body force from the bridge
-//  (bodyForceG) plus the applied mobility (generalized joint) force mapped to
-//  spatial through this body's hinge map H (the same H calcUDot pairs against z).
+//  F_ext_b is the applied spatial BODY force on b only (bodyForceG from the
+//  bridge). Matching Simbody (SimbodyMatterSubsystemRep::calcMobilizerReactionForces
+//  / calcMobilizerReactionForcesUsingFreebodyMethod, SimbodyMatterSubsystemRep.cpp
+//  :6061-6062,6067-6168): "any generalized forces applied at the mobilities end
+//  up included in the reaction forces" -- i.e. applied mobility (generalized
+//  joint) forces are NOT subtracted out here; the reported reaction is the one
+//  actually transmitted across the joint given whatever generalized force was
+//  applied. NOTE: this is behavior-neutral today because the force bridge
+//  zeroes mobilityForce every step (include/ForceBridge.hpp:73-75), so mobF is
+//  identically 0 and dropping the H*mobF term changes nothing numerically. It
+//  becomes live once a Fixman/biasing generalized torque is introduced --  at
+//  that point this convention (reaction includes actuation) is the intended one.
 //  Phi[c] (offset = parent->child origin in Ground) shifts a child's force from
 //  the child origin to b's origin -- identical to calcUDot's pass-1 transmission.
 // ============================================================================
@@ -1117,8 +1139,6 @@ void RobotEngine::calcMobilizerReactionForces(const RobotModel& m,
     const SpatialVec* A_GB = s.A_GB();
     const SpatialVec* gyro = s.gyro();
     const SpatialVec* bodyF = s.bodyForceG();
-    const Real* mobF = s.mobilityForce();
-    const SpatialVec* H = s.H();
     const PhiMatrix* Phi = s.Phi();
     const Transform* X_GB = s.X_GB();
 
@@ -1127,14 +1147,10 @@ void RobotEngine::calcMobilizerReactionForces(const RobotModel& m,
     std::vector<SpatialVec> reacBo(static_cast<std::size_t>(m.numBodies), SpatialVec(Vec3(0), Vec3(0)));
 
     for (int b = m.numBodies - 1; b >= 1; --b) {
-        const int uOff = m.bodyUIndex[b];
-        const int dof = m.bodyNU[b];
-
-        // applied spatial force on b = bridge body force + mobility force through H.
-        SpatialVec fExt = bodyF[b];
-        for (int j = 0; j < dof; ++j) {
-            fExt += H[uOff + j] * mobF[uOff + j];
-        }
+        // applied spatial force on b: bridge body force only (see Simbody
+        // convention note above -- generalized/mobility forces are NOT
+        // subtracted here).
+        const SpatialVec& fExt = bodyF[b];
 
         // rigid Newton-Euler residual at Bo, in Ground.
         SpatialVec reac = (Mk[b] * A_GB[b]) + gyro[b] - fExt;

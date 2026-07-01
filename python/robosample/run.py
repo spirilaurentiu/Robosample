@@ -8,6 +8,9 @@ import robosample
 #
 #   python3 python/robosample/run.py 2ala tip3p/2ala.prmtop tip3p/2ala.rst7 6000 0 100 1 true
 #
+#   python3 python/robosample/run.py 2ala.implicit examples/2ala/2ala.implicit.prmtop examples/2ala/2ala.implicit.rst7 6000 0 0 1 true
+#   python3 python/robosample/run.py 2ala.tip3p examples/2ala/2ala.tip3p.prmtop examples/2ala/2ala.tip3p.rst7 6000 0  0 1 true
+#
 # The prmtop/rst7 MUST carry a periodic box (a solvated system from tleap:
 # solvateBox / solvateOct). The rst7 is read for both coordinates AND the box.
 
@@ -26,15 +29,16 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-# ---- Build the context in EXPLICIT-SOLVENT mode -----------------------------
-# explicit_solvent=True:
+# ---- Build the context ------------------------------------------------------
+# The solvent model is auto-detected from the box (OpenMM-style): this rst7
+# carries a periodic box, so load_amber selects EXPLICIT solvent automatically:
 #   * PME electrostatics, GBSA off,
 #   * box read from the rst7 and stored as reduced lattice vectors,
 #   * 1.0 nm cutoff (override with nonbonded_cutoff=...),
 #   * every molecule (solute + each water) gets a FREE 6-DOF root.
 dih_classifier = robosample.AmberDihedralClassifier()
 context = robosample.Context(args.name, args.seed, dih_classifier)
-context.load_amber(args.prmtop, args.inpcrd, explicit_solvent=True)
+context.load_amber(args.prmtop, args.inpcrd)
 
 # Keep whole molecules across worlds: never let OpenMM wrap the coordinates that
 # flow into the robot engine. This is the default; set here explicitly so the

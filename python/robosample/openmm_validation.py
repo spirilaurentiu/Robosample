@@ -167,10 +167,26 @@ def reference_potential_energy_by_group(
             .getPotentialEnergy()
             .value_in_unit(unit.kilojoule_per_mole)
         )
-        name = type(force).__name__
+        name = _canon_force_class(type(force).__name__)
         by_class[name] = by_class.get(name, 0.0) + e
 
     return total, by_class
+
+
+# Force-class names that mean the same physics on the two sides. The C++ engine
+# builds implicit solvent with OpenMM's built-in GBSAOBCForce; the ParmEd
+# reference builds app.OBC2 as a CustomGBForce. Same OBC2 GB energy, different
+# OpenMM class -- collapse both to one label so the per-group comparison lines
+# them up instead of reporting each as MISSING on the other side.
+_FORCE_CLASS_ALIASES = {
+    "GBSAOBCForce": "ImplicitSolventGB",
+    "CustomGBForce": "ImplicitSolventGB",
+}
+
+
+def _canon_force_class(name: str) -> str:
+    """Canonical force-class label shared by the C++ and reference breakdowns."""
+    return _FORCE_CLASS_ALIASES.get(name, name)
 
 
 def _normalize_cpp_groups(raw) -> dict[str, float]:
@@ -190,6 +206,7 @@ def _normalize_cpp_groups(raw) -> dict[str, float]:
             _group, name, energy = entry
             name = str(name)
             energy = float(energy)
+        name = _canon_force_class(name)
         by_class[name] = by_class.get(name, 0.0) + energy
     return by_class
 
