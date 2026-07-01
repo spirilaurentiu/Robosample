@@ -482,13 +482,13 @@ auto OpenMMContext::createGBSAOBCForce(const SystemTopology& systemTopology) -> 
     auto* force = new OpenMM::GBSAOBCForce();
     force->setSolventDielectric(systemTopology.gbsaSolventDielectric); // default 78.5
     force->setSoluteDielectric(systemTopology.gbsaSoluteDielectric);   // default 1.0
-    // Match OpenMM's app-layer implicit solvent. `createSystem(implicitSolvent=
-    // OBC2)` builds a CustomGBForce with the POLAR GB term only -- it has NO
-    // nonpolar surface-area term. The built-in GBSAOBCForce, by contrast, adds
-    // an ACE SA term by default (surfaceAreaEnergy = 2.25936 kJ/mol/nm^2). That
-    // term is exactly the ~15 kJ/mol that made our implicit-solvent energy
-    // diverge from the OpenMM reference, so zero it to reproduce app.OBC2.
-    force->setSurfaceAreaEnergy(0.0);
+    // Replicate native OpenMM's default implicit solvent. `AmberPrmtopFile
+    // .createSystem(implicitSolvent=OBC2)` with no salt builds this same built-in
+    // GBSAOBCForce and, because its default sasaMethod is 'ACE', leaves the ACE
+    // nonpolar surface-area term on at the constructor default
+    // (surfaceAreaEnergy = 2.25936 kJ/mol/nm^2). We deliberately do NOT touch
+    // setSurfaceAreaEnergy so we track that same default -- zeroing it would drop
+    // the ~15 kJ/mol ACE term and diverge from the native OpenMM reference.
     force->setNonbondedMethod(gbsaForceMethod);
     force->setCutoffDistance(systemTopology.nonbondedCutoff);
     for (int index = 0; index < systemTopology.numAtoms; ++index) {
@@ -510,7 +510,6 @@ auto OpenMMContext::createAlchemyCorrectionForce(const SystemTopology& sys) -> O
     // Lorentz-Berthelot combining, matching OpenMM NonbondedForce defaults. All
     // 1-4/exclusion pairs are intramolecular, so the A x rest interaction group
     // carries no exceptions and needs no exclusion list (scales to assemblies).
-    const double ONE_4PI_EPS0 = 138.935456; // kJ*nm/(mol*e^2)
     auto* f =
         new OpenMM::CustomNonbondedForce("(lambda_inter - 1)*(4*eps*((sig/r)^12 - (sig/r)^6) + k*q1*q2/r);"
                                          "eps=sqrt(eps1*eps2); sig=0.5*(sig1+sig2)");
@@ -538,7 +537,24 @@ auto OpenMMContext::createAlchemyCorrectionForce(const SystemTopology& sys) -> O
         }
     }
     f->addInteractionGroup(aSet, restSet); // A x rest ONLY
+    // Share the main NonbondedForce's exclusion list so the CPU platform accepts
+    // the Context (see addStandardExclusions). Energy-neutral: no excluded pair is
+    // an A x rest pair.
+    addStandardExclusions(f, sys);
     return f;
+}
+
+void OpenMMContext::addStandardExclusions(OpenMM::CustomNonbondedForce* force,
+                                          const SystemTopology& sys) {
+    // scaling14 (1-4) and exclusion (1-2/1-3) pairs are disjoint -- the main
+    // NonbondedForce adds both as exceptions without duplicate-key errors, so the
+    // same two loops here never double-add a pair.
+    for (int k = 0; k < sys.numScaling14; ++k) {
+        force->addExclusion(sys.scaling14I[k], sys.scaling14L[k]);
+    }
+    for (int k = 0; k < sys.numExclusions; ++k) {
+        force->addExclusion(sys.exclusionI[k], sys.exclusionJ[k]);
+    }
 }
 
 void OpenMMContext::enableAlchemy(int atomBegin, int atomEnd) {
@@ -706,19 +722,15 @@ auto OpenMMContext::createAlchemyDecouplingForces(const SystemTopology& sys, Ope
         hard->addParticle({sys.atomsSigma[i], sys.atomsEpsilon[i]});
     }
     hard->addInteractionGroup(aSet, aSet); // A x A only
-    const auto bothAlch = [&](int a, int b) {
-        return a >= alchemyBegin && a < alchemyEnd && b >= alchemyBegin && b < alchemyEnd;
-    };
-    for (int k = 0; k < sys.numScaling14; ++k) {
-        if (bothAlch(sys.scaling14I[k], sys.scaling14L[k])) {
-            hard->addExclusion(sys.scaling14I[k], sys.scaling14L[k]);
-        }
-    }
-    for (int k = 0; k < sys.numExclusions; ++k) {
-        if (bothAlch(sys.exclusionI[k], sys.exclusionJ[k])) {
-            hard->addExclusion(sys.exclusionI[k], sys.exclusionJ[k]);
-        }
-    }
+    // Both custom forces share the main NonbondedForce's full exclusion list so
+    // the CPU platform accepts the Context (see addStandardExclusions). This is
+    // energy-neutral on both platforms: for `hard` (A x A) the only excluded pairs
+    // that fall inside the group are the intra-A 1-2/1-3/1-4 exceptions -- exactly
+    // the pairs MAIN carries as exceptions and that must not be double-counted --
+    // while the rest-involving exclusions are never A x A; for `soft` (A x rest) no
+    // excluded (intramolecular) pair is ever an A x rest pair.
+    addStandardExclusions(soft, sys);
+    addStandardExclusions(hard, sys);
 
     // Match MAIN's LJ treatment (cutoff under any periodic method).
     for (auto* f : {soft, hard}) {

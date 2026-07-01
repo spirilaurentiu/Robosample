@@ -145,10 +145,19 @@ class OpenMMContext {
         -> OpenMM::CustomNonbondedForce*;
     // Alchemy correction force: total [begin,end) x rest pair energy becomes
     // lambda_inter * standard (LJ + Coulomb), via a (lambda_inter-1)*standard term
-    // over an interaction group. No intermolecular exceptions exist, so no
-    // exclusion list is needed (scales to large assemblies).
+    // over an interaction group. Every excluded pair is intramolecular (never an
+    // A x rest pair), so the exclusions below are energy-neutral; they exist only
+    // to satisfy the CPU platform's shared-neighbor-list rule.
     [[nodiscard]] auto createAlchemyCorrectionForce(const SystemTopology& systemTopology)
         -> OpenMM::CustomNonbondedForce*;
+    // Mirror the main NonbondedForce's exception pairs (all 1-2/1-3 exclusions and
+    // 1-4 scaled pairs) as CustomNonbondedForce exclusions. The CPU platform shares
+    // ONE neighbor list across every exclusion-using force and rejects the Context
+    // ("All Forces must have identical exclusions") unless the lists match exactly;
+    // CUDA/OpenCL route interaction-group custom forces around the shared list, so
+    // this is a CPU-correctness requirement and a no-op on the energy elsewhere.
+    static void addStandardExclusions(OpenMM::CustomNonbondedForce* force,
+                                      const SystemTopology& systemTopology);
     [[nodiscard]] auto createHarmonicBondForce(const SystemTopology& systemTopology)
         -> OpenMM::HarmonicBondForce*;
     [[nodiscard]] auto createHarmonicAngleForce(const SystemTopology& systemTopology)

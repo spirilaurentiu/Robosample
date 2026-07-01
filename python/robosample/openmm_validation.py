@@ -1,17 +1,21 @@
 """openmm_validation.py
 
-Validate the C++ OpenMM build against a Python/OpenMM reference, and diagnose
-common failure modes (infinite / NaN energy).
+Validate the C++ OpenMM build against a native Python/OpenMM reference, and
+diagnose common failure modes (infinite / NaN energy).
 
 The C++ ``Context`` builds a single OpenMM ``System`` from the SoA
 ``system_topology`` (``Context.initialize_openmm``) and reports the potential
 energy of the reference structure (``Context.calc_openmm_potential_energy``).
-Here we build the *same* physical system directly with ParmEd + OpenMM from the
-original ``prmtop``/``inpcrd`` and compare the two potential energies.
+Here we build the *same* physical system directly with **native OpenMM** from
+the original ``prmtop``/``inpcrd`` (``openmm.app.AmberPrmtopFile`` +
+``AmberInpcrdFile``, not ParmEd) and compare the two potential energies. The C++
+engine is a deliberate replica of this native OpenMM build, force for force --
+including the implicit-solvent ``GBSAOBCForce`` (see below).
 
 Because the potential energy is a sum over interactions, it is invariant to atom
 ordering, so the BFS/compound ordering used on the C++ side and the prmtop
-ordering used by ParmEd must agree to within floating-point/platform tolerance.
+ordering used by the native OpenMM reference must agree to within
+floating-point/platform tolerance.
 
 Per-force-group comparison
 --------------------------
@@ -30,6 +34,9 @@ Notes
   Mixed-precision ``CUDA``/``OpenCL`` can differ by a small relative amount.
 * The settings below (NoCutoff, no constraints, no implicit solvent, no CM
   motion removal) mirror the C++ defaults for a gas-phase single-point energy.
+* Implicit solvent uses ``implicitSolvent=app.OBC2`` with OpenMM's default
+  ``sasaMethod='ACE'``. With no salt this is the built-in ``GBSAOBCForce`` with
+  the ACE nonpolar surface-area term left on -- exactly what the C++ side builds.
 """
 
 from __future__ import annotations
@@ -38,8 +45,8 @@ import math
 import os
 
 import numpy as np
+import openmm.app as app
 import openmm.unit as unit
-import parmed as pmd
 
 import openmm as mm
 import robosample
@@ -49,8 +56,8 @@ def _build_reference_system(
     context: robosample.Context,
     prmtop_path: str | os.PathLike[str],
     inpcrd_path: str | os.PathLike[str],
-) -> tuple[pmd.amber.AmberParm, mm.System]:
-    """Build the ParmEd + OpenMM reference ``System`` (shared by the helpers).
+) -> tuple[app.AmberInpcrdFile, mm.System]:
+    """Build the native OpenMM reference ``System`` (shared by the helpers).
 
     Kept in one place so the plain and per-group reference energies are
     guaranteed to come from an identically configured system. The nonbonded
@@ -58,29 +65,41 @@ def _build_reference_system(
     space tolerance are taken from ``context.system_topology`` so the reference
     mirrors whatever the C++ side built -- gas phase, GBSA, or explicit-solvent
     PME alike.
+
+    Uses OpenMM's own Amber reader (``app.AmberPrmtopFile`` /
+    ``AmberInpcrdFile``), *not* ParmEd, so the reference is exactly the native
+    OpenMM build the C++ side replicates. In particular ``implicitSolvent=OBC2``
+    with the default ``sasaMethod='ACE'`` and no salt yields the built-in
+    ``GBSAOBCForce`` (ACE nonpolar term on), which is what the C++ side emits.
+
+    Returns ``(inpcrd, system)``; ``inpcrd.positions`` carries the coordinates.
     """
     sys_top = context.system_topology
-    implicit_solvent = mm.app.OBC2 if sys_top.use_gbsa_obc2 else None
+    implicit_solvent = app.OBC2 if sys_top.use_gbsa_obc2 else None
 
-    # Map the Robosample nonbonded method onto the OpenMM app constant. ParmEd's
-    # createSystem reads the periodic box straight from `parm` (loaded with the
-    # inpcrd), so PME/Ewald/CutoffPeriodic pick up the same box the C++ side uses.
+    # Map the Robosample nonbonded method onto the OpenMM app constant.
     method_map = {
-        robosample.NonbondedMethod.NoCutoff: mm.app.NoCutoff,
-        robosample.NonbondedMethod.CutoffNonPeriodic: mm.app.CutoffNonPeriodic,
-        robosample.NonbondedMethod.CutoffPeriodic: mm.app.CutoffPeriodic,
-        robosample.NonbondedMethod.Ewald: mm.app.Ewald,
-        robosample.NonbondedMethod.PME: mm.app.PME,
+        robosample.NonbondedMethod.NoCutoff: app.NoCutoff,
+        robosample.NonbondedMethod.CutoffNonPeriodic: app.CutoffNonPeriodic,
+        robosample.NonbondedMethod.CutoffPeriodic: app.CutoffPeriodic,
+        robosample.NonbondedMethod.Ewald: app.Ewald,
+        robosample.NonbondedMethod.PME: app.PME,
     }
-    nb_method = method_map.get(sys_top.nonbonded_method, mm.app.NoCutoff)
+    nb_method = method_map.get(sys_top.nonbonded_method, app.NoCutoff)
     is_periodic = sys_top.nonbonded_method in (
         robosample.NonbondedMethod.CutoffPeriodic,
         robosample.NonbondedMethod.Ewald,
         robosample.NonbondedMethod.PME,
     )
 
-    parm = pmd.load_file(str(prmtop_path), xyz=str(inpcrd_path))
-    system = parm.createSystem(
+    prmtop = app.AmberPrmtopFile(str(prmtop_path))
+    inpcrd = app.AmberInpcrdFile(str(inpcrd_path))
+    # A periodic method needs the box; the prmtop only carries it when IFBOX>0,
+    # so take it from the inpcrd/rst7 (where the C++ side reads it too).
+    if inpcrd.boxVectors is not None:
+        prmtop.topology.setPeriodicBoxVectors(inpcrd.boxVectors)
+
+    system = prmtop.createSystem(
         nonbondedMethod=nb_method,
         nonbondedCutoff=sys_top.nonbonded_cutoff,
         constraints=None,
@@ -96,7 +115,7 @@ def _build_reference_system(
             if isinstance(force, mm.NonbondedForce):
                 force.setEwaldErrorTolerance(sys_top.ewald_error_tolerance)
                 force.setUseDispersionCorrection(True)
-    return parm, system
+    return inpcrd, system
 
 
 def reference_potential_energy(
@@ -105,12 +124,12 @@ def reference_potential_energy(
     inpcrd_path: str | os.PathLike[str],
     platform_name: str = "Reference",
 ) -> float:
-    """Potential energy [kJ/mol] from a direct ParmEd + OpenMM build."""
-    parm, system = _build_reference_system(context, prmtop_path, inpcrd_path)
+    """Potential energy [kJ/mol] from a direct native OpenMM build."""
+    inpcrd, system = _build_reference_system(context, prmtop_path, inpcrd_path)
     integrator = mm.VerletIntegrator(0.001)
     platform = mm.Platform.getPlatformByName(platform_name)
     mm_context = mm.Context(system, integrator, platform)
-    mm_context.setPositions(parm.positions)
+    mm_context.setPositions(inpcrd.positions)
     mm_context.computeVirtualSites()  # place EPs from their frames (no-op if none)
     state = mm_context.getState(getEnergy=True)
     return state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
@@ -136,7 +155,7 @@ def reference_potential_energy_by_group(
     -------
     (total, by_class) : total PE and {force_class_name: summed PE}.
     """
-    parm, system = _build_reference_system(context, prmtop_path, inpcrd_path)
+    inpcrd, system = _build_reference_system(context, prmtop_path, inpcrd_path)
 
     forces = list(system.getForces())
     # One group per force (0..n-1). OpenMM supports 32 groups (0-31).
@@ -150,7 +169,7 @@ def reference_potential_energy_by_group(
     integrator = mm.VerletIntegrator(0.001)
     platform = mm.Platform.getPlatformByName(platform_name)
     mm_context = mm.Context(system, integrator, platform)
-    mm_context.setPositions(parm.positions)
+    mm_context.setPositions(inpcrd.positions)
     mm_context.computeVirtualSites()  # place EPs from their frames (no-op if none)
 
     total = (
@@ -173,15 +192,12 @@ def reference_potential_energy_by_group(
     return total, by_class
 
 
-# Force-class names that mean the same physics on the two sides. The C++ engine
-# builds implicit solvent with OpenMM's built-in GBSAOBCForce; the ParmEd
-# reference builds app.OBC2 as a CustomGBForce. Same OBC2 GB energy, different
-# OpenMM class -- collapse both to one label so the per-group comparison lines
-# them up instead of reporting each as MISSING on the other side.
-_FORCE_CLASS_ALIASES = {
-    "GBSAOBCForce": "ImplicitSolventGB",
-    "CustomGBForce": "ImplicitSolventGB",
-}
+# Force-class names that mean the same physics on the two sides but come out
+# under different OpenMM class names. Both sides now build implicit solvent with
+# OpenMM's built-in GBSAOBCForce (the native app.OBC2 default with no salt), so
+# the class names already line up and no GB alias is needed. Kept as an
+# extension point for any future class-name divergence.
+_FORCE_CLASS_ALIASES: dict[str, str] = {}
 
 
 def _canon_force_class(name: str) -> str:

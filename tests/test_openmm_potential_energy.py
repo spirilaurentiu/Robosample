@@ -1,10 +1,14 @@
-"""Validate the C++ OpenMM potential energy against a Python/OpenMM reference.
+"""Validate the C++ OpenMM potential energy against a native OpenMM reference.
 
 These tests are the pytest form of the ``--validate`` path in
 ``python/robosample/run.py``: for each solvent model they build a
 ``robosample.Context``, let ``load_amber`` auto-detect the model from the
 periodic box (OpenMM-style), and then diff the C++ single-point energy against a
-ParmEd + OpenMM reference built from the same ``prmtop``/``rst7``.
+**native OpenMM** reference built from the same ``prmtop``/``rst7`` with
+``openmm.app.AmberPrmtopFile`` + ``AmberInpcrdFile`` (NOT ParmEd). For implicit
+solvent this means the reference is the built-in ``GBSAOBCForce`` produced by
+``createSystem(implicitSolvent=OBC2)`` with the default ``sasaMethod='ACE'`` --
+the exact force the C++ engine replicates.
 
 ``openmm_validation.compare_by_force_group`` is authoritative: it compares the
 total PE (and every force group) and *raises* ``ValueError`` on any mismatch, so
@@ -21,12 +25,12 @@ Three models are covered:
 * **vacuum**   -- the same box-less ``2ala.implicit`` files loaded with
   ``use_gbsa_obc2=False``: no implicit solvent, no periodicity (gas phase).
 
-On a bare dev run the tests skip cleanly when the compiled extension,
-OpenMM/ParmEd, or the example inputs are unavailable, rather than failing
-collection. Under the AUTHORITATIVE gate (``nox -s tests``, which exports
-``ROBOSAMPLE_REQUIRE_OPENMM=1``) these same conditions are HARD FAILURES
-instead: a missing OpenMM/ParmEd/compiled extension/2ala input must fail the
-gate loudly rather than silently reduce it to fewer oracles.
+On a bare dev run the tests skip cleanly when the compiled extension, OpenMM, or
+the example inputs are unavailable, rather than failing collection. Under the
+AUTHORITATIVE gate (``nox -s tests``, which exports ``ROBOSAMPLE_REQUIRE_OPENMM=1``)
+these same conditions are HARD FAILURES instead: a missing OpenMM/compiled
+extension/2ala input must fail the gate loudly rather than silently reduce it to
+fewer oracles.
 """
 
 from __future__ import annotations
@@ -38,18 +42,16 @@ import pytest
 
 _REQUIRE_OPENMM = bool(os.environ.get("ROBOSAMPLE_REQUIRE_OPENMM"))
 
-# The comparison needs the OpenMM/ParmEd reference stack and the compiled
-# robosample extension (the .so built by `cmake --build --preset cuda-release`).
-# Bare dev run: skip -- don't error -- when any of them is missing. Under the
-# authoritative gate: import for real, so a missing dependency is a hard
-# collection-time failure (not a silent skip).
+# The comparison needs native OpenMM (the reference is built with
+# openmm.app.AmberPrmtopFile, not ParmEd) and the compiled robosample extension
+# (the .so built by `cmake --build --preset cuda-release`). Bare dev run: skip --
+# don't error -- when either is missing. Under the authoritative gate: import for
+# real, so a missing dependency is a hard collection-time failure (not a silent skip).
 if _REQUIRE_OPENMM:
     import openmm  # noqa: F401
-    import parmed  # noqa: F401
     import robosample
 else:
     pytest.importorskip("openmm")
-    pytest.importorskip("parmed")
     robosample = pytest.importorskip("robosample")
 from robosample import openmm_validation  # noqa: E402  (after importorskip)
 
@@ -78,7 +80,7 @@ def test_openmm_potential_energy_matches_reference(
     rst7_name: str,
     load_kwargs: dict,
 ) -> None:
-    """C++ single-point PE must match the ParmEd+OpenMM reference for each model."""
+    """C++ single-point PE must match the native OpenMM reference for each model."""
     prmtop = DATA_DIR / prmtop_name
     rst7 = DATA_DIR / rst7_name
     if _REQUIRE_OPENMM:
