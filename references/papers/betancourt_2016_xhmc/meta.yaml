@@ -1,0 +1,45 @@
+key: betancourt_2016_xhmc
+doc_type: methods
+title: "Identifying the Optimal Integration Time in Hamiltonian Monte Carlo"
+authors: [Betancourt]
+year: "2016"
+venue: "arXiv preprint"
+doi: null
+arxiv: "1601.00225"
+summary: >
+  Uses the microcanonical geometry of HMC to characterize the optimal integration
+  time, motivates NUTS, and introduces Exhaustive HMC (XHMC): a dynamic
+  trajectory-termination criterion based on the temporal average of the virial rate
+  falling below a threshold delta. Covers static and dynamic (additive /
+  multiplicative binary-tree) trajectory construction, Metropolis/multinomial and
+  slice state selection, involution-based reversibility, and the divergence cutoff.
+has_implementable_math: true
+methods:
+  - leapfrog symplectic integrator
+  - multiplicative (binary-tree) trajectory expansion
+  - additive trajectory expansion
+  - No-U-Turn termination criterion
+  - virial-based exhaustion termination criterion
+  - Metropolis/multinomial trajectory state selection
+  - slice-sampler state selection
+  - momentum-negation involution for reversibility
+provides:
+  - Exhaustive HMC (XHMC) sampler
+  - numerical exhaustion termination check
+  - dynamic-trajectory detailed-balance construction
+  - trajectory divergence cutoff (Delta H > 1000)
+  - optimal integration-time criterion (period 2*pi for IID Gaussian)
+  - generalized No-U-Turn criterion
+key_equations:
+  - {label: "numexp", desc: "numerical exhaustion termination check (XHMC stop rule)"}
+  - {label: "exhaustion", desc: "theoretical exhaustion criterion via virial rate"}
+  - {label: "3", desc: "Metropolis softmax weight for trajectory state selection"}
+  - {label: "4", desc: "equal-trajectory-probability condition for detailed balance"}
+  - {label: "nuts", desc: "generalized No-U-Turn termination criterion"}
+  - {label: "virial", desc: "virial G = q^i p_i"}
+  - {label: "error_cutoff", desc: "trajectory divergence cutoff Delta H > 1000"}
+keywords: [MCMC, HMC, NUTS, XHMC, integration time, virial, exhaustion, detailed balance, symplectic integrator]
+domains: [molecular-sim, statistics, sampling]
+depends_on: [duane_1987_hmc, sohldickstein_2014_lahmc, neal_2011, hoffman_2014_nuts, betancourt_2013_riemannian_nuts, betancourt_2014_geometric_hmc, betancourt_2014_stepsize, horowitz_1991, campos_2015_extra_chance, tierney_1998, neal_1994_windowed]
+path: references/papers/betancourt_2016_xhmc
+content_hash: "69391e5b0997c34d"

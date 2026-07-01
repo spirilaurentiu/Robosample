@@ -111,6 +111,7 @@ TEST(EnsembleValidation, KEisMaxwellBoltzmann) {
 // ---------------------------------------------------------------------------
 TEST(EnsembleValidation, PEobeysEnsembleSlope) {
     if (!slowEnabled()) {
+        rtest::warnSlowTierSkipped();
         GTEST_SKIP() << "slow statistical tier (set ROBOSAMPLE_SLOW_TESTS=1)";
     }
     const double T1 = 280.0, T2 = 320.0;

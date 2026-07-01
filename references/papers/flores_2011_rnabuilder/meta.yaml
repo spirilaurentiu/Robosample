@@ -1,0 +1,42 @@
+key: flores_2011_rnabuilder
+doc_type: methods
+title: "Fast Flexible Modeling of RNA Structure Using Internal Coordinates"
+authors: [Flores, Sherman, Bruns, Eastman, Altman]
+year: "2011"
+venue: "IEEE/ACM Trans. Comput. Biol. Bioinform. 8(5):1247-1257"
+doi: 10.1109/TCBB.2010.104
+summary: >
+  RNABuilder: coarse-grained RNA structure modeling in internal (generalized)
+  coordinates on the Simbody O(n) multibody engine via the Molmodel API. Atoms
+  are partitioned onto rigid bodies joined by mobilizers; DOFs exist only where a
+  mobilizer grants them. Provides a user-specifiable base-pairing force-torque
+  potential (all Leontis-Westhof base pairs) that aligns an attachment frame on
+  one base with a body frame on another, plus collision-detecting contact-sphere
+  sterics and a Runge-Kutta-Merson integrator. Directly relevant to Robosample's
+  rigid-body/mobilizer representation and per-body spatial force reduction.
+has_implementable_math: true
+methods: [internal coordinate multibody dynamics, rigid-body mobilizer representation,
+  base-pairing force-torque potential, frame-alignment rotation, contact-sphere sterics,
+  Hunt-Crossley contact model, Runge-Kutta-Merson integrator, coordinate projection constraint stabilization,
+  Nose-Hoover thermostat, velocity rescaling thermostat]
+provides: [base-pairing potential U(r,theta), radial shape function g(r,k,c),
+  translational pairing force, body-origin torque correction, frame-alignment rotation formula,
+  constrained/unconstrained multibody equations of motion, reduced/full steric sphere schemes]
+key_equations:
+  - {label: "1", desc: "unconstrained internal-coordinate multibody EOM (ODE)"}
+  - {label: "2", desc: "constrained multibody EOM (index-3 DAE with Lagrange multipliers)"}
+  - {label: "3", desc: "frame-alignment rotation A1R^B2 from ground orientations"}
+  - {label: "5", desc: "base-pairing potential U(r,theta)"}
+  - {label: "6", desc: "radial shape function g(r,k,c), harmonic short / inverse-r long"}
+  - {label: "8", desc: "force = -grad U, angular + radial components"}
+  - {label: "10", desc: "translational pairing force f_A1 = -f_B2"}
+  - {label: "11", desc: "body-origin torque correction with moment arm"}
+keywords: [internal coordinate mechanics, multibody dynamics, RNA structure prediction,
+  base pairing, coarse-grained modeling, Simbody, Molmodel, rigid body, mobilizer,
+  O(n) dynamics, Leontis-Westhof]
+domains: [molecular-sim, structural-biology, rna]
+depends_on: [sherman_2011_simbody, jain_1993_on_recursive_dynamics, mazur_1991_icmd,
+  ryckaert_1977_shake, andersen_1983_rattle, hess_1997_lincs, nose_1984_thermostat,
+  hoover_1985_canonical, hunt_1975_contact, leontis_2002_base_pairs, jonikas_2009_nast]
+path: references/papers/flores_2011_rnabuilder
+content_hash: "ee314cb903ba7754"

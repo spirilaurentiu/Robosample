@@ -1,0 +1,23 @@
+key: stein_1997_torsion_angle_md
+doc_type: methods
+title: "Torsion-Angle Molecular Dynamics as a New Efficient Tool for NMR Structure Calculation"
+authors: [Stein, Rice, Brünger]
+year: "1997"
+venue: "Journal of Magnetic Resonance, Series B"
+doi: null
+summary: "Torsion-angle-space (internal-coordinate) MD for NMR structure calculation from an extended strand, using a Bae-Haug body-recursion, flat-bottom NOE/dihedral restraints, a repulsive quartic vdW term, and Berendsen-coupled simulated annealing. Higher success rate and efficiency than Cartesian SA and metric-matrix DGSA, especially for large proteins and DNA."
+has_implementable_math: true
+methods: [torsion-angle molecular dynamics, internal-coordinate dynamics, Bae-Haug body recursion, simulated annealing, Berendsen temperature coupling, flat-bottom NOE distance restraints, flat-bottom dihedral restraints, repulsive quartic vdW potential]
+provides: [torsion-angle MD protocol, rigid-body angular-velocity constraint, center-of-mass velocity recurrence between connected bodies, NOE square-well restraint energy, dihedral square-well restraint energy, repulsive quartic (repel) vdW energy, four-stage annealing protocol parameters]
+key_equations:
+  - {label: "11", desc: "angular-velocity constraint for a torsion joint (omega_j = omega_i + h_hat q_dot)"}
+  - {label: "13", desc: "center-of-mass velocity recurrence between two connected bodies"}
+  - {label: "6", desc: "flat-bottom NOE distance-restraint energy with soft asymptote"}
+  - {label: "8", desc: "flat-bottom dihedral-angle restraint energy"}
+  - {label: "5", desc: "repulsive quartic (repel) van der Waals potential"}
+  - {label: "10", desc: "Berendsen weak-coupling thermostat force"}
+keywords: [torsion-angle dynamics, internal coordinates, NMR structure calculation, simulated annealing, NOE restraints, dihedral restraints, rigid-body dynamics, X-PLOR]
+domains: [molecular-sim, structural-biology, NMR]
+depends_on: [bae_1987, bae_1988, jain_1993_on_recursive_dynamics, rice_1994_torsion_angle_md, mathiowetz_1994, brunger_1992_xplor, nilges_1988, berendsen_1984_thermostat, crippen_1988_distance_geometry, kuszewski_1992, brunger_1993_hybrid_energy]
+path: references/papers/stein_1997_torsion_angle_md
+content_hash: "f469883d820c5c37"

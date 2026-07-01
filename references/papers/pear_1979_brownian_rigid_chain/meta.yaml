@@ -1,0 +1,48 @@
+key: pear_1979_brownian_rigid_chain
+doc_type: methods
+title: "Brownian dynamics study of a polymer chain of linked rigid bodies"
+authors: [Pear, Weiner]
+year: "1979"
+venue: "J. Chem. Phys. 71, 212"
+doi: 10.1063/1.438119
+summary: >
+  Brownian (Langevin) dynamics of a macromolecule backbone modeled as linked rigid
+  bodies via the Wittenburg formalism, satisfying bond-length and valence-angle
+  constraints exactly. Derives the articulated generalized mass matrix A and force
+  vector B (A*phidotdot=B) with per-atom Langevin/damping forces reduced to per-body
+  spatial moments. Shows the rigid-model dihedral distribution carries a metric
+  determinant sqrt(g) absent from the flexible model, and that a Fixman compensating
+  potential U=kT*ln(sqrt(g)) restores the flexible (uniform) distribution. Gives exact
+  transition-state barrier-crossing rate formulas (with and without stress) for the
+  three-bond 90-degree chain.
+has_implementable_math: true
+methods: [Wittenburg linked-rigid-body dynamics, articulated generalized mass matrix,
+  per-atom force to per-body spatial moment reduction, Langevin/Brownian dynamics,
+  Runge-Kutta plus random-impulse integrator, Fixman compensating potential,
+  metric-determinant computation, transition-state rate theory, Bryant-angle orientation]
+provides: [generalized mass matrix A and force vector B for a kinematic chain,
+  hinge-axis projection formulas, augmented-body inertia tensors and body vectors,
+  metric determinant g(phi) closed form for 3-bond 90-deg chain, Fixman potential,
+  exact transition-state barrier-crossing rate formulas, stress-dependent rate formula,
+  flexible-model harmonic bond/angle/dihedral force expressions]
+key_equations:
+  - {label: "2.6", desc: "articulated equations of motion A*phidotdot = B"}
+  - {label: "2.7", desc: "generalized mass matrix A from hinge-axis projection"}
+  - {label: "2.8", desc: "generalized force vector B (kinematic, gyroscopic, damping, Langevin, torque)"}
+  - {label: "2.13", desc: "per-atom Langevin force reduced to per-body moment"}
+  - {label: "3.3", desc: "rigid-model dihedral distribution proportional to sqrt(g)"}
+  - {label: "3.6", desc: "closed-form metric determinant for 3-bond 90-deg chain"}
+  - {label: "3.7", desc: "Fixman compensating potential U = kT ln sqrt(g)"}
+  - {label: "4.5", desc: "covariant metric tensor G_ij"}
+  - {label: "4.10", desc: "transition-state barrier crossing rate (uncompensated)"}
+  - {label: "4.11", desc: "transition-state rate with Fixman potential"}
+  - {label: "5.9", desc: "exact transition-state rate under applied end stress"}
+keywords: [Brownian dynamics, Langevin dynamics, rigid body chain, constraints,
+  metric determinant, Fixman potential, transition state theory, barrier crossing,
+  articulated body, internal coordinates, dihedral angle, kinematic tree]
+domains: [molecular-sim, polymer-physics, statistical-mechanics]
+depends_on: [helfand_1971, turq_1977, weiner_1977, helfand_1978, fixman_1978,
+  wittenburg_1977, go_1969, go_1976, gottlieb_1976, flory_1969, chandrasekhar_1943,
+  fixman_1974, pear_1978]
+path: references/papers/pear_1979_brownian_rigid_chain
+content_hash: "7e15a691f402ae85"

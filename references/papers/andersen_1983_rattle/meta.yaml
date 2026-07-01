@@ -1,0 +1,35 @@
+key: andersen_1983_rattle
+doc_type: methods
+title: 'RATTLE: A "Velocity" Version of the SHAKE Algorithm for Molecular Dynamics Calculations'
+authors: [Andersen]
+year: "1983"
+venue: Journal of Computational Physics
+doi: 10.1016/0021-9991(83)90014-1
+summary: >-
+  Velocity-Verlet-based constrained MD integrator that enforces both distance
+  constraints on positions AND their time-derivative constraints on velocities
+  every step, via two separate SHAKE-style Lagrange-multiplier iterations. Higher
+  fixed-precision accuracy than SHAKE and directly compatible with thermostats,
+  barostats, and velocity rescaling.
+has_implementable_math: true
+methods: [velocity Verlet integrator, SHAKE-style constraint iteration, RATTLE
+  position-constraint solver, RATTLE velocity-constraint solver, Lagrange-multiplier
+  distance constraints]
+provides: [constrained MD integrator, bond-length constraints, velocity constraint
+  enforcement, position-and-velocity SHAKE iteration, per-constraint correction
+  formulas]
+key_equations:
+  - {label: "2.3", desc: "velocity-Verlet position update"}
+  - {label: "2.4", desc: "velocity-Verlet velocity update"}
+  - {label: "2.7", desc: "RATTLE position step"}
+  - {label: "2.8", desc: "RATTLE velocity step"}
+  - {label: "A3", desc: "per-atom RATTLE position update with position multipliers"}
+  - {label: "A4", desc: "per-atom RATTLE velocity update with velocity multipliers"}
+  - {label: "C11", desc: "single-constraint position correction magnitude g"}
+  - {label: "C15", desc: "single-constraint velocity correction magnitude k"}
+keywords: [RATTLE, SHAKE, constrained dynamics, velocity Verlet, bond constraints,
+  Lagrange multipliers, molecular dynamics, holonomic constraints]
+domains: [molecular-sim, numerical-integration]
+depends_on: [ryckaert_1977, verlet_1967, swope_1982, andersen_1980]
+path: references/papers/andersen_1983_rattle
+content_hash: "1fab969586119913"

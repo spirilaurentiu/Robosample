@@ -1,0 +1,73 @@
+key: sherman_2011_simbody
+doc_type: software
+title: "Simbody: multibody dynamics for biomedical research"
+authors: [Sherman, Seth, Delp]
+year: "2011"
+venue: "Procedia IUTAM (2011 Symposium on Human Body Dynamics)"
+doi: 10.1016/j.piutam.2011.04.023
+summary: >
+  Describes Simbody, an open-source C++ minimal-coordinate O(n) recursive multibody
+  dynamics library (the dynamics engine behind OpenSim and the basis for Robosample's
+  articulated-body solver). Covers the System/State/Study architecture with staged
+  realization cache, the DAE/differential-equation-on-a-manifold time-stepper
+  formulation with coordinate projection, the internal-coordinate equations of motion
+  with mobilizers and Lagrange-multiplier constraints solved via G M^{-1} G^T, and
+  compliant contact models (Hertz, Hunt-Crossley dissipation, Stribeck friction,
+  Elastic Foundation Model).
+has_implementable_math: true
+methods:
+  - minimal-coordinate O(n) recursive spatial-operator multibody dynamics
+  - internal-coordinate (mobilizer) equations of motion
+  - kinematic differential equation qdot = N(q) u
+  - Lagrange-multiplier constraint solve (G M^{-1} G^T lambda = g0)
+  - least-squares multiplier solution via complete orthogonal factorization (QTZ)
+  - coordinate projection onto constraint manifold
+  - differential-equation-on-a-manifold (DEM) formulation
+  - variable-step error-controlled integration (RK, velocity Verlet, CPODES/BDF)
+  - Hertz compliant contact
+  - Hunt-Crossley dissipation
+  - Stribeck friction (C2 spline)
+  - Elastic Foundation Model contact
+provides:
+  - multibody equations of motion in generalized coordinates
+  - O(n) M^{-1} v operator (mass-matrix inverse without forming M)
+  - constraint Jacobian assembly and multiplier solve
+  - accuracy knob alpha = 10^-n with weighted RMS step acceptance
+  - compliant contact force laws (normal + dissipation + friction)
+  - Hertz material-property combining rules
+key_equations:
+  - {label: "8", desc: "per-mobilizer kinematic differential equation qdot_i = N_i u_i"}
+  - {label: "17", desc: "constrained internal-coordinate equations of motion"}
+  - {label: "19", desc: "eliminate udot -> G M^{-1} G^T lambda = G udot0 - b"}
+  - {label: "20", desc: "condensed constraint system Y lambda = g0"}
+  - {label: "21", desc: "least-squares multiplier via pseudoinverse"}
+  - {label: "23", desc: "Hertz normal stiffness force"}
+  - {label: "24", desc: "Hunt-Crossley dissipation force"}
+  - {label: "27", desc: "Stribeck friction magnitude"}
+keywords:
+  - multibody dynamics
+  - internal coordinates
+  - mobilizer
+  - generalized coordinates
+  - spatial operator algebra
+  - constraint stabilization
+  - Lagrange multipliers
+  - compliant contact
+  - Hertz contact
+  - articulated body
+  - O(n) recursive dynamics
+domains: [molecular-sim, multibody-dynamics, biomechanics]
+depends_on:
+  - rodriguez_1991_spatial_operator_algebra
+  - rodriguez_1992_spatial_operator_algebra
+  - jain_1993_fast_recursive_md
+  - jain_1993_prescribed_motion
+  - schwieters_2001_internal_coordinates
+  - seth_2010_minimal_joint_formulation
+  - featherstone_2007_rigid_body_dynamics
+  - hertz_1882_contact
+  - johnson_1985_contact_mechanics
+  - hunt_1975_restitution_damping
+  - verlet_1967_computer_experiments
+path: references/papers/sherman_2011_simbody
+content_hash: "c0a086012ae8e2df"

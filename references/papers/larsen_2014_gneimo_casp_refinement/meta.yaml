@@ -1,0 +1,17 @@
+key: larsen_2014_gneimo_casp_refinement
+doc_type: article
+title: "Protein Structure Refinement of CASP Target Proteins Using GNEIMO Torsional Dynamics Method"
+authors: [Larsen, Wagner, Jain, Vaidehi]
+year: "2014"
+venue: "J. Chem. Inf. Model."
+doi: 10.1021/ci400484c
+summary: "Application/benchmark of GNEIMO internal-coordinate (torsional) MD plus temperature replica exchange (REXMD) to refine 30 CASP homology models without experimental restraints; reports the refinement protocol (AMBER99SB, GB/SA OBC, Nose-Hoover, Lobatto integrator, 5 fs steps, 32-replica REXMD 310-415 K) and GDT/TM/RMSD gains. Routing-only: method equations live in the GNEIMO source papers."
+has_implementable_math: false
+methods: [GNEIMO torsional internal-coordinate MD, rigid-cluster torsional-hinge model, holonomic constraints on high-frequency DOF, temperature replica-exchange MD (REXMD), Nose-Hoover thermostat, Lobatto integrator, GB/SA OBC implicit solvent, GDT_TS scoring, TM-score, native-contact map]
+provides: [homology-model refinement protocol, torsional-MD refinement benchmarks on CASP targets, GNEIMO-REXMD parameter set, GDT_TS/TM-score/native-contact definitions]
+key_equations: []
+keywords: [GNEIMO, torsional dynamics, internal coordinates, protein structure refinement, CASP, replica exchange, REXMD, homology modeling, rigid body, constrained MD]
+domains: [molecular-sim, structural-biology, protein-refinement]
+depends_on: [jain_1993, vaidehi_1996, wagner_2013, jain_2010, balaraman_2011, park_2012, sugita_1999, onufriev_2004, case_2005, tobias_1988, mazur_1989]
+path: references/papers/larsen_2014_gneimo_casp_refinement
+content_hash: "74859b9bfa3ed7c6"

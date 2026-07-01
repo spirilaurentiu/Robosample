@@ -1,0 +1,17 @@
+key: chen_2013_flexible_sampling
+doc_type: article
+title: "Tackling the conformational sampling of larger flexible compounds and macrocycles in pharmacology and drug discovery"
+authors: [Chen, Foloppe]
+year: "2013"
+venue: "Bioorganic & Medicinal Chemistry"
+doi: 10.1016/j.bmc.2013.10.003
+summary: "Benchmark/survey comparing mainstream low-mode-based conformational sampling methods (MOE LowModeMD and Stochastic Search; MacroModel LMOD/LLMOD/MT-LMOD/MT-LLMOD; Schrodinger MD/LLMOD) on curated Drug-like, Flexible, and Macrocycle compound sets. Routing-only: no equations, but documents best-practice sampling hyperparameters and reproduction/global-minimum benchmark numbers."
+has_implementable_math: false
+methods: [low-mode search, LowModeMD, mixed torsional/low-mode search, large-scale low-mode LLMOD, MD-based simulated annealing, stochastic torsional search, energy minimization, generalized Born solvation, RMSD-based conformer deduplication, radius-of-gyration coverage metric, 3D pharmacophore coverage]
+provides: [conformational sampling benchmark, best-practice low-mode search hyperparameters, method comparison for flexible/macrocyclic ligands, bioactive-structure reproduction fixtures, global-energy-minimum convergence data]
+key_equations: []
+keywords: [conformational sampling, low-mode, LowModeMD, macrocycles, flexible compounds, global energy minimum, bioactive structure, drug discovery, MOE, MacroModel, force field, generalized Born, radius of gyration, pharmacophore]
+domains: [molecular-sim, cheminformatics, drug-discovery]
+depends_on: [labute_2010_lowmodemd, kolossvary_2001_llmod, kolossvary_1996_lowmode, kolossvary_1999_lowmode, chang_1989_torsional_mc, ferguson_1989_random_search, halgren_1996_mmff, jorgensen_1996_opls, shivakumar_2012_opls2, onufriev_2000_gb, oprea_2000_rotbonds, saunders_1987_stochastic, chen_2008_sampling, chen_2010_sampling, foloppe_2009_sampling_review, berman_2000_pdb]
+path: references/papers/chen_2013_flexible_sampling
+content_hash: "b1c281fc05c5032a"

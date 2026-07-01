@@ -1,0 +1,61 @@
+key: forrest_1994_gchmc
+doc_type: methods
+title: "Generalized coordinate hybrid Monte Carlo"
+authors: [Forrest, Suter]
+year: "1994"
+venue: "Molecular Physics"
+doi: 10.1080/00268979400100304
+summary: >
+  Hybrid Monte Carlo in internal (torsional) generalized coordinates for dense
+  polymer melts with fixed bond lengths/angles. Introduces fictitious Cartesian-like
+  angular momenta with constant effective moments of inertia to make the equations
+  of motion decoupled and leap-frog-integrable, avoiding the coupled inertia-tensor
+  dynamics and matrix inversion of true internal-coordinate MD. Acceptance includes
+  an Euler-angle Jacobian (product of sin phi2). Choosing effective moments of
+  inertia equal to the equilibrium mean instantaneous moment of inertia recovers a
+  unique real-time scale and speeds equilibration.
+has_implementable_math: true
+methods:
+  - hybrid Monte Carlo (HMC)
+  - internal-coordinate / torsional generalized-coordinate sampling
+  - fictitious diagonal kinetic energy with effective moments of inertia
+  - leap-frog integration
+  - Maxwell-Boltzmann momentum refresh
+  - Metropolis acceptance with coordinate-transform Jacobian
+  - Ryckaert-Bellemans torsional potential
+  - 12-6 Lennard-Jones potential
+provides:
+  - GC-HMC sampler for torsional degrees of freedom
+  - decoupled Hamiltonian equations of motion (eq 9)
+  - fictitious kinetic energy construction (eq 8)
+  - acceptance rule with sin(phi2) Euler-angle Jacobian (eq 11)
+  - instantaneous moment-of-inertia estimator (eq 14)
+  - effective time-step / real-time mapping (eq 15)
+  - HMC correctness identities and mean-acceptance/erfc relation (eq 18, 19)
+key_equations:
+  - {label: "8",  desc: "fictitious Cartesian-like diagonal kinetic energy with effective moments of inertia"}
+  - {label: "9",  desc: "decoupled Hamiltonian equations of motion for torsions + chain origin"}
+  - {label: "11", desc: "GC-HMC acceptance: exp(-b dH) times product of sin(phi2) Euler Jacobian"}
+  - {label: "14", desc: "instantaneous moment of inertia of an angle"}
+  - {label: "15", desc: "effective real-time step per MC step from equipartition"}
+  - {label: "2",  desc: "Ryckaert-Bellemans torsional potential with coefficients"}
+  - {label: "3",  desc: "12-6 Lennard-Jones potential"}
+keywords: [HMC, hybrid Monte Carlo, internal coordinates, torsional angles, generalized coordinates, moments of inertia, polymer melt, detailed balance, leap-frog, constrained dynamics, Fixman]
+domains: [molecular-sim, sampling, polymer-physics]
+depends_on:
+  - duane_1987
+  - ryckaert_1977
+  - fixman_1974
+  - gupta_1990
+  - abe_1984
+  - theodorou_1985
+  - allen_tildesley_1989
+  - nose_1984
+  - hoover_1985
+  - gibson_scheraga_1990
+  - ludovice_suter_1991
+  - depablo_1992
+  - dodd_1992
+  - vangunsteren_1977
+path: references/papers/forrest_1994_gchmc
+content_hash: "2c6262899389344c"

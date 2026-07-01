@@ -1,0 +1,20 @@
+key: katritch_2003_icff
+doc_type: methods
+title: "ICFF: A New Method to Incorporate Implicit Flexibility into an Internal Coordinate Force Field"
+authors: [Katritch, Totrov, Abagyan]
+year: "2003"
+venue: "Journal of Computational Chemistry"
+doi: 10.1002/jcc.10091
+summary: "Projects a Cartesian force field (MMFF94s) onto a fixed-covalent-geometry internal (torsion) coordinate model. Torsion energy becomes a sixfold Fourier series fit to local Cartesian energy profiles (absorbing bond stretch/bend/OOP/1-4 vdW); 1-5,1-6 clashes use a soft harmonic-cubic repulsion; covalent geometry from local-energy Cartesian minimization. Relevant for building rigid-body/torsion-space force fields."
+has_implementable_math: true
+methods: [Fourier-series torsion fitting, weighted least-squares coefficient fit, torsion-fragment grid scan, soft polynomial 1-5/1-6 repulsion, local-energy covalent geometry optimization, harmonic torsion restraint]
+provides: [internal-coordinate force field projection, ICFF torsion energy term, soft 1-5/1-6 van der Waals repulsion function, run-time torsion parameter generation, implicit flexibility in rigid geometry]
+key_equations: [{label: "1", desc: "sixfold Fourier series ICFF torsion energy"},
+                {label: "2", desc: "soft harmonic-cubic 1-5/1-6 vdW repulsion"},
+                {label: "3", desc: "full MMFF94 Cartesian energy decomposition"},
+                {label: "weight", desc: "inverse-relative-energy least-squares fit weight"}]
+keywords: [force field, internal coordinates, torsion angles, rigid geometry, MMFF94, implicit flexibility, Fourier series, van der Waals, molecular mechanics]
+domains: [molecular-sim, computational-chemistry, drug-design]
+depends_on: [halgren_1996_mmff94, halgren_1999_mmff94_validation, momany_1975_ecepp, nemethy_1992_ecepp3, abagyan_1994_icm, abagyan_1994_biased_mcm, li_1987_mcm]
+path: references/papers/katritch_2003_icff
+content_hash: "fd7ddbe04c83227a"

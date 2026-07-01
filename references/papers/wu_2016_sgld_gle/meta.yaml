@@ -1,0 +1,22 @@
+key: wu_2016_sgld_gle
+doc_type: methods
+title: "Self-Guided Langevin Dynamics via Generalized Langevin Equation"
+authors: [Wu, Brooks, Vanden-Eijnden]
+year: "2016"
+venue: "Journal of Computational Chemistry"
+doi: 10.1002/jcc.24015
+summary: "SGLD-GLE: a generalized Langevin equation that restores detailed balance in self-guided Langevin dynamics, so the NVT/NPT canonical ensemble is sampled exactly with no reweighting. Enhances low-frequency (conformational) motion while keeping the exact Boltzmann marginal; size-extensive, per-atom-tunable guiding factor."
+has_implementable_math: true
+methods: [self-guided Langevin dynamics, generalized Langevin equation, exponential local time-average filter, Markovian auxiliary guiding-force integrator, Fokker-Planck stationary-distribution proof, velocity autocorrelation spectrum]
+provides: [SGLD-GLE integrator, guiding force with random-average correction, detailed-balance-preserving enhanced sampling, canonical/NVT and NPT exact sampling, low-frequency mode acceleration]
+key_equations: [{label: "14", desc: "SGLD-GLE equation of motion"},
+                {label: "15", desc: "GLE guiding force g^(GLE) = lambda*gamma*p~ - mu*R~"},
+                {label: "16", desc: "Markovian auxiliary ODE for the guiding force"},
+                {label: "4", desc: "exponential local time-average incremental update"},
+                {label: "13", desc: "lambda = mu(2-mu) parameter relation"},
+                {label: "19", desc: "exact canonical marginal distribution"}]
+keywords: [SGLD, generalized Langevin equation, detailed balance, conformational sampling, canonical ensemble, enhanced sampling, molecular dynamics, colored noise]
+domains: [molecular-sim, statistics]
+depends_on: [wu_2011_sgld, wu_2012_rxsgld, ryckaert_1977_shake, zwanzig_1961, ceriotti_2009, ceriotti_2010, wu_2003_sgld]
+path: references/papers/wu_2016_sgld_gle
+content_hash: "7f7338e6dacbe272"

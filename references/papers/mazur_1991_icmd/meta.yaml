@@ -1,0 +1,28 @@
+key: mazur_1991_icmd
+doc_type: methods
+title: "Derivation and Testing of Explicit Equations of Motion for Polymers Described by Internal Coordinates"
+authors: [Mazur, Dorofeev, Abagyan]
+year: "1991"
+venue: "Journal of Computational Physics 92(2):261-272"
+doi: 10.1016/0021-9991(91)90210-C
+summary: >
+  Complete explicit derivation of the Lagrangian equations of motion for a branched
+  polymer described by internal coordinates (bond lengths, valence/planar angles,
+  torsion/phase angles) organized as a unified tree of rigid bodies (BKS-tree). Any
+  internal DOF can be frozen. Gives the full inertial (mass-matrix + Coriolis/
+  centrifugal) terms and a compact linear-system form solved by Cholesky each step.
+  Foundational for internal-coordinate MD and Robosample's kinematic-tree ("robot")
+  representation; enables 9-13x larger time steps by freezing fast DOF.
+has_implementable_math: true
+methods: [internal-coordinate molecular dynamics, Lagrangian equations of motion in generalized coordinates, BKS-tree rigid-body representation, kinematic tree of rigid bodies, mass-matrix assembly over tree topology, Cholesky solve for generalized accelerations, Beeman integrator, atom-velocity Jacobian w.r.t. generalized velocities]
+provides: [explicit internal-coordinate equations of motion, generalized mass matrix a_ki, centrifugal b_ki and Coriolis c_kim coefficients, per-atom Jacobian dr/dtheta, torsion/angle/bond variable-type indicator S, temperature from internal DOF, relative RMS energy-conservation metric]
+key_equations:
+  - {label: "16", desc: "explicit per-coordinate equation of motion (mass + centrifugal + Coriolis terms)"}
+  - {label: "18", desc: "compact global-numbering linear system A theta_ddot = force"}
+  - {label: "5", desc: "partial derivative of atom velocity w.r.t. generalized velocity (Jacobian column)"}
+  - {label: "3", desc: "infinitesimal Cartesian displacement of an atom from internal-coordinate increments"}
+keywords: [internal coordinates, molecular dynamics, Lagrangian mechanics, rigid body, kinematic tree, torsion angle dynamics, constrained dynamics, mass matrix]
+domains: [molecular-sim, computational-physics, structural-biology]
+depends_on: [mazur_1989_bks_tree, abagyan_1989_energy_derivatives, go_1969, ryckaert_1977_shake, vangunsteren_1977, beeman_1976, landau_lifshitz_mechanics, abe_1984, momany_1975_ecepp, brooks_1983_charmm]
+path: references/papers/mazur_1991_icmd
+content_hash: "b09eb561a46c8738"

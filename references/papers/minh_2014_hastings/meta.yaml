@@ -1,0 +1,25 @@
+key: minh_2014_hastings
+doc_type: methods
+title: "Understanding the Hastings Algorithm"
+authors: [Minh, David D. L., Minh, Do Le (Paul)]
+year: "2014"
+venue: arXiv
+doi: null
+arxiv: "1408.4438"
+summary: "Two intuitive derivations that unify the Hastings/Metropolis-Hastings/Barker/Stein MCMC acceptance rules under one 'Algorithm M' parameterized by a free symmetric function k(x,y), and via relative majorizing/minorizing coefficients (MAR/MIR). Shows Metropolis-Hastings (C=1) has the highest acceptance probability of all Hastings algorithms."
+has_implementable_math: true
+methods: [Metropolis-Hastings acceptance, Barker acceptance, Hastings acceptance, Algorithm M unified acceptance, Markovian acceptance-rejection, Markovian minorizing, detailed-balance construction]
+provides: [MH acceptance probability rule, Barker acceptance probability rule, general Hastings acceptance rule, relative majorizing/minorizing coefficients, two-stage accept/reject decomposition, proof that MH maximizes acceptance]
+key_equations:
+  - {label: "3", desc: "Metropolis-Hastings acceptance probability alpha_MH"}
+  - {label: "4", desc: "Barker acceptance probability alpha_BK"}
+  - {label: "1", desc: "general Hastings acceptance via symmetric s(x,y)"}
+  - {label: "8", desc: "Algorithm M unified acceptance via k(x,y)"}
+  - {label: "10", desc: "piecewise Algorithm M acceptance vs L,H brackets"}
+  - {label: "20", desc: "MAR acceptance in terms of C(x,y); C=1 gives MH"}
+  - {label: "27", desc: "MIR acceptance in terms of C(x,y)"}
+keywords: [MCMC, Metropolis-Hastings, Hastings algorithm, Barker, detailed balance, acceptance probability, acceptance-rejection, reversibility]
+domains: [statistics, molecular-sim, sampling]
+depends_on: [hastings_1970, metropolis_1953, barker_1965, peskun_1973, tierney_1994, chib_1995, billera_2001, liu_2001, minh_2012, vonneumann_1951]
+path: references/papers/minh_2014_hastings
+content_hash: "d8cd1a2999f25fbd"

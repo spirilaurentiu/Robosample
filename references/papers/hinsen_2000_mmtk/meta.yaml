@@ -1,0 +1,17 @@
+key: hinsen_2000_mmtk
+doc_type: software
+title: "The Molecular Modeling Toolkit: A New Approach to Molecular Simulations"
+authors: [Hinsen]
+year: "2000"
+venue: "Journal of Computational Chemistry"
+doi: "10.1002/(SICI)1096-987X(20000130)21:2<79::AID-JCC1>3.0.CO;2-B"
+summary: "Overview of MMTK, an object-oriented Python molecular-simulation library (C for hot loops). Routing-only: no equations of its own; points to Amber 94, constrained velocity Verlet, Ewald, normal modes, and file/format interfaces."
+has_implementable_math: false
+methods: [object-oriented chemical system model, constrained velocity Verlet MD, energy minimization (steepest descent, conjugate gradients), normal mode analysis, Ewald summation, fast-multipole electrostatics, charge fitting, rigid-body superposition]
+provides: [MMTK library architecture, Amber 94 force field implementation, netCDF trajectory format, PDB/DCD I/O, NVE/NVT/NPT ensembles, Nose thermostat, Andersen barostat, deformation force field for normal modes]
+key_equations: []
+keywords: [molecular simulation, biomolecules, object-oriented design, Python, force fields, molecular dynamics, normal modes]
+domains: [molecular-sim, software]
+depends_on: [cornell_1995_amber94, swope_1982_velocity_verlet, kneller_1996_constrained_md, ewald_1921, wolf_1999_charge_neutralization, hinsen_1997_charge_fit]
+path: references/papers/hinsen_2000_mmtk
+content_hash: "cd9d68551c182c67"

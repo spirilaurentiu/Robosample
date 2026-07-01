@@ -1,0 +1,24 @@
+key: sohldickstein_2014_lahmc
+doc_type: methods
+title: "Hamiltonian Monte Carlo Without Detailed Balance"
+authors: [Sohl-Dickstein, Mudigonda, DeWeese]
+year: "2014"
+venue: ICML
+doi: null
+summary: "HMC variant (LAHMC) that avoids rejection by extending trajectories with extra leapfrog steps; uses greedy transition probabilities satisfying the fixed point equation (generalized detailed balance) instead of Metropolis-Hastings, suppressing momentum flips and random-walk behavior. Drop-in replacement for an HMC sampler."
+has_implementable_math: true
+methods: [leapfrog integrator, momentum flip operator, partial momentum randomization, greedy Look-Ahead HMC transition, generalized detailed balance]
+provides: [LAHMC sampler, greedy leapfrog transition-probability rule, reduced momentum flips, HMC operator ladder representation, rough-well test energy]
+key_equations:
+  - {label: "6", desc: "Hamiltonian = potential + kinetic (unit mass)"}
+  - {label: "15", desc: "partial momentum refresh (R operator)"}
+  - {label: "23", desc: "LAHMC transition operator (apply L 1..K times or flip F)"}
+  - {label: "25", desc: "greedy leapfrog transition probabilities (core rule)"}
+  - {label: "26", desc: "generalized detailed balance relation"}
+  - {label: "27", desc: "residual momentum-flip probability"}
+  - {label: "34", desc: "2D rough-well test energy function"}
+keywords: [MCMC, HMC, detailed balance, sampling, momentum flip, mixing time, leapfrog]
+domains: [molecular-sim, statistics, machine-learning]
+depends_on: [duane_1987_hmc, neal_2010, hairer_2003, metropolis_1953_monte_carlo, hastings_1970, horowitz_1991, hoffman_2011_nuts, neal_1994, campos_2014]
+path: references/papers/sohldickstein_2014_lahmc
+content_hash: "4c0a57deaabb0205"

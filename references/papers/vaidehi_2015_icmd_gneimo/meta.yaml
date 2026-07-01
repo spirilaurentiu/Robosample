@@ -1,0 +1,21 @@
+key: vaidehi_2015_icmd_gneimo
+doc_type: survey
+title: "Internal Coordinate Molecular Dynamics: A Foundation for Multiscale Dynamics"
+authors: [Vaidehi, Jain]
+year: "2015"
+venue: "J. Phys. Chem. B (Feature Article)"
+doi: null
+summary: "Review of the GNEIMO spatial-operator-algebra approach to internal-coordinate (torsional/BAT) molecular dynamics: O(N) recursive equations of motion for tree-topology rigid-cluster models with flexible hinges, Nose-Hoover NVT thermostat, and the general-purpose Fixman compensating potential/torque removing constraint-induced partition-function bias. Applications to protein folding, domain motion, and structure refinement."
+has_implementable_math: true
+methods: [GNEIMO recursive articulated-body solver, spatial operator algebra mass-matrix factorization, torsional MD (rigid bond lengths and angles), rigid-cluster/hinge tree model, Nose-Hoover thermostat for internal coordinates, Fixman compensating potential and torque, modal-coordinate equipartition velocity initialization, dynamic clustering (freeze/thaw), replica-exchange MD]
+provides: [O(N) internal-coordinate equations-of-motion solver, coupled ICMD equation of motion (M theta-ddot + C = T), Nose-Hoover ICMD equations, Fixman potential formula and derivative torque, BAT rigid-cluster kinematic tree with 1-6 dof hinges, thermostat mass tau=10*dt heuristic]
+key_equations: [{label: "1", desc: "coupled ICMD/torsional-MD equations of motion (mass matrix, Coriolis, generalized force)"},
+                {label: "2", desc: "GNEIMO spatial-operator closed form for joint accelerations (O(N) recursive, avoids dense mass-matrix inverse)"},
+                {label: "3", desc: "Nose-Hoover NVT torsional MD equations of motion"},
+                {label: "4", desc: "Nose-Hoover thermostat variable evolution"},
+                {label: "5", desc: "Fixman compensating potential (log ratio of mass-matrix determinants)"}]
+keywords: [internal coordinate molecular dynamics, ICMD, torsional dynamics, GNEIMO, spatial operator algebra, articulated body, Fixman potential, mass matrix, Nose-Hoover, BAT coordinates, rigid body, kinematic tree, multiscale, protein folding, structure refinement]
+domains: [molecular-sim, robotics-dynamics, structural-biology]
+depends_on: [fixman_1974, jain_1997, jain_2013_fixman, jain_2010_multibody, jain_1993_recursive, vaidehi_1996_neimo, jain_2012_equipartition, vangunsteren_1977_md_constraints, mazur_1989_icmd, katritch_2003_icff, pear_1979_brownian, nose_1984, hoover_1985, larsen_2014_gneimosim, eastman_2013_openmm, sugita_1999_remd, hamelberg_2004_amd]
+path: references/papers/vaidehi_2015_icmd_gneimo
+content_hash: "6ccd7afd698ba788"

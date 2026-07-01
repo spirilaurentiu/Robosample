@@ -10,6 +10,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <gtest/gtest.h>
 #include <random>
 
@@ -214,6 +215,22 @@ inline auto fdVec3(F f, Real t, Real h = 1e-6) -> Vec3 {
     const Vec3 fp = f(t + h);
     const Vec3 fm = f(t - h);
     return (fp - fm) * (Real(1) / (Real(2) * h));
+}
+
+// ---------------------------------------------------------------------------
+//  Slow statistical-tier tests GTEST_SKIP unless ROBOSAMPLE_SLOW_TESTS is set.
+//  A bare `ctest` run then reports SKIPPED, which is easy to miss -- so also
+//  print one prominent stderr line naming the test and how to enable it. The
+//  authoritative gate (nox -s tests) always sets ROBOSAMPLE_SLOW_TESTS=1, so
+//  this only fires on an incomplete/bare dev run; call it right next to
+//  GTEST_SKIP(), never in place of it.
+// ---------------------------------------------------------------------------
+inline void warnSlowTierSkipped() {
+    const ::testing::TestInfo* ti = ::testing::UnitTest::GetInstance()->current_test_info();
+    std::fprintf(stderr,
+                 "[SLOW TEST SKIPPED] %s.%s did not run -- set ROBOSAMPLE_SLOW_TESTS=1 to enable "
+                 "(the authoritative `nox -s tests` gate always sets it; a bare run is INCOMPLETE)\n",
+                 ti != nullptr ? ti->test_suite_name() : "?", ti != nullptr ? ti->name() : "?");
 }
 
 } // namespace rtest

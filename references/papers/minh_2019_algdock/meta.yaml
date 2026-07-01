@@ -1,0 +1,24 @@
+key: minh_2019_algdock
+doc_type: methods
+title: "Alchemical Grid Dock (AlGDock): Binding Free Energy Calculations between Flexible Ligands and Rigid Receptors"
+authors: [Minh]
+year: "2019"
+venue: arXiv
+doi: null
+summary: "Software and methodology for computing binding potentials of mean force (BPMF) between a flexible ligand and a rigid receptor using precomputed interaction grids, Hamiltonian replica exchange, and adaptive thermodynamic-state initialization based on a single thermodynamic-speed parameter."
+has_implementable_math: true
+methods: [Hamiltonian Monte Carlo, velocity Verlet, Hamiltonian replica exchange, external-coordinate MCMC, thermodynamic length state spacing, sampling importance resampling, MBAR, free energy perturbation, precomputed nonbonded grids, flat-bottom harmonic restraint, soft-core tanh grid capping, hierarchical clustering pose prediction]
+provides: [BPMF estimator, adaptive thermodynamic-state initialization, replica-exchange acceptance rule, alchemical grid-scaling protocol, thermodynamic-speed step rules, pose-specific BPMF, soft-grid end-point-catastrophe fix]
+key_equations:
+  - {label: "1", desc: "BPMF as ratio of configurational integrals"}
+  - {label: "4", desc: "reduced-potential switching protocol with soft/unperturbed grid scaling and temperature ramp"}
+  - {label: "5", desc: "Hamiltonian replica-exchange acceptance probability"}
+  - {label: "6", desc: "thermodynamic length path integral"}
+  - {label: "8", desc: "thermodynamic-speed parameter step rule"}
+  - {label: "10", desc: "progress-variable increment for states CD"}
+  - {label: "11", desc: "reduced free energy f'_CD avoiding receptor internal energy"}
+keywords: [BPMF, binding free energy, replica exchange, thermodynamic length, alchemical, implicit ligand theory, docking, protein-ligand, MBAR, reduced potential]
+domains: [molecular-sim, free-energy, drug-discovery]
+depends_on: [duane_1987_hmc, chodera_2011_gibbs_replica_exchange, minh_2012_implicit_ligand_theory, shirts_2008_mbar, zwanzig_1954_fep, shenfeld_2009_thermodynamic_length, crooks_2007_measuring_thermodynamic_length, onufriev_2004_obc, metropolis_1953_monte_carlo, weinhold_1975_metric, nguyen_2016_replica_exchange, chodera_2016_equilibration]
+path: references/papers/minh_2019_algdock
+content_hash: "db1d9fe4046fef75a1e"

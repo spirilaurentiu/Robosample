@@ -1,0 +1,23 @@
+key: brubaker_2012_chmc
+doc_type: methods
+title: "A Family of MCMC Methods on Implicitly Defined Manifolds"
+authors: [Brubaker, Salzmann, Urtasun]
+year: "2012"
+venue: AISTATS
+doi: null
+summary: "Constrained Hamiltonian Monte Carlo (CHMC): a general HMC framework for sampling distributions on implicitly defined manifolds c(q)=0, using a RATTLE (constrained leapfrog) integrator with dual acceptance/guidance Hamiltonians and a Metropolis correction. Generalizes unconstrained HMC, Riemann-manifold HMC, constrained Langevin and constrained Metropolis; proves detailed balance, irreducibility, aperiodicity and convergence."
+has_implementable_math: true
+methods: [constrained Hamiltonian Monte Carlo, RATTLE integrator, constrained leapfrog, momentum projection onto cotangent space, Metropolis acceptance, constrained Langevin Monte Carlo, constrained Metropolis, state-dependent mass matrix]
+provides: [CHMC sampler on manifolds, RATTLE symplectic constrained integrator, acceptance/guidance Hamiltonian split, momentum resampling with tangent-space projection, detailed-balance/convergence conditions, Bingham-von Mises-Fisher target, orthonormality-constrained collaborative filtering target, limb-length-constrained pose target]
+key_equations:
+  - {label: "1", desc: "constrained Hamiltonian H = T + U + lambda^T c(q)"}
+  - {label: "potential", desc: "acceptance potential U = 1/2 log|M| - log pi(q)"}
+  - {label: "rattle", desc: "generalized RATTLE constrained-leapfrog step (order-2 symplectic)"}
+  - {label: "accept", desc: "Metropolis acceptance min(1, exp{H0 - HL})"}
+  - {label: "momentum-resample", desc: "Gaussian momentum draw projected onto cotangent space"}
+  - {label: "2", desc: "integrator consistency/order condition"}
+keywords: [MCMC, HMC, Hamiltonian Monte Carlo, constrained dynamics, manifold sampling, RATTLE, SHAKE, symplectic integrator, detailed balance, Langevin, Bingham-von Mises-Fisher, collaborative filtering]
+domains: [molecular-sim, statistics, machine-learning]
+depends_on: [andersen_1983, andrieu_2003, bingham_1974, ciccotti_1986, duane_1987, girolami_2011, glover_2011, hairer_2006, hamelryck_2006, hartmann_2008, hoff_2009, jay_1996, kent_2004, khan_2004, kunze_2004, lawrence_2009, lelievre_2010, lelievre_2010_langevin, marlin_2004, marsden_1999, marsden_2001, meyer_2011, neal_2011, ponsmoll_2011, reich_1993, rieping_2005, salakhutdinov_2008, sigal_2006, tierney_1994, wood_1987, wood_1994, zhou_2010]
+path: references/papers/brubaker_2012_chmc
+content_hash: "27ede05ed739a662"

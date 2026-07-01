@@ -1,0 +1,25 @@
+key: duane_1987_hmc
+doc_type: methods
+title: "Hybrid Monte Carlo"
+authors: [Duane, Kennedy, Pendleton, Roweth]
+year: "1987"
+venue: "Physics Letters B"
+doi: 10.1016/0370-2693(87)91197-X
+summary: "The original Hybrid (Hamiltonian) Monte Carlo algorithm: propose global moves via Hamiltonian dynamics (leapfrog) with Gaussian momentum refresh, then a Metropolis accept/reject on the energy change makes sampling exact and bias-free for any step size. Foundation for molecular HMC."
+has_implementable_math: true
+methods: [leapfrog integrator, Metropolis accept/reject, Gaussian momentum heatbath, Hamiltonian dynamics proposal, detailed balance construction, pseudofermion representation]
+provides: [HMC sampler, leapfrog velocity-Verlet integrator, energy-change acceptance rule min(1,exp(-dH)), momentum refresh from unit Gaussian, generalized Metropolis acceptance for arbitrary proposals, guidance-vs-acceptance Hamiltonian separation]
+key_equations: [{label: "12", desc: "HMC Metropolis acceptance on energy change min(1,exp(delta H))"},
+                {label: "10", desc: "Gaussian momentum refresh distribution"},
+                {label: "13", desc: "full HMC field transition (refresh x trajectory x accept)"},
+                {label: "18", desc: "leapfrog initial half-kick"},
+                {label: "19", desc: "leapfrog drift (position update)"},
+                {label: "20", desc: "leapfrog full momentum kick"},
+                {label: "21", desc: "leapfrog final half-kick"},
+                {label: "6", desc: "generalized Metropolis acceptance for arbitrary proposal"},
+                {label: "5", desc: "detailed balance condition"}]
+keywords: [HMC, hybrid Monte Carlo, MCMC, leapfrog, detailed balance, Metropolis, molecular dynamics, lattice gauge theory, momentum refresh, symplectic integrator]
+domains: [molecular-sim, statistics, lattice-field-theory]
+depends_on: [metropolis_1953_monte_carlo]
+path: references/papers/duane_1987_hmc
+content_hash: "57f520c6b5a6ad2c"

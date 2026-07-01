@@ -1,0 +1,24 @@
+key: tao_2012_shape
+doc_type: methods
+title: "Maintain rigid structures in Verlet based Cartesian molecular dynamics simulations"
+authors: [Tao, Wu, Brooks]
+year: "2012"
+venue: "Journal of Chemical Physics"
+doi: 10.1063/1.4756796
+summary: "SHAPE: post-step rigid-body constraint for Cartesian/Verlet MD. After each unconstrained step it corrects atom coordinates of a rigid group by an iterative rotation-matrix construction that conserves linear and angular momentum, avoiding Lagrange multipliers so cost is independent of body size. Interchangeable with SHAKE; handles linear (>=3) and planar (>=4) bodies and atoms shared between rigid bodies via a cyclic outer loop."
+has_implementable_math: true
+methods: [SHAPE rigid-body constraint, body-fixed COM frame, moment of inertia tensor, angular-momentum conservation, matrix-exponential rotation via Rodrigues formula, skew-symmetric hat map, matrix square root approximation, fixed-point angular-velocity iteration, leapfrog/Verlet integrator, cyclic outer loop for shared atoms]
+provides: [rigid-structure MD constraint solver, SHAKE-interchangeable rigid-body corrector, per-body rotation update from angular momentum, planar/linear rigid-body constraints, Rodrigues rotation matrix, small-angle Taylor rotation branch]
+key_equations:
+  - {label: "10", desc: "first estimate of rigid angular velocity from I^-1 and unconstrained angular momentum"}
+  - {label: "13", desc: "Rodrigues formula for rotation matrix exp(theta_hat)"}
+  - {label: "15", desc: "body-fixed coordinate rotation update"}
+  - {label: "25", desc: "first-order matrix square root approximation of R"}
+  - {label: "26", desc: "angular-velocity fixed-point iteration update"}
+  - {label: "27", desc: "convert converged body-fixed coords back to global frame"}
+  - {label: "28", desc: "explicit angular-momentum equality constraint being solved"}
+keywords: [rigid body, constraint dynamics, SHAKE, RATTLE, molecular dynamics, angular momentum, rotation matrix, leapfrog, CHARMM, holonomic constraint, symplectic]
+domains: [molecular-sim, rigid-body-dynamics]
+depends_on: [ryckaert_1977_shake, andersen_1983_rattle, wu_1998_rigid_body, feller_1995_constant_pressure, brooks_2009_charmm, ma_2003_3d_vision, jorgensen_1983_tip3p, zhou_2000_shadow_hamiltonian, wu_2004_self_guided]
+path: references/papers/tao_2012_shape
+content_hash: "1f83cbc5b93c6458"

@@ -1,0 +1,24 @@
+key: rice_1994_torsion_angle_dynamics
+doc_type: methods
+title: "Torsion Angle Dynamics: Reduced Variable Conformational Sampling Enhances Crystallographic Structure Refinement"
+authors: [Rice, Brunger]
+year: "1994"
+venue: "Proteins: Structure, Function, and Genetics"
+doi: null
+summary: "High-temperature molecular dynamics restricted to torsion angles for macromolecular conformational sampling, using Bae & Haug's exact recursive constrained-dynamics (articulated-body) algorithm with Cartesian gradients. Bond/angle DOFs are frozen so ~10x fewer variables and 10,000 K runs are stable; validated on X-ray crystallographic refinement with a much larger radius of convergence than slow-cool annealing."
+has_implementable_math: true
+methods: [torsion angle molecular dynamics, recursive articulated-body dynamics, D'Alembert principle constrained EOM, spatial 6x6 inertia and force reduction, inward-outward tree recursion, fourth-order Runge-Kutta integration, Berendsen temperature coupling, simulated annealing refinement]
+provides: [torsion-angle-space MD sampler, exact holonomic-constraint solver (non-SHAKE), parent-to-child spatial velocity/acceleration propagation maps, per-body relative-acceleration solve (Eq 27), spatial inertia matrix (Eq 21), spatial generalized force with gyroscopic term (Eq 22), high-temperature reduced-variable sampling protocol]
+key_equations:
+  - {label: "8", desc: "constrained system acceleration a = M^-1 Q (velocity-dependent)"}
+  - {label: "15", desc: "spatial-velocity propagation parent->child with B^(1) transform, B^(2) hinge map"}
+  - {label: "17", desc: "spatial-acceleration propagation with velocity-dependent bias D_ij"}
+  - {label: "18", desc: "D'Alembert constrained equation of motion"}
+  - {label: "21", desc: "6x6 spatial inertia matrix about center of mass"}
+  - {label: "22", desc: "spatial generalized force with Euler/gyroscopic correction"}
+  - {label: "27", desc: "recursive relative (joint) acceleration solve / inward reduction"}
+keywords: [torsion angle dynamics, internal coordinate dynamics, articulated body, holonomic constraints, kinematic tree, rigid body, simulated annealing, crystallographic refinement, conformational sampling, spatial operator]
+domains: [molecular-sim, structural-biology, robotics-dynamics]
+depends_on: [bae_1987, bae_1988, jain_1993, rodriguez_1987, ryckaert_1977, mazur_1989, verlet_1967, berendsen_1984, goldstein_1980, brunger_1992, kirkpatrick_1983, diamond_1971, engh_1991]
+path: references/papers/rice_1994_torsion_angle_dynamics
+content_hash: "f56e385fb01a5a96c"

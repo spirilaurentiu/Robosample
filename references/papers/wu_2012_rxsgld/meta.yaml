@@ -1,0 +1,50 @@
+key: wu_2012_rxsgld
+doc_type: methods
+title: "Replica exchanging self-guided Langevin dynamics for efficient and accurate conformational sampling"
+authors: [Wu, Hodoscek, Brooks]
+year: "2012"
+venue: "Journal of Chemical Physics"
+doi: 10.1063/1.4737094
+summary: "Replica-exchange scheme (RXSGLD) whose stages differ in a self-guiding temperature rather than in temperature; the exchange probability is derived from the SGLD partition function so the base stage samples the canonical ensemble, giving much higher exchange acceptance than temperature replica exchange for large systems."
+has_implementable_math: true
+methods:
+  - self-guided Langevin dynamics equation of motion
+  - guiding force with energy-conservation factor
+  - low-frequency exponential-moving-average filter
+  - SGLD partition function and reweighting factor
+  - self-guiding temperature
+  - SGLD-based replica exchange acceptance probability
+  - momentum and low-frequency-momentum rescaling on exchange
+  - on-the-fly evolving-average estimation of SGLD factors
+  - subset-indexing clustering (SIC)
+provides:
+  - RXSGLD replica-exchange sampler
+  - SGLD guiding-force integrator step
+  - canonical-ensemble reweighting from SGLD trajectory
+  - exchange-probability rule for guided replicas
+  - skewed double-well analytic test fixtures
+key_equations:
+  - {label: "1", desc: "SGLD equation of motion (Langevin + guiding force)"}
+  - {label: "3", desc: "guiding force from low-frequency momentum"}
+  - {label: "6", desc: "low-frequency exponential-moving-average filter"}
+  - {label: "7", desc: "SGLD configurational partition function"}
+  - {label: "14", desc: "SGLD reweighting factor to canonical ensemble"}
+  - {label: "16", desc: "self-guiding temperature"}
+  - {label: "20", desc: "RXSGLD exchange probability"}
+  - {label: "21", desc: "TRXLD (temperature) exchange probability limit"}
+  - {label: "24", desc: "momentum temperature-scaling factor on exchange"}
+  - {label: "27", desc: "skewed double-well test potential"}
+keywords: [SGLD, replica exchange, enhanced sampling, Langevin dynamics, conformational sampling, canonical ensemble, reweighting, self-guiding temperature, RXSGLD]
+domains: [molecular-sim, sampling]
+depends_on:
+  - wu_2003_sgld
+  - wu_2011_sgld
+  - wu_2011_sgldfp
+  - sugita_1999_remd
+  - lee_2010_sgld_rex
+  - blanco_1993_bhairpin
+  - hassan_2002_scpism
+  - jorgensen_1983_tip3p
+  - mackerell_1998_charmm22
+path: references/papers/wu_2012_rxsgld
+content_hash: "174c6ff4d88bda40"

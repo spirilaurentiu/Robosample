@@ -1,0 +1,22 @@
+key: metropolis_1953_monte_carlo
+doc_type: methods
+title: "Equation of State Calculations by Fast Computing Machines"
+authors: [Metropolis, Rosenbluth, Rosenbluth, Teller, Teller]
+year: "1953"
+venue: "Journal of Chemical Physics"
+doi: 10.1063/1.1699114
+summary: "Introduces the Metropolis Monte Carlo algorithm: sample configurations with probability exp(-E/kT) via symmetric trial moves and the min-exp acceptance rule, giving canonical-ensemble averages. Demonstrated on 2D rigid spheres to compute the equation of state."
+has_implementable_math: true
+methods: [Metropolis Monte Carlo, symmetric trial-move proposal, exp(-dE/kT) acceptance test, canonical-ensemble sampling, importance sampling over configuration space, virial-theorem equation of state, cluster-integral virial expansion, radial distribution function binning]
+provides: [Metropolis acceptance rule, Markov-chain Monte Carlo sampler, Boltzmann-distribution sampling, hard-sphere overlap rejection, step-size tuning heuristic, 2D rigid-sphere EOS reference data]
+key_equations: [{label: "accept", desc: "Metropolis acceptance probability min(1, exp(-dE/kT))"},
+                {label: "4", desc: "Monte Carlo estimator averaging over accepted and rejected moves"},
+                {label: "3", desc: "symmetric uniform-square trial-move proposal"},
+                {label: "nu-canonical", desc: "target Boltzmann stationary distribution"},
+                {label: "10", desc: "2D rigid-sphere equation of state from contact density"},
+                {label: "14", desc: "final four-term virial EOS for 2D rigid spheres"}]
+keywords: [Monte Carlo, Metropolis algorithm, MCMC, detailed balance, canonical ensemble, importance sampling, equation of state, rigid spheres, virial expansion, Boltzmann distribution]
+domains: [molecular-sim, statistics, statistical-mechanics]
+depends_on: [wood_1952, mayer_mayer_1940, burton_magee_samuel_1952]
+path: references/papers/metropolis_1953_monte_carlo
+content_hash: "4c5fbcf6fd78a2d0"

@@ -1,0 +1,54 @@
+key: jain_2012_icmd_equipartition
+doc_type: methods
+title: "Equipartition Principle for Internal Coordinate Molecular Dynamics"
+authors: [Jain, Park, Vaidehi]
+year: "2012"
+venue: "Journal of Chemical Theory and Computation (JCTC)"
+doi: 10.1021/ct3002046
+summary: >
+  Derives an equipartition principle for internal-coordinate MD (BAT/TAMD) by
+  introducing noncanonical modal velocity coordinates v = m*(theta) thetadot that
+  decouple the configuration-dependent ICMD kinetic energy (M = m m*). In modal
+  coordinates <v_i v_j> = kT delta_ij (each modal DOF carries kT/2), unlike the
+  dense-coupled physical (theta, p) coordinates. Gives spatial-operator
+  factorizations of the mass matrix and its inverse (M = [I+HphiK] D [I+HphiK]*)
+  and O(N) recursive base-to-tip algorithms (Table 1) to transform between modal
+  and physical velocities without forming M, m, or l. Provides a thermodynamically
+  rigorous method for initializing ICMD velocities (constrained and unconstrained),
+  replacing ad hoc projection, and a basis for internal-coordinate conformational
+  entropy.
+has_implementable_math: true
+methods:
+  - modal coordinate transformation (mass-matrix square-root factorization)
+  - spatial operator mass-matrix factorization and inversion
+  - O(N) recursive base-to-tip velocity transforms
+  - generalized equipartition theorem
+  - Fixman/log-det compensating potential
+  - articulated-body (AB) forward dynamics operators
+provides:
+  - ICMD/TAMD velocity initialization from Boltzmann-distributed modal velocities
+  - modal <-> physical velocity conversion algorithm (Table 1)
+  - equipartition principle for internal coordinates (<v v*> = kT I)
+  - constrained-model Cartesian->ICMD velocity mapping P = M^-1 H phi M^1/2
+  - closed-form m(theta), l(theta) transformation matrices
+key_equations:
+  - {label: "8", desc: "ICMD kinetic energy via config-dependent mass matrix M(theta)"}
+  - {label: "17", desc: "definition of modal coordinates v = m*(theta) thetadot = l(theta) p"}
+  - {label: "18", desc: "decoupled Hamiltonian H = 1/2 v*v + U(theta) in modal coords"}
+  - {label: "22", desc: "corrected potential U' with Fixman term 1/2 ln det M"}
+  - {label: "26", desc: "ICMD equipartition principle <v v*> = kT I_N"}
+  - {label: "29", desc: "mass matrix from Jacobian M = J* M J"}
+  - {label: "31", desc: "spatial-operator square factorization and inverse of mass matrix"}
+  - {label: "32", desc: "analytical transformation matrices m = [I+HphiK] D^1/2, l = D^-1/2 [I-HpsiK]"}
+  - {label: "33", desc: "modal<->physical velocity transforms (O(N) via Table 1)"}
+  - {label: "39", desc: "constrained velocity mapping P = M^-1 H phi M^1/2"}
+keywords: [equipartition, internal coordinates, ICMD, TAMD, BAT, modal coordinates,
+           velocity initialization, mass matrix, spatial operators, articulated body,
+           Fixman potential, kinetic energy, conformational entropy]
+domains: [molecular-sim, statistical-mechanics, robotics]
+depends_on: [jain_1993_icmd, jain_1997, jain_2011_robot_multibody, jain_2011_msd,
+             featherstone_2008, jain_rodriguez_1995, fixman_1974, fixman_1978,
+             go_scheraga_1976, tolman_1918, pear_weiner_1979, hnizdo_gilson_2010,
+             balaraman_2011, park_2012]
+path: references/papers/jain_2012_icmd_equipartition
+content_hash: "9084047961b10320"

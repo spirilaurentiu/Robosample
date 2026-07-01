@@ -422,6 +422,7 @@ TEST(NcmcTeleport, ConstrainedTeleportBranchConsistency) {
 // ---------------------------------------------------------------------------
 TEST(NcmcTeleport, TeleportPreservesMarginal) {
     if (!slowEnabled()) {
+        rtest::warnSlowTierSkipped();
         GTEST_SKIP() << "slow statistical tier (set ROBOSAMPLE_SLOW_TESTS=1)";
     }
     Rng rng(0x7E1E909);
@@ -488,6 +489,7 @@ TEST(NcmcTeleport, TeleportPreservesMarginal) {
 // ---------------------------------------------------------------------------
 TEST(NcmcTeleport, HastingsRatioRestoresBalance) {
     if (!slowEnabled()) {
+        rtest::warnSlowTierSkipped();
         GTEST_SKIP() << "slow statistical tier (set ROBOSAMPLE_SLOW_TESTS=1)";
     }
     Rng rng(0x4A57);

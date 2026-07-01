@@ -1,0 +1,22 @@
+key: ryckaert_1977_shake
+doc_type: methods
+title: "Numerical Integration of the Cartesian Equations of Motion of a System with Constraints: Molecular Dynamics of n-Alkanes"
+authors: [Ryckaert, Ciccotti, Berendsen]
+year: "1977"
+venue: "Journal of Computational Physics"
+doi: 10.1016/0021-9991(77)90098-5
+summary: "Introduces SHAKE: integrate Cartesian equations of motion of the first kind under holonomic (rigid bond/angle) constraints so constraints stay exactly satisfied each step. An unconstrained Verlet step is corrected by displacements along old bond vectors, with the correction magnitudes solved either by a matrix quadratic (undetermined parameters gamma_k) or by the iterative sequential SHAKE sweep. Rigid angles handled as fixed 1-3 distances."
+has_implementable_math: true
+methods: [Verlet integrator, holonomic constraint dynamics, Lagrange multipliers first-kind, method of undetermined parameters, SHAKE iterative constraint solver, rigid bond and angle constraints via 1-3 distance]
+provides: [SHAKE algorithm, constraint-corrected Verlet step, per-constraint quadratic solve, banded constraint matrix for n-alkane chain, momentum-conserving central constraint force]
+key_equations:
+  - {label: "3.3", desc: "unconstrained Verlet position plus constraint correction"}
+  - {label: "3.7", desc: "matrix quadratic system for undetermined parameters gamma_k"}
+  - {label: "5.4a", desc: "SHAKE per-constraint correction on particle i"}
+  - {label: "5.6", desc: "per-constraint quadratic in g solved by SHAKE (drop g^2 for first order)"}
+  - {label: "A.4", desc: "constraint force on n-alkane chain group from four incident bond/angle constraints"}
+keywords: [SHAKE, constraint dynamics, holonomic constraints, rigid bonds, Verlet, molecular dynamics, n-alkane, Lagrange multipliers, RATTLE precursor]
+domains: [molecular-sim, numerical-integration]
+depends_on: [verlet_1967, ryckaert_1975_butane, orban_1974_cecam, rahman_1971_water, barojas_1973_n2, bradbury_1968_mechanics]
+path: references/papers/ryckaert_1977_shake
+content_hash: "48a17559918b2043"

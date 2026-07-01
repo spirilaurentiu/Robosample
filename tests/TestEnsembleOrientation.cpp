@@ -208,6 +208,7 @@ TEST(EnsembleOrientation, Smoke) {
 // ---------------------------------------------------------------------------
 TEST(EnsembleOrientation, NoJacobianIsHaarUniform) {
     if (!slowEnabled()) {
+        rtest::warnSlowTierSkipped();
         GTEST_SKIP() << "slow statistical tier (set ROBOSAMPLE_SLOW_TESTS=1)";
     }
     RobotModel m = freeBody();
@@ -243,6 +244,7 @@ TEST(EnsembleOrientation, NoJacobianIsHaarUniform) {
 // ---------------------------------------------------------------------------
 TEST(EnsembleOrientation, HaarNotEulerFlat) {
     if (!slowEnabled()) {
+        rtest::warnSlowTierSkipped();
         GTEST_SKIP() << "slow statistical tier (set ROBOSAMPLE_SLOW_TESTS=1)";
     }
     RobotModel m = freeBody();
@@ -273,6 +275,7 @@ TEST(EnsembleOrientation, HaarNotEulerFlat) {
 // ---------------------------------------------------------------------------
 TEST(EnsembleOrientation, WithJacobianIsBiased) {
     if (!slowEnabled()) {
+        rtest::warnSlowTierSkipped();
         GTEST_SKIP() << "slow statistical tier (set ROBOSAMPLE_SLOW_TESTS=1)";
     }
     RobotModel m = freeBody();

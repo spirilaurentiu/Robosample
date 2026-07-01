@@ -1,0 +1,49 @@
+key: vitalis_2014_mixed_rigid_dihedral
+doc_type: methods
+title: "A simple molecular mechanics integrator in mixed rigid body and dihedral angle space"
+authors: [Vitalis, Pappu]
+year: "2014"
+venue: "J. Chem. Phys."
+doi: 10.1063/1.4887339
+summary: >
+  Torsional/rigid-body MD integrator that replaces the full mass-metric tensor (MMT) with
+  its diagonal (effective masses), decoupling every generalized DOF and integrating each by
+  imposing per-DOF discrete energy conservation. Configurational sampling is free of MMT
+  (Fixman) artifacts by construction - no det(G) evaluation - at the cost of correct dynamics.
+  Provides O(N_at) inward/outward recursions for projected forces, effective inertias, and
+  Cartesian velocities, a Z-matrix (NeRF) coordinate build, quaternion rigid-body rotation,
+  and Andersen / velocity-rescaling thermostat coupling. Validated on TIP4P water and the FS
+  helix-coil peptide against SETTLE-MD and REMC references.
+has_implementable_math: true
+methods:
+  - diagonal mass-metric-tensor approximation
+  - per-DOF energy-conserving velocity update (quadratic solve)
+  - sub-stepped iterative velocity integrator (Lambda segments)
+  - inward tip-to-base recursion for projected generalized force
+  - inward recursion for diagonal effective inertia
+  - outward base-to-tip recursion for Cartesian atomic velocities
+  - Z-matrix to Cartesian placement (NeRF)
+  - quaternion rigid-body rotation update
+  - Andersen thermostat (per-DOF)
+  - Bussi velocity-rescaling thermostat
+provides:
+  - torsional/rigid-body MD integrator free of MMT/Fixman artifacts
+  - O(N_at) effective-mass and projected-force recursions
+  - mixed dihedral + rigid-body generalized-coordinate propagator
+  - diagonal effective-mass model for internal-coordinate kinetic energy
+  - full integration cycle (Appendix C pseudocode)
+key_equations:
+  - {label: "8", desc: "per-DOF energy-conserving velocity update (quadratic solution)"}
+  - {label: "11", desc: "sub-stepped iterative velocity integrator (production, Lambda segments)"}
+  - {label: "B1", desc: "inward recursion for projected generalized force"}
+  - {label: "B2", desc: "inward recursion for diagonal effective inertia I_kk"}
+  - {label: "B3", desc: "outward recursion for Cartesian atomic velocities"}
+  - {label: "A1", desc: "Z-matrix to Cartesian atom placement (NeRF)"}
+  - {label: "12", desc: "quaternion rigid-body rotation update"}
+  - {label: "5", desc: "diagonal effective-mass kinetic-energy approximation"}
+  - {label: "17", desc: "underlying continuous EOM in mass-weighted velocity"}
+keywords: [torsional dynamics, internal coordinates, mass-metric tensor, Fixman, dihedral angle MD, rigid body, effective mass, thermostat, TIP4P, helix-coil]
+domains: [molecular-sim, sampling]
+depends_on: [ryckaert_1977, pear_1979, jain_1993, jain_1997, mazur_1997, abe_1984, fixman_1974, andersen_1980, bussi_2007, jorgensen_1983, miller_2002, davidchack_2010, skeel_2002, patriciu_2004, jain_2012, jain_2013, vitalis_2009]
+path: references/papers/vitalis_2014_mixed_rigid_dihedral
+content_hash: "b66f85d0d7cf8984"

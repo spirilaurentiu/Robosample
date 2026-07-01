@@ -1,0 +1,24 @@
+key: spiridon_2017_cdhmc_gibbs
+doc_type: methods
+title: "Hamiltonian Monte Carlo with Constrained Molecular Dynamics as Gibbs Sampling"
+authors: [Spiridon, Minh]
+year: "2017"
+venue: "J. Chem. Theory Comput."
+doi: 10.1021/acs.jctc.7b00570
+summary: "Implements constrained-dynamics HMC (CDHMC) with the Fixman compensating potential and internal-coordinate equipartition, mixed with unconstrained HMC as Gibbs sampling moves, to achieve rigorous Boltzmann sampling of constrained (torsional/rigid-body) molecular systems and enhance sampling of macrocycles. Directly foundational to Robosample's blocked-Gibbs HMC over kinematic-tree mobilizers."
+has_implementable_math: true
+methods: [constrained-dynamics HMC, torsional molecular dynamics, rigid-body dynamics, Fixman compensating potential, mass metric tensor determinant, internal-coordinate equipartition velocity draw, velocity Verlet with constraint projection, Metropolis-Hastings acceptance, Gibbs sampling of alternating constraint sets, Shirts energy-histogram test]
+provides: [CDHMC sampler, Fixman potential in acceptance Hamiltonian, distinct guidance vs acceptance potential scheme, mixed constrained/unconstrained Gibbs moves, mass-metric-tensor kinetic energy, constrained velocity-Verlet integrator loop, Boltzmann-validation fixtures]
+key_equations:
+  - {label: "3", desc: "Fixman compensating potential from mass-metric-tensor determinant ratio"}
+  - {label: "2", desc: "marginal configuration density with |M_phi|^{1/2} factor"}
+  - {label: "mass-metric-tensor", desc: "M_phi = J^T M J, generalized mass metric tensor"}
+  - {label: "hamiltonian", desc: "Hamiltonian with mass-metric-tensor kinetic energy"}
+  - {label: "accept-pseudocode", desc: "MH accept/reject using modified (Fixman) Hamiltonian"}
+  - {label: "momenta-draw", desc: "internal-coordinate equipartition momentum draw N(0, kT M^-1)"}
+  - {label: "6", desc: "Shirts test: log-ratio of energy histograms linear in U"}
+keywords: [HMC, constrained dynamics, Fixman potential, torsional MD, Gibbs sampling, mass metric tensor, internal coordinates, Boltzmann sampling, macrocycles, MCMC]
+domains: [molecular-sim, sampling, statistics]
+depends_on: [ryckaert_1977_shake, andersen_1983_rattle, jain_1993_recursive_md, jain_2013_fixman_branched, jain_2012_equipartition_icmd, tao_2012_shape, vangunsteren_1977_md_constraints, mazur_1991_icmd, fixman_1974_constraints, patriciu_2004_mass_metric, echenique_2006_alanine_constraints, jain_1997_compensating_mass_matrix, forrest_1994_gchmc, duane_1987_hmc, metropolis_1953_monte_carlo, minh_2014_hastings, chodera_2011_gibbs_replica_exchange, kandel_2016_potential_distortions, shirts_2012_ensemble_validation, brubaker_2012_chmc, katritch_2003_icff, minh_2012_implicit_ligand_theory, wu_2011_sgld, wu_2012_rxsgld, sohldickstein_2014_lahmc, simbody_2011, molmodel_2011]
+path: references/papers/spiridon_2017_cdhmc_gibbs
+content_hash: "e91e25557e7feff0"

@@ -1,0 +1,24 @@
+key: wagner_2013_gneimo_cicmd
+doc_type: methods
+title: "Advanced Techniques for Constrained Internal Coordinate Molecular Dynamics"
+authors: [Wagner, Balaraman, Niesen, Larsen, Jain, Vaidehi]
+year: "2013"
+venue: "Journal of Computational Chemistry"
+doi: 10.1002/jcc.23200
+summary: "GNEIMO constrained internal-coordinate (torsional) MD: O(N) spatial-operator-algebra framework for modal-coordinate velocity initialization (CICMD equipartition), composite-body CM velocity nulling, nonseparable-Hamiltonian integrators (Lobatto IIIa-b, RK4, adaptive CVODE), a Nose-Hoover flying-ice-cube diagnostic/fix, and adaptive secondary-structure freeze/thaw coarse-graining."
+has_implementable_math: true
+methods: [spatial operator algebra, Newton-Euler inverse mass operator, modal velocity coordinates, composite rigid-body inertia CM nulling, Lobatto IIIa-b integrator, RK4 integrator, adaptive CVODE Adams-Moulton, Nose-Hoover thermostat, temperature REXMD, dynamic clustering coarse-graining]
+provides: [CICMD velocity initialization from Boltzmann via modal coordinates, O(N) base-to-tips velocity scatter, spatial-momentum nulling correction, flying-ice-cube diagnostic and mitigation, torsional-MD integrator selection, freeze/thaw adaptive coarse-graining, B-factor to RMSF conversion]
+key_equations: [{label: "1", desc: "thermal energy target (N-6)kT/2"},
+                {label: "3", desc: "modal velocity coordinate transform"},
+                {label: "4", desc: "inverse transform recovering generalized velocities (O(N) scatter)"},
+                {label: "5", desc: "modal kinetic energy as sum of squares (equipartition)"},
+                {label: "7", desc: "system spatial inertia = composite rigid-body inertia R(n)"},
+                {label: "9", desc: "CM spatial velocity from composite inertia and momentum"},
+                {label: "deltaV", desc: "base-cluster velocity correction to null spatial momentum"},
+                {label: "13", desc: "flying-ice-cube CM kinetic energy vs Nose bath variable"}]
+keywords: [constrained dynamics, torsional dynamics, internal coordinate MD, GNEIMO, spatial operator algebra, articulated body, equipartition, Nose-Hoover, flying ice cube, coarse-graining, ab-initio folding]
+domains: [molecular-sim, robotics, sampling]
+depends_on: [jain_2012_icmd_equipartition, jain_1993_icmd, jain_2010_robot_multibody, ryckaert_1977_shake, andersen_1983_rattle, metropolis_1953_monte_carlo, sugita_1999_rexmd, fixman_1974, still_1990_gbsa, martyna_1992_nose_hoover_chains, harvey_1998_flying_ice_cube, cohen_1996_cvode, friedrichs_2009_openmm]
+path: references/papers/wagner_2013_gneimo_cicmd
+content_hash: "879dfe69aaf667de"

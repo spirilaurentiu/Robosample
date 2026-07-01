@@ -1,0 +1,25 @@
+key: echenique_2006_stiff_rigid_constraints
+doc_type: methods
+title: "Quantum Mechanical Calculation of the Effects of Stiff and Rigid Constraints in the Conformational Equilibrium of the Alanine Dipeptide"
+authors: [Echenique, Calvo, Alonso]
+year: "2006"
+venue: "Journal of Computational Chemistry"
+doi: 10.1002/jcc.20467
+summary: "Derives the statistical-mechanics correcting terms (mass-metric tensor and Hessian determinants) for the classical stiff vs rigid constraint models in internal coordinates, and the Fixman compensating potential V_F = (RT/2) ln[det G/(det H det g)] that converts a rigid MD/MC ensemble into the stiff one. Quantifies each term's conformational dependence for alanine dipeptide via ab initio MP2/HF, giving residue limits for safely dropping each correction."
+has_implementable_math: true
+methods: [mass-metric tensor determinant, reduced mass-metric tensor pull-back, Fixman compensating potential, partial Hessian determinant correction, stiff vs rigid constraint statistical mechanics, SASMIC internal-coordinate factorization of det G, inertia-tensor block assembly, statistical energy distance d12]
+provides: [Fixman potential formula, stiff effective free energy F_s, rigid effective free energy F_r, kinetic entropy from det G, conformational entropy from det H, kinetic entropy from det g, closed-form det G in SASMIC coordinates, reduced mass-metric matrix g2 block structure, residue-limit criterion for dropping constraint corrections]
+key_equations:
+  - {label: "5", desc: "mass-metric tensor G (mass-weighted Jacobian inner product)"}
+  - {label: "12a", desc: "stiff effective free energy F_s = V_Sigma - T(S_s^c + S_s^k)"}
+  - {label: "15", desc: "reduced mass-metric tensor g as pull-back of G through constraints"}
+  - {label: "23a", desc: "rigid effective free energy F_r = V_Sigma - T S_r^k"}
+  - {label: "25", desc: "Fixman compensating potential V_F = (RT/2) ln[detG/(detH detg)]"}
+  - {label: "26", desc: "closed-form det G in SASMIC/Z-matrix internal coordinates"}
+  - {label: "29", desc: "internal reduced mass-metric matrix g2 block structure"}
+  - {label: "A1", desc: "Fixman sparse hard-coord matrix h, detG/detg = 1/det h under fixed hard coords"}
+keywords: [constraints, Fixman potential, mass-metric tensor, stiff model, rigid model, internal coordinates, alanine dipeptide, Ramachandran, SASMIC, Hessian determinant, configurational entropy]
+domains: [molecular-sim, constrained-dynamics, statistical-mechanics]
+depends_on: [fixman_1974, fixman_1978, go_scheraga_1976, ryckaert_1977_shake, andersen_1983_rattle, pear_1979_brownian_rigid_chain, patriciu_2004, echenique_alonso_2006_sasmic, echenique_calvo_2006_factorization, alonso_echenique_2006_distance, vangunsteren_karplus_1982, den_otter_briels_1998, den_otter_briels_2000]
+path: references/papers/echenique_2006_stiff_rigid_constraints
+content_hash: "8ed81f022399c4fd"

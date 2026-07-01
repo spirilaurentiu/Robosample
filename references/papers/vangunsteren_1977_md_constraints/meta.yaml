@@ -1,0 +1,44 @@
+key: vangunsteren_1977_md_constraints
+doc_type: methods
+title: "Algorithms for macromolecular dynamics and constraint dynamics"
+authors: [van Gunsteren, Berendsen]
+year: "1977"
+venue: "Molecular Physics 34(5):1311-1327"
+doi: 10.1080/00268977700102571
+summary: >
+  Compares Verlet, Gear and Beeman integrators for macromolecular MD (BPTI) and
+  proposes a scheme to incorporate holonomic (bond-length) constraints via SHAKE
+  into an arbitrary k-value predictor-corrector written in the force (F)
+  representation. Gives exact Gear corrector coefficients and the N<->F
+  transformation matrices for k=4..8. Bond-length constraints give ~3x speedup;
+  bond-angle constraints are not worthwhile.
+has_implementable_math: true
+methods:
+  - Gear k-value predictor-corrector integrator
+  - Verlet integrator
+  - Beeman integrator
+  - Nordsieck (N) representation
+  - force (F) representation
+  - SHAKE constraint resetting
+  - constraint-force reconstruction from position displacement
+  - representation transformation (N -> F)
+provides:
+  - Gear corrector coefficient table (k=4..8)
+  - Pascal-triangle predictor matrix A
+  - F-representation predictor matrices B (k=4..8)
+  - N->F transformation matrix T and inverses
+  - constraint-incorporation scheme for predictor-corrector MD
+  - stabilized velocity update under constraints
+key_equations:
+  - {label: "2.9", desc: "second-order predictor-corrector corrector step"}
+  - {label: "2.11a", desc: "Verlet position update"}
+  - {label: "3.3", desc: "total force = free + constraint force decomposition"}
+  - {label: "3.7", desc: "constraint force from SHAKE position displacement"}
+  - {label: "3.10", desc: "stabilized velocity update under constraints"}
+  - {label: "A.2a", desc: "B = T A T^{-1} representation transform"}
+  - {label: "A.7", desc: "F-rep corrector vector b (a_i for i<=2, else 0)"}
+keywords: [molecular dynamics, constraint dynamics, SHAKE, predictor-corrector, Gear, Verlet, Beeman, bond-length constraints, integrator, BPTI]
+domains: [molecular-sim, numerical-integration]
+depends_on: [verlet_1967, gear_1971, gear_1966, beeman_1976, ryckaert_1977, gelin_1975, nordsieck_1962, alder_1959]
+path: references/papers/vangunsteren_1977_md_constraints
+content_hash: "ff413bb9728408c3"

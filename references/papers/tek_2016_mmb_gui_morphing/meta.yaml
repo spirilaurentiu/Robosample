@@ -1,0 +1,17 @@
+key: tek_2016_mmb_gui_morphing
+doc_type: software
+title: "MMB-GUI: a fast morphing method demonstrates a possible ribosomal tRNA translocation trajectory"
+authors: [Tek, Korostelev, Flores]
+year: "2016"
+venue: "Nucleic Acids Research"
+doi: 10.1093/nar/gkv1457
+summary: "Chimera-based GUI front-end for MMB (internal-coordinate, multiscale macromolecular modeling built on Simbody). Introduces a spring-driven, flexibility-zone/physics-zone morphing method that generates clash-free directed trajectories between conformations of heterogeneous complexes; benchmarked on the Weiss & Levitt morphing set and applied to EF-G-mediated tRNA translocation in the 70S ribosome. Value to an implementer is mostly routing plus one benchmark metric."
+has_implementable_math: true
+methods: [internal-coordinate multiscale modeling, flexibility zones, physics zones, spring-driven morphing, gapped-alignment threading springs, collision-detecting spheres, rigid-body welding, RMSD/sRMSD scoring]
+provides: [morphing improvement metric, morphing protocol, flexibility/physics-zone multiscale scheme, threading force-constant parameterization, ribosome translocation benchmark fixtures]
+key_equations: [{label: "improvement", desc: "morph quality: percent RMSD improvement of closest morph frame over endpoints vs known intermediate"}]
+keywords: [morphing, internal coordinates, multiscale modeling, MMB, Simbody, ribosome, tRNA translocation, EF-G, RMSD, conformational change, Chimera GUI]
+domains: [molecular-sim, structural-biology]
+depends_on: [flores_2011, weiss_2009, gerstein_1998, krebs_2000, flores_2013, dourado_2014, kehr_2011, flores_2008_hingemaster]
+path: references/papers/tek_2016_mmb_gui_morphing
+content_hash: "38262bb1ad878c14"

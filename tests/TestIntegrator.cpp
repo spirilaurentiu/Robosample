@@ -152,6 +152,59 @@ RobotModel underValidatedJoints(Rng& rng) {
     return m;
 }
 
+// The single BendStretch mobilizer, ISOLATED from the other under-validated
+// joints (SphericalCoords, FreeLine) so a regression in its H_FM/HDot is
+// localized to one test. BendStretch is not a legal root (JointFacts.
+// FlexibleAndLegalRoot in TestJointKernels.cpp), so the smallest legal model
+// is a Free root with a single BendStretch child -- same pattern
+// underValidatedJoints uses for its first tree, minus the SphericalCoords tail.
+RobotModel bendStretchIsolated(Rng& rng) {
+    auto mk = [&](int parent, JointType jt) {
+        BodySpec s;
+        s.parent = parent;
+        s.joint = jt;
+        s.X_PF = Transform(rng.rotation(), rng.vec3(-0.2, 0.2));
+        s.X_BM = Transform(rng.rotation(), rng.vec3(-0.2, 0.2));
+        s.mass = rng.uniform(0.8, 1.6);
+        s.com_B = rng.vec3(-0.1, 0.1);
+        s.inertia_B = UnitInertia(rng.uniform(0.4, 0.6), rng.uniform(0.4, 0.6), rng.uniform(0.4, 0.6));
+        return s;
+    };
+    RobotModel m = buildForest({mk(0, JointType::Free), mk(1, JointType::BendStretch)});
+    attachAtoms(m, 1, {Vec3(0, 0, 0), Vec3(0.10, 0.02, -0.03)}, {12.0, 1.0});
+    attachAtoms(m, 2, {Vec3(0.05, 0.11, 0), Vec3(-0.03, 0, 0.06)}, {14.0, 1.0});
+    return m;
+}
+
+// Seed a ready-to-integrate state for bendStretchIsolated with ZERO external
+// force: the analytic bridge is built with k=0, so F_a = -k(r-anchor) == 0 and
+// U == 0 identically for every pose -- total energy is exactly the kinetic
+// energy calcKineticEnergy reports. Generalized velocity is nonzero on BOTH
+// BendStretch dofs (u[0]=rotation rate, u[1]=stretch rate; jointX_FM's
+// BendStretch branch takes q[qOff] as the rotation and q[qOff+1] as the
+// stretch, and non-quaternion joints have qdot==u) and zero on the Free root,
+// so all kinetic energy in the trajectory is attributable to the BendStretch
+// motion under test.
+void buildBendStretchSeeded(const RobotModel& m,
+                            RobotState& s,
+                            Rng& rng,
+                            std::vector<AnalyticForceBridge>& bridgeStore) {
+    randomizeState(m, s, rng);
+    RobotEngine::realizePosition(m, s);
+    bridgeStore.emplace_back(m, s, Real(0)); // k=0: bridge force/potential == 0 always
+    AnalyticForceBridge& bridge = bridgeStore.back();
+
+    RobotEngine::realizeArticulatedBodyInertias(m, s);
+    for (int i = 0; i < m.nu; ++i) {
+        s.u()[i] = 0;
+    }
+    const int uOff = m.bodyUIndex[2]; // body 2 == the BendStretch child
+    s.u()[uOff + 0] = Real(1.3);      // rotation rate
+    s.u()[uOff + 1] = Real(0.6);      // stretch rate
+
+    seedDerivatives(m, s, bridge);
+}
+
 // thermal scale for the momentum draw (arbitrary positive constant; only sets
 // the energy scale, not correctness).
 constexpr Real kBoostRT = Real(2.5);
@@ -537,6 +590,66 @@ TEST(Integrator, UnderValidatedJointsConserveEnergy) {
         buildSeeded(m, s, r, 60.0, store);
         const Real res = RobotEngine::checkReversibility(m, s, store.back(), cset, /*nSteps=*/200, kSafeH);
         EXPECT_LT(res, kRevTight) << "reversibility residual " << res << " on under-validated joints";
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  P5.4b: BendStretch, ISOLATED. UnderValidatedJointsConserveEnergy only ever
+//         exercises BendStretch inside a Free->BendStretch->SphericalCoords
+//         chain, so a BendStretch-only regression would show up mixed in with
+//         SphericalCoords/FreeLine drift. This test is a single Free root with
+//         one BendStretch child, ZERO external force (U==0 identically via the
+//         k=0 analytic bridge), and nonzero generalized velocity on BOTH
+//         BendStretch dofs -- so any energy drift is unambiguously the
+//         BendStretch H_FM/HDot_FM's, mirroring the structure/tolerances of
+//         UnderValidatedJointsConserveEnergy above.
+// ---------------------------------------------------------------------------
+TEST(Integrator, BendStretchIsolatedConservesEnergy) {
+    const ConstraintSet cset;
+    Rng rng(0x5701);
+    RobotModel m = bendStretchIsolated(rng);
+
+    // safe step: bounded, non-secular drift.
+    {
+        RobotState s;
+        s.allocateFull(m);
+        std::vector<AnalyticForceBridge> store;
+        store.reserve(1);
+        Rng r(0x5711);
+        buildBendStretchSeeded(m, s, r, store);
+        const DriftResult d = runTrajectory(m, s, store.back(), cset, kSafeH, 2000);
+        ASSERT_TRUE(d.ok) << "a safe-step isolated-BendStretch trajectory was rejected";
+        EXPECT_LT(d.maxRel, kEdrift) << "energy drift " << d.maxRel;
+        EXPECT_LT(d.slopeTotal, kEdrift) << "secular (monotone) energy pumping slope*N/|E0| = " << d.slopeTotal;
+    }
+
+    // O(h^2): halving the step quarters the drift over the same physical time.
+    {
+        auto driftAt = [&](Real h, int nSteps) -> Real {
+            RobotState s;
+            s.allocateFull(m);
+            std::vector<AnalyticForceBridge> store;
+            store.reserve(1);
+            Rng r(0x5722);
+            buildBendStretchSeeded(m, s, r, store);
+            const DriftResult d = runTrajectory(m, s, store.back(), cset, h, nSteps);
+            return d.ok ? d.maxAbs : std::numeric_limits<Real>::infinity();
+        };
+        const Real ratio = driftAt(kSafeH, 600) / driftAt(kSafeH / 2, 1200);
+        EXPECT_GE(ratio, 3.0) << "O(h^2) ratio too small (" << ratio << ")";
+        EXPECT_LE(ratio, 5.0) << "O(h^2) ratio too large (" << ratio << ")";
+    }
+
+    // round-trip reversibility residual is tiny at a safe step.
+    {
+        RobotState s;
+        s.allocateFull(m);
+        std::vector<AnalyticForceBridge> store;
+        store.reserve(1);
+        Rng r(0x5733);
+        buildBendStretchSeeded(m, s, r, store);
+        const Real res = RobotEngine::checkReversibility(m, s, store.back(), cset, /*nSteps=*/200, kSafeH);
+        EXPECT_LT(res, kRevTight) << "reversibility residual " << res << " on isolated BendStretch";
     }
 }
 

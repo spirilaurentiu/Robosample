@@ -1,0 +1,60 @@
+key: go_1976_rigid_flexible_partition
+doc_type: methods
+title: "On the Use of Classical Statistical Mechanics in the Treatment of Polymer Chain Conformation"
+authors: [Gō, Scheraga]
+year: "1976"
+venue: Macromolecules
+doi: 10.1021/ma60052a001
+summary: >
+  Foundational derivation contrasting the classical RIGID model (constrained bond
+  lengths/angles) whose partition function carries the intractable metric weight
+  (det G)^-1/2, against the classical FLEXIBLE model whose partition function is a
+  flat integral over dihedral angles with no metric factor. Shows the two differ by a
+  product of conformation-dependent harmonic-oscillator partition functions, and
+  concludes eq 1 (flexible, no (det G)^-1/2) is the better approximation. This is the
+  origin of the (det G)^-1/2 / Fixman-potential correction used in internal-coordinate
+  sampling and constrained MD.
+has_implementable_math: true
+methods:
+  - block partitioning of the mass-metric matrix into soft (dihedral+external) and hard (bond/angle) variables
+  - Schur-complement inverse mass metric G = (H0)^-1 = G0 - G' G''^-1 G'^+
+  - Gaussian momentum integration to obtain configurational partition functions
+  - Wilson GF-matrix relation det(F'' G'') = prod (2 pi nu_i)^2
+  - quantum vs classical harmonic-oscillator partition-function corrections (sinh vs linear)
+  - Cartesian-to-internal-coordinate Jacobian (dihedral-independent)
+provides:
+  - rigid-model partition function with (det G)^-1/2 metric weight (eq 2/13)
+  - flexible-model partition function without metric weight (eq 1/8)
+  - relation Zf = Zr * product of conformation-dependent oscillator factors (eq 16)
+  - per-mode sensitivity functions g_r, g_f quantifying rigid vs flexible error (eqs 22-23)
+  - conformational entropy -1/2 R ln det F at an energy minimum
+  - frequency thresholds (330-440 cm^-1) for classical/ground-state validity
+key_equations:
+  - {label: "2", desc: "classical rigid-model partition function with (det G)^-1/2 weight"}
+  - {label: "1", desc: "classical flexible-model partition function (flat integral over dihedrals)"}
+  - {label: "10", desc: "Schur-complement soft inverse mass metric G"}
+  - {label: "13", desc: "rigid partition function after momentum + external integration"}
+  - {label: "16", desc: "flexible = rigid times product of conformation-dependent oscillator factors"}
+  - {label: "17", desc: "quantum-correct partition function (sinh oscillator factors)"}
+  - {label: "22", desc: "g_r rigid-model per-mode log-sensitivity"}
+  - {label: "23", desc: "g_f flexible-model per-mode log-sensitivity"}
+keywords:
+  - partition function
+  - internal coordinates
+  - dihedral angles
+  - rigid constraints
+  - metric tensor
+  - Fixman potential
+  - det G correction
+  - conformational statistics
+  - Jacobian
+domains: [molecular-sim, statistical-mechanics, polymer-physics]
+depends_on:
+  - flory_1974
+  - fixman_1974
+  - go_1969
+  - kirkwood_1949
+  - wilson_1955
+  - volkenstein_1963
+path: references/papers/go_1976_rigid_flexible_partition
+content_hash: "2fbb3a88223e0b56a8"

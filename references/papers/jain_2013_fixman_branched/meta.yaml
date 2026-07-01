@@ -1,0 +1,24 @@
+key: jain_2013_fixman_branched
+doc_type: methods
+title: "Fixman compensating potential for general branched molecules"
+authors: [Jain, Kandel, Wagner, Larsen, Vaidehi]
+year: "2013"
+venue: "J. Chem. Phys."
+doi: 10.1063/1.4851315
+summary: "SOA/GNEIMO-Fixman algorithm computing the Fixman compensating potential and its gradient (Fixman torque) at linear cost for branched constrained-MD molecules of any size; det of the constrained mass matrix reduces to a product of articulated-body inertia scalars D(i) available as by-products of the GNEIMO recursion. Removes torsion-pdf bias from bond/angle constraints; validated on C4/C5/C11/C15 chains, alanine/valine dipeptide, chignolin."
+has_implementable_math: true
+methods: [spatial operator algebra, GNEIMO articulated-body recursion, mass-matrix factorization, articulated-body inertia D(i), Fixman potential via log-det of constrained mass matrix, Fixman torque via recursive scatter algorithm, Langevin dynamics, BBK integrator]
+provides: [Fixman compensating potential U_f, Fixman torque T(i), constrained mass-matrix determinant formula, log-det from articulated-body inertias, GNEIMO-Fixman working formulas eq17 and eq23, uniform-torsion-pdf bias correction]
+key_equations:
+  - {label: "11", desc: "Fixman potential U_f = (1/2)kT ln(det M / det M_B)"}
+  - {label: "13", desc: "torsion-only simplification U_f = c_f + (1/2) ln det M"}
+  - {label: "16", desc: "det M as product of articulated-body inertias D(i)"}
+  - {label: "17", desc: "GNEIMO-Fixman Fixman-potential working formula"}
+  - {label: "23", desc: "GNEIMO-Fixman Fixman-torque formula for branched systems"}
+  - {label: "7", desc: "closed-form det of BAT mass matrix (Go-Scheraga)"}
+  - {label: "24", desc: "Pear-Weiner C4 analytical det{M} ground truth"}
+keywords: [Fixman potential, constrained MD, torsional dynamics, mass matrix determinant, spatial operator algebra, GNEIMO, articulated body, internal coordinates, BAT coordinates, dihedral pdf bias]
+domains: [molecular-sim, computational-chemistry, multibody-dynamics]
+depends_on: [ryckaert_1977_shake, andersen_1983_rattle, jain_1993_ordern_md, fixman_1974, fixman_1978, go_scheraga_1976, pear_1979_brownian_rigid_chain, patriciu_2004, echenique_2006_stiff_rigid_constraints, jain_1997_soa_fixman, jain_2011_robot_multibody_dynamics, wagner_2013_gneimo, hornak_2006_amber99sb, skeel_2002_bbk, boresch_karplus_1996]
+path: references/papers/jain_2013_fixman_branched
+content_hash: "56459a63275b959e"

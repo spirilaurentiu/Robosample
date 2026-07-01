@@ -1,0 +1,41 @@
+key: spiridon_2020_robosample
+doc_type: methods
+title: "Robosample: A rigid-body molecular simulation program based on robot mechanics"
+authors: [Spiridon, Sulea, Minh, Petrescu]
+year: "2020"
+venue: "BBA - General Subjects"
+doi: 10.1016/j.bbagen.2020.129616
+summary: >
+  The primary Robosample paper. Constrained-dynamics Hamiltonian Monte Carlo
+  (CDHMC) used as a Gibbs sampling move over alternating "worlds" (each a set of
+  rigid bodies + joint types mapped onto the same molecular graph). Rigid bodies
+  and joints (Cartesian, torsional, cylindrical=2DOF, spherical/ball=3DOF)
+  distributed by the user; energies/forces from OpenMM reduced to per-body spatial
+  forces solved by Simbody's O(N) Spatial Operator Algebra. Fixman potential/torque
+  corrects the reduced-coordinate marginal to match fully flexible Boltzmann
+  sampling. Validated on alanine dipeptide free-energy surface and an HCV E2N1 glycan.
+has_implementable_math: true
+methods: [constrained-dynamics HMC, Gibbs sampling over worlds, spatial operator algebra,
+  Fixman potential correction, Fixman torque, mass matrix tensor determinant/gradient,
+  spherical joint, cylindrical joint, torsional dynamics, Metropolis-Hastings acceptance,
+  generalized-coordinate equipartition velocity init, HMC parameter tuning]
+provides: [CDHMC Gibbs sampler, multi-world rigid-body sampling scheme, Fixman potential/torque,
+  reduced-coordinate Hamiltonian, spherical and cylindrical mobilizers, joint-frame-along-bond convention,
+  HMC acceptance-rate tuning workflow, per-body spatial force reduction]
+key_equations:
+  - {label: "2", desc: "full Hamiltonian, kinetic (mass matrix tensor) + potential"}
+  - {label: "2-def", desc: "mass matrix tensor M_tot = J^T M J"}
+  - {label: "4", desc: "fully-flexible marginal config probability with |M_tot|^{-1/2}"}
+  - {label: "6", desc: "reduced-coordinate marginal with |M|^{-1/2}"}
+  - {label: "7", desc: "Fixman correcting potential U' = kT ln(|M_tot|/|M|)^{1/2}"}
+  - {label: "8", desc: "reduced-coordinate Hamiltonian with Fixman correction"}
+keywords: [molecular dynamics, Hamiltonian Monte Carlo, Gibbs sampling, robotics,
+  multibody dynamics, constrained dynamics, rigid body, Fixman potential, internal coordinates,
+  spatial operator algebra, alanine dipeptide, glycan]
+domains: [molecular-sim, sampling, robotics, statistics]
+depends_on: [spiridon_2017_cdhmc_gibbs, sherman_2011_simbody, duane_1987_hmc,
+  metropolis_1953_monte_carlo, minh_2014_hastings, jain_2012_icmd_equipartition,
+  kandel_2016_fixman_hybrid_icmd, ryckaert_1977_shake, andersen_1983_rattle,
+  minh_2019_algdock, betancourt_2016_xhmc, larsen_2014_gneimo_casp_refinement]
+path: references/papers/spiridon_2020_robosample
+content_hash: "031f69f67534c77f"

@@ -1,0 +1,77 @@
+key: jain_1997_fixman_compensating_potential
+doc_type: methods
+title: "Compensating Mass Matrix Potential for Constrained Molecular Dynamics"
+authors: [Jain]
+year: "1997"
+venue: "Journal of Computational Physics"
+doi: 10.1006/jcph.1997.5731
+summary: >
+  Closed-form O(N) spatial-operator algorithm to compute the Fixman compensating
+  (metric-tensor) potential Vc = 1/2 ln det M and its gradient (compensating hinge
+  torque Tc) for tree-topology internal-coordinate constrained MD. Reduces the
+  naive O(N^3) trace(M^-1 dM/dtheta) to a per-hinge O(N) recursion reusing
+  articulated-body-inertia quantities (P, D, psi) from the NEIMO constrained
+  dynamics solver; Vc becomes a sum of small hinge-inertia log-dets.
+has_implementable_math: true
+methods:
+  - Fixman compensating potential
+  - spatial operator algebra
+  - articulated body inertia recursion
+  - innovations (LDL*) factorization of mass matrix
+  - Newton-Euler operator factorization
+  - O(N) internal-coordinate constrained dynamics
+  - Riccati/Kalman-filter recursion for multibody inertia
+provides:
+  - compensating mass-matrix potential Vc = 0.5 sum_i ln det D(i)
+  - compensating hinge torque Tc(i) = -h(i)^T F[Q11+Q22]
+  - mass matrix determinant identity det(M) = det(D)
+  - O(N) compensating-torque recursion (Y(k) recursion)
+  - mass matrix sensitivity dM/dtheta_i operator form
+  - articulated body inertia recursion (P, D, G, K, psi)
+key_equations:
+  - {label: "2.9", desc: "Fixman modified potential Vc = 1/2 ln det M"}
+  - {label: "2.14", desc: "naive compensating torque = 1/2 Trace{M^-1 dM/dtheta}"}
+  - {label: "3.5a", desc: "innovations LDL* factorization of mass matrix"}
+  - {label: "3.6", desc: "articulated body inertia (Riccati) recursion"}
+  - {label: "4.11", desc: "closed-form mass matrix sensitivity dM/dtheta_i"}
+  - {label: "4.16", desc: "Y(k) base-to-tip recursion for compensating torque"}
+  - {label: "4.18", desc: "final closed-form per-hinge compensating torque"}
+  - {label: "4.20", desc: "Vc = 1/2 sum_i ln det D(i)"}
+keywords:
+  - Fixman potential
+  - metric tensor potential
+  - constrained molecular dynamics
+  - internal coordinates
+  - mass matrix
+  - spatial operator algebra
+  - articulated body inertia
+  - NEIMO
+  - O(N) dynamics
+domains: [molecular-sim, multibody-dynamics, robotics]
+depends_on:
+  - mazur_1989_biomolecular_modeling
+  - jain_1993_recursive_md
+  - fixman_1974_classical_constraints
+  - fixman_1978_polymer_dynamics
+  - go_1969_internal_vibrations
+  - go_1976_polymer_chain
+  - vangunsteren_1982_constraints_dynamics
+  - pear_1979_brownian_rigid_chain
+  - helfand_1979_flexible_rigid_constraints
+  - chandler_1979_nbutane_constraints
+  - vangunsteren_1980_constrained_flexible
+  - ryckaert_1977_shake
+  - rodriguez_1991_spatial_operator_algebra
+  - graham_1981_kronecker_matrix_calculus
+  - mazur_1991_icmd
+  - rodriguez_1987_kalman_robot_dynamics
+  - rodriguez_1992_spatial_operator_factorization
+  - kailath_1970_innovations
+  - featherstone_1983_articulated_body
+  - jain_1995_diagonalized_lagrangian
+  - jain_1993_underactuated_manipulators
+  - jain_1995_base_invariant_dynamics
+  - mathiowetz_1994_protein_neimo
+  - vaidehi_1996_constant_temperature_neimo
+path: references/papers/jain_1997_fixman_compensating_potential
+content_hash: "0ef885bdc4637032"

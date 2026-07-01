@@ -193,6 +193,7 @@ TEST(FixmanBoltzmann, Smoke) {
 // ---------------------------------------------------------------------------
 TEST(FixmanBoltzmann, OffMatchesSqrtDetM) {
     if (!slowEnabled()) {
+        rtest::warnSlowTierSkipped();
         GTEST_SKIP() << "slow statistical tier (set ROBOSAMPLE_SLOW_TESTS=1)";
     }
     ChainRun r = sampleChain(/*useFixman*/ false, 0xB0117, /*moves*/ 1'000'000, /*stride*/ 4);
@@ -216,6 +217,7 @@ TEST(FixmanBoltzmann, OffMatchesSqrtDetM) {
 // ---------------------------------------------------------------------------
 TEST(FixmanBoltzmann, OnIsFlat) {
     if (!slowEnabled()) {
+        rtest::warnSlowTierSkipped();
         GTEST_SKIP() << "slow statistical tier (set ROBOSAMPLE_SLOW_TESTS=1)";
     }
     ChainRun r = sampleChain(/*useFixman*/ true, 0xF1A7, /*moves*/ 1'000'000, /*stride*/ 4);

@@ -1,0 +1,25 @@
+key: chen_2005_tamd
+doc_type: methods
+title: "Application of Torsion Angle Molecular Dynamics for Efficient Sampling of Protein Conformations"
+authors: [Chen, Im, Brooks]
+year: "2005"
+venue: "Journal of Computational Chemistry"
+doi: 10.1002/jcc.20293
+summary: "Torsion-angle MD (TAMD) via the recursive O(n) NEIMO / spatial-operator-algebra articulated-body solver, plus an extended projection method to build an internal-coordinate force field (ICFF) from a Cartesian force field using softened vdW/electrostatics and CMAP torsion crossterm corrections. Enables 10-20 fs time steps and ~10x fewer DOF for enhanced conformational sampling."
+has_implementable_math: true
+methods: [NEIMO recursive articulated-body dynamics, spatial operator algebra, Newton-Euler operator factorization, innovations operator factorization, O(n) mass-matrix inverse, per-cluster spatial force reduction, modified leapfrog Verlet integrator, quaternion base propagation, Berendsen thermostat, replica exchange MD, torsion crossterm CMAP correction, softened vdW/electrostatics]
+provides: [internal-coordinate equations of motion, O(n) mass-matrix inversion, kinematic-tree rigid-body recursions, per-body spatial force from per-atom forces, internal-coordinate force field construction, energy-fluctuation integrator-accuracy metric, TAMD time-step benchmarks]
+key_equations: [{label: "1", desc: "internal-coordinate equations of motion"},
+                {label: "2", desc: "Newton-Euler spatial velocity recursion"},
+                {label: "3", desc: "Newton-Euler spatial acceleration recursion"},
+                {label: "4", desc: "Newton-Euler hinge spatial force recursion"},
+                {label: "5", desc: "generalized hinge force projection"},
+                {label: "7", desc: "Newton-Euler mass-matrix factorization"},
+                {label: "9", desc: "innovations mass-matrix factorization"},
+                {label: "10", desc: "O(n) recursive mass-matrix inverse"},
+                {label: "11", desc: "relative total-energy fluctuation metric"}]
+keywords: [torsion angle molecular dynamics, TAMD, NEIMO, internal coordinates, articulated body, spatial operator algebra, force field, generalized Born, implicit solvent, NMR refinement, replica exchange, kinematic tree]
+domains: [molecular-sim, structural-biology]
+depends_on: [jain_1993, katritch_2003_icff, ryckaert_1977_shake, mazur_1991_icmd, pear_1979_brownian_rigid_chain, rodriguez_1991, sugita_1999_remd, brooks_1983_charmm, mackerell_1998_charmm22, feig_2003_cmap, im_2003_gbsw, fincham_1992_quaternion, berendsen_1984_thermostat, nose_1984, hoover_1985, hukushima_1996_replica]
+path: references/papers/chen_2005_tamd
+content_hash: "f13e378255c4b1e0"

@@ -1,0 +1,24 @@
+key: vaidehi_1996_neimo_thermostat
+doc_type: methods
+title: "Constant Temperature Constrained Molecular Dynamics: The Newton-Euler Inverse Mass Operator Method"
+authors: [Vaidehi, Jain, Goddard]
+year: "1996"
+venue: "Journal of Physical Chemistry"
+doi: 10.1021/jp953043o
+summary: "Extends the O(N) NEIMO internal-coordinate (torsional) constrained-MD solver to the Nose and Hoover thermostats, giving canonical-ensemble equations of motion with a friction-like term folded into the Coriolis force; characterizes the optimal thermostat relaxation time tau_s and shows 20-30 fs stable time steps (10x Cartesian)."
+has_implementable_math: true
+methods: [NEIMO articulated-body O(N) solver, innovations operator factorization, Nose thermostat, Hoover thermostat, modified leapfrog-Verlet predictor-corrector, torsional constrained MD]
+provides: [NEIMO-Hoover equations of motion, thermostat friction coefficient update, tau_s selection rule, inverse mass matrix LDL^T factorization, recursive base-to-tips/tips-to-base sweeps, canonical-ensemble internal-coordinate MD]
+key_equations: [{label: "23", desc: "NEIMO-Hoover equation of motion (real variables)"},
+                {label: "29", desc: "Hoover friction coefficient equation of motion (g=N)"},
+                {label: "33", desc: "acceleration = microcanonical NEIMO minus zeta*theta_dot"},
+                {label: "30", desc: "innovations operator factorization of inverse mass matrix"},
+                {label: "34seq", desc: "recursive O(N) evaluation sequence"},
+                {label: "35", desc: "Verlet update of Hoover friction coefficient"},
+                {label: "38", desc: "lower bound tau_s >= 1.6 delta"},
+                {label: "41", desc: "minimum total simulation time"}]
+keywords: [NEIMO, internal coordinate MD, torsional dynamics, Nose-Hoover thermostat, canonical ensemble, articulated body, spatial operator algebra, constrained MD, thermostat mass]
+domains: [molecular-sim, polymer-physics]
+depends_on: [jain_1993_on_recursive_dynamics, nose_1984, hoover_1985, andersen_1980, mazur_1991_icmd, rodriguez_1992, rodriguez_1987, mayo_1990_dreiding]
+path: references/papers/vaidehi_1996_neimo_thermostat
+content_hash: "d5309c372e04eda2"

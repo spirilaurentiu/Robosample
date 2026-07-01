@@ -1,0 +1,55 @@
+key: shirts_2012_ensemble_validation
+doc_type: methods
+title: "Simple quantitative tests to validate sampling from thermodynamic ensembles"
+authors: [Shirts]
+year: "2012"
+venue: "arXiv (later J. Chem. Theory Comput. 2013)"
+doi: null
+arxiv: "1208.0910"
+summary: >
+  Statistical tests that verify a simulation samples the intended thermodynamic
+  ensemble by comparing PAIRS of simulations that differ in one intensive
+  parameter (T, P, or mu). The log-ratio of the distribution of an extensive
+  variable (E, V, H=E+PV, or N) is a linear function whose slope is fixed by the
+  intensive parameters and independent of the unknown density of states; a
+  deviating fitted slope proves the sampling is not canonical/isobaric/etc.
+  Provides linear, nonlinear least-squares, and histogram-free maximum-likelihood
+  (logistic-regression) estimators with analytic and bootstrap error bars, plus a
+  rule of thumb for the optimal parameter gap. Necessary-but-not-sufficient test.
+has_implementable_math: true
+methods:
+  - ensemble consistency test (log probability-ratio slope)
+  - weighted linear least-squares fit of log energy-ratio
+  - nonlinear least-squares fit (residual sum minimization)
+  - maximum-likelihood logistic-regression estimator (histogram-free)
+  - Fisher-information / bootstrap error estimation
+  - kinetic-energy chi-squared/Gaussian direct check
+  - optimal temperature/pressure gap selection rule
+  - Gibbs sampling with rejection sampling (NPT toy)
+provides:
+  - NVT/NPT/grand-canonical ensemble validation fixtures
+  - canonical energy log-ratio slope test (slope = -(beta2-beta1))
+  - enthalpy / volume / joint (E,V) NPT validation relations
+  - kinetic vs potential energy separability test
+  - equipartition DOF and kinetic-energy distribution checks
+  - thermostat/barostat correctness benchmarks (argon, TIP3P water)
+  - regression test data for a checkensemble port
+key_equations:
+  - {label: "6", desc: "canonical log energy-ratio is linear in E, slope -(beta2-beta1)"}
+  - {label: "8", desc: "maximum-likelihood (logistic) objective for the two fit parameters"}
+  - {label: "21", desc: "explicit kinetic-energy probability ratio (masses cancel)"}
+  - {label: "kin-dist", desc: "Gaussian approx of kinetic-energy distribution, mean 3N/2beta"}
+  - {label: "10", desc: "NPT enthalpy validation log-ratio"}
+  - {label: "11", desc: "NPT volume validation log-ratio, slope -beta(P2-P1)"}
+  - {label: "18", desc: "ML objective for joint energy-volume NPT test"}
+  - {label: "gap-T", desc: "optimal temperature-gap rule DeltaT/T = sqrt(2 kB/CV)"}
+  - {label: "30", desc: "variance of log histogram-ratio for weighting"}
+keywords: [ensemble validation, canonical, NVT, NPT, grand canonical, thermostat, barostat,
+  detailed balance check, maximum likelihood, Boltzmann distribution, energy distribution,
+  checkensemble, sampling correctness]
+domains: [molecular-sim, statistics, statistical-mechanics]
+depends_on: [shirts_2003, shirts_2008, paliwal_2011, hoover_1985, andersen_1980,
+  bussi_2007, berendsen_1984, parrinello_1981, nose_1983, martyna_1996, tuckerman_2006,
+  miyamoto_1992, andersen_1983, geman_1984, anderson_1952, harvey_1998, cuendet_2007]
+path: references/papers/shirts_2012_ensemble_validation
+content_hash: "b2b0bc331fd45da6"

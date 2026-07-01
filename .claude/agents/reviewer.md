@@ -63,7 +63,7 @@ Stop hunting when you have reasoned through the change, not when the list ends.
 1. **Theory adherence (Rule 0).** Does the change name the theory it preserves or disrupts? If it
    departs from the documented background, is the departure argued and documented? Re-derive the risky
    step in the codebase's notation; `grep` the relevant passage in `references/index.yaml` or
-   `references/papers/*.md` - pull only what you cite, never load a paper whole.
+   `references/papers/*` - pull only what you cite, never load a paper whole.
 2. **Correctness of the move.** If anything touches sampling: is reversibility + volume preservation (or
    its Jacobian) intact? Does the exact-`dH` acceptance test use the full Hamiltonian? Did a term land on
    the wrong side of the guidance/acceptance split? Is the Fixman / PMF distinction respected?

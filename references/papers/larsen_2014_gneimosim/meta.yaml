@@ -1,0 +1,26 @@
+key: larsen_2014_gneimosim
+doc_type: software
+title: "GneimoSim: A Modular Internal Coordinates Molecular Dynamics Simulation Package"
+authors: [Larsen, Wagner, Kandel, Salomon-Ferrer, Vaidehi, Jain]
+year: "2014"
+venue: "Journal of Computational Chemistry"
+doi: 10.1002/jcc.23743
+summary: >
+  Software-description paper for GneimoSim, a modular C++/Python package
+  implementing the GNEIMO internal-coordinate MD (ICMD) method: molecules modeled
+  as clusters (rigid bodies) connected by 1-6 DOF hinges, solved with the SOA
+  linear-cost (O(N)) recursive dynamics solver (DARTS). Adds ICMD equipartition
+  velocity initialization, the Fixman correction potential/torque for
+  constraint-bias-free sampling, dynamic freeze/thaw clustering, NVE/NVT
+  (Nose-Hoover, Berendsen, Langevin) ensembles, REMD and aMD enhanced sampling,
+  and pluggable third-party forcefields (LAMMPS, OpenMM, Rosetta). Routing paper:
+  points at the underlying GNEIMO/SOA/Fixman/equipartition method papers.
+has_implementable_math: false
+methods: [internal-coordinate MD, torsional MD, spatial operator algebra recursive dynamics, cluster/hinge rigid-body model, dynamic clustering freeze-thaw, ICMD equipartition velocity initialization, Fixman correction potential and torque, Nose-Hoover NVT thermostat, Berendsen thermostat, Langevin dynamics, replica exchange MD, accelerated MD, Lobatto integrator, Runge-Kutta 4 integrator, CVODE adaptive integrator, Generalized Born GBSA solvation]
+provides: [GneimoSim software architecture, ICMD cluster-hinge model API, forcefield interface abstraction, multi-forcefield weighted combination, BAT-coordinate simulation workflow, GPU forcefield via OpenMM]
+key_equations: []
+keywords: [molecular dynamics, torsional MD, ICMD, GNEIMO, internal coordinates, refinement, software, Fixman, equipartition, spatial operator algebra, REMD]
+domains: [molecular-sim, protein-dynamics, software]
+depends_on: [jain_1993_gneimo_soa, jain_2012_icmd_equipartition, jain_1997_fixman, jain_2013_fixman_branched, larsen_2014_gneimo_casp_refinement, wagner_2013_gneimo_integrators, vangunsteren_1977_md_constraints, mazur_1989_icmd, fixman_1974_classical_constraints, pear_1979_brownian_rigid_chain, sugita_1999_remd, hamelberg_2004_amd, eastman_2013_openmm, jain_2010_robot_multibody_dynamics, ryckaert_1977_shake]
+path: references/papers/larsen_2014_gneimosim
+content_hash: "8ed9c1c18525e17c"

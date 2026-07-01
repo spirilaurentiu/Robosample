@@ -59,6 +59,12 @@ def tests(session):
     else:
         session.log(f"Using CONDA_PREFIX: {os.environ['CONDA_PREFIX']}")
 
+    session.env["ROBOSAMPLE_SLOW_TESTS"] = "1"
+    # The authoritative gate must FAIL loudly on missing oracles (OpenMM/ParmEd/
+    # the compiled extension/2ala inputs) rather than silently skip them -- a
+    # bare dev run may still skip (test_openmm_potential_energy.py checks this).
+    session.env["ROBOSAMPLE_REQUIRE_OPENMM"] = "1"
+
     session.log("Cleaning old coverage data...")
     if os.path.exists("coverage"):
         shutil.rmtree("coverage")
@@ -86,6 +92,11 @@ def tests(session):
     # error (usage/internal) also lands here and rightly keeps the session red.
     session.log("Running Python tests in parallel...")
     session.env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+    # Under the authoritative gate (ROBOSAMPLE_REQUIRE_OPENMM=1), exit 5 ("no
+    # tests collected") must NOT be silently tolerated -- that is exactly the
+    # "ran far fewer oracles and reported green" failure mode this gate exists
+    # to catch. A bare dev run (var unset) keeps tolerating it.
+    pytest_success_codes = [0] if session.env.get("ROBOSAMPLE_REQUIRE_OPENMM") else [0, 5]
     try:
         session.run(
             "pytest",
@@ -98,8 +109,8 @@ def tests(session):
             "--cov=python/robosample/",
             "--cov-report=xml:coverage/python_coverage.xml",
             *session.posargs,
-            success_codes=[0, 5],
-        )  # 5 = no tests collected, treat as ok
+            success_codes=pytest_success_codes,
+        )  # 5 = no tests collected, treated as ok ONLY on a bare (non-gate) run
     except CommandFailed:
         tests_failed = True
         session.warn("Some Python tests failed (continuing to coverage).")

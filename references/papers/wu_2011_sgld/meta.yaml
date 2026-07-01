@@ -1,0 +1,21 @@
+key: wu_2011_sgld
+doc_type: methods
+title: "Toward canonical ensemble distribution from self-guided Langevin dynamics simulation"
+authors: [Wu, Brooks]
+year: "2011"
+venue: "J. Chem. Phys."
+doi: 10.1063/1.3574397
+summary: "Derives the quantitative relation between the SGLD self-guided ensemble and the canonical ensemble via low/high-frequency (locally-averaged) property separation, giving a per-conformation reweighting factor that converts SGLD trajectories back to canonical averages; includes the leap-frog Verlet SGLD integrator."
+has_implementable_math: true
+methods: [self-guided Langevin dynamics, local/evolving average momentum, guiding force with energy-conservation factor, low/high-frequency property separation, first-order reweighting, leap-frog Verlet integrator, SHAKE constraints]
+provides: [SGLD equation of motion, guiding force formula, SGLD reweighting factor w_SGLD, self-guiding temperature T_sg, low/high-frequency energy factors, low-frequency collision factor, leap-frog SGLD integrator with running accumulators]
+key_equations: [{label: "10", desc: "guiding force from low-frequency momentum"},
+                {label: "25", desc: "SGLD-to-canonical reweighting factor"},
+                {label: "27", desc: "self-guiding temperature"},
+                {label: "A8", desc: "collision/energy factors from accumulators"},
+                {label: "A10", desc: "leap-frog SGLD velocity update"}]
+keywords: [SGLD, enhanced sampling, conformational search, Langevin dynamics, reweighting, canonical ensemble, guiding force, rare events]
+domains: [molecular-sim, sampling]
+depends_on: [ryckaert_1977_shake, wu_2003_sgld, andricioaei_2003_momentum_hmc, wu_2005_ips]
+path: references/papers/wu_2011_sgld
+content_hash: "b8fb58eae899fc75"

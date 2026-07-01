@@ -8,7 +8,10 @@
 //  to it, in Ground, from a rigid Newton-Euler inward sweep on the TRUE body
 //  accelerations:
 //      reac_b@Bo = Mk_b A_GB_b + gyro_b - F_ext_b + sum_c Phi[c] reac_c@Bo
-//  with F_ext_b = bodyForceG[b] + sum_j H_j mobilityForce[uOff+j]. The public
+//  with F_ext_b = bodyForceG[b] ONLY -- applied mobility (generalized joint)
+//  forces are NOT subtracted, matching Simbody's calcMobilizerReactionForces
+//  ("any generalized forces applied at the mobilities end up included in the
+//  reaction forces", SimbodyMatterSubsystemRep.cpp:6061-6062). The public
 //  output is reported at the outboard M frame (Simbody's convention).
 //
 //  Oracle strategy: no OpenMM. Forces come from the analytic harmonic
@@ -280,12 +283,19 @@ TEST(ReactionForces, WeldChildTransmitsFullLoad) {
 }
 
 // ---------------------------------------------------------------------------
-//  6. MobilityForceEntersReaction: with a NONZERO applied mobility (generalized
-//     joint) force, the reaction must include its spatial image sum_j H_j tau_j
-//     in F_ext. We set body forces and mobility forces directly (no bridge),
-//     run calcUDot, and check the operator against the full recursion -- which
-//     now genuinely depends on the mobility-force term.
-//     FAIL guard: dropping the H*mobilityForce mapping makes this go red.
+//  6. MobilityForceEntersReaction (Simbody convention -- audit F2): a NONZERO
+//     applied mobility (generalized joint) force is NOT subtracted out of the
+//     reaction; F_ext for the Newton-Euler residual is the applied BODY force
+//     only (see calcMobilizerReactionForces' doc comment and Simbody's
+//     SimbodyMatterSubsystemRep.cpp:6061-6062: "any generalized forces applied
+//     at the mobilities end up included in the reaction forces"). The mobility
+//     force still genuinely affects the reaction -- indirectly, through A_GB,
+//     since calcUDot solves the true accelerations against mF -- so we assert
+//     the engine matches the recursion with F_ext = bodyForce only, and, as a
+//     vacuousness guard, that this differs from the CONTROL recursion that
+//     (incorrectly) also subtracts sum_j H_j*mF_j -- proving the mobility
+//     force is doing real work in the comparison, not simply absent.
+//     FAIL guard: re-introducing the H*mobilityForce subtraction makes this go red.
 // ---------------------------------------------------------------------------
 TEST(ReactionForces, MobilityForceEntersReaction) {
     Rng rng(0x7A06);
@@ -320,26 +330,28 @@ TEST(ReactionForces, MobilityForceEntersReaction) {
         const SpatialVec* H = s.H();
         const PhiMatrix* Phi = s.Phi();
 
-        // recursion WITH the mobility-force term; and a CONTROL that omits it.
+        // recursion matching the engine (F_ext = bodyForce only, Simbody
+        // convention); and a CONTROL that (incorrectly) also subtracts the
+        // mobility-force term, to prove the comparison is not vacuous.
         std::vector<SpatialVec> ref(static_cast<std::size_t>(m.numBodies), SpatialVec(Vec3(0), Vec3(0)));
-        std::vector<SpatialVec> refNoMob(static_cast<std::size_t>(m.numBodies), SpatialVec(Vec3(0), Vec3(0)));
+        std::vector<SpatialVec> refSubtractMob(static_cast<std::size_t>(m.numBodies), SpatialVec(Vec3(0), Vec3(0)));
         bool mobMatters = false;
         for (int b = m.numBodies - 1; b >= 1; --b) {
             const int uOff = m.bodyUIndex[b], dof = m.bodyNU[b];
-            SpatialVec fExt = bF[b], fExtNoMob = bF[b];
+            SpatialVec fExt = bF[b], fExtSubtractMob = bF[b];
             for (int j = 0; j < dof; ++j) {
-                fExt += H[uOff + j] * mF[uOff + j];
+                fExtSubtractMob += H[uOff + j] * mF[uOff + j];
             }
             SpatialVec r = (Mk[b] * A[b]) + gyro[b] - fExt;
-            SpatialVec rNo = (Mk[b] * A[b]) + gyro[b] - fExtNoMob;
+            SpatialVec rSub = (Mk[b] * A[b]) + gyro[b] - fExtSubtractMob;
             for (int ci = m.bodyChildrenBeg[b]; ci < m.bodyChildrenEnd[b]; ++ci) {
                 const int c = m.bodyChildren[ci];
                 r += Phi[c] * ref[static_cast<std::size_t>(c)];
-                rNo += Phi[c] * refNoMob[static_cast<std::size_t>(c)];
+                rSub += Phi[c] * refSubtractMob[static_cast<std::size_t>(c)];
             }
             ref[static_cast<std::size_t>(b)] = r;
-            refNoMob[static_cast<std::size_t>(b)] = rNo;
-            if ((r.angular - rNo.angular).norm() + (r.linear - rNo.linear).norm() > 1e-6) {
+            refSubtractMob[static_cast<std::size_t>(b)] = rSub;
+            if ((r.angular - rSub.angular).norm() + (r.linear - rSub.linear).norm() > 1e-6) {
                 mobMatters = true;
             }
 
@@ -348,8 +360,10 @@ TEST(ReactionForces, MobilityForceEntersReaction) {
             EXPECT_TRUE(rtest::NearVec3(reacBo[b].linear, r.linear, rtest::kTight))
                 << "lin b" << b << " rep " << rep;
         }
-        // the mobility term must actually MATTER here, else the test is vacuous.
-        EXPECT_TRUE(mobMatters) << "mobility force did not affect the reaction -- term untested, rep " << rep;
+        // the (rejected) subtraction must actually differ from the engine's
+        // answer here, else the comparison is vacuous.
+        EXPECT_TRUE(mobMatters) << "mobility-force subtraction did not change the reaction -- term untested, rep "
+                                 << rep;
     }
 }
 // ---------------------------------------------------------------------------

@@ -1,0 +1,58 @@
+key: chodera_2011_gibbs_replica_exchange
+doc_type: methods
+title: "Replica exchange and expanded ensemble simulations as Gibbs sampling: Simple improvements for enhanced mixing"
+authors: [Chodera, Shirts]
+year: "2011"
+venue: "J. Chem. Phys."
+doi: 10.1063/1.3660669
+summary: "Casts replica exchange and expanded ensemble as Gibbs sampling on the joint (config, thermodynamic-state) distribution; replaces single neighbor-exchange state moves with independence sampling, Metropolized independence sampling, restricted-range sampling, and K^3-K^5 random pair-swap loops to accelerate state-space and configuration-space mixing at near-zero extra cost."
+has_implementable_math: true
+methods:
+  - Gibbs sampling on (x,k) joint distribution
+  - neighbor exchange state move
+  - independence sampling of state index
+  - Metropolized independence sampling
+  - restricted-range state sampling
+  - random pair-swap MCMC on permutation
+  - empirical state transition matrix diagnostic
+  - integrated autocorrelation time / statistical inefficiency
+provides:
+  - expanded-ensemble state-update rule pi(k|x)
+  - replica-exchange permutation-update swap loop
+  - Metropolis acceptance for pair swaps (Eq 24)
+  - reduced-potential formalism u_k(x)
+  - softcore Lennard-Jones alchemical potential
+  - von Mises periodic umbrella bias
+  - mixing-time metrics (tau_2, tau_ac, tau_end)
+key_equations:
+  - {label: "7", desc: "conditional state distribution pi(k|x) for expanded ensemble"}
+  - {label: "10", desc: "conditional permutation distribution pi(S|X) for replica exchange"}
+  - {label: "15", desc: "independence sampling proposal (draw from pi(k|x))"}
+  - {label: "16", desc: "Metropolized independence sampling proposal"}
+  - {label: "17", desc: "Metropolized independence sampling acceptance"}
+  - {label: "18", desc: "restricted-range proposal within neighbor set S_i"}
+  - {label: "19", desc: "restricted-range acceptance (ratio of restricted partition functions)"}
+  - {label: "24", desc: "replica-exchange pair-swap Metropolis acceptance"}
+  - {label: "25", desc: "empirical symmetrized state transition matrix"}
+  - {label: "26", desc: "relaxation time from second eigenvalue"}
+  - {label: "30", desc: "softcore Lennard-Jones alchemical potential"}
+keywords: [replica exchange, expanded ensemble, parallel tempering, simulated tempering, Gibbs sampling, MCMC, detailed balance, enhanced sampling, umbrella sampling, alchemical free energy, mixing time]
+domains: [molecular-sim, statistics, free-energy]
+depends_on:
+  - metropolis_1953_monte_carlo
+  - hastings_1970
+  - duane_1987_hmc
+  - geman_1984
+  - liu_2002
+  - liu_1996
+  - marinari_1992
+  - lyubartsev_1992
+  - sugita_1999
+  - bennett_1976
+  - shirts_2008_mbar
+  - shirts_2005_softcore
+  - aldous_1986
+  - manousiouthakis_1999
+  - chodera_2007_correlation
+path: references/papers/chodera_2011_gibbs_replica_exchange
+content_hash: "0ce563a64e6eccc5"

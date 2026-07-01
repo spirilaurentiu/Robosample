@@ -225,6 +225,7 @@ TEST(MassScaleInvariance, StableStepGrowsAsSqrtScale_FreeShell) {
 // ---------------------------------------------------------------------------
 TEST(MassScaleInvariance, ConfigurationalMarginalUnchanged) {
     if (!slowEnabled()) {
+        rtest::warnSlowTierSkipped();
         GTEST_SKIP() << "slow statistical tier (set ROBOSAMPLE_SLOW_TESTS=1)";
     }
     const Histogram h1 = samplePhi2(/*scale*/ 1.0, /*useFixman*/ false, 0xA1, 1'000'000, 4);

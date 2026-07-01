@@ -1,0 +1,44 @@
+key: jain_1993_on_recursive_dynamics
+doc_type: methods
+title: "A Fast Recursive Algorithm for Molecular Dynamics Simulation"
+authors: [Jain, Vaidehi, Rodriguez]
+year: "1993"
+venue: "Journal of Computational Physics"
+doi: null
+summary: >
+  O(N) recursive dynamics for internal-variable (rigid-cluster, tree-topology)
+  molecular models via spatial operator algebra. Derives the Newton-Euler and
+  innovations operator factorizations of the articulated-body mass matrix, a
+  closed-form mass-matrix inverse, and a two-sweep (tip-to-base Riccati /
+  base-to-tip) recursion for the generalized accelerations that avoids forming
+  the mass matrix or a cubic linear solve. Also reduces per-atom Cartesian
+  forces to per-body spatial forces. Core articulated-body solver Robosample
+  uses for its robot/mobilizer kinematic trees.
+has_implementable_math: true
+methods: [spatial operator algebra, articulated-body inertia recursion,
+  discrete Riccati recursion, Newton-Euler operator factorization,
+  innovations operator factorization, closed-form mass-matrix inverse,
+  tip-to-base and base-to-tip recursions, per-atom to per-body spatial force reduction]
+provides: [O(N) recursive forward dynamics solver, generalized-acceleration recursion,
+  spatial inertia and spatial transform operators, hinge/mobilizer matrix H,
+  articulated-body mass matrix factorization and inverse, Coriolis and gyroscopic spatial forces]
+key_equations:
+  - {label: "4.8", desc: "Newton-Euler recursive inverse-dynamics equations of motion"}
+  - {label: "4.15a", desc: "Newton-Euler operator factorization of mass matrix M = H phi M phi* H*"}
+  - {label: "5.1", desc: "tip-to-base Riccati recursion for P, D, G, K, tau, psi"}
+  - {label: "5.6", desc: "innovations factorization M = [I+HphiK] D [I+HphiK]*"}
+  - {label: "5.8", desc: "closed-form mass-matrix inverse"}
+  - {label: "5.11a", desc: "O(N) tip-to-base residual-force recursion"}
+  - {label: "5.11b", desc: "O(N) base-to-tip generalized-acceleration recursion"}
+  - {label: "4.6", desc: "reduce per-atom Cartesian forces to per-body spatial force"}
+  - {label: "A.2", desc: "6x6 spatial transformation matrix"}
+  - {label: "A.4", desc: "6x6 spatial inertia of a rigid body"}
+keywords: [spatial operator algebra, articulated body, O(N) dynamics,
+  internal coordinates, recursive dynamics, mass matrix factorization,
+  Kalman filtering analogy, rigid clusters, tree topology, molecular dynamics]
+domains: [molecular-sim, robotics, multibody-dynamics]
+depends_on: [gibson_scheraga_1990, mazur_1991_icmd, mccammon_harvey_1987,
+  rodriguez_kreutzdelgado_1991, rodriguez_jain_1992, anderson_moore_1979,
+  meirovitch_1970, rodriguez_1987, jain_1991]
+path: references/papers/jain_1993_on_recursive_dynamics
+content_hash: "8b6790b89aa30a49"

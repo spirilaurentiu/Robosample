@@ -1,0 +1,27 @@
+key: minh_2012_implicit_ligand_theory
+doc_type: methods
+title: "Implicit Ligand Theory: Rigorous Binding Free Energies and Thermodynamic Expectations from Molecular Docking"
+authors: [Minh]
+year: "2012"
+venue: arXiv
+doi: null
+arxiv: "1208.4885"
+summary: "Rigorous formalism for noncovalent binding free energies and bound-ensemble expectations in which receptor configurations are sampled once, independently of the ligand; the binding free energy is an exponential average over receptor configs of a rigid-receptor binding PMF B(r_R) that is itself an exponential average of the effective interaction energy over ligand internal + external DOF. Provides FEP/cumulant/importance-sampling/MBAR estimators and a vacuum-alchemical decomposition."
+has_implementable_math: true
+methods: [free energy perturbation, thermodynamic integration, Bennett acceptance ratio, multistate BAR (MBAR), Hamiltonian replica exchange, cumulant expansion, importance sampling, dominant state approximation, alchemical decoupling, implicit solvent PMF (PB/GBSA)]
+provides: [binding PMF B(r_R) estimator, rigid-receptor binding free energy, exponential-average binding free energy over receptor configs, interaction-weighted thermodynamic expectation Theta(r_R), confining-potential biased FEP estimator, vacuum-to-target binding PMF decomposition, MBAR expectation estimator, binding-site volume / external-DOF confinement free energy]
+key_equations:
+  - {label: "10", desc: "binding PMF B(r_R) = -beta^-1 ln <exp(-beta Psi)> over ligand DOF (central result)"}
+  - {label: "11", desc: "binding free energy DeltaG = -beta^-1 ln <exp(-beta B)>_R + DeltaG_xi (central result)"}
+  - {label: "12", desc: "interaction-weighted rigid-receptor expectation Theta(r_R)"}
+  - {label: "13", desc: "bound-ensemble expectation of an observable"}
+  - {label: "15", desc: "forward FEP sample-mean estimator of binding PMF"}
+  - {label: "16", desc: "fourth-order cumulant expansion of binding PMF"}
+  - {label: "22", desc: "importance-weighted binding free energy estimator"}
+  - {label: "23", desc: "vacuum-alchemical decomposition B = B_cpl + B_RL - B_L - DeltaU"}
+  - {label: "25", desc: "RMSE between two methods' binding free energies"}
+keywords: [binding free energy, molecular docking, implicit solvent, potential of mean force, alchemical free energy, FEP, MBAR, replica exchange, virtual screening, conformational selection, induced fit]
+domains: [molecular-sim, free-energy, drug-discovery, statistics]
+depends_on: [gilson_1997, cohen_2006, gallicchio_2010, gallicchio_2012, jiang_2009, zwanzig_1954, kirkwood_1935, bennett_1976, shirts_2008_mbar, moghaddam_2009, moghaddam_2011, chang_2003, duane_1987, neal_2001, wagoner_2011, davis_1991, phillips_2005_namd, weiser_1999]
+path: references/papers/minh_2012_implicit_ligand_theory
+content_hash: "5e3dbabad9f542f5"

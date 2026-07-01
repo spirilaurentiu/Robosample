@@ -1,0 +1,22 @@
+key: kandel_2016_fixman_hybrid_icmd
+doc_type: methods
+title: "Overcoming potential energy distortions in constrained internal coordinate molecular dynamics simulations"
+authors: [Kandel, Salomon-Ferrer, Larsen, Jain, Vaidehi]
+year: "2016"
+venue: "Journal of Chemical Physics"
+doi: 10.1063/1.4939532
+summary: "Fixman compensating potential removes the intrinsic (mass-matrix-determinant) bias of constrained internal-coordinate MD in configuration pdfs but only partially for velocity-dependent barrier-crossing rates; a hybrid ICMD method that selectively opens key backbone bond angles removes the extrinsic (forcefield-coupling) distortion. Directly relevant to torsional/rigid-body sampling and Fixman-potential correctness."
+has_implementable_math: true
+methods: [GNEIMO internal-coordinate MD, spatial operator algebra inverse mass matrix, Fixman compensating potential, hybrid ICMD selective bond-angle opening, transition-state barrier-crossing rate, Schur-complement mass-matrix factorization, Langevin dynamics, Hellinger-distance pdf comparison]
+provides: [Fixman potential formula, BAT mass-matrix determinant closed form, constrained vs unconstrained configuration pdf, barrier-crossing-rate expressions, hybrid ICMD backbone-angle recipe per dipeptide, C4-chain test fixtures, alanine-dipeptide FES benchmarks, CLN025 H-bond fixtures]
+key_equations: [{label: "7", desc: "closed-form determinant of full BAT mass matrix (torsion-independent product)"},
+                {label: "11", desc: "Fixman compensating potential = 1/2 kT ln(detM/detM_B)"},
+                {label: "13", desc: "simplified TMD Fixman potential 1/2 kT ln detM(alpha)"},
+                {label: "18", desc: "constrained barrier-crossing rate (mass-matrix determinant dependence)"},
+                {label: "19", desc: "Fixman-corrected barrier-crossing rate with residual S^-1 term"},
+                {label: "22", desc: "all-atom forcefield form with bond/angle/torsion/long-range terms"}]
+keywords: [Fixman potential, internal coordinate MD, torsional dynamics, GNEIMO, constrained dynamics, bond-angle constraints, free energy surface, alanine dipeptide, rigid-body MD, holonomic constraints]
+domains: [molecular-sim, sampling, statistical-mechanics]
+depends_on: [fixman_1974, jain_1997, jain_2013, jain_1993, larsen_2014, pear_1979, cornell_1995, echenique_2006, hinsen_2013, honda_2008]
+path: references/papers/kandel_2016_fixman_hybrid_icmd
+content_hash: "0cade40486def120"

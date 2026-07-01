@@ -1,0 +1,54 @@
+key: konig_2014_constraint_correction
+doc_type: methods
+title: "Correcting for the free energy costs of bond or angle constraints in molecular dynamics simulations"
+authors: [Konig, Brooks]
+year: "2014"
+venue: "Biochimica et Biophysica Acta (BBA) - General Subjects"
+doi: 10.1016/j.bbagen.2014.09.001
+summary: >
+  Post-processing method to compute the free energy cost of imposing/releasing hard
+  constraints (bonds, angles) in MD, so constrained free energy simulations (BAR/MBAR/NBB)
+  recover the unconstrained result. Splits the correction into enthalpy (Newton-Raphson
+  to the minimum), harmonic vibrational entropy (reduced-basis Hessian eigenvalues), and
+  internal-to-Cartesian Jacobian terms, combined per-frame via a Zwanzig exponential average.
+has_implementable_math: true
+methods:
+  - reduced-basis harmonic (normal mode) analysis of constrained DOFs
+  - Newton-Raphson one-step minimization for enthalpy correction
+  - Hessian projection C^T F C and eigendecomposition
+  - internal-to-Cartesian Jacobian factors (rigid-rotor, Herschbach)
+  - Zwanzig / thermodynamic-perturbation exponential averaging
+  - CBND / CANG normal-mode types (bond then angle, with angle curvature)
+provides:
+  - constraint free-energy correction (bonds and angles)
+  - enthalpy contribution delta H (eq 14/19)
+  - vibrational entropy contribution delta G_harm (eq 15/20)
+  - Jacobian free-energy terms for bonds and angles (eqs 22-25)
+  - free energy of releasing constraints from a constrained trajectory (eq 29)
+key_equations:
+  - {label: "10", desc: "constraint free energy = enthalpy + vibrational entropy"}
+  - {label: "13", desc: "one-step Newton-Raphson displacement to unconstrained minimum"}
+  - {label: "16", desc: "reduced Hessian by basis projection H = C^T F C"}
+  - {label: "19", desc: "multi-constraint enthalpy correction"}
+  - {label: "20", desc: "multi-constraint vibrational entropy correction"}
+  - {label: "22", desc: "Jacobian free-energy change from internal-to-Cartesian transform"}
+  - {label: "23", desc: "bond Jacobian factor J_r = r^2"}
+  - {label: "24", desc: "linear-chain angle Jacobian factor J = sin theta"}
+  - {label: "29", desc: "release free energy as Zwanzig average over constrained ensemble"}
+keywords: [free energy calculation, constraint correction, SHAKE, normal mode analysis, Bennett acceptance ratio, Jacobian, molecular dynamics, phase space overlap]
+domains: [molecular-sim, free-energy, statistical-mechanics]
+depends_on:
+  - ryckaert_1977_shake
+  - andersen_1983_rattle
+  - tao_2012_shape
+  - vangunsteren_1977_md_constraints
+  - bennett_1976
+  - zwanzig_1954
+  - go_1976
+  - boresch_1996
+  - herschbach_1959
+  - shirts_2008_mbar
+  - konig_2011_nbb
+  - brooks_1995_harmonic_analysis
+path: references/papers/konig_2014_constraint_correction
+content_hash: bef5b366b146942a

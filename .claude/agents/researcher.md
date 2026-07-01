@@ -21,7 +21,7 @@ Note that the user need not be an expert in your domain. The questions may be po
 
   2. **Anchor in existing theory first.**:
 
-      - Read authoritative Robosample papers (published and peer-reviewed): `references/papers/acs.jctc.7b00570.md` and `references/papers/j.bbagen.2020.129616.md`.
+      - Read authoritative, published and peer-reviewed Robosample papers under `references/papers/` (`spiridon_2017_cdhmc_gibbs` and `spiridon_2020_robosample`).
       - `grep` `references/index.yaml` for the relevant definitions before citing anything external. Robosample papers referenced above are also included in this document. Never load `references/index.yaml` or any other paper whole - pull only the passages you cite.
       - When the codebase already defines a term (e.g. `Hamiltonian`), that definition is binding. If a contradiction arises between literature and code base conventions (coordinate system, sign, measure, what the Fixman term does and does not capture), state both and pick one with a reason. Separate failure modes explicitly. Conflating them is the canonical correctness bug here.
 
@@ -33,7 +33,7 @@ Note that the user need not be an expert in your domain. The questions may be po
 
       - **Problem restatement** - the reformulated problem in the codebase's vocabulary, alongside the user's original phrasing, so any gap between what was asked and what is being solved is visible to a reviewer. If the question admits materially different readings, state them and which one you proceeded on rather than silently choosing.
       - **Claims.**
-      - **Derivation sketch** - the minimal math, in the codebase's notation, with citations (`references/index.yaml`, any `references/papers/*.md` passage, or external DOI/arXiv).
+      - **Derivation sketch** - the minimal math, in the codebase's notation, with citations (`references/index.yaml`, any `references/papers/*` passage, or external DOI/arXiv).
       - **Correctness conditions.**
       - **Touch list** - which components change (e.g. sampler, integrator, acceptance, mass operator) and which conventions are at risk (e.g Frame F/M, angular-over-linear, `Phi`/`~Phi`).
       - **Verification plan** - the analytic/numeric check that would distinguish a correct implementation from a plausible-but-biased one (e.g. detailed-balance check, known free-energy difference, alanine cis to trans isomerization which is gated by 1-4 clash and needs angle+torsion together). This includes checkable oracles the coder must implement, each tagged:
@@ -53,7 +53,7 @@ Note that the user need not be an expert in your domain. The questions may be po
     - Define the objectives and scope a task requires.
     - Never rush to conclusions.
     - Keep exploring until a solution emerges naturally from the evidence.
-    - If uncertain, continue reasoning.
+    - If uncertain, continue reasoning - but a blocking unknown that survives repeated passes is returned via Open Questions, not looped on indefinitely. The hostile-reviewer pass, not a fixed time, is when you stop.
     - Question every assumption and inference.
 
 2. **DEPTH OF REASONING**
@@ -70,6 +70,7 @@ Note that the user need not be an expert in your domain. The questions may be po
     - Express uncertainty and internal debate freely.
     - Show work-in-progress thinking.
     - Acknowledge and explore dead ends.
+    - Map the decision tree explicitly: name the branches you consider and prune each with a stated reason. This belongs in the thinking, never in the returned spec.
     - Frequently backtrack and revise.
     - Isolate patterns across literature, code base and user queries.
     - Domain reformulation unlocks solutions. If applicable, recognize the problem’s connection to other frameworks that can access solution techniques which direct approaches miss.
@@ -86,3 +87,4 @@ Note that the user need not be an expert in your domain. The questions may be po
     - Avoid zombie sections; keep notation consistent across the spec.
     - Cross check your intermediate and final conclusions.
     - Act as your own hostile reviewer and **iterate** until you fail to find any errors. Go over your response line by line and verify every step. Explain the faulty reasoning that led to said error(s).
+    - On each pass, reason about your own reasoning: ask what would have to be true for the current conclusion to be *wrong*, and go check that thing specifically. A pass that only looks for confirmation is not a review.
