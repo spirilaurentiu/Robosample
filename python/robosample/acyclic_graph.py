@@ -18,9 +18,9 @@ ordering is layered on top afterwards (see ``indexing.CompoundIndex``).
 from __future__ import annotations
 
 import logging
+from typing import Any, NamedTuple
 
 import networkx as nx
-import parmed as pmd
 
 from .amber_dihedral_types import DihedralType
 from .bond_util import is_rigid_bond
@@ -28,14 +28,36 @@ from .bond_util import is_rigid_bond
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-def atom_label(molecule: pmd.Structure, idx: int) -> str:
+class _DihedralCandidate(NamedTuple):
+    """Throwaway 4-atom quad passed to ``dihedral_classifier.classify``.
+
+    ``AmberDihedralClassifier.classify`` only reads ``.atom1``..``.atom4``
+    (and, through those, ``.name``/``.residue.idx``/``.residue.name``) -- it
+    never touches ``.type``/``.improper``/etc. A real ``ParmEd Dihedral(...)``
+    is therefore unnecessary AND unsafe here: its constructor mutates the
+    atoms' own bookkeeping (``atom.dihedrals.append(self)``,
+    ``atom.dihedral_to(other)``), which requires ParmEd-Atom-specific
+    internals (``.dihedrals``, ``._dihedral_partners``) that the
+    ``amber_loader.PrototypeTopology`` shim atoms don't (and shouldn't need
+    to) replicate, and which would otherwise silently accumulate bogus
+    bookkeeping on every classification probe. A plain, side-effect-free
+    named tuple works identically for both real ParmEd atoms and shim atoms.
+    """
+
+    atom1: object
+    atom2: object
+    atom3: object
+    atom4: object
+
+
+def atom_label(molecule: Any, idx: int) -> str:
     """Return a human-readable label for atom *idx* (used in log messages)."""
     a = molecule.atoms[idx]
     return "%s%d_%s_%d" % (a.residue.name, a.residue.idx + 1, a.name, idx + 1)
 
 
 def find_forbidden_bonds(
-    molecule: pmd.Structure, atom_type_pairs: list[tuple[str, str]]
+    molecule: Any, atom_type_pairs: list[tuple[str, str]]
 ) -> set[frozenset[int]]:
     """
     Identify bonds whose two endpoint atom *names* match any forbidden
@@ -58,7 +80,7 @@ def find_forbidden_bonds(
 
 
 def build_acyclic_graph(
-    molecule: pmd.Structure,
+    molecule: Any,
     dihedral_classifier,
 ) -> tuple[nx.Graph, dict[frozenset[int], DihedralType]]:
     """
@@ -92,7 +114,7 @@ def build_acyclic_graph(
         validation fails.
     """
     num_atoms: int = len(molecule.atoms)
-    atom_by_idx: dict[int, pmd.Atom] = {a.idx: a for a in molecule.atoms}
+    atom_by_idx: dict[int, Any] = {a.idx: a for a in molecule.atoms}
     dihedral_type_cache: dict[frozenset[int], DihedralType] = {}
 
     # ----------------------------------------------------------------
@@ -104,8 +126,8 @@ def build_acyclic_graph(
     ring_dihedral_bonds: set[frozenset[int]] = set()
 
     for bond in molecule.bonds:
-        parent: pmd.Atom = bond.atom2
-        child: pmd.Atom = bond.atom1
+        parent: Any = bond.atom2
+        child: Any = bond.atom1
         key: frozenset[int] = frozenset((parent.idx, child.idx))
         full_graph.add_edge(parent.idx, child.idx)
 
@@ -125,7 +147,7 @@ def build_acyclic_graph(
                 # atom. A repeated atom is not a real dihedral anyway, so skip it.
                 if len({grandparent.idx, parent.idx, child.idx, gchild.idx}) < 4:
                     continue
-                candidate = pmd.Dihedral(grandparent, parent, child, gchild)
+                candidate = _DihedralCandidate(grandparent, parent, child, gchild)
                 dtype: DihedralType = dihedral_classifier.classify(candidate)
                 if dtype == DihedralType.PROTEIN_RING_DIHEDRAL:
                     is_ring_dihedral = True
@@ -306,7 +328,7 @@ def validate_ring_closing_bonds(
     )
 
 
-def check_residual_cycles(molecule: pmd.Structure, g: nx.Graph) -> None:
+def check_residual_cycles(molecule: Any, g: nx.Graph) -> None:
     """Raise ``ValueError`` if *g* contains cycles, logging each one."""
     if nx.is_forest(g):
         return
@@ -321,7 +343,7 @@ def check_residual_cycles(molecule: pmd.Structure, g: nx.Graph) -> None:
     raise ValueError("Acyclic graph still contains cycles after ring-closure removal.")
 
 
-def check_disconnected_graph(molecule: pmd.Structure, g: nx.Graph) -> None:
+def check_disconnected_graph(molecule: Any, g: nx.Graph) -> None:
     """Raise ``ValueError`` if *g* is disconnected, logging each component."""
     if nx.is_connected(g):
         return

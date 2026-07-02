@@ -47,6 +47,43 @@ the Numerical & Behavioral Contract) - never take it silently.
 
 ---
 
+## Scale and the hot-path map
+
+State the obvious, because it sets every priority below. The target systems reach **1M atoms** clustered
+in up to **100k rigid bodies**; the generalized-coordinate count `nu` is of the same order (~100k for the
+torsion-dominated systems that are the common case, where each body contributes a single DOF). Two
+consequences dominate:
+
+* Per-body work is *tiny and numerous*. Hinge matrices are `nu`-local: `n in {1,3,6}` (1-DOF torsion is
+  the hot case, then 3-DOF angle/ball, then 6-DOF free). Per-body dense linear algebra is a handful of
+  flops repeated 100k times, not a big solve.
+* Per-atom arrays are *huge* and cross the CPU<->GPU and C++<->Python boundaries every step. Transfer and
+  marshalling, not arithmetic, are frequently the cost.
+
+Where the time actually goes - orient here before touching anything, then confirm with `perf`:
+
+1. **The ABA recursion spine (`src/RobotEngine.cpp`).** Three sweeps per force evaluation over the body
+   array: base-to-tip kinematics/velocity, tip-to-base articulated inertia + force, base-to-tip
+   acceleration. Each body reads its **parent** (`m.bodyParent[b]`), so a chain is a *sequential
+   dependency* you cannot break - but independent branches and the independent trees of a Gibbs block are
+   parallel. The value algebra (`SpatialVec`, `ArticulatedInertia`, `PhiMatrix`, `SpatialInertia`) is
+   header-only and vtable-free by design; do not convert it to virtual dispatch or library calls.
+2. **Per-body dense LA inside the spine** (`invertDense`, `jacobiEigh`, `logDetSymPD`, the `D_b = ~H P H`
+   Cholesky). All `n in {1,3,6}`. See Dense Linear Algebra below - the in-house code is deliberate.
+3. **The OpenMM force bridge (`src/OpenMMContext.cpp`).** OpenMM computes per-atom forces on the GPU;
+   `getState(Forces)` copies up to 1M `Vec3` to the host, which are reduced to per-body spatial forces
+   (net force + torque about the body origin). Per-atom Ground positions/stations are the input currency
+   the other way. Transfer-bound; the highest-value CUDA-interface target.
+4. **The per-atom loops** (position/station scatter, force->body reduction). Embarrassingly parallel over
+   atoms, no parent dependency - where OpenMP/SIMD/GPU-residency pay off, unlike the spine.
+5. **The sampler spine and the pybind11 boundary.** The accept/reject loop consumes the RNG stream in a
+   fixed order (Contract rule 5) and marshals arrays across pybind11 each step.
+
+Amdahl governs: a sub-microsecond 1x1 torsion inversion will not repay a GPU offload no matter how
+"parallel" 100k of them look, unless you also kill the per-step transfer that dominates them.
+
+---
+
 ## Cross-Language Mandate
 
 Robosample is C++ + CUDA + Python in one pipeline. Judge them **together**, not file by file. The
@@ -155,7 +192,7 @@ reductions, algorithmic redesign).
 ### 1. Data-Oriented Design
 
 * Prefer Structure of Arrays (SoA) over Array of Structures (AoS)
-* Organize memory for contiguous linear access
+* Organize memory for contiguous linear access (prefer singular slabs of aligned memory)
 * Minimize pointer chasing
 * Avoid scattered allocations
 * Avoid linked structures unless absolutely necessary
@@ -324,7 +361,10 @@ Prioritize:
 * Efficient bonded interaction traversal
 * Internal-coordinate representations
 * Reduced coordinate transformations
-* Rigid-body exploitation
+* Rigid-body exploitation - the engine's whole point is that 1M atoms collapse to ~100k bodies; keep work
+  in body space where the physics already reduced it.
+* Tree-structure parallelism - fan out across independent branches / independent trees of a Gibbs block;
+  never down a parent chain (data dependency) or across the RNG spine (Contract rule 5).
 * OpenMM is compiled in-tree - prefer using its kernels over re-deriving them; check whether a hot path
   already has an OpenMM implementation before writing a new one.
 
@@ -361,12 +401,69 @@ Guidelines:
 
 ---
 
+## Dense Linear Algebra: In-House vs OpenBLAS / LAPACK / cuSOLVER
+
+OpenBLAS + LAPACK are linked, and cuBLAS/cuSOLVER are available on the CUDA target. The intuitive move -
+replace hand-rolled matrix code with a tuned library - is *usually wrong here* and occasionally very
+right. The deciding variable is matrix size against the library's fixed per-call cost, so price the setup
+and transfer before you propose the call.
+
+**The fixed cost you amortize against.** A BLAS/LAPACK call (`dgemm`, `dpotrf`, `dsyev`, ...) costs
+argument marshalling, workspace handling, and - for a threaded OpenBLAS - a thread-team fork/join *per
+call*; for a 6x6 that fork alone dwarfs the ~O(n^3) flops, and a threaded BLAS called 100k times from
+inside the spine also *contends* with the OpenMP parallelism wrapped around the spine. A cuBLAS/cuSOLVER
+call adds a kernel launch and, unless the data is already resident, an `H2D`/`D2H` `cudaMemcpy`. A batched
+call (`cublas<t>gemmBatched`, `cusolverDn<t>potrfBatched`) adds array-of-pointers assembly and, if not
+already on-device, the transfer of 100k tiny matrices.
+
+* **Do not** route the per-body `n in {1,3,6}` operations (`invertDense`, `jacobiEigh`, `logDetSymPD`,
+  `D_b` Cholesky) through BLAS/LAPACK/cuBLAS/cuSOLVER. At this size the library is a measured *regression*;
+  the in-house closed-form (n=1) / cyclic-Jacobi (n>=2) code exists precisely because the small-matrix
+  path is faster hand-rolled and the SimTK LAPACK symbol is not linked. Treat it as load-bearing, not
+  naive code to modernize. A library kernel also rounds *differently* than the in-house loop even for the
+  same math - swapping one in is a Contract rule-2 change unless you prove bitwise identity, which you
+  almost never can at this size.
+* **Where the library genuinely wins**, and worth proposing with a measured crossover:
+  * **Large-`nu` dense eigensolves/factorizations.** The NMA path (`include/NMA.hpp`) already flags "for
+    very large nu prefer LAPACK `dsyev`" over the in-house Jacobi; any dense `M`/Hessian assembled over a
+    large Gibbs block crosses into where LAPACK's blocked, cache-aware kernels win decisively. Push to
+    cuSOLVER (`dsyevd`/`potrf`) only when `nu` is large enough that O(nu^3) compute repays the one-time
+    `H2D`/`D2H` - state the crossover you measured.
+  * **Batched small-matrix ops on the GPU** - only when the batch is *already resident on-device* (e.g.
+    fused with the OpenMM force stage) so no per-step transfer is paid. The same batch shipped from the
+    host each step will not win; if you cannot keep it resident, do not propose it.
+  * **A genuinely large, dense, per-step GEMM/GEMV off the spine**, if one exists. Pin threading: a BLAS
+    call *inside* an OpenMP region must be single-threaded (`OPENBLAS_NUM_THREADS=1` / sequential BLAS) to
+    avoid nested-parallelism collapse.
+* Linking a new library, changing `BLA_VENDOR`, or creating a cuBLAS/cuSOLVER handle+stream is a build /
+  lifetime change - propose it (and the handle/stream lifetime), do not apply it (see Handoff and Build
+  Files).
+
+---
+
 ## CUDA Kernel Techniques
+
+There are **no first-party `.cu` kernels** in this tree today: CUDA enters exclusively through the in-tree
+OpenMM CUDA platform (`USE_CUDA`), which owns its own context, streams, and on-device per-atom buffers.
+Your CUDA-interface work is therefore about the *boundary*, not writing kernels from scratch.
 
 * Maximize occupancy and coalesced memory access.
 * Minimize host/device transfer - keep data resident across steps.
 * Batch small launches; watch warp divergence in inner loops.
 * Reductions and atomics fall under Contract rule 4 - use deterministic reductions or declare the reorder.
+* **Analyze the transfer before proposing any offload.** The per-atom force -> per-body spatial force
+  reduction currently pulls the full per-atom force array to the host via `getState(Forces)`; for 1M atoms
+  that `D2H` copy is the cost, and a faster host-side reduction that still pays the copy is not a win.
+  State bytes moved per step and measured `cudaMemcpy` time, not just compute.
+* **Highest-value opportunity: fuse the force reduction onto the device.** The per-atom -> per-body
+  reduction is a segmented reduction keyed by `atomBody[a]`; done on-device against OpenMM's resident
+  force buffer it replaces a 1M-`Vec3` `D2H` with a 100k-body one (or keeps bodies resident too). The
+  arithmetic is cheap - the entire justification is transfer eliminated, so quantify it, and pin the
+  accumulation order (rule 4). Symmetrically, avoid shipping per-atom Ground positions `H2D` each step by
+  computing the scatter where the data already lives.
+* Reuse OpenMM's kernels and on-device state before writing anything new (see the molecular-simulation
+  list); builds use `CMAKE_CUDA_ARCHITECTURES=native` for local measurement, but shipped code targets
+  consumer GPUs (e.g. RTX 3090) - do not bake in the local arch.
 
 ---
 

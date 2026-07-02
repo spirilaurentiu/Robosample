@@ -1,5 +1,7 @@
 """
-DihedralClassifier: route any parmed dihedral to its DihedralType.
+DihedralClassifier: route any AMBER/CHAMBER dihedral (a real ParmEd
+``Dihedral`` or the fast-loader's dihedral shim -- see ``amber_loader.py``)
+to its DihedralType.
 
 Architecture
 ------------
@@ -51,7 +53,7 @@ Topology validation
 
 Ions and coordinated metals
     Standard AMBER ions (Na+, K+, Ca2+, Mg2+, etc.) are point particles with
-    no covalent bonds; parmed generates no dihedrals for them.  MCPB-style
+    no covalent bonds; the loader generates no dihedrals for them.  MCPB-style
     bonded metal complexes use custom residue names absent from all built-in
     residue sets and therefore return ``UNKNOWN``.  Use ``extra_residue_map``
     to route them if classification is needed.
@@ -68,9 +70,7 @@ Known limitations
 
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple, Union
-
-import parmed as pmd
+from typing import Any, Dict, Optional, Tuple, Union
 
 from .amber_dihedral_tables import (
     LIPID_DIHEDRAL_LOOKUP,
@@ -86,7 +86,7 @@ from .amber_dihedral_types import DihedralType
 # Type aliases
 # ---------------------------------------------------------------------------
 
-_Atom = pmd.topologyobjects.Atom
+_Atom = Any  # a real ParmEd Atom or the fast-loader's atom shim (see amber_loader.py)
 _Quad = Tuple[str, str, str, str]
 _UserTable = Dict[_Quad, int]
 
@@ -260,7 +260,8 @@ def _classify_nucleic(a1: _Atom, a2: _Atom, a3: _Atom, a4: _Atom) -> DihedralTyp
 
 class AmberDihedralClassifier:
     """
-    Stateless (per instance) classifier mapping a ``pmd.Dihedral`` to a
+    Stateless (per instance) classifier mapping an AMBER/CHAMBER dihedral
+    (a real ParmEd ``Dihedral`` or the fast-loader's dihedral shim) to a
     ``DihedralType`` (or a user-defined integer).
 
     Parameters
@@ -315,15 +316,17 @@ class AmberDihedralClassifier:
     # ------------------------------------------------------------------
 
     def classify(
-        self, dihedral: pmd.topologyobjects.Dihedral
+        self, dihedral: Any
     ) -> Union[DihedralType, int]:
         """
-        Classify a parmed dihedral and return its biochemical role.
+        Classify an AMBER/CHAMBER dihedral and return its biochemical role.
 
         Parameters
         ----------
         dihedral:
-            A ``parmed.topologyobjects.Dihedral`` with non-``None``
+            A real ParmEd ``Dihedral`` or the fast-loader's dihedral shim
+            (``amber_loader._DihedralShim`` / the throwaway
+            ``acyclic_graph._DihedralCandidate``), with non-``None``
             ``.atom1`` through ``.atom4`` attributes and valid
             ``.residue.idx`` values.
 

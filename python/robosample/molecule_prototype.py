@@ -39,12 +39,11 @@ from functools import cached_property
 from typing import Any
 
 import mdtraj as md
+import mdtraj.core.element as mdtraj_element
 import networkx as nx
 import numpy as np
-import parmed as pmd
 
 from . import acyclic_graph as ag
-from . import prmtop_reader
 from . import z_matrix as zm
 from .amber_dihedral_classifier import AmberDihedralClassifier
 from .amber_dihedral_types import DihedralType
@@ -58,12 +57,23 @@ logger: logging.Logger = logging.getLogger(__name__)
 _ZM_SENTINEL: int = zm.ZM_SENTINEL
 
 
+def _mdtraj_element(atomic_number: int) -> mdtraj_element.Element:
+    """mdtraj ``Element`` for *atomic_number*; atomic number 0 (extra
+    points/virtual sites -- ParmEd's "EP" convention) resolves to mdtraj's
+    built-in ``virtual`` element. Used by ``MoleculePrototype._compute_dssp``
+    to build an ``mdtraj.Topology`` directly (see that method's docstring)."""
+    try:
+        return mdtraj_element.Element.getByAtomicNumber(atomic_number)
+    except (KeyError, IndexError):
+        return mdtraj_element.virtual
+
+
 class MoleculePrototype:
     """Immutable pre-processed snapshot of a single ParmEd molecule."""
 
     def __init__(
         self,
-        molecule: pmd.Structure,
+        molecule: Any,
         dihedral_classifier: AmberDihedralClassifier,
     ) -> None:
         self.molecule = molecule
@@ -74,7 +84,7 @@ class MoleculePrototype:
             (a.residue.idx + 1 for a in molecule.atoms), default=0
         )
 
-        self._atom_by_idx: dict[int, pmd.Atom] = {a.idx: a for a in molecule.atoms}
+        self._atom_by_idx: dict[int, Any] = {a.idx: a for a in molecule.atoms}
 
         # -- Spanning forest + dihedral-type cache (local indices) ---------
         self.acyclic_graph, self._dihedral_type_cache = ag.build_acyclic_graph(
@@ -92,7 +102,7 @@ class MoleculePrototype:
         # triplet. A connected tree on n>=2 atoms always has >=2 leaves, so this is
         # well defined; fall back to any real atom only in pathological cases.
         if self.num_atoms == 1:
-            root_atom: pmd.Atom = molecule.atoms[0]
+            root_atom: Any = molecule.atoms[0]
         else:
             g = self.acyclic_graph
             tree_leaves = [
@@ -189,8 +199,35 @@ class MoleculePrototype:
 
     def _compute_dssp(self):
         # The trajectory must use *local*-order coordinates so it matches the
-        # local-order OpenMM topology.  DSSP is returned per residue, so the
-        # result is independent of atom (compound) reordering.
+        # local-order topology built below.  DSSP is returned per residue, so
+        # the result is independent of atom (compound) reordering.
+        #
+        # Built DIRECTLY from molecule.atoms/.bonds/.residue (never through
+        # ParmEd's Structure.topology property / md.Topology.from_openmm):
+        # that property calls openmm.app.internal.unitcell.
+        # reducePeriodicBoxVectors, which raises ZeroDivisionError on a
+        # degenerate/absent box (e.g. GfcDstrippedMin.prmtop, a CHAMBER
+        # example with no real periodic box) -- see
+        # docs/specs/fast-amber-loader.md Step 4a. Residues are added in
+        # residue.idx order (first appearance in molecule.atoms, which is
+        # already ascending local/prototype order), so the returned per-
+        # residue DSSP array indexes exactly like `residue.idx` elsewhere in
+        # this class (e.g. _build_bond_arrays' `dssp[atom.residue.idx]`).
+        top = md.Topology()
+        chain = top.add_chain()
+        mdtraj_residues = []
+        mdtraj_atoms = []
+        last_residue_idx: int | None = None
+        for a in self.molecule.atoms:
+            if a.residue.idx != last_residue_idx:
+                mdtraj_residues.append(top.add_residue(a.residue.name, chain))
+                last_residue_idx = a.residue.idx
+            mdtraj_atoms.append(
+                top.add_atom(a.name, _mdtraj_element(a.atomic_number), mdtraj_residues[-1])
+            )
+        for b in self.molecule.bonds:
+            top.add_bond(mdtraj_atoms[b.atom1.idx], mdtraj_atoms[b.atom2.idx])
+
         xyz_local = (
             np.array(
                 [
@@ -201,10 +238,7 @@ class MoleculePrototype:
             ).T
             * ANG_TO_NM
         )
-        traj = md.Trajectory(
-            xyz=xyz_local,
-            topology=md.Topology.from_openmm(self.molecule.topology),
-        )
+        traj = md.Trajectory(xyz=xyz_local, topology=top)
         return md.compute_dssp(traj, simplified=False)[0]
 
     # ------------------------------------------------------------------
@@ -301,11 +335,20 @@ class MoleculePrototype:
     # ------------------------------------------------------------------
 
     def _build_periodic_torsion_arrays(self) -> None:
-        records: list[tuple[pmd.Dihedral, pmd.DihedralType]] = []
+        records: list[tuple[Any, Any]] = []
         for d in self.molecule.dihedrals:
-            if isinstance(d.type, pmd.DihedralTypeList):
+            # Multi-term torsions: ParmEd's DihedralTypeList IS a list
+            # subclass, so this duck-typed check also covers it -- but
+            # AMBER/CHAMBER-loaded dihedrals (ParmEd OR the PrototypeTopology
+            # shim) never actually produce one; Structure.join_dihedrals(),
+            # the only thing that creates a DihedralTypeList, is never called
+            # by AmberParm/ChamberParm, so multi-term torsions always arrive
+            # as several separate single-type Dihedral records instead (see
+            # amber_loader.py's PrototypeTopology module docstring). This
+            # branch is kept for robustness / any other Structure source.
+            if isinstance(d.type, list):
                 records.extend((d, dt) for dt in d.type)
-            elif isinstance(d.type, pmd.DihedralType):
+            else:
                 records.append((d, d.type))
 
         self.num_periodic_torsions = len(records)
@@ -397,17 +440,11 @@ class MoleculePrototype:
         self.exclusion_i_local, self.exclusion_j_local = [], []
         self.exclusion_i, self.exclusion_j = [], []
 
-        if not hasattr(self.molecule, "parm_data"):
-            logger.warning(
-                "molecule has no parm_data attribute; scaling14 and exclusions "
-                "will be empty.  Load the molecule from an AMBER .prmtop file "
-                "to populate these arrays."
-            )
-            return
-
-        tables = prmtop_reader.load_nonbonded_exceptions(
-            self.molecule.parm_data, self.molecule
-        )
+        # Pre-computed once per (unique) prototype by
+        # amber_loader.PrototypeTopology, from the whole-system raw prmtop
+        # arrays (see prmtop_reader.load_nonbonded_exceptions) -- no ParmEd
+        # parm_data slicing involved.
+        tables = self.molecule.nonbonded_tables
 
         for rec in tables.scaling14:
             # Pair quantities are symmetric; orientation only fixes which is i/l.
@@ -499,6 +536,6 @@ class MoleculePrototype:
         return list(seen.values())
 
     @staticmethod
-    def _sort_atoms_by_mass(atoms: list[pmd.Atom]) -> list[pmd.Atom]:
+    def _sort_atoms_by_mass(atoms: list[Any]) -> list[Any]:
         """Sort by descending mass; ascending atom index breaks ties."""
         return sorted(atoms, key=lambda a: (-a.mass, a.idx))

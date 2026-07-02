@@ -44,6 +44,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -66,40 +67,79 @@ using robo::Vec4;
 
 namespace {
 
-// log|det A| for a small SYMMETRIC POSITIVE-DEFINITE n x n matrix (row-major)
-// via Cholesky: A = L L^T  =>  det A = prod(L_ii)^2  =>  log det = 2 sum log L_ii.
-// D_b = ~H P H is SPD for any physical articulated body, so Cholesky is the
-// right (cheapest, most stable) factorization here. Returns 0 for n == 0.
-inline robo::Real logDetSymPD(const robo::Real* A, int n) {
+// n x n symmetric eigensolver (cyclic Jacobi), defined below; forward-declared
+// here so the null-space-lock helpers (this block) can use it before their
+// point of definition in the file.
+static void jacobiSymEig(const robo::Real* Ain, int n, robo::Real* d, robo::Real* V);
+
+// ============================================================================
+//  SHARED NULL-SPACE LOCK (docs/specs/singular-dof-fixman.md CC1/CC4/N1).
+//
+//  A direction of a dof x dof hinge-inertia block D_b = ~H_b P_b H_b is
+//  "null" (a structural/gauge phantom, e.g. a leaf single-atom Torsion body
+//  whose atom sits ON its own rotation axis) iff its magnitude is at or
+//  below this RELATIVE lock, floored at an absolute constant so an
+//  all-tiny block is still locked rather than scaled away to nothing. This
+//  is the SINGLE source of truth: invertDense (dynamics pseudo-inverse),
+//  pseudoLogDet (Fixman pseudo-determinant), and symSqrtInv (sqrt(M) for
+//  NMA route B) all lock on exactly this test, so a direction removed by
+//  the dynamics contributes factor 1 (0 to ln det) to the determinant and 0
+//  to sqrt(D) -- never a floating-point residue treated as physically
+//  present (the pre-fix inconsistency: invertDense zeroed the direction,
+//  logDetSymPD's separate 1e-300 Cholesky-pivot clamp did not, so it added
+//  ln(residue) instead of ln(1)==0).
+// ============================================================================
+constexpr robo::Real kNullLockAbs = robo::Real(1e-12);
+
+inline robo::Real nullLockTol(robo::Real scale) {
+    return std::max(kNullLockAbs, scale * kNullLockAbs);
+}
+
+// Eigen-decompose an n x n symmetric block and compute its null-space lock
+// tolerance in one place, so every caller locks on IDENTICAL (d, V, tol) for
+// the same input matrix. n == 1 is closed form (no eigensolve needed): the
+// single "eigenvalue" is the scalar itself and the tolerance is the bare
+// absolute constant (matches invertDense's pre-existing 1-dof fast path,
+// unchanged by this refactor).
+inline void eigDecompAndTol(const robo::Real* A, int n, robo::Real* d, robo::Real* V, robo::Real& tol) {
+    if (n == 1) {
+        d[0] = A[0];
+        V[0] = robo::Real(1);
+        tol = kNullLockAbs;
+        return;
+    }
+    jacobiSymEig(A, n, d, V);
+    robo::Real scale = 0;
+    for (int k = 0; k < n; ++k) {
+        scale = std::max(scale, std::abs(d[k]));
+    }
+    tol = nullLockTol(scale);
+}
+
+// ln|det D_b|, the PSEUDO-determinant: a null direction (per the shared lock
+// above) contributes 0 to the sum (factor 1 to det), never ln(residue). This
+// is what makes calcLogDetM agree with invertDense (CC1) -- a direction the
+// dynamics pseudo-inverse removes must not still inflate/deflate ln|M_tree|
+// by a floating-point accident. D_b is SPD for a well-posed hinge, so every
+// non-null eigenvalue is expected positive; std::abs is defensive against
+// roundoff-sign noise exactly at the lock boundary, not a silent sign flip
+// of a real negative eigenvalue (that would be non-PD and is a separate bug,
+// surfaced by NaN/Inf downstream, not masked here). Returns 0 for n == 0
+// (Weld: det == 1).
+inline robo::Real pseudoLogDet(const robo::Real* A, int n) {
     if (n <= 0) {
         return robo::Real(0);
     }
-    robo::Real L[36]; // n <= 6
-    for (int i = 0; i < n * n; ++i) {
-        L[i] = robo::Real(0);
-    }
+    robo::Real d[6];
+    robo::Real V[36];
+    robo::Real tol;
+    eigDecompAndTol(A, n, d, V, tol);
     robo::Real logDet = robo::Real(0);
-    for (int j = 0; j < n; ++j) {
-        robo::Real sum = A[j * n + j];
-        for (int k = 0; k < j; ++k) {
-            sum -= L[j * n + k] * L[j * n + k];
+    for (int k = 0; k < n; ++k) {
+        if (std::abs(d[k]) <= tol) {
+            continue; // null direction: contributes 0 (pseudo-determinant), not ln(residue)
         }
-        // Guard against a non-finite / non-PD block (near-singular hinge): clamp
-        // the pivot so the caller gets a large-but-finite Fixman rather than NaN,
-        // which the Metropolis step can then reject cleanly.
-        if (!(sum > robo::Real(1e-300))) {
-            sum = robo::Real(1e-300);
-        }
-        const robo::Real Ljj = std::sqrt(sum);
-        L[j * n + j] = Ljj;
-        logDet += robo::Real(2) * std::log(Ljj);
-        for (int i = j + 1; i < n; ++i) {
-            robo::Real s = A[i * n + j];
-            for (int k = 0; k < j; ++k) {
-                s -= L[i * n + k] * L[j * n + k];
-            }
-            L[i * n + j] = s / Ljj;
-        }
+        logDet += std::log(std::abs(d[k]));
     }
     return logDet;
 }
@@ -288,14 +328,12 @@ inline Real spatialDot(const SpatialVec& a, const SpatialVec& b) {
     return dot(a[0], b[0]) + dot(a[1], b[1]);
 }
 
-// Dense inverse of an n x n block (n in {1,3,6}), row-major in/out.
-// n == 1 is closed form (the Torsion-joint hot path); n >= 2 goes through LAPACK
-// LU (dgetrf/dgetri). Always returns a finite result (singular -> regularized).
-static void jacobiSymEig(const Real* Ain, int n, Real* d, Real* V); // defined below
-
 // Symmetric (Moore-Penrose) pseudo-inverse of the dof x dof articulated hinge
 // matrix D = ~H P H, row-major in/out. D is symmetric and, for a well-posed
-// hinge, SPD; this routine returns its inverse.
+// hinge, SPD; this routine returns its inverse. Returns the number of
+// LOCKED (null) directions, 0 for a well-conditioned D -- the realize-ABI
+// caller uses this to fire the CC1/CC4 fail-loud gate (docs/specs/
+// singular-dof-fixman.md STEP 3) on any body whose lock was not expected.
 //
 // CRITICAL ROBUSTNESS PROPERTY: a *degenerate* hinge -- a DOF with ~zero
 // articulated inertia -- must be LOCKED, not regularized into a huge finite
@@ -314,14 +352,13 @@ static void jacobiSymEig(const Real* Ain, int n, Real* d, Real* V); // defined b
 // inertia passes through, i.e. the joint behaves as a weld) => udot=0 and the
 // HMC seed velocity is 0 too. The DOF is frozen at its initial value, which is
 // the physically exact treatment of a null coordinate.
-void invertDense(const Real* A, int n, Real* Ainv) {
-    const Real lockTol = Real(1e-12); // |eigenvalue| <= this is treated as null
-
+int invertDense(const Real* A, int n, Real* Ainv) {
     // Dominant case: 1-DOF Torsion. Closed form, with a lock instead of a clamp.
     if (n == 1) {
         const Real d = A[0];
-        Ainv[0] = (std::abs(d) > lockTol) ? (Real(1) / d) : Real(0);
-        return;
+        const bool locked = std::abs(d) <= kNullLockAbs;
+        Ainv[0] = locked ? Real(0) : (Real(1) / d);
+        return locked ? 1 : 0;
     }
 
     // n in {3,6}: symmetric pseudo-inverse via the in-house Jacobi eigensolver
@@ -330,18 +367,16 @@ void invertDense(const Real* A, int n, Real* Ainv) {
     // any null eigendirection contributes 0 (that direction is locked).
     Real d[6];
     Real V[36];
-    jacobiSymEig(A, n, d, V);
-    Real scale = 0;
-    for (int k = 0; k < n; ++k) {
-        scale = std::max(scale, std::abs(d[k]));
-    }
-    const Real tol = std::max(lockTol, scale * Real(1e-12));
+    Real tol;
+    eigDecompAndTol(A, n, d, V, tol);
     for (int i = 0; i < n * n; ++i) {
         Ainv[i] = Real(0);
     }
+    int numLocked = 0;
     for (int k = 0; k < n; ++k) {
         if (std::abs(d[k]) <= tol) {
-            continue; // null direction -> pseudo-inverse contributes 0 (locked)
+            ++numLocked; // null direction -> pseudo-inverse contributes 0 (locked)
+            continue;
         }
         const Real inv = Real(1) / d[k];
         for (int i = 0; i < n; ++i) {
@@ -350,6 +385,7 @@ void invertDense(const Real* A, int n, Real* Ainv) {
             }
         }
     }
+    return numLocked;
 }
 
 // Symmetric eigensolver (cyclic Jacobi) for a small dense symmetric matrix
@@ -440,25 +476,49 @@ void symSqrt(const Real* A, int n, Real* S) {
     }
 }
 
-// Inverse symmetric square root of a dof x dof SPD block: S = V diag(1/sqrt(lambda)) ~V.
-// This is the EXACT inverse of symSqrt (same eigenvectors, reciprocal sqrt eigenvalues),
-// so symSqrtInv(A) * symSqrt(A) == I. Used by multiplyBySqrtM (the forward sqrt sweep).
-// Verified numerically to ~2e-13 over random SPD blocks (dof 1..6).
+// Inverse symmetric square root of a dof x dof block A == DI (invertDense's
+// pseudo-inverse of D): S = V diag(1/sqrt(lambda)) ~V. On every UNLOCKED
+// direction this is the exact inverse of symSqrt(DI) (same eigenvectors,
+// reciprocal sqrt eigenvalues), so symSqrtInv(DI)*symSqrt(DI) == I there --
+// verified numerically to ~2e-13 over random SPD blocks (dof 1..6). Used by
+// multiplyBySqrtM (the forward sqrt sweep, NMA route B).
+//
+// NULL-DIRECTION CONVENTION (S3, docs/specs/singular-dof-fixman.md): DI's
+// eigenvalue is EXACTLY 0 on any direction invertDense locked (a structural
+// phantom). The OLD code floored that 0 to 1e-300 and returned
+// 1/sqrt(1e-300) ~ 3e149 -- an enormous but technically-finite regularizer
+// that is NOT the pseudo-inverse convention every other null-space lock in
+// this file uses, and is only harmless today because the caller's `in` on
+// that direction is always bit-exact 0 (u_phantom is frozen by the SAME
+// lock), so huge*0==0. That correctness depends on an invariant this
+// function cannot see or enforce. Locking the direction to 0 HERE instead
+// (same shared tol as invertDense/pseudoLogDet) makes symSqrtInv robust on
+// its own terms -- multiplyBySqrtM's derivation only needs sqrt(D)==0 on a
+// direction that mobility WILL NEVER be seeded on, and 0 is the correct
+// "no information on this gauge direction" answer, not the largest float
+// that still avoids inf.
 void symSqrtInv(const Real* A, int n, Real* S) {
     if (n == 1) {
-        S[0] = Real(1) / std::sqrt(std::max(Real(1e-300), A[0]));
+        const bool locked = A[0] <= kNullLockAbs; // DI >= 0 always; <=0 means locked (or non-PSD, caught downstream)
+        S[0] = locked ? Real(0) : (Real(1) / std::sqrt(A[0]));
         return;
     }
     Real d[6];
     Real V[36];
-    jacobiSymEig(A, n, d, V);
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-            Real acc = 0;
-            for (int k = 0; k < n; ++k) {
-                acc += V[i * n + k] * (Real(1) / std::sqrt(std::max(Real(1e-300), d[k]))) * V[j * n + k];
+    Real tol;
+    eigDecompAndTol(A, n, d, V, tol);
+    for (int i = 0; i < n * n; ++i) {
+        S[i] = Real(0);
+    }
+    for (int k = 0; k < n; ++k) {
+        if (std::abs(d[k]) <= tol) {
+            continue; // null direction -> contributes 0 (locked; matches invertDense/pseudoLogDet)
+        }
+        const Real inv = Real(1) / std::sqrt(d[k]);
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < n; ++j) {
+                S[i * n + j] += inv * V[i * n + k] * V[j * n + k];
             }
-            S[i * n + j] = acc;
         }
     }
 }
@@ -765,7 +825,70 @@ void RobotEngine::realizeArticulatedBodyInertias(const RobotModel& m, RobotState
             }
         }
         Real* DI = &DIpool[m.bodyUSqIndex[b]];
-        invertDense(D, dof, DI);
+        const int numLocked = invertDense(D, dof, DI);
+
+        // STEP 3 fail-loud gate (docs/specs/singular-dof-fixman.md, Review
+        // outcome): invertDense null-locked >=1 direction of this body's
+        // hinge inertia. That is EXPECTED and safe only for a body whose
+        // D_b is PROVABLY a run-constant (locked at this q => locked for
+        // EVERY q, so freezing it is bias-free, C3) -- never merely
+        // "small at this reference config" (B2's rejected false-positive
+        // risk: an angle-flexible multi-dof joint, e.g. BendStretch/
+        // SphericalCoords/Cartesian/FreeLine, can be genuinely collinear
+        // only at isolated q and must NOT be treated as structural).
+        //
+        // A LEAF (no children) Torsion (1-dof) body qualifies unconditionally:
+        // D_b = ~H_b P_b H_b with H_b (Ground) = R_GF * H_FM, H_FM CONSTANT
+        // for Torsion (jointHasConstantHFM) and R_GF depending only on
+        // ancestors (upstream of this body's own q); P_b == Mk_G[b] exactly
+        // (leaf: no PPlus_child term). Writing Mk_G[b] = R_GB Mk_B R_GB^T
+        // with R_GB = R_GF R_FM(q_own) R_MB, the R_GF factors cancel by
+        // orthogonality in D_b = H_FM^T [R_FM(q_own) R_MB Mk_B R_MB^T
+        // R_FM(q_own)^T] H_FM, which no longer contains R_GF at all -- D_b
+        // is therefore independent of every ancestor config AND of the
+        // body's own q (a revolute joint's own-axis inertia is invariant to
+        // rotation about that same axis, the standard rigid-body fact).
+        // Confirmed empirically to ~1e-14 by the Cyclic1APQPhantomLogDetIsRunConstant
+        // LEMMA test (tests/TestRoboticsOracleMolecule.cpp) on 1APQ's three
+        // leaf single-atom on-axis Torsion phantoms. STEP 4 (a build-time
+        // weld removing these bodies outright, making this gate unreachable
+        // for them) is DEFERRED -- see the coder checkpoint; this runtime
+        // recognition is the provably-safe substitute while it is deferred.
+        // Any OTHER locked body (non-leaf, non-Torsion, or multi-dof) is NOT
+        // this shape and throws instead of silently locking (Rule 11).
+        if (numLocked > 0 && !(m.bodyChildrenBeg[b] == m.bodyChildrenEnd[b] && m.bodyJoint[b] == JointType::Torsion)) {
+            Real eig[6];
+            Real eigV[36];
+            Real eigTol;
+            eigDecompAndTol(D, dof, eig, eigV, eigTol);
+            Real minEig = std::abs(eig[0]);
+            for (int k = 1; k < dof; ++k) {
+                minEig = std::min(minEig, std::abs(eig[k]));
+            }
+            std::string msg = "realizeArticulatedBodyInertias: invertDense null-locked " + std::to_string(numLocked)
+                             + " direction(s) of D_b on body " + std::to_string(b)
+                             + " (JointType=" + std::to_string(static_cast<int>(m.bodyJoint[b]))
+                             + ", dof=" + std::to_string(dof) + ", atoms=[";
+            // bodyAtomsBeg/End are only populated for a fully-built (real-molecule)
+            // RobotModel; a hand-built synthetic test model (tests/RobotBuilders.hpp
+            // buildForest without attachAtoms) leaves them empty -- guard the index
+            // so a genuine gate failure never masks itself behind an out-of-bounds
+            // read while formatting the diagnostic.
+            if (static_cast<std::size_t>(b) < m.bodyAtomsBeg.size()) {
+                for (int a = m.bodyAtomsBeg[b]; a < m.bodyAtomsEnd[b]; ++a) {
+                    if (a != m.bodyAtomsBeg[b]) {
+                        msg += ",";
+                    }
+                    msg += std::to_string(m.bodyAtoms[a]);
+                }
+            } else {
+                msg += "unavailable: synthetic model with no atom map";
+            }
+            msg += "], min-eig(D)=" + std::to_string(minEig)
+                 + ") that is not a recognized structural phantom (leaf Torsion) -- "
+                   "see docs/specs/singular-dof-fixman.md STEP 3";
+            throw std::runtime_error(msg);
+        }
 
 #if ROBO_DEBUG
         {
@@ -1089,7 +1212,7 @@ robo::Real RobotEngine::calcLogDetM(const RobotModel& m, const RobotState& s) {
                 D[i * dof + j] = spatialDot(H[uOff + i], PHj);
             }
         }
-        logDet += logDetSymPD(D, dof); // ln det(D_b)
+        logDet += pseudoLogDet(D, dof); // pseudo-ln-det(D_b): null directions contribute 0 (CC1)
     }
     return logDet; // = ln|M_phi|
 }

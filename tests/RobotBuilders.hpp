@@ -210,4 +210,55 @@ inline void randomizeState(const RobotModel& m, RobotState& s, Rng& rng) {
     }
 }
 
+// ----------------------------------------------------------------------------
+//  buildBentTorsionChain -- a Free 6-DOF root followed by nTorsions Torsion
+//  joints in a zigzag chain, alternating the bend axis every link (extends
+//  TestFixmanBoltzmann.cpp::twoTorsionChain's 90-degree-bend coupling idea to
+//  many links) so consecutive torsion axes are never parallel and the
+//  mass-metric tensor M(phi) is dense / strongly off-diagonal rather than
+//  block-diagonal. n_dof = 6 + nTorsions (RobotModel::nu). Shared by
+//  TestEquipartition.cpp (T0.1) and TestEnsembleValidation.cpp (T0.2) so both
+//  tiers exercise the SAME fixture (ensemble-validation spec 10-tier0
+//  T0.1/T0.2). Two atoms are attached per body so downstream Cartesian
+//  reconstruction (fillAtomPositionsFromBodies) has something to transform,
+//  even on call sites that never read PE.
+// ----------------------------------------------------------------------------
+inline RobotModel buildBentTorsionChain(int nTorsions, Rng& rng) {
+    std::vector<BodySpec> specs;
+
+    BodySpec root;
+    root.parent = 0;
+    root.joint = JointType::Free;
+    root.mass = rng.uniform(robo::Real(1.2), robo::Real(2.0));
+    root.com_B = rng.vec3(robo::Real(-0.05), robo::Real(0.05));
+    root.inertia_B = UnitInertia(rng.uniform(robo::Real(0.4), robo::Real(0.6)),
+                                 rng.uniform(robo::Real(0.4), robo::Real(0.6)),
+                                 rng.uniform(robo::Real(0.4), robo::Real(0.6)));
+    specs.push_back(root);
+
+    for (int i = 0; i < nTorsions; ++i) {
+        BodySpec b;
+        b.parent = i; // body i+1's parent is body i (root == body 1)
+        b.joint = JointType::Torsion;
+        const robo::CoordinateAxis bendAxis = (i % 2 == 0) ? robo::XAxis : robo::YAxis;
+        b.X_PF = Transform(Rotation(robo::Real(M_PI_2), bendAxis), Vec3(robo::Real(0.15), robo::Real(0.0), robo::Real(0.0)));
+        b.X_BM = Transform();
+        b.mass = rng.uniform(robo::Real(0.8), robo::Real(1.6));
+        b.com_B = Vec3(rng.uniform(robo::Real(0.08), robo::Real(0.14)),
+                       rng.uniform(robo::Real(-0.05), robo::Real(0.05)),
+                       rng.uniform(robo::Real(-0.05), robo::Real(0.05)));
+        b.inertia_B = UnitInertia(rng.uniform(robo::Real(0.3), robo::Real(0.5)),
+                                  rng.uniform(robo::Real(0.3), robo::Real(0.5)),
+                                  rng.uniform(robo::Real(0.3), robo::Real(0.5)));
+        specs.push_back(b);
+    }
+
+    RobotModel m = buildForest(specs);
+    for (int b = 1; b < m.numBodies; ++b) {
+        attachAtoms(m, b, {Vec3(0, 0, 0), Vec3(robo::Real(0.05), robo::Real(0.02), robo::Real(-0.01))},
+                    {robo::Real(12.0), robo::Real(1.0)});
+    }
+    return m;
+}
+
 } // namespace rtest

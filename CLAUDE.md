@@ -30,6 +30,26 @@ what it does, where it sits in the pipeline, and its binding constraint.
 
 - `references/index.yaml`: summary of all papers Robosample is based on with link to their Markdown versions stored locally.
 
+## Spec writing style
+
+Avoid using too many normative statements (e.g. *binding*, *mandatory*, *fail loud*, *must*, *resolved*, *almost*) everywhere since everything becomes equally important.
+
+Example: *state the SphericalCoords ctor args explicitly* and *compare pre-projection recursion* have vastly different importance: one is documentation and the other one is correctness.
+
+Instead, classify requirements:
+
+- **Normative:** *SHALL*, *MUST*
+
+- **Recommended:** *SHOULD*
+
+- **Implementation notes:** *NOTE*
+
+This makes review dramatically easier.
+
+Do not mix implementation order into architecture. Specifications should answer *What is correct?*, not *What should be coded first?*. Implementation order changes, but requirements don't.
+The spec should define/explain terms only once and must avoid repeated discussions.
+To make maintenance and auditing easier, consider splitting the spec into multiple files if things happen to share infrastructure, but conceptually validate different things.
+
 ## How to run shell commands (mandatory)
 
 Permissions are **generous-allow + hard-deny**: almost every command runs without a prompt; a short

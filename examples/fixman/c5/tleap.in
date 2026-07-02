@@ -1,0 +1,5 @@
+source leaprc.gaff
+loadamberparams /home/victor/Robosample/examples/fixman/c5/c5.frcmod
+c5 = loadmol2 /home/victor/Robosample/examples/fixman/c5/c5.mol2
+saveamberparm c5 /home/victor/Robosample/examples/fixman/c5/c5.prmtop /home/victor/Robosample/examples/fixman/c5/c5.rst7
+quit

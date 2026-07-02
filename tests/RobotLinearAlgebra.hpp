@@ -3,16 +3,36 @@
 //  robo_linalg.hpp -- small dense linear-algebra kernels for the articulated-
 //  body dynamics (the dof x dof hinge block D = ~H P H, dof <= 6).
 //
-//  SINGLE SOURCE OF TRUTH. These were file-local statics in the anonymous
-//  namespace of src/RobotEngine.cpp; they are hoisted here verbatim (only the
-//  linkage qualifier changed to `inline` for header use) so that BOTH the engine
-//  TU and the unit-test TU bind the *same* symbol. Previously tests exercised a
-//  hand-synced copy (tests/RobotLinearAlgebra.hpp) that could silently drift
-//  from the shipped code; that copy is now deleted and both sides #include this.
+//  TEST-LOCAL REFERENCE IMPLEMENTATION -- NOT the single source of truth and
+//  NOT bound to the same symbols as the engine. `src/RobotEngine.cpp` does
+//  NOT #include this header; it keeps its own file-local copies of these
+//  kernels in its anonymous namespace (jacobiSymEig, invertDense, symSqrt,
+//  symSqrtInv, and -- since docs/specs/singular-dof-fixman.md -- pseudoLogDet
+//  in place of logDetSymPD). This header is a separate, hand-maintained copy
+//  used ONLY by the test TUs as an independent oracle; despite an earlier
+//  banner here claiming otherwise, it was never deduplicated with the engine
+//  and no such dedup copy was ever deleted.
 //
-//  Consumers in the engine: invertDense -> D^-1 (=> M^-1 seed, udot);
+//  CONVENTION DRIFT (deliberate, tracked): `invertDense`/`symSqrt`/
+//  `symSqrtInv` below already match the engine's current CC1/CC4 null-space
+//  lock (a near-null eigendirection of D is treated as exactly null, locked
+//  to 0, not regularized). `logDetSymPD` below does NOT -- it still floors a
+//  near-zero Cholesky pivot at 1e-300 (the PRE-FIX convention `calcLogDetM`
+//  used before it switched to `pseudoLogDet`'s null-space lock). This is kept
+//  ON PURPOSE as the "old convention" reference for tests that need to
+//  reconstruct what the pre-fix engine would have returned (e.g.
+//  TestMassMatrix.cpp's LogDetMExcludesStructuralPhantomNullDirection) and as
+//  the oracle for `Constraints::solveSmallSpd`/`calcConstraintLogDet`
+//  (Constraints.cpp), which the spec's S2 explicitly did NOT fold into the
+//  shared hinge-inertia lock (`G M^-1 G^T` is a dimensionally distinct
+//  quantity). Do not "fix" `logDetSymPD` here to match `pseudoLogDet` without
+//  re-deriving which callers depend on which convention (see TestLinearAlgebraOracle.cpp
+//  O6 and TestConstraints.cpp/TestConstraintSolver.cpp).
+//
+//  Consumers (test TUs only): invertDense -> D^-1 (=> M^-1 seed, udot);
 //  symSqrt / symSqrtInv -> sqrt(D^-1)/sqrt(D) (the momentum draw); logDetSymPD
-//  -> ln det(D) (the Fixman tree term). jacobiSymEig underlies all of them.
+//  -> ln det(D) (the OLD-convention Fixman tree term / constraint log-det).
+//  jacobiSymEig underlies all of them.
 // ============================================================================
 
 #include <algorithm>

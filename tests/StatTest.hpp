@@ -22,10 +22,19 @@
 // ============================================================================
 
 #include <cmath>
+#include <cstdlib>
 #include <vector>
 
 namespace rtest {
 namespace stat {
+
+// Gate for the high-N / slow statistical tier (large sample counts, tight
+// alpha=1e-4 distribution tests). The authoritative gate (`nox -s tests`)
+// always sets ROBOSAMPLE_SLOW_TESTS=1; a bare dev `ctest` run leaves it unset
+// so those tests GTEST_SKIP() (see TestHelpers.hpp::warnSlowTierSkipped).
+inline bool slowEnabled() {
+    return std::getenv("ROBOSAMPLE_SLOW_TESTS") != nullptr;
+}
 
 // ---- inverse normal CDF (Acklam), upper-tail quantile z s.t. P(Z>z)=p --------
 inline double invNormalCdf(double p) {

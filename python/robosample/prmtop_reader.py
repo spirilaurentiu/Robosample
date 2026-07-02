@@ -18,7 +18,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
-import parmed as pmd
+
+from .units import ANG_TO_NM, KCAL_TO_KJ
 
 logger = logging.getLogger(__name__)
 
@@ -340,37 +341,9 @@ def has_nbfix_fast(
 def load_lj_coefs(
     parm_data: dict,
     num_types: int,
-    ene_conv: float = pmd.unit.kilocalories_per_mole.conversion_factor_to(
-        pmd.unit.kilojoules_per_mole
-    ),
-    length_conv: float = pmd.unit.angstroms.conversion_factor_to(pmd.unit.nanometers),
+    ene_conv: float = KCAL_TO_KJ,
+    length_conv: float = ANG_TO_NM,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Convert and return Lennard-Jones coefficients in SI-adjacent units.
-
-    ...
-
-    Parameters
-    ----------
-    parm_data : dict
-        ``raw_data`` dict from :func:`parse_prmtop_numpy`.  Must contain
-        ``NONBONDED_PARM_INDEX``, ``LENNARD_JONES_ACOEF``, and
-        ``LENNARD_JONES_BCOEF``.
-    num_types : int
-        Number of distinct LJ atom types (``NTYPES`` pointer).
-    ene_conv : float, optional
-        Multiplicative factor converting kcal mol⁻¹ to the target energy
-        unit.  Defaults to the kcal mol⁻¹ → kJ mol⁻¹ factor as reported
-        by :mod:`parmed`.  Override only when targeting a non-SI energy
-        unit.
-    length_conv : float, optional
-        Multiplicative factor converting Å to the target length unit.
-        Defaults to the Å → nm factor as reported by :mod:`parmed`.
-        Override only when targeting a non-SI length unit.
-
-    Returns
-    -------
-    ...
-    """
     """Convert and return Lennard-Jones coefficients in SI-adjacent units.
 
     Reads the raw LJ *A* and *B* coefficients from an AMBER prmtop data
@@ -397,14 +370,14 @@ def load_lj_coefs(
         ``LENNARD_JONES_BCOEF``.
     num_types : int
         Number of distinct LJ atom types (``NTYPES`` pointer).
-    ene_conv : float
+    ene_conv : float, optional
         Multiplicative factor converting kcal mol⁻¹ to the target energy
-        unit (e.g. ``pmd.unit.kilocalories_per_mole
-        .conversion_factor_to(pmd.unit.kilojoules_per_mole)``).
-    length_conv : float
-        Multiplicative factor converting Å to the target length unit
-        (e.g. ``pmd.unit.angstroms
-        .conversion_factor_to(pmd.unit.nanometers)``).
+        unit.  Defaults to ``units.KCAL_TO_KJ`` (kcal mol⁻¹ -> kJ mol⁻¹).
+        Override only when targeting a non-SI energy unit.
+    length_conv : float, optional
+        Multiplicative factor converting Å to the target length unit.
+        Defaults to ``units.ANG_TO_NM`` (Å -> nm). Override only when
+        targeting a non-SI length unit.
 
     Returns
     -------
@@ -440,157 +413,16 @@ def load_lj_coefs(
     return a_coef, b_coef
 
 
-def load_cmap(
-    parm_data: dict,
-    parm: pmd.amber.AmberParm,
-    ene_conv: float = pmd.unit.kilocalories_per_mole.conversion_factor_to(
-        pmd.unit.kilojoules_per_mole
-    ),
-) -> dict[str, int | list[float] | list[int]]:
-    """Parse CMAP correction grids and torsion assignments from an AMBER prmtop.
-
-    CMAP (Correction MAP) defines a 2D potential-energy surface E(phi, psi)
-    applied to pairs of consecutive backbone dihedrals.  Each grid is stored
-    in the prmtop with phi as the slow (outer) index and psi as the fast
-    (inner) index, with the origin at -180 degrees.  OpenMM expects phi as
-    the fast (inner) index with the origin at 0 degrees; this function
-    performs both the index transposition and the 180-degree cyclic shift.
-
-    All grids must share the same resolution (number of points per axis),
-    which is the case for all standard CHARMM force fields (typically 24).
-
-    Parameters
-    ----------
-    parm_data : dict
-        ``raw_data`` dict produced by :func:`parse_prmtop`.  Must contain
-        ``CMAP_RESOLUTION`` and ``CMAP_PARAMETER_XX`` entries for CHAMBER
-        topologies; returns empty accumulators silently for plain AMBER files
-        that carry no CMAP data.
-    parm : pmd.amber.AmberParm
-        Loaded parmed structure.  Atom global indices are taken from
-        ``pmd.Atom.idx`` to avoid maintaining a separate index mapping.
-    ene_conv : float, optional
-        Multiplicative factor converting kcal mol⁻¹ to the target energy
-        unit.  Defaults to the kcal mol⁻¹ -> kJ mol⁻¹ factor from
-        :mod:`parmed`.
-
-    Returns
-    -------
-    dict with keys matching ``SystemTopology`` attribute names:
-
-    ``"cmap_grid_size"`` : int
-        Number of grid points along each axis (same for all grids).
-    ``"cmap_grid_energy"`` : list[float]
-        Concatenated, reordered energy grids in kJ mol⁻¹.  Grid *k* occupies
-        positions ``k * size**2`` to ``(k+1) * size**2``, with phi varying
-        fastest (OpenMM convention).
-    ``"cmap_torsion_a1"`` .. ``"cmap_torsion_a4"`` : list[int]
-        Global atom indices for the first (phi) dihedral of each torsion pair.
-    ``"cmap_torsion_b1"`` .. ``"cmap_torsion_b4"`` : list[int]
-        Global atom indices for the second (psi) dihedral.  Atoms b1-b3
-        overlap with a2-a4 (the two dihedrals share a central triplet).
-    ``"cmap_torsion_map_index"`` : list[int]
-        0-based index into the grid table for each torsion pair.
-
-    Raises
-    ------
-    ValueError
-        If CMAP grids have inconsistent resolutions, or if any torsion
-        references a grid index outside the valid range.
-    """
-    _EMPTY: dict[str, int | list] = {
-        "cmap_grid_size": 0,
-        "cmap_grid_energy": [],
-        "cmap_torsion_a1": [],
-        "cmap_torsion_a2": [],
-        "cmap_torsion_a3": [],
-        "cmap_torsion_a4": [],
-        "cmap_torsion_b1": [],
-        "cmap_torsion_b2": [],
-        "cmap_torsion_b3": [],
-        "cmap_torsion_b4": [],
-        "cmap_torsion_map_index": [],
-    }
-
-    cmap_resolution = parm_data.get("CMAP_RESOLUTION", [])
-    num_grids = len(cmap_resolution)
-    if num_grids == 0:
-        return _EMPTY
-
-    # ------------------------------------------------------------------ #
-    # Validate uniform grid resolution
-    # ------------------------------------------------------------------ #
-    sizes = np.asarray(cmap_resolution, dtype=np.int64)
-    if np.any(sizes != sizes[0]):
-        raise ValueError(
-            f"All CMAP grids must share the same resolution; "
-            f"found {sorted(set(sizes.tolist()))}."
-        )
-    res = int(sizes[0])
-    half = res // 2
-
-    # ------------------------------------------------------------------ #
-    # Build reorder indices once, reuse for every grid.
-    #
-    # AMBER layout : old_index = phi_amber * res + psi_amber
-    #                origin at -180 deg, psi fastest
-    # OpenMM layout: new_index = phi_omm + res * psi_omm
-    #                origin at   0 deg, phi fastest
-    #
-    # Cyclic shift: phi_amber = (phi_omm + half) % res
-    # ------------------------------------------------------------------ #
-    phi_amber = (np.arange(res) + half) % res
-    psi_amber = (np.arange(res) + half) % res
-    old_indices = phi_amber[:, None] * res + psi_amber[None, :]  # (res, res)
-
-    # ------------------------------------------------------------------ #
-    # Reorder and convert all grids; concatenate into one flat list
-    # ------------------------------------------------------------------ #
-    grid_energy: list[float] = []
-    for i in range(num_grids):
-        cmap = np.asarray(parm_data[f"CMAP_PARAMETER_{i + 1:02d}"], dtype=np.float64)
-        # Transpose to [psi_omm, phi_omm] then C-order flatten
-        # -> new_index = phi_omm + res * psi_omm  (phi fastest)
-        grid_energy.extend((cmap[old_indices] * ene_conv).T.ravel().tolist())
-
-    # ------------------------------------------------------------------ #
-    # Torsion assignments.
-    # CMAP_INDEX layout (6 integers per entry, 1-based prmtop atom indices):
-    #   [a1, a2, a3, a4, b4, map_index]
-    # Torsion A = (a1, a2, a3, a4)  -- phi dihedral
-    # Torsion B = (a2, a3, a4, b4)  -- psi dihedral (shares a2-a4 with A)
-    # ------------------------------------------------------------------ #
-    cmap_index = parm_data.get("CMAP_INDEX", [])
-    if len(cmap_index) == 0:
-        return {**_EMPTY, "cmap_grid_size": res, "cmap_grid_energy": grid_energy}
-
-    entries = np.asarray(cmap_index, dtype=np.int64).reshape(-1, 6)
-    map_indices = entries[:, 5] - 1  # 0-based grid index
-
-    invalid = (map_indices < 0) | (map_indices >= num_grids)
-    if np.any(invalid):
-        raise ValueError(
-            f"CMAP map indices out of range [1, {num_grids}]: "
-            f"{entries[invalid, 5].tolist()}"
-        )
-
-    # Resolve 1-based prmtop indices to global atom indices via pmd.Atom.idx
-    global_idx = np.array([atom.idx for atom in parm.atoms])
-    atoms = global_idx[entries[:, :5] - 1]  # (n_torsions, 5)
-
-    return {
-        "cmap_grid_size": res,
-        "cmap_grid_energy": grid_energy,
-        "cmap_torsion_a1": atoms[:, 0].tolist(),
-        "cmap_torsion_a2": atoms[:, 1].tolist(),
-        "cmap_torsion_a3": atoms[:, 2].tolist(),
-        "cmap_torsion_a4": atoms[:, 3].tolist(),
-        "cmap_torsion_b1": atoms[:, 1].tolist(),  # torsion B shares a2-a4
-        "cmap_torsion_b2": atoms[:, 2].tolist(),
-        "cmap_torsion_b3": atoms[:, 3].tolist(),
-        "cmap_torsion_b4": atoms[:, 4].tolist(),
-        "cmap_torsion_map_index": map_indices.tolist(),
-    }
+# NOTE: an earlier `load_cmap(parm_data, parm, ...)` helper used to live
+# here. It required a loaded ParmEd structure (to resolve each atom's global
+# index) and was never called anywhere in the codebase --
+# ``Context.load_amber`` builds the CMAP grid/torsion arrays itself, inline,
+# directly from ``raw_data`` + ``prmtop_to_global_index`` (see the "CMAP
+# correction maps and torsions" section of ``context.py``). Removed as dead
+# code rather than ported, per the fast-loader Step 4b parmed-free
+# requirement (docs/specs/fast-amber-loader.md) -- keeping an unused
+# ParmEd-typed function around would be the only remaining parmed dependency
+# in this module.
 
 
 # ====================================================================== #
@@ -598,9 +430,10 @@ def load_cmap(
 #
 # These sections are not exposed on the high-level ParmEd Structure API and
 # must be reconstructed from the raw prmtop dihedral pointer list and the
-# excluded-atoms list.  Records are returned in *local* (ParmEd) atom indices;
-# orientation into closest->farthest order and remapping to compound indices is
-# the caller's responsibility (see MoleculePrototype).
+# excluded-atoms list.  Records are returned in *local* (prototype-local,
+# 0-based ascending) atom indices; orientation into closest->farthest order
+# and remapping to compound indices is the caller's responsibility (see
+# MoleculePrototype).
 # ====================================================================== #
 
 # Mathematical constant relating the AMBER r_min (equilibrium pair distance) to
@@ -639,38 +472,58 @@ class NonbondedTables:
 
 
 def load_nonbonded_exceptions(
-    parm_data: dict,
-    parm: pmd.amber.AmberParm,
-    ene_conv: float = pmd.unit.kilocalories_per_mole.conversion_factor_to(
-        pmd.unit.kilojoules_per_mole
-    ),
-    length_conv: float = pmd.unit.angstroms.conversion_factor_to(pmd.unit.nanometers),
+    raw_data: dict,
+    atom_indices: np.ndarray,
+    ene_conv: float = KCAL_TO_KJ,
+    length_conv: float = ANG_TO_NM,
 ) -> NonbondedTables:
-    """Parse 1-4 scaling pairs and explicit exclusions from an AMBER prmtop.
+    """Parse 1-4 scaling pairs and explicit exclusions for ONE prototype.
 
-    Companion to :func:`load_lj_coefs` / :func:`load_cmap`: where those handle
-    the full LJ table and the CMAP grids, this reconstructs the per-pair 1-4
-    scaled interactions and the explicit exclusion list.
+    Companion to :func:`load_lj_coefs` / CMAP handling in ``context.py``: where
+    those handle the full LJ table and the CMAP grids, this reconstructs the
+    per-pair 1-4 scaled interactions and the explicit exclusion list.
+
+    Part of the fast-loader rewrite (``docs/specs/fast-amber-loader.md`` §3(C)):
+    reads directly from the WHOLE-SYSTEM ``raw_data`` (prmtop order, GLOBAL
+    atom indices) instead of a ParmEd-sliced-per-prototype ``parm_data`` /
+    ``Structure``. The 1-4/exclusion atom-index-space work (which pairs exist)
+    is scoped to *atom_indices* (one prototype's/instance's GLOBAL 0-based
+    prmtop atom indices, ascending) and returned in *local* (0-based,
+    position-within-``atom_indices``) indices. The physical VALUES (charges,
+    LJ A/B coefficients, SCEE/SCNB) are looked up directly from the
+    GLOBAL/whole-system type tables (``NONBONDED_PARM_INDEX``, LJ (14)
+    coefficient arrays, ``SCEE_SCALE_FACTOR``/``SCNB_SCALE_FACTOR``, per-atom
+    ``CHARGE``): these are keyed by ATOM TYPE / DIHEDRAL TYPE, not by atom
+    index, so their values are identical whether read from the whole-system
+    table or from ParmEd's own per-prototype-sliced-and-pruned copy of the same
+    table -- only the row/column numbering would differ, which this function
+    never needs (it always indexes by the atom's own GLOBAL
+    ``ATOM_TYPE_INDEX``, not a prototype-local one).
 
     The 1-4 pairs are read from the dihedral pointer quintuples
-    (``DIHEDRALS_INC_HYDROGEN`` + ``DIHEDRALS_WITHOUT_HYDROGEN``): the 3rd
-    pointer < 0 marks a suppressed 1-4 interaction (skipped) and the 4th < 0
-    marks an improper (skipped).  ``SCEE`` and ``SCNB`` factors are absorbed
-    into the returned charge product and epsilon respectively.  Pairs already
-    accounted for as 1-4 interactions are removed from the exclusion list so
-    each pair appears in exactly one table.
+    (``DIHEDRALS_INC_HYDROGEN`` + ``DIHEDRALS_WITHOUT_HYDROGEN``, in THAT
+    order -- matches the pre-rewrite parmed-slice-based behaviour byte for
+    byte): the 3rd pointer < 0 marks a suppressed 1-4 interaction (skipped)
+    and the 4th < 0 marks an improper (skipped). Only entries whose first atom
+    belongs to *atom_indices* are kept (AMBER bonded-term sections only ever
+    reference atoms within a single connected/bonded molecule, so checking the
+    first atom is sufficient -- see ``docs/specs/fast-amber-loader.md`` §3(B)).
+    ``SCEE``/``SCNB`` factors are absorbed into the returned charge product and
+    epsilon respectively. Pairs already accounted for as 1-4 interactions are
+    removed from the exclusion list so each pair appears in exactly one table.
 
     Parameters
     ----------
-    parm_data : dict
-        Raw section data: either ``parm.parm_data`` or the ``raw_data`` dict
-        from :func:`parse_prmtop`.  Must contain the LJ 1-4 (or plain LJ)
-        coefficient tables, ``NONBONDED_PARM_INDEX``, ``SCEE_SCALE_FACTOR``,
-        ``SCNB_SCALE_FACTOR``, the dihedral pointer lists, and the
+    raw_data : dict
+        The ``raw_data`` dict from :func:`parse_prmtop` (WHOLE system, prmtop
+        order). Must contain the LJ 1-4 (or plain LJ) coefficient tables,
+        ``NONBONDED_PARM_INDEX``, ``SCEE_SCALE_FACTOR``, ``SCNB_SCALE_FACTOR``,
+        the dihedral pointer lists, ``ATOM_TYPE_INDEX``, ``CHARGE``, and the
         excluded-atom lists.
-    parm : pmd.amber.AmberParm
-        Loaded structure; supplies per-atom charge / ``nb_idx`` / ``idx`` and
-        the ``NTYPES`` pointer, mirroring :func:`load_cmap`'s use of *parm*.
+    atom_indices : np.ndarray
+        Ascending 0-based GLOBAL prmtop atom indices of the one molecule
+        instance/prototype to build tables for (see
+        ``amber_loader.MoleculePartition``).
     ene_conv : float, optional
         kcal mol⁻¹ -> target energy unit factor (default: kcal -> kJ).
     length_conv : float, optional
@@ -679,29 +532,42 @@ def load_nonbonded_exceptions(
     Returns
     -------
     NonbondedTables
-        ``scaling14`` and ``exclusions`` record lists, in local atom indices.
+        ``scaling14`` and ``exclusions`` record lists, in LOCAL (0-based,
+        position within *atom_indices*) atom indices.
     """
-    num_types: int = parm.ptr("NTYPES")
-    atom_by_idx: dict[int, pmd.Atom] = {a.idx: a for a in parm.atoms}
+    natom_total = len(raw_data["ATOM_NAME"])
+    local_of_global = np.full(natom_total, -1, dtype=np.int64)
+    local_of_global[atom_indices] = np.arange(len(atom_indices), dtype=np.int64)
 
-    lj14_a = parm_data.get("LENNARD_JONES_14_ACOEF")
+    num_types = int(raw_data["POINTERS"][1])
+    charge = np.asarray(raw_data["CHARGE"], dtype=np.float64)
+    nb_type_index = np.asarray(raw_data["ATOM_TYPE_INDEX"], dtype=np.int64)  # 1-based
+
+    lj14_a = raw_data.get("LENNARD_JONES_14_ACOEF")
     if lj14_a is None:
-        lj14_a = parm_data["LENNARD_JONES_ACOEF"]
-    lj14_b = parm_data.get("LENNARD_JONES_14_BCOEF")
+        lj14_a = raw_data["LENNARD_JONES_ACOEF"]
+    lj14_b = raw_data.get("LENNARD_JONES_14_BCOEF")
     if lj14_b is None:
-        lj14_b = parm_data["LENNARD_JONES_BCOEF"]
-    nb_index = parm_data["NONBONDED_PARM_INDEX"]
-    scee_factors = parm_data["SCEE_SCALE_FACTOR"]
-    scnb_factors = parm_data["SCNB_SCALE_FACTOR"]
+        lj14_b = raw_data["LENNARD_JONES_BCOEF"]
+    lj14_a = np.asarray(lj14_a, dtype=np.float64)
+    lj14_b = np.asarray(lj14_b, dtype=np.float64)
+    nb_index = np.asarray(raw_data["NONBONDED_PARM_INDEX"], dtype=np.int64)
+    scee_factors = np.asarray(raw_data["SCEE_SCALE_FACTOR"], dtype=np.float64)
+    scnb_factors = np.asarray(raw_data["SCNB_SCALE_FACTOR"], dtype=np.float64)
 
     tables = NonbondedTables()
     seen_14: set[tuple[int, int]] = set()
 
-    # list(...) + list(...) so this works whether the sections are Python
-    # lists (parm.parm_data) or numpy arrays (parse_prmtop raw_data); '+' on
-    # numpy arrays would element-wise add rather than concatenate.
-    dihedral_ptrs = list(parm_data["DIHEDRALS_INC_HYDROGEN"]) + list(
-        parm_data["DIHEDRALS_WITHOUT_HYDROGEN"]
+    # INC_HYDROGEN before WITHOUT_HYDROGEN -- matches the pre-rewrite
+    # (parmed-slice-based) function's iteration order exactly. (Note this is
+    # the REVERSE of the WITHOUT-then-INC order ParmEd/amber_loader use to
+    # build the `.dihedrals` collection for periodic-torsion ENERGY terms --
+    # a pre-existing inconsistency in this codebase, preserved here rather
+    # than "fixed", since fixing it could silently change which duplicate 1-4
+    # pair record (rare: two dihedral paths sharing the same (i, l) atoms with
+    # different SCEE/SCNB) wins the `seen_14` dedup.
+    dihedral_ptrs = list(raw_data.get("DIHEDRALS_INC_HYDROGEN", [])) + list(
+        raw_data.get("DIHEDRALS_WITHOUT_HYDROGEN", [])
     )
 
     for ii in range(0, len(dihedral_ptrs), 5):
@@ -712,21 +578,22 @@ def load_nonbonded_exceptions(
         if l_raw < 0:  # improper dihedral
             continue
 
-        atom_i_idx = int(i_raw) // 3
-        atom_l_idx = int(l_raw) // 3
+        atom_i_g = int(i_raw) // 3
+        atom_l_g = int(l_raw) // 3
 
-        if atom_i_idx not in atom_by_idx or atom_l_idx not in atom_by_idx:
+        local_i = int(local_of_global[atom_i_g])
+        if local_i < 0:
+            continue  # not this instance
+        local_l = int(local_of_global[atom_l_g])
+        if local_l < 0:
             continue
 
-        atom_i = atom_by_idx[atom_i_idx]
-        atom_l = atom_by_idx[atom_l_idx]
-
-        key = (min(atom_i_idx, atom_l_idx), max(atom_i_idx, atom_l_idx))
+        key = (min(local_i, local_l), max(local_i, local_l))
         if key in seen_14:
             continue
 
-        nb_i = atom_i.nb_idx - 1  # ParmEd nb_idx is 1-based
-        nb_l = atom_l.nb_idx - 1
+        nb_i = int(nb_type_index[atom_i_g]) - 1  # 1-based -> 0-based
+        nb_l = int(nb_type_index[atom_l_g]) - 1
         pair_idx = int(nb_index[nb_i * num_types + nb_l]) - 1
         if pair_idx < 0:
             continue
@@ -743,15 +610,15 @@ def load_nonbonded_exceptions(
             epsilon_kj = 0.0
             sigma_nm = 1.0 * length_conv  # placeholder; epsilon is 0
 
-        scee = scee_factors[int(dtype_idx) - 1]
-        scnb = scnb_factors[int(dtype_idx) - 1]
+        scee = float(scee_factors[int(dtype_idx) - 1])
+        scnb = float(scnb_factors[int(dtype_idx) - 1])
 
         seen_14.add(key)
         tables.scaling14.append(
             Scaling14Record(
                 i_local=key[0],
                 l_local=key[1],
-                charge_product=atom_i.charge * atom_l.charge / scee,
+                charge_product=float(charge[atom_i_g] * charge[atom_l_g]) / scee,
                 epsilon=epsilon_kj / scnb,
                 sigma=sigma_nm,
             )
@@ -760,26 +627,26 @@ def load_nonbonded_exceptions(
     logger.debug("Parsed %d 1-4 scaling pairs from prmtop.", len(tables.scaling14))
 
     # ---- Explicit exclusions -------------------------------------------- #
-    n_excluded_list = parm_data["NUMBER_EXCLUDED_ATOMS"]
-    excluded_atoms = parm_data["EXCLUDED_ATOMS_LIST"]
+    n_excluded_list = np.asarray(raw_data["NUMBER_EXCLUDED_ATOMS"], dtype=np.int64)
+    excluded_atoms = np.asarray(raw_data["EXCLUDED_ATOMS_LIST"], dtype=np.int64)
+    offsets = np.concatenate(([0], np.cumsum(n_excluded_list)))
 
     seen_excl: set[tuple[int, int]] = set(seen_14)
-    offset = 0
-    for i_atom in range(len(parm.atoms)):
-        n = int(n_excluded_list[i_atom])
-        for j_atom_1based in excluded_atoms[offset : offset + n]:
-            j = int(j_atom_1based)
-            if j <= 0:
+    for local_i, g in enumerate(atom_indices.tolist()):
+        n = int(n_excluded_list[g])
+        off = int(offsets[g])
+        for j_1based in excluded_atoms[off : off + n].tolist():
+            if j_1based <= 0:
                 continue  # j=0 placeholder for atoms with no exclusions
-            j_idx = j - 1  # prmtop is 1-based
-            if j_idx not in atom_by_idx:
+            j_g = j_1based - 1  # prmtop is 1-based
+            local_j = int(local_of_global[j_g])
+            if local_j < 0:
                 continue
-            key = (min(i_atom, j_idx), max(i_atom, j_idx))
+            key = (min(local_i, local_j), max(local_i, local_j))
             if key in seen_excl:
                 continue
             seen_excl.add(key)
             tables.exclusions.append(ExclusionRecord(i_local=key[0], j_local=key[1]))
-        offset += n
 
     logger.debug("Parsed %d exclusions from prmtop.", len(tables.exclusions))
     return tables

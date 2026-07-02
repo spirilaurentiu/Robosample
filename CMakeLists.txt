@@ -593,6 +593,32 @@ if(BUILD_TESTING)
     robosample_add_test(${_test_name})
   endforeach()
 
+  # ---------------------------------------------------------------------------
+  # TestRoboticsOracle*-only wiring (docs/specs/robotics-oracle-differential.md
+  # §9): the fixtures are <case>.npz + <case>.manifest.json on disk, loaded at
+  # test runtime via the vendored cnpy (tests/third_party/cnpy) + a
+  # CMake-defined fixture-dir macro. Test-scoped only -- no other test needs
+  # cnpy/zlib, so this is added onto the TestRoboticsOracle* targets alone
+  # rather than into robosample_add_test()/robosample_objects. Matches BOTH
+  # TestRoboticsOracle (Scope A, tests/fixtures/robotics_oracle) and
+  # TestRoboticsOracleMolecule (Scope B, tests/fixtures/robotics_oracle_molecules)
+  # -- same cnpy/JSON machinery, disjoint fixture directories (§4.2/§9).
+  # ---------------------------------------------------------------------------
+  foreach(_oracle_target TestRoboticsOracle TestRoboticsOracleMolecule)
+    if(TARGET ${_oracle_target})
+      find_package(ZLIB REQUIRED)
+      target_sources(${_oracle_target} PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/third_party/cnpy/cnpy.cpp)
+      target_include_directories(${_oracle_target} PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/third_party/cnpy
+        ${CMAKE_SOURCE_DIR}/tests/third_party/sha256)
+      target_link_libraries(${_oracle_target} PRIVATE ZLIB::ZLIB)
+      target_compile_definitions(${_oracle_target} PRIVATE
+        ROBOTICS_ORACLE_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures/robotics_oracle"
+        ROBOTICS_ORACLE_MOLECULES_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures/robotics_oracle_molecules")
+    endif()
+  endforeach()
+
   # ===========================================================================
   # OpenMM's own test suite (platform-independent API + serialization + the one
   # selected backend's platform tests)

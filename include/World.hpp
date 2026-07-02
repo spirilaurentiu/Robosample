@@ -277,6 +277,46 @@ class World {
         return docking_;
     }
 
+    // Number of velocity/momentum coordinates actually drawn for this world
+    // (ensemble-validation foundations spec, Sec. 2). Internal/torsional world:
+    // nu - n_C, where n_C is the SAME loop-closure constraint count consumed by
+    // calcConstraintLogDet (constraints_.numConstraints()) -- the removed
+    // holonomic velocity constraints. Cartesian world: model_.nu is NOT the
+    // physical dof (Cartesian worlds are modelled with nu==1 body, see
+    // buildModel), so this instead reads OpenMM's own dof count
+    // (3*N_real - constraints - 3*[CMMotionRemover present]) off the shared
+    // OpenMMContext system.
+    [[nodiscard]] int nDof() const {
+        if (cartesian_) {
+            return OpenMMContext::get().getNumDegreesOfFreedom();
+        }
+        return model_.nu - constraints_.numConstraints();
+    }
+
+    // Number of loop-closure DistanceConstraints (ConstraintSet::distance) this
+    // world's molecule graph produced -- 0 on every acyclic molecule, >=1 once a
+    // ring-closing bond was cut into a RATTLE constraint (World.cpp ~:679). Exposed
+    // for the Tier-2 cyclic-path structural guard (docs/specs/
+    // fixman-idealized-chains-validation.md T2.0): no other Python-reachable
+    // signal distinguishes "the loop path never fired" from "it fired and is 0".
+    [[nodiscard]] int numLoopConstraints() const {
+        return constraints_.numConstraints();
+    }
+
+    // Loop-closure Fixman term ln det(G M^-1 G^T) at the CURRENT geometry
+    // (Constraints.hpp::calcConstraintLogDet) -- the same quantity calcFixman()
+    // folds into the acceptance Hamiltonian, exposed standalone (no sampling
+    // round required) so a structural test can assert it is non-zero and
+    // conformation-dependent on a cyclic molecule. Realizes position + articulated
+    // -body inertias at the state's CURRENT q first (idempotent, cheap: this is
+    // exactly calcFixman()'s own precondition). Returns 0 verbatim on an acyclic
+    // world (ConstraintSet::calcConstraintLogDet's own no-op contract).
+    [[nodiscard]] double currentConstraintLogDet() {
+        RobotEngine::realizePosition(model_, state_);
+        RobotEngine::realizeArticulatedBodyInertias(model_, state_);
+        return constraints_.calcConstraintLogDet(model_, state_);
+    }
+
     // --- last-move telemetry (for the [rex] log) ---
     [[nodiscard]] bool lastAccepted() const {
         return lastAccepted_;

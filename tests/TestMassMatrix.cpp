@@ -17,6 +17,7 @@
 #include <array>
 #include <cmath>
 #include <gtest/gtest.h>
+#include <iostream>
 #include <vector>
 
 #include "RobotBuilders.hpp"
@@ -541,4 +542,114 @@ TEST(MassMatrixDense, CorruptingMkGBreaksBothDensePaths) {
     const Real lnDense = robo_linalg::logDetSymPD(Mclean.data(), n);
     EXPECT_GT(std::abs(lnDetM - lnDense), 1e-3)
         << "corrupting Mk_G did NOT break the log-det match -- paths are not independent";
+}
+
+// ---------------------------------------------------------------------------
+//  P5 (docs/specs/singular-dof-fixman.md S8 INVARIANT "path consistency", CC1/
+//  C6): calcLogDetM's pseudo-determinant MUST exclude a structural phantom's
+//  null hinge-inertia direction -- the entire point of the pseudoLogDet fix --
+//  rather than silently reverting to the pre-fix "1e-300 clamp keeps it as a
+//  finite residue" behavior. Nothing else in the suite pins this down: the
+//  molecule oracle (TestRoboticsOracleMolecule.cpp) `continue`s past the
+//  logDetM comparison whenever the tree is singular, and the
+//  Cyclic1APQPhantomLogDetIsRunConstant LEMMA computes per-body ln(D_b)
+//  directly, never through calcLogDetM.
+//
+//  Construction (spec S4 derivation, literal case): a leaf single-atom Torsion
+//  body whose ONE atom sits exactly AT the body origin, on its own rotation
+//  axis (c=0 => P_b = [[0,0],[0,0]] block-wise: UnitInertia(0,0,0) about the
+//  origin has no off-axis mass to begin with) -- so D_b = ~H_b P_b H_b is
+//  bit-exact 0.0, not merely tiny, no floating-point argument required. Paired
+//  with a normal, well-conditioned Ball-jointed body so the tree is
+//  non-trivial (a lone phantom would make the WHOLE tree singular, the
+//  ill-posed case the molecule oracle explicitly guards against).
+//
+//  Oracle: calcLogDetM on the two-body model MUST equal calcLogDetM on a
+//  SEPARATE one-body model containing only the well-conditioned body (built
+//  with identical q) -- by definition, that reduced-model value IS
+//  "sum over non-null bodies of ln det D_b", since the well-conditioned body
+//  is the tree's only non-null body either way. This is a genuinely
+//  independent comparison (different model topology, not comparing
+//  calcLogDetM to itself under the same inputs) and it is DISCRIMINATING: if
+//  pseudoLogDet regressed to the pre-fix floor-to-finite convention (simulated
+//  below via the test-local, deliberately-unfixed robo_linalg::logDetSymPD,
+//  tests/RobotLinearAlgebra.hpp S1.B), the two-body calcLogDetM would pick up
+//  an extra ln(clamped D_phantom) ~= ln(1e-300) ~= -690.78 term that the
+//  one-body reference never sees -- an ~O(690) swing, several orders past any
+//  plausible tolerance, so a reversion cannot slip through as noise.
+// ---------------------------------------------------------------------------
+TEST(MassMatrix, LogDetMExcludesStructuralPhantomNullDirection) {
+    // Body 1: well-conditioned Ball joint (3 dof), ordinary mass properties.
+    BodySpec wellConditioned;
+    wellConditioned.parent = 0;
+    wellConditioned.joint = JointType::Ball;
+    wellConditioned.X_PF = Transform(Rotation(Real(0.4), robo::XAxis), Vec3(0.2, -0.1, 0.05));
+    wellConditioned.X_BM = Transform(Rotation(Real(-0.3), robo::YAxis), Vec3(0.05, 0.1, -0.05));
+    wellConditioned.mass = Real(1.5);
+    wellConditioned.com_B = Vec3(0.1, -0.05, 0.2);
+    wellConditioned.inertia_B = UnitInertia(Real(0.4), Real(0.5), Real(0.6));
+
+    // Body 2: structural phantom -- leaf single-atom Torsion, atom AT the body
+    // origin (on the torsion axis by construction, spec S4). X_BM is identity
+    // so the torsion axis (M frame z, H_FM's constant angular part) is exactly
+    // the body's own z axis. X_PF carries a non-trivial ancestor rotation on
+    // purpose (proves the D_b==0 result does not depend on R_GF, spec S4/
+    // realizeArticulatedBodyInertias S3 comment).
+    BodySpec phantom;
+    phantom.parent = 0;
+    phantom.joint = JointType::Torsion;
+    phantom.X_PF = Transform(Rotation(Real(0.9), robo::XAxis), Vec3(0.3, -0.2, 0.1));
+    phantom.X_BM = Transform();      // identity: torsion axis == body z axis
+    phantom.mass = Real(12.0);
+    phantom.com_B = Vec3(0, 0, 0);   // atom AT the body origin
+    phantom.inertia_B = UnitInertia(Real(0), Real(0), Real(0)); // point mass at origin: exactly zero
+
+    RobotModel mFull = buildForest({wellConditioned, phantom});
+    rtest::attachAtoms(mFull, /*body=*/2, {Vec3(0, 0, 0)}, {Real(12.0)});
+    RobotState sFull;
+    sFull.allocateFull(mFull);
+    std::fill(sFull.q(), sFull.q() + mFull.nq, Real(0));
+    sFull.q()[0] = Real(1); // body 1's quaternion (qOff==0): identity (w,x,y,z)=(1,0,0,0)
+    sFull.q()[4] = Real(0.37); // body 2's own torsion angle -- arbitrary, D_b is q-independent
+    std::fill(sFull.u(), sFull.u() + mFull.nu, Real(0));
+    prep(mFull, sFull);
+
+    // Independent reduced model: the well-conditioned body ALONE, identical q.
+    RobotModel mReduced = buildForest({wellConditioned});
+    RobotState sReduced;
+    sReduced.allocateFull(mReduced);
+    std::fill(sReduced.q(), sReduced.q() + mReduced.nq, Real(0));
+    sReduced.q()[0] = Real(1);
+    std::fill(sReduced.u(), sReduced.u() + mReduced.nu, Real(0));
+    prep(mReduced, sReduced);
+
+    const Real lnDetFull = RobotEngine::calcLogDetM(mFull, sFull);
+    const Real lnDetNonNullOnly = RobotEngine::calcLogDetM(mReduced, sReduced);
+
+    ASSERT_TRUE(std::isfinite(lnDetFull)) << "calcLogDetM must stay finite in the presence of a structural phantom";
+
+    // Sanity/precondition: the phantom's own D_b really is null (structurally,
+    // not just "small at this q") -- otherwise this test would be vacuous.
+    const int uOffPhantom = mFull.bodyUIndex[2];
+    const SpatialVec HbPhantom = sFull.H()[uOffPhantom];
+    const Real DbPhantom = dot(HbPhantom, sFull.P()[2] * HbPhantom);
+    ASSERT_EQ(DbPhantom, Real(0)) << "atom-at-origin construction must give a bit-exact-null D_b (spec S4)";
+
+    // THE assertion: calcLogDetM on the full (phantom-containing) model equals
+    // the sum over non-null bodies only -- the phantom contributes 0, not
+    // ln(residue).
+    EXPECT_NEAR(lnDetFull, lnDetNonNullOnly, 1e-9)
+        << "calcLogDetM must EXCLUDE the structural phantom's null direction (CC1/C6)";
+
+    // Discrimination: what the PRE-FIX floor-to-finite convention would have
+    // produced for the phantom's contribution (test-local reference kernel,
+    // tests/RobotLinearAlgebra.hpp, deliberately NOT updated -- S1.B).
+    const Real buggyPhantomTerm = robo_linalg::logDetSymPD(&DbPhantom, 1);
+    const Real lnDetIfBuggy = lnDetNonNullOnly + buggyPhantomTerm;
+    const Real swing = std::abs(lnDetFull - lnDetIfBuggy);
+    std::cout << "[ MassMatrix ] LogDetMExcludesStructuralPhantomNullDirection: lnDetFull=" << lnDetFull
+              << " lnDetNonNullOnly=" << lnDetNonNullOnly << " buggyPhantomTerm=" << buggyPhantomTerm
+              << " lnDetIfBuggy=" << lnDetIfBuggy << " swing=" << swing << std::endl;
+    EXPECT_GT(swing, 50.0) << "reverting calcLogDetM to the old 1e-300 floor must be clearly discriminated"
+                               " (expected swing ~ -ln(1e-300) ~= 690.78 here)";
 }

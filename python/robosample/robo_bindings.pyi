@@ -1049,6 +1049,10 @@ class World:
         """
         Make this a per-molecule NCMC world: soften [atom_begin,atom_end) x rest nonbonded during a lambda:1->0->1 switch. Call AFTER add_sampler.
         """
+    def current_constraint_log_det(self) -> float:
+        """
+        Loop-closure Fixman term ln det(G M^-1 G^T) at the CURRENT geometry (0 on an acyclic world). No sampling round required; realizes position + articulated-body inertias at the state's current q first.
+        """
     def set_body_mass_scale(self, body: typing.SupportsInt | typing.SupportsIndex, scale: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Per-body form of set_mass_scale_by_joint (scale=1.0 is physical/off).
@@ -1090,3 +1094,13 @@ class World:
     @property
     def is_docking(self) -> bool:
         ...
+    @property
+    def n_dof(self) -> int:
+        """
+        Number of velocity/momentum coordinates actually drawn for this world (ensemble-validation foundations spec, Sec. 2). Internal/torsional world: nu - n_C (summed joint mobilities minus removed loop-closure velocity constraints, n_C == 0 on an acyclic molecule). Cartesian world: OpenMM's own count 3*N_real - constraints - 3*[center-of-mass removal active], NOT model.nu (which is not the physical dof for a Cartesian world).
+        """
+    @property
+    def num_loop_constraints(self) -> int:
+        """
+        Number of ring-closing loop DistanceConstraints this world's molecule graph produced (0 on every acyclic molecule). Structural guard for the cyclic Fixman path (docs/specs/fixman-idealized-chains-validation.md T2.0).
+        """

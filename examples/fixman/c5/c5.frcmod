@@ -1,0 +1,17 @@
+c5 custom parameters
+MASS
+CT  14.000  0.878
+
+BOND
+CT-CT  83.66  1.540
+
+ANGLE
+CT-CT-CT  43.46  109.0
+
+DIHE
+CT-CT-CT-CT  1  0.0  0.0  1.0
+
+IMPROPER
+
+NONBON
+CT  0.0000  0.0000

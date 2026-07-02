@@ -85,7 +85,7 @@ Known Limitations
 
 from __future__ import annotations
 
-import parmed as pmd
+from typing import Any
 
 # ==========================================================================
 # Aromatic atom types
@@ -364,9 +364,10 @@ def is_multiple_like(a1: str, a2: str) -> bool:
     return a1 in MULTIPLE_BOND_TYPES and a2 in MULTIPLE_BOND_TYPES
 
 
-def is_rigid_bond(parent_atom: pmd.Atom, child_atom: pmd.Atom) -> bool:
+def is_rigid_bond(parent_atom: Any, child_atom: Any) -> bool:
     """
-    Determine whether the bond between two parmed.Atom objects is rigid.
+    Determine whether the bond between two atom objects is rigid (a real
+    ParmEd ``Atom`` or the fast-loader's atom shim -- see amber_loader.py).
 
     Applies three heuristic criteria in priority order after an optional
     fast-path bond-order check:
@@ -390,9 +391,9 @@ def is_rigid_bond(parent_atom: pmd.Atom, child_atom: pmd.Atom) -> bool:
 
     Parameters
     ----------
-    parent_atom : parmed.Atom
+    parent_atom : Any
         One endpoint of the bond.
-    child_atom : parmed.Atom
+    child_atom : Any
         The other endpoint of the bond.
 
     Returns
@@ -404,7 +405,7 @@ def is_rigid_bond(parent_atom: pmd.Atom, child_atom: pmd.Atom) -> bool:
     ------
     AttributeError
         If either atom lacks a ``type`` attribute, indicating a malformed
-        or incompletely initialised parmed.Atom object.
+        or incompletely initialised atom object.
 
     Notes
     -----
@@ -463,21 +464,21 @@ def is_rigid_bond(parent_atom: pmd.Atom, child_atom: pmd.Atom) -> bool:
 # ==========================================================================
 
 
-def _find_bond(a1: pmd.Atom, a2: pmd.Atom) -> "pmd.Bond | None":
+def _find_bond(a1: Any, a2: Any) -> Any:
     """
-    Return the parmed.Bond connecting a1 and a2, or None if not found.
+    Return the bond object connecting a1 and a2, or None if not found.
 
     Iterates over the bond list of a1 (complexity O(degree(a1))) and
     checks object identity for both endpoints.
 
     Parameters
     ----------
-    a1 : parmed.Atom
-    a2 : parmed.Atom
+    a1 : Any
+    a2 : Any
 
     Returns
     -------
-    parmed.Bond or None
+    Any or None
     """
     for bond in a1.bonds:
         if bond.atom1 is a2 or bond.atom2 is a2:

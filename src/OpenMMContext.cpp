@@ -10,19 +10,15 @@
 #include <string>
 #include <vector>
 
+#include "../openmm/platforms/reference/include/ReferencePlatform.h"
+
 #if USE_CPU
 #    include "../openmm/platforms/cpu/include/CpuPlatform.h"
-#elif USE_REFERENCE
-#    include "../openmm/platforms/reference/include/ReferencePlatform.h"
 #elif USE_OPENCL
 #    include "../openmm/platforms/opencl/include/OpenCLPlatform.h"
 #elif USE_CUDA
 #    include "../openmm/platforms/cuda/include/CudaPlatform.h"
 #endif
-
-namespace {
-constexpr double kPi = 3.14159265358979323846;
-} // namespace
 
 // Multiple-timestep (MTS) r-RESPA Verlet integrator. groups = (force group,
 // substeps); slower groups have fewer substeps. Built by initialize() when MTS
@@ -485,10 +481,12 @@ auto OpenMMContext::createGBSAOBCForce(const SystemTopology& systemTopology) -> 
     // Replicate native OpenMM's default implicit solvent. `AmberPrmtopFile
     // .createSystem(implicitSolvent=OBC2)` with no salt builds this same built-in
     // GBSAOBCForce and, because its default sasaMethod is 'ACE', leaves the ACE
-    // nonpolar surface-area term on at the constructor default
-    // (surfaceAreaEnergy = 2.25936 kJ/mol/nm^2). We deliberately do NOT touch
-    // setSurfaceAreaEnergy so we track that same default -- zeroing it would drop
-    // the ~15 kJ/mol ACE term and diverge from the native OpenMM reference.
+    // nonpolar surface-area term on (surfaceAreaEnergy = 2.25936 kJ/mol/nm^2). Set
+    // it explicitly (rather than relying on OpenMM::GBSAOBCForce's own constructor
+    // default) so this is not silently dependent on that default staying
+    // 2.25936 across vendored-OpenMM versions -- zeroing/losing it would drop the
+    // ~15 kJ/mol ACE term and diverge from the native OpenMM reference.
+    force->setSurfaceAreaEnergy(2.25936);
     force->setNonbondedMethod(gbsaForceMethod);
     force->setCutoffDistance(systemTopology.nonbondedCutoff);
     for (int index = 0; index < systemTopology.numAtoms; ++index) {
@@ -499,9 +497,63 @@ auto OpenMMContext::createGBSAOBCForce(const SystemTopology& systemTopology) -> 
     return force;
 }
 
-auto OpenMMContext::createCustomNonbondedForce(const SystemTopology& /*systemTopology*/)
-    -> OpenMM::CustomNonbondedForce* {
-    throw std::runtime_error("createCustomNonbondedForce (NBFIX) not implemented yet");
+auto OpenMMContext::createCustomNonbondedForce(const SystemTopology& sys) -> OpenMM::CustomNonbondedForce* {
+    // P1: the NBFIX A/B-coefficient table must be well-formed before it is fed to
+    // OpenMM::Discrete2DFunction (which does no bounds checking of its own).
+    if (sys.numNBTypes <= 0) {
+        throw std::runtime_error("createCustomNonbondedForce (NBFIX): numNBTypes must be > 0");
+    }
+    const std::size_t expectedSize =
+        static_cast<std::size_t>(sys.numNBTypes) * static_cast<std::size_t>(sys.numNBTypes);
+    if (sys.aCoef.size() != expectedSize || sys.bCoef.size() != expectedSize) {
+        throw std::runtime_error("createCustomNonbondedForce (NBFIX): aCoef/bCoef size must equal "
+                                 "numNBTypes^2");
+    }
+    if (static_cast<int>(sys.atomsNonbondedIndex.size()) != sys.numAtoms) {
+        throw std::runtime_error("createCustomNonbondedForce (NBFIX): atomsNonbondedIndex.size() must "
+                                 "equal numAtoms");
+    }
+    for (int index = 0; index < sys.numAtoms; ++index) {
+        const int type = sys.atomsNonbondedIndex[index];
+        if (type < 0 || type >= sys.numNBTypes) {
+            throw std::runtime_error("createCustomNonbondedForce (NBFIX): atomsNonbondedIndex["
+                                     + std::to_string(index) + "] out of range [0, numNBTypes)");
+        }
+    }
+    // P2: 12-6-4 (LENNARD_JONES_CCOEF) is not represented in SystemTopology; there
+    // is no field to check, so reaching here with such data would silently drop the
+    // C/r^4 term. Nothing to guard against today (gfcd has none) -- see spec OQ1.
+
+    auto* force = new OpenMM::CustomNonbondedForce(
+        "(a/r6)^2-b/r6; r6=r^6; a=acoef(type1, type2); b=bcoef(type1, type2);");
+    force->addTabulatedFunction("acoef",
+                                new OpenMM::Discrete2DFunction(sys.numNBTypes, sys.numNBTypes, sys.aCoef));
+    force->addTabulatedFunction("bcoef",
+                                new OpenMM::Discrete2DFunction(sys.numNBTypes, sys.numNBTypes, sys.bCoef));
+    force->addPerParticleParameter("type");
+    for (int index = 0; index < sys.numAtoms; ++index) {
+        force->addParticle({double(sys.atomsNonbondedIndex[index])});
+    }
+
+    // Method/cutoff branch mirroring createNonbondedForce (CustomNonbondedForce has
+    // no Ewald/PME reciprocal-space option of its own, so every periodic method
+    // collapses to CutoffPeriodic here -- same pattern as createAlchemyDecouplingForces).
+    if (isPeriodic(sys.nonbondedMethod)) {
+        force->setNonbondedMethod(OpenMM::CustomNonbondedForce::CutoffPeriodic);
+        force->setCutoffDistance(sys.nonbondedCutoff);
+        force->setUseLongRangeCorrection(true);
+    } else if (sys.nonbondedMethod == NonbondedMethod::CutoffNonPeriodic) {
+        force->setNonbondedMethod(OpenMM::CustomNonbondedForce::CutoffNonPeriodic);
+        force->setCutoffDistance(sys.nonbondedCutoff);
+    } else {
+        force->setNonbondedMethod(OpenMM::CustomNonbondedForce::NoCutoff);
+    }
+
+    // I2: exclude every pair the main NonbondedForce already accounts for (1-4
+    // exceptions with CHAMBER-specific sigma/epsilon, plus zeroed 1-2/1-3
+    // exclusions) so LJ is never double-counted between the two forces.
+    addStandardExclusions(force, sys);
+    return force;
 }
 
 auto OpenMMContext::createAlchemyCorrectionForce(const SystemTopology& sys) -> OpenMM::CustomNonbondedForce* {
@@ -544,8 +596,7 @@ auto OpenMMContext::createAlchemyCorrectionForce(const SystemTopology& sys) -> O
     return f;
 }
 
-void OpenMMContext::addStandardExclusions(OpenMM::CustomNonbondedForce* force,
-                                          const SystemTopology& sys) {
+void OpenMMContext::addStandardExclusions(OpenMM::CustomNonbondedForce* force, const SystemTopology& sys) {
     // scaling14 (1-4) and exclusion (1-2/1-3) pairs are disjoint -- the main
     // NonbondedForce adds both as exceptions without duplicate-key errors, so the
     // same two loops here never double-add a pair.
@@ -616,7 +667,7 @@ auto OpenMMContext::createPeriodicTorsionForce(const SystemTopology& systemTopol
 auto OpenMMContext::createImproperHarmonicTorsionForce(const SystemTopology& systemTopology)
     -> OpenMM::CustomTorsionForce* {
     std::ostringstream expr;
-    expr << std::setprecision(17) << "k*min(dtheta, 2*" << kPi << "-dtheta)^2; dtheta=abs(theta-theta0)";
+    expr << std::setprecision(17) << "k*min(dtheta, 2*" << M_PI << "-dtheta)^2; dtheta=abs(theta-theta0)";
     auto* force = new OpenMM::CustomTorsionForce(expr.str());
     force->addPerTorsionParameter("k");
     force->addPerTorsionParameter("theta0");

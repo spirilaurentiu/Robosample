@@ -5,9 +5,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
-import parmed as pmd
 
-from . import prmtop_reader, topology
+from . import amber_loader, prmtop_reader, topology
 from .amber_dihedral_classifier import AmberDihedralClassifier
 from .amber_dihedral_types import DihedralType
 from .molecule_prototype import MoleculePrototype
@@ -19,7 +18,6 @@ from .robo_bindings import (
 )
 from .robo_bindings import Context as _Context
 from .secondary_structure import DSSPCode
-from .units import ANG_TO_NM
 
 
 @dataclass
@@ -148,35 +146,125 @@ class Context(_Context):
         self.system_topology.gbsa_solute_dielectric = 1.0
         self.system_topology.gbsa_solvent_dielectric = 78.5
 
-        # Parse files and do typing
+        # Parse files and do typing. Fully ParmEd-free as of fast-loader Step
+        # 4b (docs/specs/fast-amber-loader.md): dedup (a former Structure.split()
+        # call) and the per-prototype MoleculePrototype input (a former sliced
+        # ParmEd Structure) were already replaced in Step 4a by
+        # amber_loader.partition_molecules + amber_loader.PrototypeTopology
+        # below; box-vector construction and virtual-site (ExtraPoint) frame
+        # detection -- the last two ParmEd usages in this method -- are
+        # replaced below by amber_loader.box_vectors_from_lengths_angles and
+        # amber_loader.extract_virtual_sites, both driven off raw_data/
+        # atom_coords_nm alone. No topology-file load through ParmEd remains.
         parm_file = prmtop_reader.parse_prmtop(prmtop_path)
-        parm: pmd.amber.AmberParm = pmd.load_file(prmtop_path, xyz=inpcrd_path)
+        raw_data = parm_file["raw_data"]
 
-        # Look at NB fix
-        self.system_topology.num_nb_types = parm.pointers["NTYPES"]
+        # Direct, ParmEd-free coordinate read (component (A) of the
+        # fast-loader spec): a single vectorized (N,3) array in prmtop atom
+        # order, instead of per-atom `parm.atoms[i].xx/.xy/.xz` Python
+        # attribute access. `rst7_box` -- [a, b, c, alpha, beta, gamma] (nm,
+        # rad) or None -- is the raw box GEOMETRY parsed from the coordinate
+        # file's box line, if any; whether it is actually USED is decided
+        # below from IFBOX (POINTERS), not from its mere presence (see the
+        # periodicity block) -- some non-periodic rst7 files (e.g. a stripped
+        # CHAMBER system) carry a degenerate placeholder box line that must
+        # be ignored when IFBOX == 0.
+        atom_coords_nm, rst7_box = amber_loader.read_amber_coordinates(inpcrd_path)
+        natom_prmtop = len(raw_data["ATOM_NAME"])
+        if atom_coords_nm.shape[0] != natom_prmtop:
+            raise ValueError(
+                f"Coordinate file '{inpcrd_path}' has {atom_coords_nm.shape[0]} atoms, "
+                f"but topology '{prmtop_path}' has {natom_prmtop}."
+            )
+
+        # NTYPES (POINTERS[1], 0-based) -- number of distinct LJ atom types.
+        self.system_topology.num_nb_types = int(raw_data["POINTERS"][1])
         self.system_topology.a_coef, self.system_topology.b_coef = (
             prmtop_reader.load_lj_coefs(
-                parm_file["raw_data"],
+                raw_data,
                 self.system_topology.num_nb_types,
             )
         )
 
-        # parm.split() groups molecules by topology identity; one prototype per
-        # unique molecule type, plus the instance indices of every occurrence.
-        parm_prototypes: list[tuple[pmd.amber.AmberParm, list[int]]] = parm.split()
+        # NBFIX detection (docs/specs/fast-amber-loader.md §4a + the GAP
+        # flagged in docs/specs/loader-feature-matrix.md "Nonbonded" table):
+        # has_nbfix_fast reproduces OpenMM's own combining-rule-deviation
+        # check on the raw (unconverted) LJ A/B coefficient table. Setting
+        # this flag is what makes OpenMMContext.cpp::initialize's existing
+        # `if (systemTopology.hasNBfix) { createCustomNonbondedForce(...) }`
+        # guard fire (that function unconditionally raises "not implemented
+        # yet") -- an NBFIX prmtop must raise there instead of silently
+        # getting combining-rule LJ.
+        self.system_topology.has_nb_fix = bool(
+            prmtop_reader.has_nbfix_fast(
+                raw_data["NONBONDED_PARM_INDEX"],
+                self.system_topology.num_nb_types,
+                raw_data["LENNARD_JONES_ACOEF"],
+                raw_data["LENNARD_JONES_BCOEF"],
+            )
+        )
 
-        # Build one MoleculePrototype per unique type (parsing is expensive).
-        molecule_prototypes = [
-            MoleculePrototype(mol_struct, self.dihedral_classifier)
-            for mol_struct, _ in parm_prototypes
+        # Molecule-instance / prototype dedup (component (B) of the
+        # fast-loader spec, docs/specs/fast-amber-loader.md §3(B)/§5):
+        # replaces parm.split() with scipy connected-components over the bond
+        # graph plus a conservative per-instance fingerprint. Energy is
+        # invariant to prototype grouping/order (spec §5), so correctness
+        # only requires (a) never merging non-identical molecules and (b)
+        # numbering instances the same way ParmEd does -- both are gated by
+        # the loader differential test.
+        partition = amber_loader.partition_molecules(raw_data, natom_prmtop)
+
+        # Whole-system (prmtop order, 0-based) residue index and residue/atom
+        # name lookup. Used below both to build each prototype's
+        # PrototypeTopology (residue grouping) AND, after the instance loop,
+        # to build atoms_unique_name in one vectorized pass instead of one
+        # f-string call per atom. RESIDUE_POINTER holds each residue's 1-based
+        # first-atom index; searchsorted on the 0-based starts gives, for
+        # every prmtop atom, the 0-based index of the residue it belongs to.
+        residue_starts0 = np.asarray(raw_data["RESIDUE_POINTER"], dtype=np.int64) - 1
+        residue_of_atom = (
+            np.searchsorted(residue_starts0, np.arange(natom_prmtop), side="right") - 1
+        )
+        resname_by_residue = np.asarray(raw_data["RESIDUE_LABEL"])
+        resname_of_atom = resname_by_residue[residue_of_atom]
+        atom_name_of_atom = np.asarray(raw_data["ATOM_NAME"])
+
+        # Build one MoleculePrototype per unique prototype (parsing is
+        # expensive) from an amber_loader.PrototypeTopology built directly
+        # from the whole-system raw prmtop arrays at the representative
+        # (first-occurring) instance's atom indices -- component (C) of the
+        # fast-loader spec (docs/specs/fast-amber-loader.md §3(C)). Replaces
+        # the ParmEd `parm[mask]` slice (Structure.__getitem__ boolean mask),
+        # which rebuilds/prunes a full ParmEd object graph over the WHOLE
+        # system on every call and was the dominant remaining load-time cost.
+        molecule_prototypes = []
+        for atom_indices in partition.prototype_representative_atoms:
+            proto_topology = amber_loader.PrototypeTopology(
+                raw_data,
+                atom_indices,
+                atom_coords_nm,
+                residue_of_atom,
+                resname_by_residue,
+            )
+            molecule_prototypes.append(
+                MoleculePrototype(proto_topology, self.dihedral_classifier)
+            )
+
+        # Per-prototype BFS/compound->local (prmtop-order) permutation as a
+        # numpy array, cached once per UNIQUE prototype rather than rebuilt
+        # from the Python list on every instance (a water prototype alone can
+        # recur tens of thousands of times).
+        compound_to_local_by_proto: list[np.ndarray] = [
+            np.asarray(proto.compound_to_local, dtype=np.int64)
+            for proto in molecule_prototypes
         ]
 
-        # Flatten into (instance_index, prototype_index), ordered by instance.
-        self.molecules: list[tuple[int, int]] = [
-            (instance_index, prototype_index)
-            for prototype_index, (_, instance_indices) in enumerate(parm_prototypes)
-            for instance_index in instance_indices
-        ]
+        # Flatten into (instance_index, prototype_index), ordered by instance
+        # (already ordered by construction; .sort() is a defensive no-op
+        # matching the pre-rewrite code's explicit ordering guarantee).
+        self.molecules: list[tuple[int, int]] = list(
+            enumerate(partition.prototype_of_instance)
+        )
         self.molecules.sort(key=lambda x: x[0])
 
         COLUMNS: dict[str, str | type] = {
@@ -189,7 +277,12 @@ class Context(_Context):
             "residue_name": str,
             "residue_idx": np.int32,
         }
-        self.df_bonds = pd.DataFrame(columns=COLUMNS)
+        # Bond-table rows are accumulated column-wise here and assembled into a
+        # single DataFrame after the instance loop.  Building the frame
+        # incrementally with pd.concat() per bond is O(N^2) -- each concat copies
+        # the whole accumulated frame -- and a large solvated system has >100k
+        # bonds, which is a dominant part of the multi-second load time.
+        bond_cols: dict[str, list] = {col: [] for col in COLUMNS}
 
         # ---- Local accumulators ----------------------------------------------
         acc: dict[str, list] = {}
@@ -204,8 +297,9 @@ class Context(_Context):
         # atoms_unique_name is assembled here rather than via _FIELD_SPECS: it
         # embeds GLOBAL (whole-system, prmtop) residue and atom numbers, which
         # depend on each instance's position and so cannot live on a shared
-        # prototype.  residue_off tracks the cumulative residue count in prmtop
-        # (instance) order, mirroring how counters["num_atoms"] tracks atoms.
+        # prototype. Built in ONE vectorized pass after the instance loop (see
+        # below) from atoms_prmtop_index + the whole-system resname_of_atom/
+        # atom_name_of_atom arrays precomputed above -- not per-atom f-strings.
         acc.setdefault("atoms_unique_name", [])
         acc.setdefault("atoms_x", [])
         acc.setdefault("atoms_y", [])
@@ -215,8 +309,6 @@ class Context(_Context):
         # (compound) order below, so the list position IS the global BFS index;
         # transmitted to C++ to write trajectory output in prmtop atom order.
         acc.setdefault("atoms_prmtop_index", [])
-
-        residue_off: int = 0
 
         # Per-molecule arrays (one entry per instance, NOT per atom):
         #   atoms_root_index : the root atom's index in the GLOBAL, BFS-ordered
@@ -231,13 +323,6 @@ class Context(_Context):
         acc.setdefault("atoms_root_index", [])
         acc.setdefault("root_mobilities", [])
         default_root_mobility = JointType.Rigid
-
-        # prmtop_to_global_index maps each 0-based prmtop atom index to its
-        # position in the BFS/compound-ordered global flat arrays.
-        # Built incrementally inside the per-atom loop below.
-        # Used after the loop by the CMAP section to convert 1-based prmtop
-        # atom indices in CMAP_INDEX to global indices.
-        self.prmtop_to_global_index: dict[int, int] = {}
 
         for instance_idx, prototype_idx in self.molecules:
             proto: MoleculePrototype = molecule_prototypes[prototype_idx]
@@ -263,40 +348,30 @@ class Context(_Context):
                 else:
                     dst.extend(x + atom_off for x in src)
 
-            # 2c. Per-atom unique name, stored in compound order like every
-            #     other atom array.  Format: "{resname}{res}_{atomname}_{atom}",
-            #     e.g. "ALA1_N_4".  Both numbers are GLOBAL and 1-based:
-            #       - res  = residue_off + (prototype-local residue idx) + 1
-            #       - atom = atom_off    + (prototype-local prmtop idx)  + 1
-            #     The trailing atom number is therefore the actual 1-based index
-            #     in the prmtop file (the array *position* stays compound order).
-            for c in range(proto.num_atoms):
-                local_idx = proto.compound_to_local[c]
-                a = proto.molecule.atoms[local_idx]
+            # 2c. Per-instance atom bookkeeping, vectorized over the whole
+            #     instance instead of one Python-level iteration per atom:
+            #     prmtop index = atom_off + local (prmtop-order) index within
+            #     the molecule; global (compound/BFS) index = atom_off + c,
+            #     i.e. arange(atom_off, atom_off + num_atoms) since atoms are
+            #     appended in compound order.
+            local_idx_arr = compound_to_local_by_proto[prototype_idx]
+            prmtop_idx_arr = atom_off + local_idx_arr
 
-                # global index = position in the compound-ordered flat array
-                global_idx: int = atom_off + c
+            # BFS->prmtop permutation for trajectory output (position in this
+            # list == global_idx, value == prmtop_idx); also doubles as the
+            # per-instance index set used below to gather coordinates and,
+            # after the loop, to build atoms_unique_name and
+            # prmtop_to_global_index in one vectorized pass.
+            acc["atoms_prmtop_index"].extend(prmtop_idx_arr.tolist())
 
-                # prmtop index = atom_off + local (prmtop-order) index within molecule
-                prmtop_idx: int = atom_off + local_idx
-                self.prmtop_to_global_index[prmtop_idx] = global_idx
-
-                # BFS->prmtop permutation for trajectory output (position in
-                # this list == global_idx, value == prmtop_idx).
-                acc["atoms_prmtop_index"].append(prmtop_idx)
-
-                # Per-INSTANCE coordinates: read from the full parm at this
-                # instance's global atom index (prmtop_idx), NOT from the shared
-                # prototype (which would superimpose every copy of a molecule
-                # type and blow the energy up to inf).
-                inst_atom = parm.atoms[prmtop_idx]
-                acc["atoms_x"].append(inst_atom.xx * ANG_TO_NM)
-                acc["atoms_y"].append(inst_atom.xy * ANG_TO_NM)
-                acc["atoms_z"].append(inst_atom.xz * ANG_TO_NM)
-                acc["atoms_unique_name"].append(
-                    f"{a.residue.name}{residue_off + a.residue.idx + 1}"
-                    f"_{a.name}_{prmtop_idx + 1}"
-                )
+            # Per-INSTANCE coordinates: gathered from the whole-system
+            # coordinate array at this instance's prmtop indices, NOT from the
+            # shared prototype (which would superimpose every copy of a
+            # molecule type and blow the energy up to inf).
+            inst_coords_nm = atom_coords_nm[prmtop_idx_arr]
+            acc["atoms_x"].extend(inst_coords_nm[:, 0].tolist())
+            acc["atoms_y"].extend(inst_coords_nm[:, 1].tolist())
+            acc["atoms_z"].extend(inst_coords_nm[:, 2].tolist())
 
             # 3. Advance counters
             for spec in topology._RANGE_SPECS:
@@ -306,25 +381,52 @@ class Context(_Context):
             for spec in topology._RANGE_SPECS:
                 acc[spec.end].append(counters[spec.counter])
 
-            # 5. Update bond DataFrame
+            # 5. Accumulate bond-table rows column-wise (assembled into df_bonds
+            #    once after the loop; see bond_cols above).
             for i in range(proto.num_bonds):
-                entry = {
-                    "atom1_idx": [proto.bonds_i[i]],
-                    "atom2_idx": [proto.bonds_j[i]],
-                    "molecule_idx": [instance_idx],
-                    "dihedral_type": [proto.bonds_dihedral_type[i]],
-                    "is_ring_closing": [proto.bonds_is_ring_closing[i]],
-                    "dss": [proto.bonds_secondary_structure[i]],
-                    "residue_name": ["UNK"],
-                    "residue_idx": [-1],
-                }
-                self.df_bonds = pd.concat(
-                    [self.df_bonds, pd.DataFrame(entry)],
-                    ignore_index=True,
-                )
+                bond_cols["atom1_idx"].append(proto.bonds_i[i])
+                bond_cols["atom2_idx"].append(proto.bonds_j[i])
+                bond_cols["molecule_idx"].append(instance_idx)
+                bond_cols["dihedral_type"].append(proto.bonds_dihedral_type[i])
+                bond_cols["is_ring_closing"].append(proto.bonds_is_ring_closing[i])
+                bond_cols["dss"].append(proto.bonds_secondary_structure[i])
+                bond_cols["residue_name"].append("UNK")
+                bond_cols["residue_idx"].append(-1)
 
-            # Advance the global residue offset for the next instance.
-            residue_off += proto.num_residues
+        # Assemble the bond table in one shot.  Building column-wise and
+        # constructing the DataFrame once is O(N) in total bonds, versus the
+        # O(N^2) per-bond pd.concat it replaces; column contents are identical.
+        self.df_bonds = pd.DataFrame(bond_cols)
+
+        # ---- atoms_unique_name + prmtop_to_global_index (vectorized, once) ---
+        # acc["atoms_prmtop_index"] is now the full global (compound/BFS-order)
+        # -> prmtop-index permutation built by the instance loop above. Format
+        # unchanged: "{resname}{res}_{atomname}_{atom}", e.g. "ALA1_N_4", both
+        # numbers GLOBAL and 1-based (res = whole-system 0-based residue index
+        # of the atom + 1; atom = the atom's 1-based prmtop index).
+        atoms_prmtop_index_arr = np.asarray(acc["atoms_prmtop_index"], dtype=np.int64)
+        resname_arr = resname_of_atom[atoms_prmtop_index_arr]
+        resnum_arr = (residue_of_atom[atoms_prmtop_index_arr] + 1).astype(str)
+        atomname_arr = atom_name_of_atom[atoms_prmtop_index_arr]
+        atomnum_arr = (atoms_prmtop_index_arr + 1).astype(str)
+        unique_names = np.char.add(
+            np.char.add(
+                np.char.add(np.char.add(resname_arr, resnum_arr), "_"), atomname_arr
+            ),
+            np.char.add("_", atomnum_arr),
+        )
+        acc["atoms_unique_name"] = unique_names.tolist()
+
+        # prmtop_to_global_index[prmtop_idx] = global (compound/BFS) index;
+        # used below by the CMAP section and the virtual-site block. Every
+        # prmtop atom belongs to exactly one instance/compound position, so
+        # atoms_prmtop_index_arr is a permutation of range(natom_prmtop) and a
+        # plain array inverse is well-defined (see docs/specs/
+        # fast-amber-loader.md §3(D): "a dict or an int array is fine").
+        self.prmtop_to_global_index = np.empty(natom_prmtop, dtype=np.int64)
+        self.prmtop_to_global_index[atoms_prmtop_index_arr] = np.arange(
+            atoms_prmtop_index_arr.shape[0], dtype=np.int64
+        )
 
         # ---- Flush accumulators to topology ----------------------------------
         for attr, data in acc.items():
@@ -348,9 +450,20 @@ class Context(_Context):
         #   cmap_torsions_map_index list[int]      0-based map index per torsion
         #   cmap_torsions_a[i/j/k/l]  list[int]   torsion A atom global indices
         #   cmap_torsions_b[i/j/k/l]  list[int]   torsion B atom global indices
-        raw_data = parm_file["raw_data"]
+        # (raw_data was already bound near the top of this method, from the
+        # same parm_file dict.)
+        # CMAP flag names carry a "CHARMM_" prefix in ParmEd/modern AmberTools
+        # `chamber` output (see ParmEd's ChamberParm._cmap_prefix == "CHARMM_")
+        # -- added to disambiguate a CHAMBER file's CMAP section from ff19SB's
+        # own native (non-CHARMM) CMAP corrections, which use the same
+        # unprefixed flag names. Older CHAMBER-format prmtop files (e.g.
+        # examples/GfcDstrippedMin.prmtop) predate that rename and still use
+        # the unprefixed names. Accept either.
+        def _cmap_flag(name: str) -> str:
+            prefixed = "CHARMM_" + name
+            return prefixed if prefixed in raw_data else name
 
-        cmap_resolution: list[int] = raw_data.get("CMAP_RESOLUTION", [])
+        cmap_resolution: list[int] = raw_data.get(_cmap_flag("CMAP_RESOLUTION"), [])
         num_cmap_grids = len(cmap_resolution)
 
         cmap_grid_size: int = 0
@@ -366,7 +479,7 @@ class Context(_Context):
                     "this system requires per-map resolution support not yet implemented."
                 )
 
-            key = f"CMAP_PARAMETER_{grid_idx + 1:02d}"
+            key = _cmap_flag(f"CMAP_PARAMETER_{grid_idx + 1:02d}")
             raw_cmap: list[float] = raw_data[key]
 
             # Amber/ParmEd layout: psi varies fastest, phi starts at -180°.
@@ -390,7 +503,7 @@ class Context(_Context):
         # where atoms 1-4 define torsion A (phi) and atoms 2-5 define torsion B
         # (psi), with atoms 2-4 shared.  All atom indices are 1-based in prmtop.
         # We convert to global (BFS) indices via prmtop_to_global_index.
-        cmap_index_raw: list[int] = raw_data.get("CMAP_INDEX", [])
+        cmap_index_raw: list[int] = raw_data.get(_cmap_flag("CMAP_INDEX"), [])
         num_cmap_torsions = len(cmap_index_raw) // 6
 
         cmap_torsions_map_index: list[int] = []
@@ -405,7 +518,7 @@ class Context(_Context):
 
         def _g(prmtop_1based: int) -> int:
             """Convert 1-based prmtop atom index to global (BFS) index."""
-            return self.prmtop_to_global_index[prmtop_1based - 1]
+            return int(self.prmtop_to_global_index[prmtop_1based - 1])
 
         for i in range(0, len(cmap_index_raw), 6):
             a1, a2, a3, a4, a5, map_idx = cmap_index_raw[i : i + 6]
@@ -450,40 +563,26 @@ class Context(_Context):
         # --------------------------------------------------------------------
         #  Virtual sites (extra points). 4-point waters (OPC/TIP4P) carry a
         #  massless EP whose position is a 3-particle affine average of the real
-        #  atoms. Read each EP's frame + weights and map the parent atoms through
-        #  the same prmtop->global reindexing the rest of the SoA uses, so the
-        #  indices match the OpenMM particle order. Done unconditionally: an EP
-        #  must be declared whenever it exists, regardless of the solvent flag.
+        #  atoms. amber_loader.extract_virtual_sites reads each EP's frame +
+        #  weights directly from raw bond/angle arrays (fast-loader Step 4b,
+        #  replacing ParmEd's ExtraPoint/ThreeParticleExtraPointFrame) in
+        #  prmtop-index space; map through the same prmtop->global reindexing
+        #  the rest of the SoA uses, so the indices match the OpenMM particle
+        #  order. Done unconditionally: an EP must be declared whenever it
+        #  exists, regardless of the solvent flag. Any frame type other than
+        #  the 3-particle in-plane average (e.g. TIP5P's out-of-plane frame)
+        #  raises amber_loader.UnsupportedTopologyFeature there, naming the
+        #  pattern -- never silently approximated (spec §4a).
         # --------------------------------------------------------------------
-        vs_site, vs_a1, vs_a2, vs_a3 = [], [], [], []
-        vs_w1, vs_w2, vs_w3 = [], [], []
-        for atom in parm.atoms:
-            if type(atom).__name__ != "ExtraPoint":
-                continue
-            frame = atom.frame_type
-            if type(frame).__name__ != "ThreeParticleExtraPointFrame":
-                raise NotImplementedError(
-                    f"Extra point {atom.name} (idx {atom.idx}) uses frame "
-                    f"{type(frame).__name__}, which is not yet supported. Only "
-                    "3-particle average sites (OPC / TIP4P family) are handled; "
-                    "out-of-plane sites (e.g. TIP5P) need an additional virtual-"
-                    "site type."
-                )
-            fa = frame.get_atoms()
-            w = frame.get_weights()
-            if len(fa) != 3 or len(w) != 3:
-                raise NotImplementedError(
-                    f"Extra point {atom.name}: expected a 3-atom frame, got "
-                    f"{len(fa)} atoms / {len(w)} weights."
-                )
-            g = self.prmtop_to_global_index
-            vs_site.append(g[atom.idx])
-            vs_a1.append(g[fa[0].idx])
-            vs_a2.append(g[fa[1].idx])
-            vs_a3.append(g[fa[2].idx])
-            vs_w1.append(float(w[0]))
-            vs_w2.append(float(w[1]))
-            vs_w3.append(float(w[2]))
+        vs_records = amber_loader.extract_virtual_sites(raw_data, atom_coords_nm)
+        g = self.prmtop_to_global_index
+        vs_site = [int(g[r.site]) for r in vs_records]
+        vs_a1 = [int(g[r.atom1]) for r in vs_records]
+        vs_a2 = [int(g[r.atom2]) for r in vs_records]
+        vs_a3 = [int(g[r.atom3]) for r in vs_records]
+        vs_w1 = [r.weight1 for r in vs_records]
+        vs_w2 = [r.weight2 for r in vs_records]
+        vs_w3 = [r.weight3 for r in vs_records]
 
         self.system_topology.num_virtual_sites = len(vs_site)
         self.system_topology.vs_site = vs_site
@@ -497,17 +596,58 @@ class Context(_Context):
         # --------------------------------------------------------------------
         #  Solvent / periodicity configuration.
         #
-        #  OpenMM-style auto-detection: a periodic box in the topology/coords
-        #  selects explicit solvent (PME under PBC, GBSA off); its absence
-        #  selects implicit solvent (GBSA-OBC2, non-periodic). The caller never
-        #  passes an "explicit_solvent" flag -- it follows the box.
+        #  OpenMM-style auto-detection: periodicity is decided from IFBOX
+        #  (POINTERS[27], 0-based) -- exactly how OpenMM's own AmberPrmtopFile
+        #  reader does it -- NOT from the mere presence of a box line in the
+        #  coordinate file. This matters: some non-periodic (IFBOX == 0)
+        #  systems carry a degenerate placeholder box line in their rst7
+        #  (e.g. "0 0 0 90 90 90" on a stripped CHAMBER system), which must
+        #  be ignored rather than treated as "has a box" -- the pre-Step-4b
+        #  loader had exactly this bug (ParmEd's `parm.box = f.box` setter
+        #  re-derives IFBOX from the coordinate file's box line alone,
+        #  overwriting the prmtop's own IFBOX == 0). A periodic box in the
+        #  topology selects explicit solvent (PME under PBC, GBSA off); its
+        #  absence selects implicit solvent (GBSA-OBC2, non-periodic). The
+        #  caller never passes an "explicit_solvent" flag -- it follows IFBOX.
         # --------------------------------------------------------------------
         periodic_methods = (
             NonbondedMethod.CutoffPeriodic,
             NonbondedMethod.Ewald,
             NonbondedMethod.PME,
         )
-        has_box = parm.box_vectors is not None
+        ifbox = int(raw_data["POINTERS"][27])
+        has_box = ifbox > 0
+        if has_box and rst7_box is None:
+            # No box line in the coordinate file (e.g. a restart written
+            # without one): fall back to the prmtop's own legacy
+            # BOX_DIMENSIONS section -- [beta_deg, a, b, c] (Angstrom),
+            # ALL THREE angles taken equal to beta -- exactly the fallback
+            # both ParmEd's amber.readparm.LoadParm ("if all else fails, set
+            # the box from the prmtop file") and OpenMM's own
+            # PrmtopLoader.getBoxBetaAndDimensions/computePeriodicBoxVectors
+            # use. Only reached when IFBOX > 0 but the rst7/inpcrd carries no
+            # box line (the b1-1n example exercises this).
+            if "BOX_DIMENSIONS" not in raw_data:
+                raise ValueError(
+                    f"Topology '{prmtop_path}' declares a periodic box (IFBOX={ifbox}), but "
+                    f"coordinate file '{inpcrd_path}' carries no box line and the topology has "
+                    "no BOX_DIMENSIONS fallback section."
+                )
+            beta_deg, a_ang, b_ang, c_ang = (
+                float(x) for x in raw_data["BOX_DIMENSIONS"][:4]
+            )
+            beta_rad = beta_deg * amber_loader.DEG_TO_RAD
+            rst7_box = np.array(
+                [
+                    a_ang * amber_loader.ANG_TO_NM,
+                    b_ang * amber_loader.ANG_TO_NM,
+                    c_ang * amber_loader.ANG_TO_NM,
+                    beta_rad,
+                    beta_rad,
+                    beta_rad,
+                ],
+                dtype=np.float64,
+            )
 
         # Guard the two ways an explicit override contradicts the detected box.
         if not has_box and nonbonded_method in periodic_methods:
@@ -546,9 +686,14 @@ class Context(_Context):
             if ewald_error_tolerance is not None:
                 self.system_topology.ewald_error_tolerance = ewald_error_tolerance
 
-            # Box: pass ParmEd's three REDUCED lattice vectors straight through,
-            # converted to nm and flattened row-major [a.xyz b.xyz c.xyz].
-            box_nm = parm.box_vectors.value_in_unit(pmd.unit.nanometer)
+            # Box: reduce the rst7's (a, b, c, alpha, beta, gamma) geometry to
+            # three lattice vectors (nm), replicating ParmEd's box_vectors
+            # (ParmEd's geometry.box_lengths_and_angles_to_vectors) exactly --
+            # see amber_loader.box_vectors_from_lengths_angles. Flattened
+            # row-major [a.xyz b.xyz c.xyz].
+            box_nm = amber_loader.box_vectors_from_lengths_angles(
+                rst7_box[:3], rst7_box[3:]
+            )
             self.system_topology.box_vectors = [
                 float(component) for vec in box_nm for component in vec
             ]

@@ -16,10 +16,16 @@
 //  diffed against LAPACK (scipy dsyev/dpotrf/sqrtm) over well-conditioned,
 //  clustered, and degenerate spectra -- agreement to ~1e-15. They diverge from
 //  LAPACK *intentionally* in exactly two regimes, which are pinned below as
-//  INTENDED behaviour (a naive "compare to LAPACK" oracle would falsely flag
-//  them): (1) invertDense LOCKS a near-null eigendirection to 0 instead of
-//  inverting it to ~1/eps; (2) logDetSymPD FLOORS a near-zero Cholesky pivot to
-//  keep the log finite.
+//  INTENDED behaviour of THIS FILE'S kernels (tests/RobotLinearAlgebra.hpp,
+//  a test-local reference copy -- a naive "compare to LAPACK" oracle would
+//  falsely flag them): (1) invertDense LOCKS a near-null eigendirection to 0
+//  instead of inverting it to ~1/eps -- this MATCHES the shipped engine
+//  (`src/RobotEngine.cpp::invertDense`, CC1/CC4, docs/specs/singular-dof-fixman.md);
+//  (2) logDetSymPD FLOORS a near-zero Cholesky pivot to keep the log finite --
+//  this is the PRE-FIX convention and does NOT match the shipped engine
+//  anymore: `src/RobotEngine.cpp::calcLogDetM` now goes through `pseudoLogDet`,
+//  which shares invertDense's null-space lock and contributes exactly 0 (not
+//  ln(residue)) for a locked direction (see O6 below).
 // ============================================================================
 #include <algorithm>
 #include <cmath>
@@ -252,8 +258,24 @@ TEST(LinAlgOracle, InvertDenseLocksNullDirection_IntendedDivergence) {
 }
 
 // ---------------------------------------------------------------------------
-//  O6: INTENDED divergence #2 -- logDetSymPD FLOORS a near-zero pivot so the
-//  log-det stays finite on a (numerically) singular matrix, rather than -inf.
+//  O6: INTENDED divergence #2 from LAPACK -- but NOT what the shipped engine
+//  does anymore. `robo_linalg::logDetSymPD` (this file's test-local reference
+//  copy, tests/RobotLinearAlgebra.hpp) FLOORS a near-zero pivot at 1e-300 so
+//  the log-det stays finite on a (numerically) singular matrix rather than
+//  -inf/NaN -- that is this KERNEL's own convention, verified here, and it is
+//  still what `Constraints::solveSmallSpd`/`calcConstraintLogDet`
+//  (src/Constraints.cpp) does for the dimensionally-distinct `G M^-1 G^T`
+//  loop-closure determinant (docs/specs/singular-dof-fixman.md S2 -- NOT
+//  folded into the shared hinge-inertia null-space lock).
+//
+//  It is NOT what `src/RobotEngine.cpp::calcLogDetM` does. That path was
+//  fixed (same spec, CC1/CC4/S6) to go through `pseudoLogDet`, which shares
+//  `invertDense`'s null-space lock: a locked direction contributes exactly 0
+//  to ln|det|, not ln(1e-300)~=-690.78. Floor-to-finite is therefore NOT the
+//  shipped engine's Fixman-tree-term behavior; do not read this test as
+//  asserting that. See tests/TestMassMatrix.cpp
+//  LogDetMExcludesStructuralPhantomNullDirection for the engine's actual
+//  (lock-to-zero) convention on the same kind of singular input.
 // ---------------------------------------------------------------------------
 TEST(LinAlgOracle, LogDetFloorsSingularPivot_IntendedDivergence) {
     Rng rng(0xF100);

@@ -150,6 +150,24 @@ PYBIND11_MODULE(robo_bindings, m) {
         .def_property_readonly("index", &World::index)
         .def_property_readonly("is_cartesian", &World::isCartesian)
         .def_property_readonly("is_docking", &World::isDocking)
+        .def_property_readonly("n_dof",
+             &World::nDof,
+             "Number of velocity/momentum coordinates actually drawn for this world "
+             "(ensemble-validation foundations spec, Sec. 2). Internal/torsional world: "
+             "nu - n_C (summed joint mobilities minus removed loop-closure velocity "
+             "constraints, n_C == 0 on an acyclic molecule). Cartesian world: OpenMM's own "
+             "count 3*N_real - constraints - 3*[center-of-mass removal active], NOT "
+             "model.nu (which is not the physical dof for a Cartesian world).")
+        .def_property_readonly("num_loop_constraints",
+             &World::numLoopConstraints,
+             "Number of ring-closing loop DistanceConstraints this world's molecule graph "
+             "produced (0 on every acyclic molecule). Structural guard for the cyclic "
+             "Fixman path (docs/specs/fixman-idealized-chains-validation.md T2.0).")
+        .def("current_constraint_log_det",
+             &World::currentConstraintLogDet,
+             "Loop-closure Fixman term ln det(G M^-1 G^T) at the CURRENT geometry (0 on an "
+             "acyclic world). No sampling round required; realizes position + articulated-"
+             "body inertias at the state's current q first.")
         .def("set_root_mobility",
              &World::setRootMobility,
              py::arg("molecule_index"),

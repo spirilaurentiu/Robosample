@@ -52,6 +52,33 @@ class OpenMMContext {
         return kineticEnergy;
     }
 
+    // OpenMM's own degrees-of-freedom count for the whole system, matching the
+    // convention OpenMM's StateDataReporter uses: 3 per particle with nonzero
+    // mass (massless virtual sites carry no independent dof), minus the number
+    // of SHAKE/SETTLE distance constraints, minus 3 if a CMMotionRemover force
+    // (center-of-mass motion removal) is present. Used as the Cartesian world's
+    // n_dof, since model_.nu is NOT the physical dof there (Cartesian worlds
+    // collapse every atom into a single nu==1 body).
+    [[nodiscard]] auto getNumDegreesOfFreedom() const -> int {
+        ensureInitialized();
+        int dof = 0;
+        const int numParticles = system->getNumParticles();
+        for (int i = 0; i < numParticles; ++i) {
+            if (system->getParticleMass(i) > 0.0) {
+                dof += 3;
+            }
+        }
+        dof -= system->getNumConstraints();
+        const int numForces = system->getNumForces();
+        for (int i = 0; i < numForces; ++i) {
+            if (dynamic_cast<const OpenMM::CMMotionRemover*>(&system->getForce(i)) != nullptr) {
+                dof -= 3;
+                break;
+            }
+        }
+        return dof;
+    }
+
     struct ForceGroupEnergy {
         int group = 0;
         std::string name;
