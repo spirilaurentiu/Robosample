@@ -787,7 +787,12 @@ void RobotEngine::calcQDot(const RobotModel& m, const RobotState& s, Real* qdotO
 // ============================================================================
 //  ARTICULATED-BODY INERTIAS (inward)   RigidBodyNodeSpec.cpp
 // ============================================================================
-void RobotEngine::realizeArticulatedBodyInertias(const RobotModel& m, RobotState& s) {
+// Position-only articulated-inertia factorization: P, PPlus, D, DI, G (the per-body
+// Jacobi eigensolve / invertDense). Pure function of q (masses + geometry) -- NO velocity
+// dependence -- so the verlet corrector hoists it to once/step (see the wrapper below and
+// docs/specs/gpu-cartesian-kinematics/03-aba-parallelization.md Sec.0.5). The velocity-
+// dependent centrifugal seed is split into seedArticulatedCentrifugal.
+void RobotEngine::factorizeArticulatedInertias(const RobotModel& m, RobotState& s) {
     ArticulatedInertia* P = s.P();
     ArticulatedInertia* PPlus = s.PPlus();
     const SpatialVec* H = s.H();
@@ -975,21 +980,36 @@ void RobotEngine::realizeArticulatedBodyInertias(const RobotModel& m, RobotState
                                   inertia(2, 2));
         PPlus[b] = Pb - ArticulatedInertia(symMass, massMoment, symInertia);
     }
+}
 
-    // Articulated-body centrifugal force = P * a_mob + b  (seed for calcUDot
-    // pass1). CRITICAL: Simbody (RigidBodyNode.cpp,
-    // realizeArticulatedBodyVelocityCache) forms this from the MOBILIZER
-    // coriolis acceleration (the per-joint incremental term A), NOT the TOTAL
-    // coriolis acceleration (a = ~Phi*a_parent + A). Using the total here adds
-    // a spurious, velocity^2-scaled centrifugal force on every non-root body;
-    // it propagates inward through the pass-1 Phi*zPlus sum, corrupts udot,
-    // and feeds back through Verlet as monotonic energy injection -> blow-up.
+// Velocity-dependent articulated centrifugal seed: abcf = P * a_mob + gyro (seed for
+// calcUDot pass1). This is the ONLY part of the old realizeArticulatedBodyInertias that
+// depends on u; splitting it out lets the corrector iterate just this + calcUDot while the
+// (expensive, position-only) factorization above runs once/step. PRECONDITION: realizeVelocity
+// current (a_mob/gyro) and factorizeArticulatedInertias current (P).
+void RobotEngine::seedArticulatedCentrifugal(const RobotModel& m, RobotState& s) {
+    // CRITICAL: Simbody (RigidBodyNode.cpp, realizeArticulatedBodyVelocityCache) forms this
+    // from the MOBILIZER coriolis acceleration (the per-joint incremental term A), NOT the
+    // TOTAL coriolis acceleration (a = ~Phi*a_parent + A). Using the total here adds a
+    // spurious, velocity^2-scaled centrifugal force on every non-root body; it propagates
+    // inward through the pass-1 Phi*zPlus sum, corrupts udot, and feeds back through Verlet
+    // as monotonic energy injection -> blow-up.
+    const ArticulatedInertia* P = s.P();
     const SpatialVec* a_mob = s.mobCoriolisA();
     const SpatialVec* gyro = s.gyro();
     SpatialVec* abcf = s.abCentrifugal();
     for (int b = 1; b < m.numBodies; ++b) {
         abcf[b] = P[b] * a_mob[b] + gyro[b];
     }
+}
+
+// Backward-compatible full pass = factorization + centrifugal seed, in the original order.
+// Callers other than the verlet corrector (reinitialize, captureReactionSnapshot, ...) use
+// this and are unchanged; the corrector (RobotIntegrator.hpp) calls the two halves
+// separately, hoisting the factorization out of the u-only iteration.
+void RobotEngine::realizeArticulatedBodyInertias(const RobotModel& m, RobotState& s) {
+    factorizeArticulatedInertias(m, s);
+    seedArticulatedCentrifugal(m, s);
 }
 
 // ============================================================================

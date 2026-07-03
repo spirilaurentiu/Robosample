@@ -300,12 +300,21 @@ bool RobotEngine::verletStep(const RobotModel& m,
         ROBO_CHECK("realizePosition");
         bridge.evaluate(s);
         ROBO_CHECK("bridge.evaluate");
-        return forcesFinite(); // non-finite force -> abort before it corrupts udot/q
+        if (!forcesFinite()) {
+            return false; // non-finite force -> abort before it corrupts udot/q
+        }
+        // The articulated-inertia factorization (P/PPlus/D/DI/G) is a pure function of q,
+        // so hoist it here alongside realizePosition; the corrector below re-derives only
+        // the velocity-dependent seed (evalVel), turning the per-body Jacobi eigensolves
+        // from ~11x/step into 1x/step. Bitwise-identical (same q -> same factorization
+        // every sweep). See docs/specs/gpu-cartesian-kinematics/03-aba-parallelization Sec.0.5.
+        factorizeArticulatedInertias(m, s);
+        return true;
     };
     auto evalVel = [&]() -> bool {
         realizeVelocity(m, s);
         ROBO_CHECK("realizeVelocity");
-        realizeArticulatedBodyInertias(m, s);
+        seedArticulatedCentrifugal(m, s); // abcf = P*a_mob + gyro (P from the hoisted factorization)
         calcUDot(m, s);
         ROBO_CHECK("calcUDot");
         for (int i = 0; i < nu; ++i) {

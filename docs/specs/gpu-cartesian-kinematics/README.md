@@ -1,6 +1,10 @@
 # GPU Cartesian Kinematics + ABA Parallelization — Optimization Spec
 
-Status: **draft, pre-review**. Target: `cuda` build (`USE_CUDA=ON`), with a mandatory CPU-only fallback (`USE_CPU`/`USE_REFERENCE`).
+Status: **01 + 02 implemented & validated** (fused position push and device force reduction — opt-in via
+`ROBO_CUDA_KINEMATICS=1`, verified end-to-end on run_3SN6.lig.py; the integrator corrector hoist also
+landed). **03 (ABA) is upgraded from sketch to grounded design** using the now-proven kernel
+infrastructure and the constants taxonomy the stale-station bug validated; not yet implemented. Target:
+`cuda` build (`USE_CUDA=ON`), with a mandatory CPU-only fallback (`USE_CPU`/`USE_REFERENCE`).
 
 This spec plans a performance optimization of the two per-step hot loops that dominate Robosample's
 inner sampling loop and of the articulated-body (ABA) recursions that surround them. It is written

@@ -55,8 +55,14 @@ class RobotEngine {
 
     // ---- ARTICULATED-BODY DYNAMICS ----------------------------------------
     // Port of realizeArticulatedBodyInertiasInward (RigidBodyNodeSpec.cpp).
-    // Inward sweep. Fills P, PPlus, D, DI, G.
-    static void realizeArticulatedBodyInertias(const RobotModel& m, RobotState& s);
+    // Inward sweep. Fills P, PPlus, D, DI, G. Split into a position-only inertia
+    // factorization and the velocity-dependent centrifugal seed so the verlet
+    // corrector can hoist the (expensive) factorization out of the u-only iteration
+    // (docs/specs/gpu-cartesian-kinematics/03-aba-parallelization.md Sec.0.5). The
+    // combined call preserves the original behavior for non-corrector callers.
+    static void factorizeArticulatedInertias(const RobotModel& m, RobotState& s); // P,PPlus,D,DI,G (q-only)
+    static void seedArticulatedCentrifugal(const RobotModel& m, RobotState& s);   // abcf = P*a_mob+gyro (u)
+    static void realizeArticulatedBodyInertias(const RobotModel& m, RobotState& s); // factorize + seed
 
     // Forward dynamics: forces -> udot. Port of calcUDotPass1Inward (Z, eps,
     // zPlus) + calcUDotPass2Outward (udot, A_GB). Requires bodyForceG +
