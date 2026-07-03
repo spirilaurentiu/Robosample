@@ -18,6 +18,10 @@
 //  failure at import time.)
 // ============================================================================
 
+#include <array>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <vector>
 
 #include "OpenMMContext.hpp" // the existing OpenMM singleton (reused, not wrapped)
@@ -40,10 +44,16 @@ class ForceBridge {
         for (int a = 0; a < model_.numAtoms; ++a) {
             posCache_[a] = OpenMM::Vec3(p[a][0], p[a][1], p[a][2]);
         }
+        lastEvalWasFused_ = false; // host positions now current; PE comes from posCache_
     }
 
-    // Potential energy from OpenMM for the cached positions [kJ/mol].
+    // Potential energy from OpenMM for the current positions [kJ/mol]. On the fused
+    // CUDA path the energy was already computed on device during evaluate() (positions
+    // live in posq, not posCache_), so return that; otherwise recompute from posCache_.
     [[nodiscard]] robo::Real calcPotentialEnergy() const {
+        if (lastEvalWasFused_) {
+            return lastPE_;
+        }
         return OpenMMContext::get().computePotentialEnergy(posCache_);
     }
 
@@ -109,9 +119,27 @@ class ForceBridge {
     }
 
     // One full force evaluation: positions then forces (Dynamics-stage realize).
+    // Fused CUDA path (opt-in, robot worlds): compute posG = X_GB*station straight
+    // into OpenMM's device posq, evaluate forces+energy on device, and reduce forces
+    // to per-body spatial forces on device -- so per step only O(numBodies) transforms
+    // go up and O(numBodies) forces come down (no per-atom host round trip). Falls back
+    // to the exact host path when the toggle is off, not a CUDA build, or when per-atom
+    // forces are needed on the host (wantsAtomForces, e.g. NCMC solvent Verlet). The
+    // Cartesian MD world never reaches here (it uses integrateTrajectoryOnDevice).
     void evaluate(RobotState& s) {
-        setAtomPositionsInGround(s);
-        getForcesFromOpenMM(s);
+        if (OpenMMContext::get().cudaKinematicsAvailable() && !s.wantsAtomForces()) {
+            evaluateFused(s);
+        } else {
+            setAtomPositionsInGround(s);
+            getForcesFromOpenMM(s);
+        }
+    }
+
+    // Mark the atom stations (body-frame positions) as changed so the fused path re-uploads
+    // them on its next evaluate. Call after any refit of RobotModel::atomStation_B (a
+    // coordinate transfer -- World::recomputeGeometry). No-op for the host path.
+    void markStationsDirty() {
+        stationsDirty_ = true;
     }
 
     void setVelocitiesToTemperature(double temperature, int seed) const {
@@ -146,6 +174,101 @@ class ForceBridge {
     }
 
     private:
+    // Allocate the reused staging buffers once and build the constant virtual-site mask.
+    // stationFlat_ is only sized here; its CONTENTS are repacked every step (atomStation_B
+    // is refit per coordinate transfer, so it changes between rounds).
+    void ensureFusedStaging() {
+        if (fusedStagingBuilt_) {
+            return;
+        }
+        stationFlat_.assign(static_cast<std::size_t>(3 * model_.numAtoms), 0.0);
+        isVirtualI_.resize(static_cast<std::size_t>(model_.numAtoms));
+        for (int a = 0; a < model_.numAtoms; ++a) {
+            isVirtualI_[static_cast<std::size_t>(a)] =
+                (model_.atomMass[static_cast<std::size_t>(a)] == robo::Real(0)) ? 1 : 0;
+        }
+        xgbFlat_.assign(static_cast<std::size_t>(12 * model_.numBodies), 0.0);
+        bodyForceFlat_.assign(static_cast<std::size_t>(6 * model_.numBodies), 0.0);
+        fusedStagingBuilt_ = true;
+    }
+
+    // Fused CUDA evaluate: push X_GB*station into OpenMM's device posq, evaluate forces +
+    // energy on device, and reduce forces to per-body spatial forces on device. Per robotics
+    // STEP the only host<->device traffic is X_GB up (12*numBodies) and bodyForceG down
+    // (6*numBodies); the atom stations (3*numAtoms) go up only when they change -- i.e. once
+    // per round, on a coordinate transfer (World::recomputeGeometry -> markStationsDirty).
+    void evaluateFused(RobotState& s) {
+        ensureFusedStaging();
+        OpenMMContext& omm = OpenMMContext::get();
+
+        // atomStation_B is refit only on a coordinate transfer (once per round), so repack
+        // the flat stations ONLY when they changed. Otherwise this per-atom pass is skipped.
+        if (stationsDirty_) {
+            for (int a = 0; a < model_.numAtoms; ++a) {
+                const robo::Vec3& st = model_.atomStation_B[static_cast<std::size_t>(a)];
+                stationFlat_[static_cast<std::size_t>(3 * a)] = st[0];
+                stationFlat_[static_cast<std::size_t>(3 * a + 1)] = st[1];
+                stationFlat_[static_cast<std::size_t>(3 * a + 2)] = st[2];
+            }
+        }
+        omm.ensureKinematicsConstants(static_cast<const void*>(this),
+                                      model_.numAtoms,
+                                      model_.numBodies,
+                                      stationFlat_.data(),
+                                      model_.atomBody.data(),
+                                      isVirtualI_.data(),
+                                      model_.bodyAtomsBeg.data(),
+                                      model_.bodyAtomsEnd.data(),
+                                      model_.bodyAtoms.data(),
+                                      /*stationsChanged=*/stationsDirty_);
+        stationsDirty_ = false;
+
+        // Pack X_GB as 12 doubles/body: 9 row-major rotation (robo::Mat33::elems) + 3
+        // translation. Matches the kernel's row-major R*station + p.
+        const robo::Transform* X_GB = s.X_GB();
+        for (int b = 0; b < model_.numBodies; ++b) {
+            const std::array<robo::Real, 9>& e = X_GB[b].R().elems;
+            double* d = xgbFlat_.data() + static_cast<std::size_t>(12 * b);
+            for (int k = 0; k < 9; ++k) {
+                d[k] = e[static_cast<std::size_t>(k)];
+            }
+            const robo::Vec3& p = X_GB[b].p();
+            d[9] = p[0];
+            d[10] = p[1];
+            d[11] = p[2];
+        }
+
+        omm.pushBodyTransforms(xgbFlat_.data());          // K1: posq <- X_GB*station
+        lastPE_ = omm.computeForcesAndEnergyOnDevice();    // forces+energy on device
+        lastEvalWasFused_ = true;                          // calcPotentialEnergy uses lastPE_
+        omm.reduceForcesToBodies(bodyForceFlat_.data());   // K2: forces -> per-body
+
+        robo::SpatialVec* BF = s.bodyForceG();
+        for (int b = 0; b < model_.numBodies; ++b) {
+            const double* f = bodyForceFlat_.data() + static_cast<std::size_t>(6 * b);
+            BF[b] = robo::SpatialVec(robo::Vec3(f[0], f[1], f[2]),   // angular (moment about Bo)
+                                     robo::Vec3(f[3], f[4], f[5]));  // linear (net force)
+        }
+        // Generalized (joint) forces are applied only as Cartesian atom forces, so the
+        // per-DOF force is identically zero -- clear it (calcUDot reads it). Mirrors the
+        // host getForcesFromOpenMM; any future Fixman/bias term adds here before calcUDot.
+        robo::Real* mob = s.mobilityForce();
+        for (int i = 0; i < model_.nu; ++i) {
+            mob[i] = robo::Real(0);
+        }
+    }
+
     const RobotModel& model_;
     std::vector<OpenMM::Vec3> posCache_; // OpenMM particle order, nm
+
+    // Fused CUDA robot-kinematics path state (see evaluate/evaluateFused). All inert
+    // when the fused path is never taken (host path leaves lastEvalWasFused_ false).
+    bool lastEvalWasFused_ = false;
+    double lastPE_ = 0.0;
+    bool fusedStagingBuilt_ = false;
+    bool stationsDirty_ = true;          // stations refit per coordinate transfer; re-upload then
+    std::vector<double> stationFlat_;    // 3*numAtoms, body-frame stations (per round)
+    std::vector<int> isVirtualI_;        // numAtoms, 1 => skip (virtual site)
+    std::vector<double> xgbFlat_;        // 12*numBodies, repacked + uploaded each step
+    std::vector<double> bodyForceFlat_;  // 6*numBodies, downloaded each step
 };

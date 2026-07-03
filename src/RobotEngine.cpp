@@ -157,13 +157,6 @@ inline robo::Real pseudoLogDet(const robo::Real* A, int n) {
 #define ROBO_DEBUG 1
 #define ROBO_VERBOSE 2
 
-#ifndef ROBO_DEBUG
-#    define ROBO_DEBUG 1
-#endif
-#ifndef ROBO_VERBOSE
-#    define ROBO_VERBOSE 1
-#endif
-
 #if ROBO_DEBUG
 namespace robodbg {
 
@@ -600,12 +593,19 @@ void RobotEngine::realizePosition(const RobotModel& m, RobotState& s) {
     }
 
     // Per-atom Ground positions and stations (R_GB * station_B). The transfer
-    // currency + the input to the OpenMM force bridge.
-    Vec3* posG = s.atomPosG();
-    Vec3* stG = s.atomStationG();
+    // currency + the input to the OpenMM force bridge. Each atom is independent (no
+    // reduction), so this vectorizes cleanly: __restrict removes the aliasing barrier
+    // between the destination arrays and the (const) source arrays, and `omp simd`
+    // (SIMD-only, -fopenmp-simd) lets the compiler pack the R*station FMAs across atoms.
+    // Bitwise-identical to the scalar form.
+    Vec3* __restrict posG = s.atomPosG();
+    Vec3* __restrict stG = s.atomStationG();
+    const int* __restrict atomBody = m.atomBody.data();
+    const Vec3* __restrict station = m.atomStation_B.data();
+#pragma omp simd
     for (int a = 0; a < m.numAtoms; ++a) {
-        const int b = m.atomBody[a];
-        const Vec3 st = X_GB[b].R() * m.atomStation_B[a];
+        const int b = atomBody[a];
+        const Vec3 st = X_GB[b].R() * station[a];
         stG[a] = st;
         posG[a] = X_GB[b].p() + st;
     }
@@ -1327,12 +1327,25 @@ void RobotEngine::fillAtomPositionsFromBodies(const RobotModel& m, RobotState& s
     // each step would snap them back onto the welded body and undo the relaxation).
     // mask == nullptr in the welded engine, so this is a no-op there.
     const char* cartMask = s.cartSolventMask();
-    for (int a = 0; a < m.numAtoms; ++a) {
-        if (cartMask && cartMask[a]) {
-            continue;
+    const int* __restrict atomBody = m.atomBody.data();
+    const Vec3* __restrict station = m.atomStation_B.data();
+    Vec3* __restrict posGr = posG;
+    if (cartMask == nullptr) {
+        // Welded engine (the common case): no Cartesian-solvent atoms to preserve, so
+        // the whole loop vectorizes (see realizePosition for the same pattern).
+#pragma omp simd
+        for (int a = 0; a < m.numAtoms; ++a) {
+            const int b = atomBody[a];
+            posGr[a] = X_GB[b].p() + X_GB[b].R() * station[a];
         }
-        const int b = m.atomBody[a];
-        posG[a] = X_GB[b].p() + X_GB[b].R() * m.atomStation_B[a];
+    } else {
+        for (int a = 0; a < m.numAtoms; ++a) {
+            if (cartMask[a]) {
+                continue; // Cartesian-solvent atom owns posG directly; leave untouched
+            }
+            const int b = atomBody[a];
+            posGr[a] = X_GB[b].p() + X_GB[b].R() * station[a];
+        }
     }
 }
 

@@ -512,6 +512,7 @@ Evaluate:
 * Undefined-behavior audit
 * Compiler-warning review
 * Cache-behaviour and threading-model review
+* PCI transfers
 * Exception-usage and compile-time assessment
 * Document design decisions
 

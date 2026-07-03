@@ -18,6 +18,20 @@
 #    include "../openmm/platforms/opencl/include/OpenCLPlatform.h"
 #elif USE_CUDA
 #    include "../openmm/platforms/cuda/include/CudaPlatform.h"
+// Direct device-buffer access for the fused robot-kinematics pipeline. OpenMM is a
+// vendored source build, so reaching CudaContext (via the public
+// Context::getImpl().getPlatformData()) and driving kernels through the common
+// ComputeContext abstraction is fully in-tree. All new code stays behind USE_CUDA.
+#    include "../openmm/openmmapi/include/openmm/internal/ContextImpl.h"
+#    include "../openmm/platforms/cuda/include/CudaContext.h"
+#    include "../openmm/platforms/common/include/openmm/common/ComputeContext.h"
+#    include "../openmm/platforms/common/include/openmm/common/ComputeArray.h"
+#    include "../openmm/platforms/common/include/openmm/common/ComputeKernel.h"
+#    include "../openmm/platforms/common/include/openmm/common/ComputeProgram.h"
+#    include "../openmm/platforms/common/include/openmm/common/ContextSelector.h"
+#    include <cstdlib>
+#    include <map>
+#    include <memory>
 #endif
 
 // Multiple-timestep (MTS) r-RESPA Verlet integrator. groups = (force group,
@@ -66,6 +80,339 @@ class MTSIntegrator : public OpenMM::CustomIntegrator {
         }
     }
 };
+
+// ===========================================================================
+//  Fused CUDA robot-kinematics pipeline (spec docs/specs/gpu-cartesian-kinematics)
+// ===========================================================================
+#if USE_CUDA
+namespace {
+
+// K1 writes posG = X_GB*station + p straight into OpenMM's device posq (mixed-
+// precision split identical to CommonUpdateStateDataKernel::setPositions). K2
+// reduces the device fixed-point force buffer into per-body spatial forces. Both
+// honor OpenMM's internal atom ordering via invOrder (atom -> device slot). The
+// transform is done in double; only .xyz of posq are written so the packed charge
+// in .w is preserved. Rotation is row-major (matches robo::Mat33::elems).
+const char* const kKinematicsKernelSource = R"KERNSRC(
+KERNEL void pushPositions(
+        GLOBAL const double* RESTRICT station,   // 3*numAtoms, body-frame (nm)
+        GLOBAL const int* RESTRICT atomBody,     // numAtoms
+        GLOBAL const int* RESTRICT isVirtual,    // numAtoms (nonzero => skip)
+        GLOBAL const double* RESTRICT xgb,       // 12*numBodies: 9 row-major R + 3 p
+        GLOBAL const int* RESTRICT invOrder,     // numAtoms: atom -> device slot
+        GLOBAL real4* RESTRICT posq,
+#ifdef HAS_POSQ_CORRECTION
+        GLOBAL real4* RESTRICT posqCorrection,
+#endif
+        int numAtoms) {
+    // Write EVERY atom's position, exactly like Context::setPositions (the host path
+    // pushes all atomPosG). Do NOT skip massless atoms here: some atoms are massless in
+    // the robot model (skipped in the force reduction K2, matching getForcesFromOpenMM)
+    // yet are real, force-bearing particles in OpenMM -- leaving their posq unwritten
+    // keeps a stale value and corrupts the force field. True OpenMM virtual sites are
+    // fixed up afterward by computeVirtualSites (called in pushBodyTransforms).
+    for (int a = GLOBAL_ID; a < numAtoms; a += GLOBAL_SIZE) {
+        int base = 12*atomBody[a];
+        double sx = station[3*a], sy = station[3*a+1], sz = station[3*a+2];
+        double x = xgb[base+9]  + xgb[base+0]*sx + xgb[base+1]*sy + xgb[base+2]*sz;
+        double y = xgb[base+10] + xgb[base+3]*sx + xgb[base+4]*sy + xgb[base+5]*sz;
+        double z = xgb[base+11] + xgb[base+6]*sx + xgb[base+7]*sy + xgb[base+8]*sz;
+        int i = invOrder[a];
+        posq[i].x = (real) x;                     // .w (charge) untouched
+        posq[i].y = (real) y;
+        posq[i].z = (real) z;
+#ifdef HAS_POSQ_CORRECTION
+        posqCorrection[i].x = (real) (x - (real) x);
+        posqCorrection[i].y = (real) (y - (real) y);
+        posqCorrection[i].z = (real) (z - (real) z);
+#endif
+    }
+}
+
+KERNEL void reduceForces(
+        GLOBAL const mm_long* RESTRICT force,    // 3*paddedNumAtoms fixed point, component-major
+        GLOBAL const double* RESTRICT station,
+        GLOBAL const int* RESTRICT isVirtual,
+        GLOBAL const double* RESTRICT xgb,
+        GLOBAL const int* RESTRICT invOrder,
+        GLOBAL const int* RESTRICT bodyAtomsBeg,
+        GLOBAL const int* RESTRICT bodyAtomsEnd,
+        GLOBAL const int* RESTRICT bodyAtoms,
+        GLOBAL double* RESTRICT bodyForce,       // 6*numBodies: 3 angular + 3 linear
+        int numBodies,
+        int paddedNumAtoms) {
+    const double scale = 1.0/(double) 0x100000000;
+    for (int b = GLOBAL_ID; b < numBodies; b += GLOBAL_SIZE) {
+        int base = 12*b;
+        double r0 = xgb[base+0], r1 = xgb[base+1], r2 = xgb[base+2];
+        double r3 = xgb[base+3], r4 = xgb[base+4], r5 = xgb[base+5];
+        double r6 = xgb[base+6], r7 = xgb[base+7], r8 = xgb[base+8];
+        double lx = 0, ly = 0, lz = 0, ax = 0, ay = 0, az = 0;
+        for (int k = bodyAtomsBeg[b]; k < bodyAtomsEnd[b]; ++k) {
+            int a = bodyAtoms[k];
+            if (isVirtual[a]) continue;           // parents already carry the site force
+            int i = invOrder[a];
+            double fx = scale*(double) force[i];
+            double fy = scale*(double) force[i+paddedNumAtoms];
+            double fz = scale*(double) force[i+2*paddedNumAtoms];
+            double sx = station[3*a], sy = station[3*a+1], sz = station[3*a+2];
+            double rx = r0*sx + r1*sy + r2*sz;    // r = X_GB.R * station (about body origin)
+            double ry = r3*sx + r4*sy + r5*sz;
+            double rz = r6*sx + r7*sy + r8*sz;
+            lx += fx; ly += fy; lz += fz;
+            ax += ry*fz - rz*fy;                  // angular += r x f
+            ay += rz*fx - rx*fz;
+            az += rx*fy - ry*fx;
+        }
+        bodyForce[6*b+0] = ax; bodyForce[6*b+1] = ay; bodyForce[6*b+2] = az;
+        bodyForce[6*b+3] = lx; bodyForce[6*b+4] = ly; bodyForce[6*b+5] = lz;
+    }
+}
+)KERNSRC";
+
+struct GpuKinematics {
+    OpenMM::ComputeContext* cc = nullptr;
+    const void* worldToken = nullptr;
+    int numAtoms = 0;
+    int numBodies = 0;
+    bool mixed = false;
+    OpenMM::ComputeArray station, atomBody, isVirtual, invOrder;
+    OpenMM::ComputeArray bodyAtomsBeg, bodyAtomsEnd, bodyAtoms;
+    OpenMM::ComputeArray xgb, bodyForce; // per-step: uploaded / downloaded each call
+    OpenMM::ComputeKernel pushKernel, reduceKernel;
+    std::vector<int> invOrderHost;
+    std::vector<int> lastOrder; // cached OpenMM slot->particle order to detect reorders
+    std::vector<double> bodyForceHost;
+
+    // atom -> device slot: invert OpenMM's slot -> particle map. OpenMM reorders atoms
+    // (spatial sort for the neighbor list) roughly every 250 steps under a cutoff, and
+    // -- critically -- a reorder can happen inside ANOTHER world's on-device MD (the
+    // Cartesian world) between our steps, when getAtomsWereReordered() has already been
+    // cleared. So we can't trust that flag: we compare the live order against a cached
+    // copy and rebuild only when it actually changed (uploads only on change; the O(N)
+    // compare is cheap next to the force eval). MUST run before K1 (push) and before K2
+    // (reduce), since the force calc between them can itself reorder.
+    void syncInvOrder() {
+        const std::vector<int>& order = cc->getAtomIndex();
+        if (order.size() == lastOrder.size()
+            && std::equal(order.begin(), order.end(), lastOrder.begin())) {
+            return; // order unchanged; invOrder still valid
+        }
+        // order maps device slot i -> original particle order[i]. Its length is
+        // paddedNumAtoms (> numAtoms), and after a spatial reorder a REAL atom can sit in
+        // a slot index >= numAtoms while padding entries (order[i] >= numAtoms) occupy low
+        // slots. So we must scan ALL slots and invert only the real particles -- inverting
+        // just the first numAtoms slots misses real atoms in high slots (leaving their posq
+        // unwritten by K1 -> stale positions) and risks OOB on padding indices.
+        invOrderHost.assign(static_cast<std::size_t>(numAtoms), -1);
+        const int nSlots = static_cast<int>(order.size());
+        for (int i = 0; i < nSlots; ++i) {
+            const int a = order[static_cast<std::size_t>(i)];
+            if (a >= 0 && a < numAtoms) {
+                invOrderHost[static_cast<std::size_t>(a)] = i; // atom a lives in device slot i
+            }
+        }
+        invOrder.upload(invOrderHost.data());
+        lastOrder = order;
+    }
+};
+
+// The device sub-object lives here (OpenMMContext is itself a singleton). Freed by
+// OpenMMContext::releaseGpuKinematics() with the CUDA context current.
+std::unique_ptr<GpuKinematics> gGpuKin;
+
+OpenMM::ComputeContext* getCudaComputeContext(OpenMM::Context* ctx) {
+    if (ctx == nullptr) {
+        return nullptr;
+    }
+    auto* pd = reinterpret_cast<OpenMM::CudaPlatform::PlatformData*>(ctx->getImpl().getPlatformData());
+    if (pd == nullptr || pd->contexts.empty()) {
+        return nullptr;
+    }
+    return pd->contexts[0];
+}
+
+} // namespace
+#endif // USE_CUDA
+
+auto OpenMMContext::cudaKinematicsAvailable() const -> bool {
+#if USE_CUDA
+    return initialized && cudaKinematicsEnabled_;
+#else
+    return false;
+#endif
+}
+
+void OpenMMContext::releaseGpuKinematics() {
+#if USE_CUDA
+    if (!gGpuKin) {
+        return;
+    }
+    if (gGpuKin->cc != nullptr) {
+        OpenMM::ContextSelector selector(*gGpuKin->cc);
+        gGpuKin.reset();
+    } else {
+        gGpuKin.reset();
+    }
+#endif
+}
+
+void OpenMMContext::ensureKinematicsConstants(const void* worldToken,
+                                              int numAtomsIn,
+                                              int numBodiesIn,
+                                              const double* station,
+                                              const int* atomBody,
+                                              const int* isVirtual,
+                                              const int* bodyAtomsBeg,
+                                              const int* bodyAtomsEnd,
+                                              const int* bodyAtoms,
+                                              bool stationsChanged) {
+#if USE_CUDA
+    ensureInitialized();
+    OpenMM::ComputeContext* cc = getCudaComputeContext(context.get());
+    if (cc == nullptr) {
+        return; // not a CUDA platform: caller falls back to the host path
+    }
+    // atomStation_B is refit on every coordinate transfer (once per generateSample), so it
+    // is constant only over one round's mdSteps -- NOT over the world's lifetime. atomBody,
+    // the body-atom CSR and masses ARE constant. Build the constant arrays + compile the
+    // kernels once per world (token-gated); re-upload the stations and refresh invOrder on
+    // every call, since a stale station makes K1/K2 use the previous round's body frames
+    // (rigid-fit error -> wrong forces -> blow-up).
+    if (gGpuKin && gGpuKin->cc == cc && gGpuKin->worldToken == worldToken
+        && gGpuKin->numAtoms == numAtomsIn && gGpuKin->numBodies == numBodiesIn) {
+        if (stationsChanged) { // else the only per-step device traffic is X_GB up / bodyForce down
+            OpenMM::ContextSelector selector(*cc);
+            gGpuKin->station.upload(station);
+        }
+        return; // invOrder is refreshed in pushBodyTransforms/reduceForcesToBodies
+    }
+    OpenMM::ContextSelector selector(*cc);
+    gGpuKin.reset(); // free any prior world's device arrays (context current)
+    gGpuKin = std::make_unique<GpuKinematics>();
+    GpuKinematics& g = *gGpuKin;
+    g.cc = cc;
+    g.worldToken = worldToken;
+    g.numAtoms = numAtomsIn;
+    g.numBodies = numBodiesIn;
+    g.mixed = cc->getUseMixedPrecision();
+
+    g.station.initialize<double>(*cc, static_cast<std::size_t>(3 * numAtomsIn), "robo_station");
+    g.atomBody.initialize<int>(*cc, static_cast<std::size_t>(numAtomsIn), "robo_atomBody");
+    g.isVirtual.initialize<int>(*cc, static_cast<std::size_t>(numAtomsIn), "robo_isVirtual");
+    g.invOrder.initialize<int>(*cc, static_cast<std::size_t>(numAtomsIn), "robo_invOrder");
+    g.bodyAtomsBeg.initialize<int>(*cc, static_cast<std::size_t>(numBodiesIn), "robo_bodyAtomsBeg");
+    g.bodyAtomsEnd.initialize<int>(*cc, static_cast<std::size_t>(numBodiesIn), "robo_bodyAtomsEnd");
+    g.bodyAtoms.initialize<int>(*cc, static_cast<std::size_t>(numAtomsIn), "robo_bodyAtoms");
+    g.xgb.initialize<double>(*cc, static_cast<std::size_t>(12 * numBodiesIn), "robo_xgb");
+    g.bodyForce.initialize<double>(*cc, static_cast<std::size_t>(6 * numBodiesIn), "robo_bodyForce");
+    g.bodyForceHost.assign(static_cast<std::size_t>(6 * numBodiesIn), 0.0);
+
+    g.station.upload(station);
+    g.atomBody.upload(atomBody);
+    g.isVirtual.upload(isVirtual);
+    g.bodyAtomsBeg.upload(bodyAtomsBeg);
+    g.bodyAtomsEnd.upload(bodyAtomsEnd);
+    g.bodyAtoms.upload(bodyAtoms);
+    g.syncInvOrder();
+
+    std::map<std::string, std::string> defines;
+    if (g.mixed) {
+        defines["HAS_POSQ_CORRECTION"] = "1";
+    }
+    OpenMM::ComputeProgram program = cc->compileProgram(kKinematicsKernelSource, defines);
+    g.pushKernel = program->createKernel("pushPositions");
+    g.pushKernel->addArg(g.station);
+    g.pushKernel->addArg(g.atomBody);
+    g.pushKernel->addArg(g.isVirtual);
+    g.pushKernel->addArg(g.xgb);
+    g.pushKernel->addArg(g.invOrder);
+    g.pushKernel->addArg(cc->getPosq());
+    if (g.mixed) {
+        g.pushKernel->addArg(cc->getPosqCorrection());
+    }
+    g.pushKernel->addArg(numAtomsIn);
+
+    g.reduceKernel = program->createKernel("reduceForces");
+    g.reduceKernel->addArg(cc->getLongForceBuffer());
+    g.reduceKernel->addArg(g.station);
+    g.reduceKernel->addArg(g.isVirtual);
+    g.reduceKernel->addArg(g.xgb);
+    g.reduceKernel->addArg(g.invOrder);
+    g.reduceKernel->addArg(g.bodyAtomsBeg);
+    g.reduceKernel->addArg(g.bodyAtomsEnd);
+    g.reduceKernel->addArg(g.bodyAtoms);
+    g.reduceKernel->addArg(g.bodyForce);
+    g.reduceKernel->addArg(numBodiesIn);
+    g.reduceKernel->addArg(cc->getPaddedNumAtoms());
+#else
+    (void) worldToken;
+    (void) numAtomsIn;
+    (void) numBodiesIn;
+    (void) station;
+    (void) atomBody;
+    (void) isVirtual;
+    (void) bodyAtomsBeg;
+    (void) bodyAtomsEnd;
+    (void) bodyAtoms;
+#endif
+}
+
+void OpenMMContext::pushBodyTransforms(const double* xgbFlat) {
+#if USE_CUDA
+    if (!gGpuKin) {
+        return;
+    }
+    GpuKinematics& g = *gGpuKin;
+    OpenMM::ContextSelector selector(*g.cc);
+    g.syncInvOrder(); // a reorder may have happened in another world's MD since our last step
+    g.xgb.upload(xgbFlat);
+    g.pushKernel->execute(g.numAtoms); // K1: posq <- X_GB*station
+
+    // Writing posq directly bypasses the bookkeeping Context::setPositions does AFTER the
+    // position write: zero the periodic-image cell offsets and re-sort atoms (reorderAtoms
+    // self-limits to ~every 250 steps; between, OpenMM's displacement tracking keeps the
+    // neighbor list valid, exactly as for the host setPositions path). This refreshes the
+    // spatial decomposition after another world's on-device MD has moved the atoms.
+    for (auto& off : g.cc->getPosCellOffsets()) {
+        off = OpenMM::mm_int4(0, 0, 0, 0);
+    }
+    g.cc->reorderAtoms();
+    if (hasVirtualSites) {
+        context->computeVirtualSites();
+    }
+#else
+    (void) xgbFlat;
+#endif
+}
+
+auto OpenMMContext::computeForcesAndEnergyOnDevice() -> double {
+#if USE_CUDA
+    ensureInitialized();
+    // Compute forces + energy on device from the posq we just wrote; leaves the
+    // fixed-point force buffer populated for reduceForcesToBodies (no host download).
+    potentialEnergy = context->getImpl().calcForcesAndEnergy(true, true);
+    return potentialEnergy;
+#else
+    return 0.0;
+#endif
+}
+
+void OpenMMContext::reduceForcesToBodies(double* bodyForceGFlat) {
+#if USE_CUDA
+    if (!gGpuKin) {
+        return;
+    }
+    GpuKinematics& g = *gGpuKin;
+    OpenMM::ContextSelector selector(*g.cc);
+    g.syncInvOrder(); // the force calc between push and reduce can itself reorder atoms
+    g.reduceKernel->execute(g.numBodies);
+    g.bodyForce.download(g.bodyForceHost);
+    std::copy(g.bodyForceHost.begin(), g.bodyForceHost.end(), bodyForceGFlat);
+#else
+    (void) bodyForceGFlat;
+#endif
+}
 
 auto OpenMMContext::initialize(const SystemTopology& systemTopology) -> bool {
     numAtoms = static_cast<std::size_t>(systemTopology.numAtoms);
@@ -288,6 +635,18 @@ auto OpenMMContext::initialize(const SystemTopology& systemTopology) -> bool {
     }
 
     initialized = true;
+
+    // Opt-in fused CUDA robot-kinematics pipeline. Env is the default control; a
+    // Context/World setter (setCudaKinematics) may override it afterward. No-op unless
+    // built with USE_CUDA (cudaKinematicsAvailable() is false otherwise).
+#if USE_CUDA
+    if (const char* env = std::getenv("ROBO_CUDA_KINEMATICS")) {
+        cudaKinematicsEnabled_ = (std::string(env) == "1");
+        std::cout << "[INFO] ROBO_CUDA_KINEMATICS=" << env << " -> fused CUDA robot kinematics "
+                  << (cudaKinematicsEnabled_ ? "ENABLED" : "disabled") << ".\n";
+    }
+#endif
+
     std::cout << "[INFO] Initialized OpenMM. Using version " << platform->getOpenMMVersion() << ".\n";
     return true;
 }

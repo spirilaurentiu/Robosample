@@ -202,6 +202,20 @@ void Context::initialize(const std::vector<double>& temperatures) {
     replicaCoords_.assign(temperatures_.size(), ref);
     writeCounter_ = 0;
 
+    // Truncate the per-run TEXT outputs so a rerun with the same base name starts
+    // fresh. They are opened in append mode as frames are produced (writeReactionRows /
+    // the energy + moves CSVs) with a "write the header only when the file is empty"
+    // guard, so WITHOUT truncating here a second run appends its rows onto the first
+    // run's file -- accumulating stale/duplicate frames (and inflating any downstream
+    // analysis). The DCD writers already overwrite on initialize(); this brings the
+    // CSVs in line. Opening an ofstream in trunc mode (and letting it close) empties
+    // the file, or creates it empty.
+    std::ofstream(baseName + ".moves.csv", std::ios::trunc);
+    for (std::size_t r = 0; r < temperatures_.size(); ++r) {
+        std::ofstream(baseName + "." + std::to_string(r) + ".csv", std::ios::trunc);
+        std::ofstream(baseName + "." + std::to_string(r) + ".reactions.csv", std::ios::trunc);
+    }
+
     dcdWriters_.clear();
     dcdWriters_.reserve(temperatures_.size());
     const bool periodicDcd =

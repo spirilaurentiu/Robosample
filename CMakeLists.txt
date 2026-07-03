@@ -244,6 +244,10 @@ set(ROBOSAMPLE_SANITIZER_LINK_FLAGS -fsanitize=${ROBOSAMPLE_SANITIZERS})
 
 set(ROBOSAMPLE_BASE_COMPILE_OPTIONS
     -march=x86-64-v3
+    # SIMD-only OpenMP: enables `#pragma omp simd` for the hot per-atom transform loops
+    # (RobotEngine) WITHOUT pulling in the OpenMP threading runtime (libgomp). No effect
+    # on TUs without the pragma. Robosample's code only (not openmm_objects).
+    -fopenmp-simd
     -Wno-deprecated-declarations # OpenMM double4 / double4_16a / double4_32a
     $<$<CONFIG:Debug>:-fno-omit-frame-pointer
     -O0

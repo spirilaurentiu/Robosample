@@ -24,6 +24,7 @@ class OpenMMContext {
     auto initialize(const SystemTopology& systemTopology) -> bool;
 
     void shutdown() {
+        releaseGpuKinematics(); // free device buffers BEFORE the CUDA context dies
         integrator.reset();
         context.reset();
         system.reset();
@@ -147,6 +148,50 @@ class OpenMMContext {
                || m == NonbondedMethod::PME;
     }
 
+    // ---- CUDA robot kinematics pipeline (spec docs/specs/gpu-cartesian-kinematics) --
+    // Opt-in, CUDA-only fused path that computes per-atom Ground positions
+    // (posG = X_GB*station + p) directly into OpenMM's device posq and reduces the
+    // per-atom device forces into per-body spatial forces, so per robot step only
+    // O(numBodies) transforms go up and O(numBodies) forces come down (no per-atom
+    // host round trip). No-op / unavailable when not built with USE_CUDA or when the
+    // toggle is off; the caller then uses the existing host path. All array pointers
+    // are POD (this wrapper stays free of robo:: types); layouts are documented per
+    // argument. See ForceBridge for the dispatch.
+    void setCudaKinematics(bool enabled) {
+        cudaKinematicsEnabled_ = enabled;
+    }
+    [[nodiscard]] auto getCudaKinematics() const -> bool {
+        return cudaKinematicsEnabled_;
+    }
+    // True iff the fused CUDA path can run right now (USE_CUDA build + initialized +
+    // toggle on). Under USE_CUDA the active platform is always CUDA (compile-time).
+    [[nodiscard]] auto cudaKinematicsAvailable() const -> bool;
+    // Upload the per-world constants once (no-op when worldToken is unchanged), (re)build
+    // the atom->device-slot map, and compile the kernels on first use. station is
+    // 3*numAtoms (xyz per atom, nm, body-frame), isVirtual is numAtoms (nonzero => skip),
+    // the bodyAtoms* triple is the body-sorted atom CSR (RobotModel.bodyAtoms{Beg,End}).
+    void ensureKinematicsConstants(const void* worldToken,
+                                   int numAtoms,
+                                   int numBodies,
+                                   const double* station,
+                                   const int* atomBody,
+                                   const int* isVirtual,
+                                   const int* bodyAtomsBeg,
+                                   const int* bodyAtomsEnd,
+                                   const int* bodyAtoms,
+                                   bool stationsChanged);
+    // Upload X_GB (12*numBodies doubles: 9 row-major rotation + 3 translation per body),
+    // write posq/posqCorrection on device (K1), then place virtual sites on device.
+    void pushBodyTransforms(const double* xgbFlat);
+    // Compute forces + energy on device for the positions already in posq (no host
+    // download); returns the potential energy [kJ/mol]. Leaves forces in the device
+    // fixed-point buffer for reduceForcesToBodies to consume.
+    auto computeForcesAndEnergyOnDevice() -> double;
+    // Reduce the device force buffer into per-body spatial forces (K2) and download only
+    // bodyForceGFlat (6*numBodies doubles: 3 angular [moment about body origin] + 3 linear
+    // per body, in Ground). Must run after computeForcesAndEnergyOnDevice.
+    void reduceForcesToBodies(double* bodyForceGFlat);
+
     auto computePotentialEnergy(const std::vector<OpenMM::Vec3>& positions) -> double;
     auto computePotentialEnergyByGroup(const std::vector<OpenMM::Vec3>& positions)
         -> std::pair<double, std::vector<ForceGroupEnergy>>;
@@ -242,4 +287,9 @@ class OpenMMContext {
     bool enforcePeriodicBox = false;
     bool hasVirtualSites = false;
     bool initialized = false;
+
+    // CUDA robot kinematics pipeline. The device sub-object (kernels + arrays) is a
+    // file-static in OpenMMContext.cpp keyed to the singleton; released here.
+    bool cudaKinematicsEnabled_ = false;
+    void releaseGpuKinematics(); // no-op unless USE_CUDA
 };

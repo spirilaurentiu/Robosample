@@ -287,14 +287,22 @@ bool RobotEngine::verletStep(const RobotModel& m,
         u[i] = u0[i] + (h * udot0[i]); // u1_est
     }
 
-    auto evalDerivs = [&]() -> bool {
+    // Position/force derivatives (evalPos) are a pure function of q, and the velocity
+    // corrector below NEVER changes q -- only u. So realizePosition and the OpenMM force
+    // evaluation (the dominant per-step cost) are identical across all corrector sweeps
+    // and are HOISTED to run exactly once here, not once per sweep. Only the
+    // velocity-dependent work (evalVel: realizeVelocity, the ABA inertias' velocity-
+    // coupled centrifugal seed, calcUDot, qdots) iterates. This is bitwise-identical to
+    // the old per-sweep evalDerivs (same q -> same forces every sweep) but evaluates
+    // OpenMM once/step instead of up to 11x/step.
+    auto evalPos = [&]() -> bool {
         realizePosition(m, s);
         ROBO_CHECK("realizePosition");
         bridge.evaluate(s);
         ROBO_CHECK("bridge.evaluate");
-        if (!forcesFinite()) {
-            return false; // non-finite force -> abort before it corrupts udot/q
-        }
+        return forcesFinite(); // non-finite force -> abort before it corrupts udot/q
+    };
+    auto evalVel = [&]() -> bool {
         realizeVelocity(m, s);
         ROBO_CHECK("realizeVelocity");
         realizeArticulatedBodyInertias(m, s);
@@ -309,7 +317,7 @@ bool RobotEngine::verletStep(const RobotModel& m,
         calcQDotDot(m, s);
         return true;
     };
-    if (!evalDerivs()) {
+    if (!evalPos() || !evalVel()) {
         restorePreStep();
         return false;
     }
@@ -344,7 +352,9 @@ bool RobotEngine::verletStep(const RobotModel& m,
             restorePreStep();
             return false;
         }
-        if (!evalDerivs()) {
+        // q is unchanged by the corrector, so positions/forces (evalPos) are already
+        // current from the single evaluation above; only re-derive velocity terms.
+        if (!evalVel()) {
             restorePreStep();
             return false;
         }
@@ -418,7 +428,7 @@ bool RobotEngine::verletStep(const RobotModel& m,
 
     // Cartesian solvent velocity half: v1 = v0 + (h/2)(a0 + a1), a1 = f1/m. The
     // positions are frozen through the solute corrector, so f1 = frcG (evaluated
-    // at the drifted x1 during evalDerivs) is the end-of-step force -- the update
+    // once at the drifted x1 by evalPos) is the end-of-step force -- the update
     // is explicit and exact, no iteration. This completes the symmetric Verlet.
     for (int j = 0; j < nSolv; ++j) {
         const int a = solvAtoms[j];

@@ -54,9 +54,6 @@ bool dockDebugEnabled() {
 // env var ROBO_NMA_DEBUG=1 to see, per Gibbs block, exactly how the momentum draw
 // is re-pointed. Off by default so the per-block reinitialize() path stays quiet.
 bool nmaDebugEnabled() {
-    return true;
-
-
     static const bool on = [] {
         const char* e = std::getenv("ROBO_NMA_DEBUG");
         return e != nullptr && e[0] != '0' && e[0] != '\0';
@@ -1014,6 +1011,10 @@ void World::recomputeGeometry(const robo::Vec3* targets) {
             model_.X_PF[b] = Proot_X_root * model_.X_BM[b];
         }
     }
+
+    // atomStation_B was just refit -> the fused CUDA path must re-upload the stations on its
+    // next evaluate (they are otherwise treated as resident/unchanged across steps).
+    bridge_.markStationsDirty();
 }
 
 // ----------------------------------------------------------------------------
