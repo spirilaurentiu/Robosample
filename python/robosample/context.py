@@ -781,7 +781,11 @@ class Context(_Context):
             world.set_mass_scale_by_joint(joint_type, float(scale))
 
     def add_robotic_world(
-        self, selection, mass_scale=None, reversibility_check_every=0
+        self,
+        selection,
+        mass_scale=None,
+        reversibility_check_every=0,
+        want_spatial_force_history=False,
     ):
         """Add a torsional (internal-coordinate) world.
 
@@ -799,25 +803,47 @@ class Context(_Context):
             round-trip residual and warning if dt is too large for the current
             geometry. It certifies dt only for the configuration it runs from;
             the always-on guard remains the per-step corrector throw.
+        want_spatial_force_history : bool
+            Opt-in (default off, docs/specs/reaction-force-monitoring.md).
+            Flags this world the net-applied-per-body-force reporter: its
+            ``selection``'s flexed bodies (plus their parent, both sides of the
+            flex point) become the interesting-body set whose net applied
+            spatial force (``bodyForceG``, the OpenMM-reduced field load) is
+            streamed to ``<base_name>.<replica>.reactions.csv`` at the DCD
+            write cadence.
         """
-        world = super().add_robotic_world(selection)
+        world = super().add_robotic_world(
+            selection, want_spatial_force_history=want_spatial_force_history
+        )
         self._apply_mass_scale(world, mass_scale)
         if reversibility_check_every:
             world.set_reversibility_check(int(reversibility_check_every))
         return world
 
     def add_torsional_world(
-        self, selection, mass_scale=None, reversibility_check_every=0
+        self,
+        selection,
+        mass_scale=None,
+        reversibility_check_every=0,
+        want_spatial_force_history=False,
     ):
-        # Alias kept in sync with add_robotic_world (mass_scale + reversibility_check_every).
+        # Alias kept in sync with add_robotic_world.
         return self.add_robotic_world(
             selection,
             mass_scale=mass_scale,
             reversibility_check_every=reversibility_check_every,
+            want_spatial_force_history=want_spatial_force_history,
         )
 
-    def add_cartesian_world(self, mass_scale=None, reversibility_check_every=0):
-        world = super().add_cartesian_world()
+    def add_cartesian_world(
+        self,
+        mass_scale=None,
+        reversibility_check_every=0,
+        want_spatial_force_history=False,
+    ):
+        world = super().add_cartesian_world(
+            want_spatial_force_history=want_spatial_force_history
+        )
         self._apply_mass_scale(world, mass_scale)
         if reversibility_check_every:
             world.set_reversibility_check(int(reversibility_check_every))
@@ -874,6 +900,8 @@ class Context(_Context):
         mass_scale=None,
         ncmc_teleport=False,
         relax_solvent=False,
+        use_metropolized_inner=False,
+        want_spatial_force_history=False,
     ):
         """Add an NCMC torsional world with ALL solvent welded to Ground.
 
@@ -921,6 +949,23 @@ class Context(_Context):
         kinetic-metric scaling that raises the stable dt ~sqrt(scale) with NO
         configurational bias -- Fixman cancels it). ``mass_scale=None`` (default)
         is physical / off.
+
+        Construction I vs Construction II (docs/specs/ncmc-explicit-solvent/
+        10-acceptance-construction.md)
+        --------------------------------------------------------------------
+        ``use_metropolized_inner=False`` (default) keeps Construction I: accept
+        the whole switch on the endpoint Hamiltonian difference. In explicit
+        solvent (or any large bath) this acceptance sees the propagator's
+        accumulated shadow work over every propagated DOF and collapses toward 0
+        as the bath grows (docs/specs/ncmc-explicit-solvent/
+        00-diagnosis-and-scaling.md). ``use_metropolized_inner=True`` selects
+        Construction II (Metropolized-dynamics NCMC): each fixed-lambda
+        propagate substep is itself Metropolis accept/reject'd against the full
+        H_lambda, so shadow work is absorbed into inner rejections and never
+        reaches the outer acceptance, which instead accepts on the protocol work
+        W alone (``min(1,exp(-beta*W))``). This is the construction required for
+        explicit-solvent / large-bath viability; Construction I remains the
+        cheaper choice for a small rigid ligand with a well-converged corrector.
         """
         st = self.system_topology
         num_mol = int(st.num_molecules)
@@ -975,6 +1020,15 @@ class Context(_Context):
         # add_sampler (the rebuild resets per-body sampler state).
         world.set_root_mobilities(root_mob)
 
+        # Net-applied-per-body-force reporter (docs/specs/
+        # reaction-force-monitoring.md): applied AFTER set_root_mobilities, not
+        # via add_robotic_world's own want_spatial_force_history kwarg -- that
+        # rebuild changes body indices, so deriving the interesting-body set
+        # before it would go stale. enable_reaction_reporter() re-derives from
+        # THIS (final) model.
+        if want_spatial_force_history:
+            world.enable_reaction_reporter()
+
         # Mass scaling MUST come AFTER set_root_mobilities: that rebuild resets
         # every body's mass scale to 1.0. A kinetic-metric mass scale raises the
         # stable dt ~sqrt(scale) with ZERO configurational bias (Fixman cancels it
@@ -998,6 +1052,10 @@ class Context(_Context):
         # behaviour).
         if ncmc_teleport:
             world.set_ncmc_teleport(True)
+        # Construction II (Metropolized-dynamics NCMC): default off reproduces
+        # Construction I (endpoint-DeltaH) bit-for-bit.
+        if use_metropolized_inner:
+            world.set_ncmc_construction_ii(True)
 
         # Solvent-relaxing NCMC (docs/specs/ncmc_solvent_relax.md). With
         # relax_solvent=True the solvent stays WELDED as rigid bodies (no Fixman/
@@ -1013,4 +1071,109 @@ class Context(_Context):
                 if solvent_flags[m]:
                     solvent_atoms.extend(range(atoms_begin[m], atoms_end[m]))
             world.set_cartesian_solvent(solvent_atoms)
+        return world
+
+    def add_contact_world(
+        self,
+        selection,
+        environment_molecule_index,
+        mass_scale=None,
+        reversibility_check_every=0,
+    ):
+        """Add a two-robot contact world (docs/specs/two-robot-contact/).
+
+        The target robot R samples in torsional (internal) coordinates via
+        ``selection``, exactly as :meth:`add_robotic_world` -- R's root
+        mobility is left at whatever the shared topology already carries
+        (this method does not second-guess it). The environment robot E
+        (``environment_molecule_index``, a SEPARATE molecule) is welded to
+        Ground as a 0-DOF Rigid root and its atoms are additionally flagged
+        Cartesian-solvent, so E relaxes by flat velocity-Verlet on the SAME
+        shared OpenMM force evaluation that drives R's proposal -- the
+        existing solvent-relaxing-NCMC ``verletStep`` block
+        (``RobotIntegrator.hpp``), reused verbatim; no new integrator.
+
+        Welding E is not a simplification, it is PRECONDITION P1
+        (docs/specs/two-robot-contact/10-mixed-integrator-correctness.md
+        Sec.2): every atom is assigned to some articulated body, so a
+        Cartesian-integrated atom is only safe inside a 0-DOF Weld/Rigid
+        body -- a DOF>0 body would double-count its atoms' kinetic energy
+        (the articulated ``ke`` PLUS ``keSolvent``) and double-draw their
+        momentum. ``World::setCartesianSolvent`` enforces this at
+        construction (throws on a Free-rooted or partially-masked E), so a
+        caller that names a molecule already given external DOF elsewhere
+        still fails loud rather than silently corrupting the sampled
+        density.
+
+        Parameters
+        ----------
+        selection : str
+            Atom selection for R's mobile torsions (see add_robotic_world).
+        environment_molecule_index : int | Iterable[int]
+            Molecule index/indices treated as the Cartesian environment E.
+            Atom-disjoint from R by construction (different molecules).
+        mass_scale : None | float | dict[JointType, float]
+            Opt-in kinetic-metric mass scaling on R's bodies (off when None).
+        reversibility_check_every : int
+            Cadence of the reversibility probe (THEORY 5.7; see
+            add_robotic_world). Runs on the JOINT (R+E) map, not R alone --
+            INV-REV (docs/specs/two-robot-contact/50-validation.md) requires
+            exactly this to certify the shared-force coupling.
+
+        Returns
+        -------
+        World
+            The new world, for chaining ``.add_sampler(...)``.
+        """
+        if isinstance(environment_molecule_index, int):
+            environment_molecule_index = [environment_molecule_index]
+        environment_molecule_index = sorted(
+            {int(i) for i in environment_molecule_index}
+        )
+
+        st = self.system_topology
+        num_mol = int(st.num_molecules)
+        if not environment_molecule_index:
+            raise ValueError(
+                "add_contact_world: environment_molecule_index is empty; the "
+                "Cartesian environment E must name at least one molecule."
+            )
+        for m in environment_molecule_index:
+            if m < 0 or m >= num_mol:
+                raise ValueError(
+                    f"add_contact_world: environment_molecule_index {m} is out of "
+                    f"range for {num_mol} molecules."
+                )
+
+        atoms_begin = list(st.atoms_begin)
+        atoms_end = list(st.atoms_end)
+
+        world = super().add_robotic_world(selection)
+
+        # Weld E's root(s) to Ground (0-DOF Rigid): P1's construction rule.
+        # Root mobility is a per-world property -- this rebuilds THIS world's
+        # model only and does NOT modify self.system_topology.root_mobilities,
+        # so other worlds sharing the topology are unaffected. Every other
+        # molecule (including R's) keeps the shared topology's existing root
+        # mobility untouched. Call BEFORE add_sampler/mass-scale: the rebuild
+        # resets per-body sampler state and mass scale.
+        root_mob = list(st.root_mobilities)
+        for m in environment_molecule_index:
+            root_mob[m] = JointType.Rigid
+        world.set_root_mobilities(root_mob)
+
+        self._apply_mass_scale(world, mass_scale)
+        if reversibility_check_every:
+            world.set_reversibility_check(int(reversibility_check_every))
+
+        # Flag E's atoms Cartesian-integrated (the existing solvent-relaxing
+        # machinery, generalized from "all water" to "this named molecule").
+        # World::setCartesianSolvent enforces P1 itself (throws if a flagged
+        # atom's body has DOF>0 or is only partially masked), so no redundant
+        # check here.
+        environment_atoms = []
+        for m in environment_molecule_index:
+            environment_atoms.extend(range(atoms_begin[m], atoms_end[m]))
+        world.set_cartesian_solvent(environment_atoms)
+
         return world

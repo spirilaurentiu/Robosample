@@ -25,8 +25,8 @@
             },
             "args": [
                 "2ala",
-                "${workspaceFolder}/examples/2ala/2ala.implicit.prmtop",
-                "${workspaceFolder}/examples/2ala/2ala.implicit.rst7",
+                "${workspaceFolder}/examples/2ala/2ala.tip3p.prmtop",
+                "${workspaceFolder}/examples/2ala/2ala.tip3p.rst7",
                 "6000",
                 "0",
                 "100",
@@ -43,8 +43,8 @@
             "args": [
                 "${workspaceFolder}/python/robosample/run.py",
                 "2ala",
-                "${workspaceFolder}/examples/2ala/2ala.implicit.prmtop",
-                "${workspaceFolder}/examples/2ala/2ala.implicit.rst7",
+                "${workspaceFolder}/examples/2ala/2ala.tip3p.prmtop",
+                "${workspaceFolder}/examples/2ala/2ala.tip3p.rst7",
                 "6000",
                 "0",
                 "100",

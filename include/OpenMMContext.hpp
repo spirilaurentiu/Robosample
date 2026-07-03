@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -37,9 +38,13 @@ class OpenMMContext {
     }
 
     // ---- NCMC alchemy (per-molecule intermolecular decoupling) -------------
-    // enableAlchemy stores the decoupled atom range and a flag; the correction
-    // force is built in initialize() (which has the SystemTopology). PME/periodic
-    // is rejected there. setAlchemicalLambda drives the global "lambda_inter".
+    // enableAlchemy stores the decoupled atom-index SET (Region A, docs/specs/
+    // ncmc-explicit-solvent/30-region-and-protocol-policy.md Sec.2, DECIDED:
+    // arbitrary set, not only contiguous) and a flag; the correction force is
+    // built in initialize() (which has the SystemTopology). PME/periodic is
+    // rejected there. setAlchemicalLambda drives the global "lambda_inter".
+    void enableAlchemy(const std::vector<int>& atomIndices);
+    // Convenience: contiguous [atomBegin,atomEnd) Region A.
     void enableAlchemy(int atomBegin, int atomEnd);
     void setAlchemicalLambda(double lambdaInter);
 
@@ -219,10 +224,13 @@ class OpenMMContext {
     bool separateForceGroups = false;
     std::vector<std::pair<int, std::string>> forceGroupLabels;
 
-    // NCMC alchemy state.
+    // NCMC alchemy state. alchemyAtoms is Region A: an ascending, deduplicated
+    // atom-index set (may be non-contiguous; enableAlchemy(int,int) builds the
+    // contiguous case). alchemyAtomSet mirrors it as a std::set<int> for O(log n)
+    // membership tests in the force builders.
     bool alchemyEnabled = false;
-    int alchemyBegin = -1;
-    int alchemyEnd = -1;
+    std::vector<int> alchemyAtoms;
+    std::set<int> alchemyAtomSet;
     OpenMM::CustomNonbondedForce* alchemyForce = nullptr; // owned by `system`
 
     // r-RESPA multiple-timestep state.

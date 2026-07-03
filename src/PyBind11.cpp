@@ -57,13 +57,37 @@ PYBIND11_MODULE(robo_bindings, m) {
     //                   acceptance H of torsional (internal-coordinate) worlds.
     py::class_<World>(m, "World")
         .def("configure_ncmc",
-             &World::configureNcmc,
+             py::overload_cast<int, int, int, double>(&World::configureNcmc),
              py::arg("atom_begin"),
              py::arg("atom_end"),
              py::arg("ncmc_steps"),
              py::arg("hold_fraction") = 0.0,
              "Make this a per-molecule NCMC world: soften [atom_begin,atom_end) x "
-             "rest nonbonded during a lambda:1->0->1 switch. Call AFTER add_sampler.")
+             "rest nonbonded during a lambda:1->0->1 switch. Call AFTER add_sampler. "
+             "Convenience overload for a single contiguous Region A; see "
+             "configure_ncmc_region for an arbitrary atom-index set.")
+        .def("configure_ncmc_region",
+             py::overload_cast<std::vector<int>, int, double>(&World::configureNcmc),
+             py::arg("atom_indices"),
+             py::arg("ncmc_steps"),
+             py::arg("hold_fraction") = 0.0,
+             "Make this a per-molecule NCMC world with Region A given as an "
+             "ARBITRARY atom-index set (global/OpenMM order; need not be "
+             "contiguous -- docs/specs/ncmc-explicit-solvent/"
+             "30-region-and-protocol-policy.md Sec.2). Sorted+deduplicated "
+             "internally. Call AFTER add_sampler.")
+        .def("set_ncmc_construction_ii",
+             &World::setNcmcConstructionII,
+             py::arg("on"),
+             "Select Construction II (Metropolized-dynamics NCMC, docs/specs/"
+             "ncmc-explicit-solvent/10-acceptance-construction.md): each fixed-"
+             "lambda propagate substep is Metropolis accept/reject'd against the "
+             "full H_lambda (inner GHMC), and the OUTER move accepts on the "
+             "protocol work W alone (min(1,exp(-beta*W))) instead of the endpoint "
+             "Hend-Hstart. Removes bath shadow work from acceptance -- the fix for "
+             "near-zero NCMC acceptance in explicit solvent / large baths. Default "
+             "off == Construction I (endpoint-DeltaH, unchanged). Call AFTER "
+             "configure_ncmc/configure_ncmc_region.")
         .def("add_sampler",
              &World::add_sampler,
              py::arg("timeStep"),
@@ -190,7 +214,93 @@ PYBIND11_MODULE(robo_bindings, m) {
              "forces INSIDE the proposal, so the contact environment relaxes during "
              "the move instead of being a welded wall. Bodies stay welded (no Fixman/"
              "Jacobian contribution); only the per-atom (x,v) move. Empty == the "
-             "welded engine, bit-for-bit. Call AFTER add_sampler/configure_ncmc.");
+             "welded engine, bit-for-bit. Call AFTER add_sampler/configure_ncmc.")
+        .def("enable_reaction_reporter",
+             &World::enableReactionReporter,
+             py::arg("report_free_bodies") = true,
+             py::arg("include_openmm") = true,
+             py::arg("include_reaction") = false,
+             "Mark this world the per-rigid-body force reporter "
+             "(docs/specs/reaction-force-monitoring.md).\n"
+             "\n"
+             "WHAT IS RECORDED\n"
+             "  For each interesting rigid body, ONE (force, torque) pair, about the body "
+             "origin Bo, in the Ground frame -- the SUM of whichever term(s) below are "
+             "enabled. Both terms are spatial forces about the SAME point (Bo, in Ground), so "
+             "summing them is a valid spatial-force addition, not an apples-to-oranges "
+             "combination. The output is ALWAYS the same 10-column CSV row shape (one force + "
+             "torque per body); which term(s) went into the sum is a per-reporter-world "
+             "CHOICE, not a separate set of columns.\n"
+             "\n"
+             "  include_openmm=True (default) adds the OpenMM NET APPLIED spatial force "
+             "bodyForceG:\n"
+             "      force  = sum over the body's atoms of the OpenMM per-atom force f_a\n"
+             "      torque = sum over the body's atoms of (r_a - Bo) x f_a\n"
+             "  i.e. the net EXTERNAL force the OpenMM force field exerts on the whole rigid "
+             "body (van der Waals + electrostatics + the bonded terms crossing the body "
+             "boundary). It is NOT the mobilizer/joint REACTION (the internal constraint "
+             "force transmitted through the inboard joint). Being a sum of per-atom forces "
+             "at fixed positions, bodyForceG is a pure function of the configuration q and "
+             "carries NO velocity/momentum dependence.\n"
+             "\n"
+             "  include_reaction=True (default False) adds the STATIC (u=0) mobilizer "
+             "REACTION: the constraint spatial force transmitted through the body's inboard "
+             "joint, evaluated with all generalized speeds set to zero on the SAME accepted "
+             "q. Unlike bodyForceG (this body's own applied load only), the reaction is "
+             "CUMULATIVE over the body's entire outboard subtree and depends on the "
+             "kinematic rooting, not just this body's own atoms -- it is a different, "
+             "complementary quantity, not a refinement of bodyForceG. When False (default), "
+             "no forward-dynamics step is taken and u is never touched.\n"
+             "\n"
+             "  DEFAULT (include_openmm=True, include_reaction=False) reproduces the "
+             "OpenMM-only output this reporter shipped with, byte-for-byte. Setting "
+             "include_openmm=False, include_reaction=True records the reaction ALONE (no "
+             "applied-force term in the sum); setting BOTH True records their SUM (\"net\", "
+             "in the sense of net field load + net constraint load). Raises if BOTH are "
+             "False (nothing to report).\n"
+             "\n"
+             "WHICH BODIES\n"
+             "  Auto-derived from THIS world's final model: every internally flexed body "
+             "plus its parent (Ground itself excluded). report_free_bodies=False (default "
+             "True) also drops FREE-FLOATING RIGID bodies -- a body that is BOTH "
+             "Ground-rooted AND childless, i.e. a lone rigid molecule on a Free root (e.g. a "
+             "Free-rooted lipid with no internal DOFs). A flexed molecule's OWN root (e.g. a "
+             "receptor's root TM body) is Ground-rooted too but HAS children, so it is kept "
+             "either way.\n"
+             "\n"
+             "WHEN IT IS SAMPLED\n"
+             "  At the END of a round: AFTER the world's HMC move has drawn its random "
+             "Boltzmann momenta, integrated the trajectory, and resolved accept/reject. The "
+             "q read is therefore the ACCEPTED conformation -- the SAME configuration written "
+             "to that round's DCD frame, so force rows join the trajectory 1:1 by frame "
+             "index. It is taken at the trajectory-write cadence (write_freq, production "
+             "only), not every round.\n"
+             "\n"
+             "  Beginning-vs-end / before-vs-after the momentum draw: the snapshot is taken "
+             "at the END of the round (post-integration, post-accept), hence AFTER the "
+             "momentum draw. But EVERY enabled term is velocity-free by construction -- "
+             "bodyForceG is a sum of per-atom forces at fixed positions, and the reaction "
+             "term is forced to u=0 before being evaluated -- so the recorded value is "
+             "INDEPENDENT of the drawn momenta and of where in the ballistic-vs-diffusive "
+             "trajectory the round happened to end -- evaluating it before or after the draw, "
+             "at the same accepted q, yields the same result. (This invariance is why the "
+             "reaction term is forced to u=0 rather than read at the LIVE trajectory-endpoint "
+             "u; an instantaneous u != 0 reaction WOULD depend on the momentum draw and the "
+             "trajectory point.)\n"
+             "\n"
+             "  The snapshot is READ-ONLY w.r.t. the sampler (it does not consume or perturb "
+             "q/u), so the next round's move is bit-for-bit unaffected.\n"
+             "\n"
+             "USAGE\n"
+             "  Prefer the want_spatial_force_history=True argument to context.add_*_world(); "
+             "call this directly ONLY when the world is rebuilt after construction (e.g. "
+             "add_ncmc_world / set_root_mobilities), so the derivation sees the FINAL body "
+             "indexing. Raises on a Cartesian world (internal-coordinate body indexing is not "
+             "meaningful there).")
+        .def_property_readonly("is_reaction_reporter",
+             &World::isReactionReporter,
+             "Whether enable_reaction_reporter()/setReactionReporter() has been called on "
+             "this world.");
 
     py::class_<OpenMMContext::ForceGroupEnergy>(m, "ForceGroupEnergy")
         .def_readonly("group", &OpenMMContext::ForceGroupEnergy::group)
@@ -330,16 +440,26 @@ PYBIND11_MODULE(robo_bindings, m) {
              "Build OpenMM, set the replica temperature ladder, seed coordinates.")
         .def("add_cartesian_world",
              &Context::addCartesianWorld,
+             py::arg("want_spatial_force_history") = false,
              py::return_value_policy::reference_internal,
-             "Add a Cartesian (OpenMM-MD) world; returns it for .add_sampler(...).")
+             "Add a Cartesian (OpenMM-MD) world; returns it for .add_sampler(...). "
+             "want_spatial_force_history=True always raises (docs/specs/"
+             "reaction-force-monitoring.md Sec.3): a Cartesian world's internal-coordinate "
+             "body indexing is not meaningful.")
         .def("add_robotic_world",
              &Context::addRoboticWorld,
              py::arg("selection"),
+             py::arg("want_spatial_force_history") = false,
              py::return_value_policy::reference_internal,
-             "Add an internal-coordinate (torsional) world for the given selection.")
+             "Add an internal-coordinate (torsional) world for the given selection. "
+             "want_spatial_force_history=True flags this world the net-applied-per-body-force "
+             "reporter (docs/specs/reaction-force-monitoring.md); its selection's flexed "
+             "bodies (plus parents) become the interesting-body set whose bodyForceG is "
+             "streamed to <base>.<replica>.reactions.csv.")
         .def("add_torsional_world",
              &Context::addRoboticWorld,
              py::arg("selection"),
+             py::arg("want_spatial_force_history") = false,
              py::return_value_policy::reference_internal,
              "Alias of add_robotic_world.")
         .def("add_docking_world",

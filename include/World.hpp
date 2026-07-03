@@ -68,6 +68,28 @@ struct Selection {
     std::vector<JointType> bondMobility; // [numBonds]; default Weld (== Rigid)
 };
 
+// Per-frame, per-BODY spatial force row (docs/specs/reaction-force-
+// monitoring.md Sec.1/3/4): `force`/`torque`, about the body origin Bo, in
+// Ground, is the SUM of whichever term(s) World::enableReactionReporter
+// enabled -- the OpenMM net applied force (`bodyForceG`, read directly off
+// `ForceBridge::evaluate`) and/or the static (u=0) mobilizer reaction
+// (`RobotEngine::calcMobilizerReactionForces`). Both terms are spatial
+// forces about the SAME point (Bo, in Ground), so summing them is a valid
+// spatial-force addition, not an apples-to-oranges combination; which
+// term(s) are included is a per-reporter-world CHOICE, not encoded in the
+// row itself (docs/specs/reaction-force-monitoring.md Sec.1.2). RAW (native
+// units, no normalization -- normalization, if wanted, is a render-only
+// transform applied downstream of this CSV, in vmd/arrows.tcl, never here).
+// `bodyIdx` is the RobotModel body index; `atomIdx` is the VMD/DCD atom
+// index (prmtop order, SystemTopology::atomsPrmtopIndex) of a
+// REPRESENTATIVE atom of that body, for placement in vmd/arrows.tcl.
+struct ReactionSample {
+    int bodyIdx;
+    int atomIdx;
+    robo::Vec3 force;
+    robo::Vec3 torque;
+};
+
 struct SamplerConfig {
     double timeStep = 0.001;
     int mdSteps = 0;
@@ -170,10 +192,21 @@ struct SamplerConfig {
     int ncmcSteps = 0;
     // Fraction of ncmcSteps held at lambda=0 between the down- and up-ramps.
     double ncmcHoldFraction = 0.0;
-    // Atom-index range [begin,end) of the molecule decoupled from every other
-    // molecule. Set by World::configureNcmc.
-    int ncmcAtomBegin = -1;
-    int ncmcAtomEnd = -1;
+    // Atom-index SET (global/OpenMM order, ASCENDING + deduplicated) of Region A --
+    // the substructure decoupled from every other atom (docs/specs/
+    // ncmc-explicit-solvent/30-region-and-protocol-policy.md Sec.2). Set by
+    // World::configureNcmc; a contiguous [begin,end) range is the common case (the
+    // convenience overload builds this vector from it) but the set need not be
+    // contiguous.
+    std::vector<int> ncmcAtomIndices;
+    // Construction II (Metropolized-dynamics NCMC, docs/specs/
+    // ncmc-explicit-solvent/10-acceptance-construction.md): when true, each
+    // fixed-lambda propagate substep is itself Metropolis accept/reject'd against
+    // the full H_lambda (an inner GHMC kernel), and the OUTER move accepts on the
+    // protocol work W alone (min(1,exp(-beta*W))) instead of the endpoint
+    // Hend-Hstart. Default false preserves Construction I (endpoint-DeltaH, the
+    // original behavior) bit-for-bit.
+    bool useMetropolizedInner = false;
 };
 
 class World {
@@ -241,9 +274,15 @@ class World {
     void configureDocking(std::vector<std::vector<int>> ligandGroups, std::vector<int> siteAtoms);
 
     // Mark this world as a per-molecule NCMC world: during the lambda:1->0->1
-    // switch the intermolecular nonbonded between [atomBegin,atomEnd) and every
-    // other molecule is alchemically softened (intramolecular physics untouched).
-    // Call AFTER add_sampler (it sets moveType last). Vacuum/implicit only.
+    // switch the intermolecular nonbonded between Region A (atomIndices) and
+    // every other atom is alchemically softened (intramolecular physics
+    // untouched). atomIndices is an arbitrary atom-index set (need not be
+    // contiguous, docs/specs/ncmc-explicit-solvent/30-region-and-protocol-
+    // policy.md Sec.2); it is sorted + deduplicated internally. Call AFTER
+    // add_sampler (it sets moveType last).
+    void configureNcmc(std::vector<int> atomIndices, int ncmcSteps, double holdFraction);
+    // Convenience overload: contiguous [atomBegin,atomEnd) Region A (the common
+    // case -- a single contiguous solute block). Forwards to the index-set form.
     void configureNcmc(int atomBegin, int atomEnd, int ncmcSteps, double holdFraction);
 
     void setAtomsLocationsInGround(const std::vector<robo::Vec3>& atomPosG);
@@ -369,6 +408,101 @@ class World {
         sampler_.ncmcTeleport = on;
     }
 
+    // Select Construction II (Metropolized-dynamics NCMC) for the outer
+    // acceptance. Default false == Construction I (endpoint-DeltaH, unchanged).
+    // See SamplerConfig::useMetropolizedInner and docs/specs/
+    // ncmc-explicit-solvent/10-acceptance-construction.md.
+    void setNcmcConstructionII(bool on) {
+        sampler_.useMetropolizedInner = on;
+    }
+
+    // ---- Reaction-force reporter (docs/specs/reaction-force-monitoring.md) --
+    // Mark this world the "reporter" for per-body force monitoring.
+    // `interestingBodies` (RobotModel body indices, Ground (body 0) excluded --
+    // Sec.2.1/§4) is the set whose spatial force `captureReactionSnapshot()`
+    // records. Off by default -- a world that never calls this allocates
+    // nothing and does zero extra work. Throws if this world is Cartesian
+    // (OpenMMVelocityVerlet-equivalent): the internal-coordinate articulated
+    // body indexing this reporter relies on is not meaningful there (Sec.3
+    // integrator guard). Does NOT touch reactionIncludeOpenmm_/
+    // reactionIncludeReaction_ (they stay whatever they already were,
+    // defaults true/false) -- those flags are set exclusively by
+    // enableReactionReporter's includeOpenmm/includeReaction arguments.
+    void setReactionReporter(std::vector<int> interestingBodies);
+    // Self-contained convenience: derive the interesting-body set from THIS
+    // world's CURRENT model_ (every flexed/non-Weld body plus its parent,
+    // excluding only Ground itself -- bodyForceG needs no inboard atom, so a
+    // body whose own inboard joint attaches directly to Ground, e.g. a
+    // Free-rooted receptor's root body, IS included -- same rule as
+    // enableReactionReporter's own doc comment) and call setReactionReporter
+    // with it. Safe to call at ANY point after buildModel/setRootMobility(ies) has
+    // produced the FINAL model this world will sample with -- a rebuild
+    // changes body indices, so calling this BEFORE the LAST rebuild derives a
+    // stale set (e.g. add_ncmc_world's set_root_mobilities rebuild happens
+    // AFTER add_robotic_world, docs/specs/reaction-force-monitoring.md
+    // Sec.2.0).
+    //
+    // `reportFreeBodies` (default true, non-breaking) controls whether
+    // FREE-FLOATING RIGID bodies survive the derivation: a body that is BOTH
+    // Ground-rooted (bodyParent[b] == 0) AND CHILDLESS (no other body's
+    // parent is b) is a lone rigid molecule sitting on a Free root -- e.g. a
+    // lipid given a Free root but no internal DOFs. When false, such bodies
+    // are dropped from the derived set AFTER collection, even though they
+    // are "flexed" (bodyNU != 0 from the Free root) and would otherwise pass
+    // the loop above. A flexed molecule's OWN root (e.g. a receptor's root
+    // TM body) is Ground-rooted too but is NOT childless -- its internally-
+    // jointed bodies branch from it -- so it is unaffected and always kept.
+    //
+    // `includeOpenmm` (default true) / `includeReaction` (default false)
+    // select which spatial-force TERM(S) captureReactionSnapshot() SUMS into
+    // each body's single (force, torque) row (docs/specs/
+    // reaction-force-monitoring.md Sec.1.2): includeOpenmm adds the OpenMM
+    // net applied force `bodyForceG`; includeReaction adds the static (u=0)
+    // mobilizer reaction. Both terms are spatial forces about the SAME point
+    // (Bo, in Ground), so summing them is a valid addition. DEFAULT
+    // (true, false) reproduces the OpenMM-only output this reporter shipped
+    // with, byte-for-byte -- no forward-dynamics step, no u save/zero/
+    // restore. At least one of the two MUST be true (enforced in
+    // captureReactionSnapshot, not here, since the flags can still change via
+    // a later enableReactionReporter call before any snapshot is taken).
+    // Bound to Python as world.enable_reaction_reporter(report_free_bodies=True,
+    // include_openmm=True, include_reaction=False).
+    void enableReactionReporter(bool reportFreeBodies = true,
+                                bool includeOpenmm = true,
+                                bool includeReaction = false);
+    [[nodiscard]] bool isReactionReporter() const {
+        return reactionReporter_;
+    }
+    [[nodiscard]] const std::vector<int>& reactionInterestingBodies() const {
+        return reactionInterestingBodies_;
+    }
+
+    // Snapshot, per interesting body, the SUM of whichever term(s)
+    // enableReactionReporter enabled -- the OpenMM net applied force
+    // (`bodyForceG`, velocity-free) and/or the static (u=0) mobilizer
+    // reaction -- on this world's CURRENT q (docs/specs/
+    // reaction-force-monitoring.md Sec.3) into reactionSamples(). Intended
+    // call point: AFTER generateSample() has resolved this round's
+    // accept/reject, so the q read here is the same accepted conformation
+    // that gets written to the paired DCD frame (Sec.1 item 3). No-op
+    // (leaves reactionSamples() empty) unless isReactionReporter(). Throws
+    // if BOTH includeOpenmm and includeReaction are false (nothing to
+    // report). READ-ONLY w.r.t. the sampler: `bodyForceG`'s refresh only
+    // touches ForceBridge/arena scratch (recomputed fresh at the top of the
+    // next round anyway); the OPTIONAL u=0 reaction term DOES zero `u` for
+    // its forward-dynamics step, but saves and restores it (and every
+    // u-derived cache) before returning -- so either way this cannot perturb
+    // the next round's generateSample() call (the no-perturbation property,
+    // Sec.3/6).
+    void captureReactionSnapshot();
+    // The force rows captured by the last captureReactionSnapshot() call
+    // (empty until that has been called at least once, or on a non-reporter
+    // world). Read-only -- Context flushes this to the per-replica
+    // reactions.csv at the DCD cadence (Sec.4).
+    [[nodiscard]] const std::vector<ReactionSample>& reactionSamples() const {
+        return reactionSamples_;
+    }
+
     // Compute the Route B mass-weighted internal-coordinate Hessian at the given
     // (minimized) Ground-frame coordinates and store the softest non-trivial mode
     // as the per-DOF NMA direction consumed by reinitialize(). atomPosGFlat is
@@ -395,6 +529,21 @@ class World {
     double protocolLambda(int s) const;     // lambda schedule, s in [0, ncmcSteps)
     int ncmcTeleportRoot() const;           // Free-joint tree root of the NCMC region, or -1
     void ncmcApplyTroughTeleport(int rootBody); // rigid λ=0 teleport + KE co-rotation
+    // Construction II inner kernel (docs/specs/ncmc-explicit-solvent/
+    // 10-acceptance-construction.md Sec.3, 20-inner-integrator.md Sec.2 F3): one
+    // fixed-lambda Verlet substep, Metropolized against the FULL H_lambda (the
+    // SAME assembly currentTotalEnergy() uses -- F1/F2), reject-flip (u,v_s) on
+    // reject. A non-converged velocity corrector is ALSO an automatic reject
+    // (F3). Returns false ONLY on a genuinely unrecoverable non-finite
+    // force/velocity (mirrors RobotEngine::stepTo's own contract); the caller
+    // treats false exactly as it already treats a raw stepTo failure (abort the
+    // whole NCMC move). A Metropolis reject or non-convergence is absorbed
+    // internally and reported as true (the state is left valid, momentum-flipped).
+    // `substepIndex` is diagnostic only (per-substep trace, ROBO_NCMC_DEBUG=1).
+    // `acceptedOut`, if non-null, is set to whether the inner GHMC accepted this
+    // substep (false on an F3 non-convergence reject too), so the caller can
+    // accumulate a per-move inner-acceptance count.
+    bool ncmcInnerGhmcStep(robo::Real h, int substepIndex, bool* acceptedOut = nullptr);
     void recomputeGeometry(const robo::Vec3* targets);
 
     // --- Fixman / coordinate-Jacobian corrections (torsional worlds only) ---
@@ -437,6 +586,20 @@ class World {
     bool lastKickApplied_ = false;
     long generateSampleCalls_ = 0; // for the reversibility-check cadence (SamplerConfig)
     bool equilPhase_ = false;      // true during burn-in: AlwaysAccept overrides MH
+
+    // Reaction-force reporter state (docs/specs/reaction-force-monitoring.md).
+    // reactionReporter_/reactionInterestingBodies_ are set once by
+    // setReactionReporter(); reactionIncludeOpenmm_/reactionIncludeReaction_
+    // are set by enableReactionReporter's includeOpenmm/includeReaction
+    // arguments (not by setReactionReporter -- see its doc comment); they
+    // select which term(s) captureReactionSnapshot() sums into each row
+    // (Sec.1.2); reactionSamples_ is captureReactionSnapshot()'s output
+    // buffer.
+    bool reactionReporter_ = false;
+    bool reactionIncludeOpenmm_ = true;
+    bool reactionIncludeReaction_ = false;
+    std::vector<int> reactionInterestingBodies_;
+    std::vector<ReactionSample> reactionSamples_;
 
     // Consecutive rejected docking moves from the current carried-forward pose.
     // Reset on any acceptance; when it reaches sampler_.maxStuckRounds a kick is

@@ -104,7 +104,11 @@ bool RobotEngine::verletStep(const RobotModel& m,
                              RobotState& s,
                              Bridge& bridge,
                              const robo::ConstraintSet& cset,
-                             Real h) {
+                             Real h,
+                             bool* correctorConverged) {
+    if (correctorConverged) {
+        *correctorConverged = false; // pessimistic default; set true only on a converged step below
+    }
     const int nq = m.nq, nu = m.nu;
     Real* q = s.q();
     Real* u = s.u();
@@ -393,6 +397,9 @@ bool RobotEngine::verletStep(const RobotModel& m,
     // is kept (fail-loud diagnostic): a non-converged corrector means dt is too
     // large for this geometry, so most such steps will be rejected by Metropolis
     // until the world's timestep is reduced.
+    if (correctorConverged) {
+        *correctorConverged = converged;
+    }
     if (!converged) {
         std::fprintf(stderr,
                      "[verlet] world: velocity corrector did not converge at dt=%.6g ps "
@@ -430,12 +437,16 @@ auto RobotEngine::stepTo(const RobotModel& model,
                          RobotState& state,
                          Bridge& bridge,
                          const robo::ConstraintSet& cset,
-                         Real tEnd) -> bool {
+                         Real tEnd,
+                         bool* correctorConverged) -> bool {
     const Real h = tEnd - state.time;
     if (h <= 0) {
+        if (correctorConverged) {
+            *correctorConverged = true; // no-op step: trivially "converged"
+        }
         return true;
     }
-    return verletStep(model, state, bridge, cset, h);
+    return verletStep(model, state, bridge, cset, h, correctorConverged);
 }
 
 template <class Bridge>

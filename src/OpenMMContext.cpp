@@ -582,11 +582,7 @@ auto OpenMMContext::createAlchemyCorrectionForce(const SystemTopology& sys) -> O
     }
     std::set<int> aSet, restSet;
     for (int i = 0; i < sys.numAtoms; ++i) {
-        if (i >= alchemyBegin && i < alchemyEnd) {
-            aSet.insert(i);
-        } else {
-            restSet.insert(i);
-        }
+        (alchemyAtomSet.count(i) ? aSet : restSet).insert(i);
     }
     f->addInteractionGroup(aSet, restSet); // A x rest ONLY
     // Share the main NonbondedForce's exclusion list so the CPU platform accepts
@@ -608,10 +604,20 @@ void OpenMMContext::addStandardExclusions(OpenMM::CustomNonbondedForce* force, c
     }
 }
 
-void OpenMMContext::enableAlchemy(int atomBegin, int atomEnd) {
+void OpenMMContext::enableAlchemy(const std::vector<int>& atomIndices) {
     alchemyEnabled = true;
-    alchemyBegin = atomBegin;
-    alchemyEnd = atomEnd;
+    alchemyAtoms = atomIndices;
+    std::sort(alchemyAtoms.begin(), alchemyAtoms.end());
+    alchemyAtoms.erase(std::unique(alchemyAtoms.begin(), alchemyAtoms.end()), alchemyAtoms.end());
+    alchemyAtomSet = std::set<int>(alchemyAtoms.begin(), alchemyAtoms.end());
+}
+
+void OpenMMContext::enableAlchemy(int atomBegin, int atomEnd) {
+    std::vector<int> atomIndices;
+    for (int i = atomBegin; i < atomEnd; ++i) {
+        atomIndices.push_back(i);
+    }
+    enableAlchemy(atomIndices);
 }
 
 void OpenMMContext::setAlchemicalLambda(double lambdaInter) {
@@ -735,7 +741,7 @@ auto OpenMMContext::createAlchemyDecouplingForces(const SystemTopology& sys, Ope
     // Sterics: zero A's epsilon so MAIN computes no LJ involving A; rebuilt below.
     // 1-4/exclusion exceptions are intramolecular and left untouched.
     main->addGlobalParameter("lambda_inter", 1.0);
-    for (int i = alchemyBegin; i < alchemyEnd; ++i) {
+    for (int i : alchemyAtoms) {
         double q = 0.0, sig = 0.0, eps = 0.0;
         main->getParticleParameters(i, q, sig, eps);
         main->setParticleParameters(i, 0.0, sig, 0.0);
@@ -744,7 +750,7 @@ auto OpenMMContext::createAlchemyDecouplingForces(const SystemTopology& sys, Ope
 
     std::set<int> aSet, restSet;
     for (int i = 0; i < sys.numAtoms; ++i) {
-        (i >= alchemyBegin && i < alchemyEnd ? aSet : restSet).insert(i);
+        (alchemyAtomSet.count(i) ? aSet : restSet).insert(i);
     }
 
     // (2) Soft-core A x rest LJ, scaled by lambda_inter. lambda=1 -> exact LJ;

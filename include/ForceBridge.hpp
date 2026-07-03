@@ -119,6 +119,12 @@ class ForceBridge {
     }
 
     // NCMC passthroughs (forward only ints; no SystemTopology coupling here).
+    // Region A as an arbitrary atom-index set (docs/specs/ncmc-explicit-solvent/
+    // 30-region-and-protocol-policy.md Sec.2).
+    void enableAlchemy(const std::vector<int>& atomIndices) const {
+        OpenMMContext::get().enableAlchemy(atomIndices);
+    }
+    // Convenience: contiguous [atomBegin,atomEnd) Region A.
     void enableAlchemy(int atomBegin, int atomEnd) const {
         OpenMMContext::get().enableAlchemy(atomBegin, atomEnd);
     }

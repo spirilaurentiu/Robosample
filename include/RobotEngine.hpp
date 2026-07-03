@@ -134,21 +134,34 @@ class RobotEngine {
     // or coordinate appeared during the step (e.g. a hard steric overlap drove an
     // LJ force to Inf); in that case the pre-step q/u are restored so the caller
     // sees a finite, unmodified state to reject from -- never a NaN it must chase.
+    //
+    // correctorConverged (optional, default nullptr): when non-null, receives
+    // whether the implicit-trapezoid velocity corrector reached its fixed point
+    // (see the "take the step anyway" comment in the .hpp definition). Every
+    // existing caller passes nullptr and observes NO behavior change -- the step
+    // is still taken unconditionally on non-convergence; only a caller that reads
+    // the flag can react (docs/specs/ncmc-explicit-solvent/20-inner-integrator.md
+    // F3: under Construction-II NCMC, the caller SHALL treat a false readback as
+    // a reject, since a non-converged corrector need not be F-reversible and would
+    // otherwise silently break the inner GHMC kernel's pi_lambda-invariance).
     template <class Bridge>
     static bool verletStep(const RobotModel& m,
                            RobotState& s,
                            Bridge& bridge,
                            const robo::ConstraintSet& cset,
-                           robo::Real h);
+                           robo::Real h,
+                           bool* correctorConverged = nullptr);
 
     // Drives verletStep until t_end. Port of TimeStepper::stepTo for the fixed-
-    // step velocity-Verlet path Robosample uses. Returns success.
+    // step velocity-Verlet path Robosample uses. Returns success. See verletStep
+    // for the optional correctorConverged out-param.
     template <class Bridge>
     static bool stepTo(const RobotModel& m,
                        RobotState& s,
                        Bridge& bridge,
                        const robo::ConstraintSet& cset,
-                       robo::Real tEnd);
+                       robo::Real tEnd,
+                       bool* correctorConverged = nullptr);
 
     // Reversibility diagnostic: integrate nSteps forward at step h, flip the
     // momenta, integrate nSteps back, flip again, and return the RELATIVE

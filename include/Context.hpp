@@ -39,8 +39,18 @@ class Context {
     // world (internal-coordinate HMC). Both return a reference to the new world
     // so Python can chain .add_sampler(...). The model is built immediately
     // from the current systemTopology + root mobilities.
-    World& addCartesianWorld();
-    World& addRoboticWorld(const Selection& sel);
+    //
+    // wantReactionReporter (docs/specs/reaction-force-monitoring.md Sec.2): opt
+    // -in, off by default. Flags the new world the per-body applied-force
+    // reporter (World::setReactionReporter). addCartesianWorld always THROWS
+    // when true (Sec.3 integrator guard -- a Cartesian world's articulated
+    // body indexing is not meaningful). addRoboticWorld derives the
+    // interesting-body set from the just-built model: every non-Weld (flexed)
+    // body plus its parent, excluding only Ground itself -- a Free-rooted
+    // body (e.g. a receptor's root, directly attached to Ground) IS included
+    // (Sec.2.1/Sec.4).
+    World& addCartesianWorld(bool wantReactionReporter = false);
+    World& addRoboticWorld(const Selection& sel, bool wantReactionReporter = false);
 
     // Add a DOCKING world. `ligandMoleculeIndices` lists which molecules are
     // ligands; their roots become Free (6 external DOF) and ALL their bonds stay
@@ -97,6 +107,11 @@ class Context {
     private:
     double openmmPotential(const std::vector<robo::Vec3>& coords);
     void writeOutputs(int replica, int round, bool verbose);
+    // Append a reporter world's captured per-body force rows (docs/specs/
+    // reaction-force-monitoring.md Sec.4) to that replica's per-replica CSV,
+    // tagged with the DCD frame index they pair with. No-op if rows is
+    // empty. Always the fixed 10-column schema (Sec.1.2/4).
+    void writeReactionRows(int replica, int frame, const std::vector<ReactionSample>& rows);
 
     // Refuse to start (or warn, if ROBO_ALLOW_BAD_START is set) when the input
     // geometry is non-finite or sterically clashing -- the docking world cannot

@@ -18,8 +18,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <numeric>
 #include <queue>
+#include <set>
 #include <stdexcept>
 #include <string>
 
@@ -57,6 +59,21 @@ bool nmaDebugEnabled() {
 
     static const bool on = [] {
         const char* e = std::getenv("ROBO_NMA_DEBUG");
+        return e != nullptr && e[0] != '0' && e[0] != '\0';
+    }();
+    return on;
+}
+
+// Opt-in per-substep trace of Construction II's inner GHMC kernel
+// (ncmcInnerGhmcStep). Set the env var ROBO_NCMC_DEBUG=1 to print, for every
+// fixed-lambda substep, Hbefore/Hafter/dH/converged/accepted -- diagnosable
+// evidence for whether the inner kernel is accepting genuine dt-dependent
+// dynamics or freezing (dH pinned to a large/NaN, dt-independent value; see
+// docs/specs/ncmc-explicit-solvent/). Off by default (up to ncmcSteps lines
+// per move would otherwise flood stderr).
+bool ncmcDebugEnabled() {
+    static const bool on = [] {
+        const char* e = std::getenv("ROBO_NCMC_DEBUG");
         return e != nullptr && e[0] != '0' && e[0] != '\0';
     }();
     return on;
@@ -310,6 +327,176 @@ void World::setReversibilityCheck(int interval) {
                      "(non-destructive; residual logged per round; see THEORY 5.7).\n",
                      index_,
                      sampler_.reversibilityCheckInterval);
+    }
+}
+
+void World::setReactionReporter(std::vector<int> interestingBodies) {
+    if (cartesian_) {
+        throw std::runtime_error(
+            "World::setReactionReporter: not supported on a Cartesian (OpenMMVelocityVerlet-equivalent) "
+            "world -- it has no articulated body indexing for the interesting-body set to select from "
+            "(docs/specs/reaction-force-monitoring.md Sec.3 integrator guard). Flag a torsional/"
+            "robotic (add_robotic_world/add_torsional_world) world instead.");
+    }
+    reactionInterestingBodies_ = std::move(interestingBodies);
+    reactionReporter_ = true;
+}
+
+void World::enableReactionReporter(bool reportFreeBodies, bool includeOpenmm, bool includeReaction) {
+    if (cartesian_) {
+        throw std::runtime_error(
+            "World::enableReactionReporter: not supported on a Cartesian (OpenMMVelocityVerlet-equivalent) "
+            "world -- it has no articulated body indexing for the interesting-body set to select from "
+            "(docs/specs/reaction-force-monitoring.md Sec.3 integrator guard). Flag a torsional/"
+            "robotic (add_robotic_world/add_torsional_world) world instead.");
+    }
+    // Interesting-body selection (docs/specs/reaction-force-monitoring.md
+    // Sec.2.1/Sec.4): every flexed (non-Weld) body PLUS its parent -- the
+    // "both sides of the flex point" domain-boundary picture the old writer
+    // used (its childMBIx/parentMBIx pair). bodyForceG is well-defined for
+    // ANY non-Ground body (it needs only that body's own atoms, not an
+    // inboard atom), so the only exclusion is Ground itself (body 0, no
+    // atom to serve as the CSV's atom_idx representative -- Terms: "Ground,
+    // body 0, is never included"). In particular a body whose OWN inboard
+    // joint attaches directly to Ground (e.g. a Free-rooted receptor's root
+    // body) IS included here -- excluding it would silently drop that root
+    // body's own applied-force reading (e.g. TM1 of a 7-body TM bundle).
+    std::set<int> interesting;
+    auto reportable = [](int body) { return body != 0; };
+    for (int b = 1; b < model_.numBodies; ++b) {
+        if (model_.bodyNU[b] == 0) {
+            continue; // Weld: not a flexed joint
+        }
+        if (reportable(b)) {
+            interesting.insert(b);
+        }
+        const int p = model_.bodyParent[b];
+        if (reportable(p)) {
+            interesting.insert(p);
+        }
+    }
+
+    // reportFreeBodies == false: drop FREE-FLOATING RIGID bodies -- bodies
+    // that are BOTH Ground-rooted (bodyParent[b] == 0) AND CHILDLESS (no
+    // other body's parent is b). Such a body is a lone rigid molecule sitting
+    // on a Free root (e.g. a lipid given a Free root but no internal DOFs):
+    // it entered `interesting` above only because a Free root always carries
+    // bodyNU == 6 != 0, tripping the "flexed" gate even though nothing about
+    // it is actually flexed. A flexed molecule's OWN root (e.g. a receptor's
+    // root TM body) is Ground-rooted too, but is NOT childless -- its
+    // internally-jointed bodies branch from it -- so this predicate leaves it
+    // untouched.
+    if (!reportFreeBodies) {
+        std::vector<int> childCount(static_cast<std::size_t>(model_.numBodies), 0);
+        for (int b = 1; b < model_.numBodies; ++b) {
+            ++childCount[static_cast<std::size_t>(model_.bodyParent[b])];
+        }
+        for (auto it = interesting.begin(); it != interesting.end();) {
+            const int b = *it;
+            if (model_.bodyParent[b] == 0 && childCount[static_cast<std::size_t>(b)] == 0) {
+                it = interesting.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    reactionIncludeOpenmm_ = includeOpenmm;
+    reactionIncludeReaction_ = includeReaction;
+    setReactionReporter(std::vector<int>(interesting.begin(), interesting.end()));
+}
+
+void World::captureReactionSnapshot() {
+    reactionSamples_.clear();
+    if (!reactionReporter_) {
+        return;
+    }
+    if (!reactionIncludeOpenmm_ && !reactionIncludeReaction_) {
+        throw std::runtime_error(
+            "World::captureReactionSnapshot: both includeOpenmm and includeReaction are false -- "
+            "nothing to report (docs/specs/reaction-force-monitoring.md Sec.1.2). Pass at least one "
+            "true to World::enableReactionReporter.");
+    }
+
+    // 1. Realize position at the CURRENT (accepted) q. Idempotent/cheap
+    // (mirrors currentConstraintLogDet()'s own pattern): guarantees X_GB is
+    // current for THIS q regardless of which generateSample() branch
+    // (accept, or one of the several reject-restore paths) produced it.
+    // bodyForceG's reduction (ForceBridge::getForcesFromOpenMM) needs
+    // atomPosG/X_GB only, not articulated-body inertias/velocities.
+    RobotEngine::realizePosition(model_, state_);
+
+    // 2. Refresh the field at q: bridge_.evaluate writes atomPosG -> OpenMM,
+    // reads back per-atom forces, and reduces them to the per-body spatial
+    // force `bodyForceG` (net force + torque about each body's origin, in
+    // Ground -- docs/specs/reaction-force-monitoring.md Sec.1/3,
+    // ForceBridge::getForcesFromOpenMM). Velocity-independent: this alone
+    // cannot leak a trajectory velocity into the recorded quantity, and it
+    // only overwrites arena scratch (bodyForceG/atomForceG/mobilityForce)
+    // that the next round's evaluate() recomputes from scratch anyway -- no
+    // save/restore dance is needed for THIS quantity (unlike the OPTIONAL
+    // u=0 reaction term below, which does touch u and restores it). ALWAYS
+    // run, regardless of includeOpenmm: `bodyForceG` is also the F_ext the
+    // reaction term (calcMobilizerReactionForces) needs as a precondition.
+    bridge_.evaluate(state_);
+
+    // 3. OPTIONAL: the static (u=0) mobilizer reaction term (docs/specs/
+    // reaction-force-monitoring.md Sec.1.2). Off by default
+    // (reactionIncludeReaction_ == false): skipped entirely -- no forward-
+    // dynamics step, no u touched, exactly the OpenMM-only path this
+    // reporter shipped with.
+    std::vector<robo::SpatialVec> reactionAtBo;
+    if (reactionIncludeReaction_) {
+        // Static (u=0) forward dynamics ("Why static", docs/specs/
+        // reaction-force-monitoring.md): save u, zero it, re-realize velocity
+        // so every u-derived cache (V_GB, gyro, Coriolis/centrifugal bias) is
+        // EXACTLY the u=0 value, then solve forward dynamics so A_GB/zPlus
+        // are consistent with u=0 and the field already evaluated in step 2.
+        RobotEngine::realizeArticulatedBodyInertias(model_, state_);
+        const int nu = model_.nu;
+        std::vector<Real> uSave(state_.u(), state_.u() + nu);
+        std::fill(state_.u(), state_.u() + nu, Real(0));
+        RobotEngine::realizeVelocity(model_, state_);
+        RobotEngine::calcUDot(model_, state_);
+
+        // The static reaction: one O(n) inward sweep, at-Bo only.
+        reactionAtBo.assign(static_cast<std::size_t>(model_.numBodies),
+                            robo::SpatialVec(robo::Vec3(0), robo::Vec3(0)));
+        RobotEngine::calcMobilizerReactionForces(model_, state_, reactionAtBo.data(), nullptr);
+
+        // Restore u (and re-sync every u-derived cache to it) -- READ-ONLY
+        // w.r.t. the sampler: the next round's generateSample() sees exactly
+        // the q/u it would have seen had this snapshot never run.
+        std::copy(uSave.begin(), uSave.end(), state_.u());
+        RobotEngine::realizeVelocity(model_, state_);
+        RobotEngine::calcUDot(model_, state_);
+    }
+
+    // 4. Buffer rows: for each interesting body, the SUM of whichever term(s)
+    // are enabled, plus the VMD/DCD atom index (prmtop order) of its FIRST
+    // atom as a representative atom for placement in vmd/arrows.tcl. Falls
+    // back to the engine atom index itself if this world was built without a
+    // prmtop permutation (sys_->atomsPrmtopIndex empty/unset).
+    const bool havePerm =
+        sys_ != nullptr && static_cast<int>(sys_->atomsPrmtopIndex.size()) == model_.numAtoms;
+    auto vmdAtomOf = [&](int body) -> int {
+        const int engineAtom = model_.bodyAtoms[static_cast<std::size_t>(model_.bodyAtomsBeg[body])];
+        return havePerm ? sys_->atomsPrmtopIndex[static_cast<std::size_t>(engineAtom)] : engineAtom;
+    };
+    const robo::SpatialVec* bodyForceG = state_.bodyForceG();
+    reactionSamples_.reserve(reactionInterestingBodies_.size());
+    for (int b : reactionInterestingBodies_) {
+        robo::Vec3 force(0);
+        robo::Vec3 torque(0);
+        if (reactionIncludeOpenmm_) {
+            force += bodyForceG[static_cast<std::size_t>(b)].linear;
+            torque += bodyForceG[static_cast<std::size_t>(b)].angular;
+        }
+        if (reactionIncludeReaction_) {
+            force += reactionAtBo[static_cast<std::size_t>(b)].linear;
+            torque += reactionAtBo[static_cast<std::size_t>(b)].angular;
+        }
+        reactionSamples_.push_back(ReactionSample{b, vmdAtomOf(b), force, torque});
     }
 }
 
@@ -1552,6 +1739,57 @@ void World::setCartesianSolvent(const std::vector<int>& atomIndices) {
             kept.push_back(a);
         }
     }
+
+    // PRECONDITION P1 (docs/specs/two-robot-contact/10-mixed-integrator-
+    // correctness.md Sec.2): buildModel assigns EVERY atom to some articulated
+    // body, so a Cartesian-integrated atom is safe ONLY inside a 0-DOF
+    // Weld/Rigid body whose atom membership the mask covers EXACTLY. If a
+    // flagged atom instead sat in a body with bodyNU > 0 (e.g. a Free-rooted
+    // second robot), that body's KE would be double-counted (the articulated
+    // `ke` from calcKineticEnergy PLUS `keSolvent` from calcSolventKE) and its
+    // momentum double-drawn (multiplyBySqrtMInv PLUS drawSolventVelocities) --
+    // a silent, non-crashing Boltzmann corruption, not a crash. Likewise a body
+    // only PARTIALLY covered by the mask breaks the "one rigid body, one
+    // motion" invariant the zero cross-Jacobians of M1 depend on. Fail loud
+    // instead of sampling the wrong density.
+    {
+        std::vector<char> flagged(static_cast<std::size_t>(model_.numAtoms), 0);
+        for (int a : kept) {
+            flagged[static_cast<std::size_t>(a)] = 1;
+        }
+        std::vector<char> bodyChecked(static_cast<std::size_t>(model_.numBodies), 0);
+        for (int a : kept) {
+            const int b = model_.atomBody[a];
+            if (bodyChecked[static_cast<std::size_t>(b)]) {
+                continue;
+            }
+            bodyChecked[static_cast<std::size_t>(b)] = 1;
+            if (model_.bodyNU[b] != 0) {
+                throw std::runtime_error(
+                    "World::setCartesianSolvent: flagged atom " + std::to_string(a) + " belongs to body "
+                    + std::to_string(b) + " with " + std::to_string(model_.bodyNU[b])
+                    + " DOF; Cartesian-integrated atoms MUST sit in a 0-DOF Weld/Rigid body "
+                      "(PRECONDITION P1, docs/specs/two-robot-contact/10-mixed-integrator-correctness.md "
+                      "Sec.2). A DOF>0 body double-counts KE and double-draws momentum for its atoms.");
+            }
+            for (int ci = model_.bodyAtomsBeg[b]; ci < model_.bodyAtomsEnd[b]; ++ci) {
+                const int bodyAtom = model_.bodyAtoms[ci];
+                if (model_.atomMass[bodyAtom] <= robo::Real(0)) {
+                    continue; // massless virtual site: never flagged, never required
+                }
+                if (!flagged[static_cast<std::size_t>(bodyAtom)]) {
+                    throw std::runtime_error(
+                        "World::setCartesianSolvent: body " + std::to_string(b)
+                        + " is only PARTIALLY covered by the cartSolvent mask (atom "
+                        + std::to_string(bodyAtom)
+                        + " of this 0-DOF body is not flagged); the mask must cover a flagged body's atoms "
+                          "EXACTLY (PRECONDITION P1, docs/specs/two-robot-contact/"
+                          "10-mixed-integrator-correctness.md Sec.2).");
+                }
+            }
+        }
+    }
+
     state_.setCartSolvent(kept, model_.atomMass.data());
     std::fprintf(stderr,
                  "[ncmc] world %d: Cartesian-integrated solvent atoms = %d (of %d requested); the "
@@ -1806,13 +2044,26 @@ bool World::metropolis(double Hold, double Hnew) {
     return uniform_(rng_) < std::exp(-beta_ * dH);
 }
 
-void World::configureNcmc(int atomBegin, int atomEnd, int ncmcSteps, double holdFraction) {
-    sampler_.ncmcAtomBegin = atomBegin;
-    sampler_.ncmcAtomEnd = atomEnd;
+void World::configureNcmc(std::vector<int> atomIndices, int ncmcSteps, double holdFraction) {
+    // Region A is an arbitrary atom-index SET (docs/specs/ncmc-explicit-solvent/
+    // 30-region-and-protocol-policy.md Sec.2). Sort + dedupe so ncmcTeleportRoot's
+    // "first atom" read and the OpenMM-side index-set iteration are well defined.
+    std::sort(atomIndices.begin(), atomIndices.end());
+    atomIndices.erase(std::unique(atomIndices.begin(), atomIndices.end()), atomIndices.end());
+    sampler_.ncmcAtomIndices = atomIndices;
     sampler_.ncmcSteps = ncmcSteps;
     sampler_.ncmcHoldFraction = holdFraction;
     sampler_.moveType = MoveType::NcmcSwitch; // must be set AFTER add_sampler
-    bridge_.enableAlchemy(atomBegin, atomEnd);
+    bridge_.enableAlchemy(sampler_.ncmcAtomIndices);
+}
+
+void World::configureNcmc(int atomBegin, int atomEnd, int ncmcSteps, double holdFraction) {
+    std::vector<int> atomIndices;
+    if (atomEnd > atomBegin) {
+        atomIndices.resize(static_cast<std::size_t>(atomEnd - atomBegin));
+        std::iota(atomIndices.begin(), atomIndices.end(), atomBegin);
+    }
+    configureNcmc(std::move(atomIndices), ncmcSteps, holdFraction);
 }
 
 auto World::protocolLambda(int step) const -> double {
@@ -1824,12 +2075,19 @@ auto World::protocolLambda(int step) const -> double {
 }
 
 int World::ncmcTeleportRoot() const {
-    // The tree root (parent == Ground) of the body carrying the first NCMC atom,
-    // iff it is a Free joint (so a rigid reposition is one quaternion+translation).
-    if (sampler_.ncmcAtomBegin < 0 || sampler_.ncmcAtomBegin >= model_.numAtoms) {
+    // The tree root (parent == Ground) of the body carrying the FIRST (smallest-
+    // index) atom of Region A, iff it is a Free joint (so a rigid reposition is
+    // one quaternion+translation). ncmcAtomIndices is kept sorted ascending
+    // (configureNcmc), so .front() is that atom for both the contiguous and the
+    // general index-set case.
+    if (sampler_.ncmcAtomIndices.empty()) {
         return -1;
     }
-    int b = model_.atomBody[sampler_.ncmcAtomBegin];
+    const int firstAtom = sampler_.ncmcAtomIndices.front();
+    if (firstAtom < 0 || firstAtom >= model_.numAtoms) {
+        return -1;
+    }
+    int b = model_.atomBody[firstAtom];
     while (b > 0 && model_.bodyParent[b] != 0) {
         b = model_.bodyParent[b];
     }
@@ -1889,6 +2147,147 @@ void World::ncmcApplyTroughTeleport(int rootBody) {
     RobotEngine::calcQDotDot(model_, state_);
 }
 
+bool World::ncmcInnerGhmcStep(robo::Real h, int substepIndex, bool* acceptedOut) {
+    // Construction II inner kernel (docs/specs/ncmc-explicit-solvent/
+    // 10-acceptance-construction.md Sec.3; 20-inner-integrator.md Sec.2 F3).
+    //
+    // One fixed-lambda Verlet substep, proposed and then Metropolis accept/
+    // reject'd against the FULL H_lambda = V_lambda + K(u;q) + K_s(v_s) + U_F(q)
+    // - 1/2 RT ln sin^2(gamma2) - nmaCorr -- reusing currentTotalEnergy()'s own
+    // assembly VERBATIM (F1/F2: a shortcut that dropped U_F/pitch here would make
+    // the inner kernel non-pi_lambda-invariant and silently sample the WRONG
+    // density; INV0 in tests/TestNcmcExplicitSolvent.cpp is the discriminating
+    // oracle). On reject: restore (q,u,x_s,v_s) to their pre-substep values and
+    // NEGATE (u,v_s) -- the standard GHMC reject-flip that keeps this kernel
+    // F-reversible and hence exactly pi_lambda-invariant.
+    //
+    // F3: a velocity corrector that does not converge at this dt is ALSO an
+    // automatic reject (never silently taken as Construction I's propagator
+    // does) -- under Construction II a non-converged corrector need not be
+    // F-reversible, and taking it as the GHMC proposal would break
+    // pi_lambda-invariance with no visible symptom in the outer acceptance
+    // (10-...:Sec.5 NOTE F3, 20-...:Sec.2 second bullet).
+    if (acceptedOut) {
+        *acceptedOut = false; // pessimistic default; set true only on a genuine accept below
+    }
+    const std::vector<int>& solv = state_.cartSolventAtoms();
+    robo::Vec3* posG = state_.atomPosG();
+    robo::Vec3* velG = state_.atomVelG();
+    std::vector<Real> q0(state_.q(), state_.q() + model_.nq);
+    std::vector<Real> u0(state_.u(), state_.u() + model_.nu);
+    std::vector<robo::Vec3> xs0(solv.size()), vs0(solv.size());
+    for (std::size_t j = 0; j < solv.size(); ++j) {
+        xs0[j] = posG[solv[j]];
+        vs0[j] = velG[solv[j]];
+    }
+
+    const double Hbefore = currentTotalEnergy(); // H_lambda at the CURRENT bridge lambda;
+    // also refreshes bodyForceG/mobilityForce (bridge_.evaluate) and V_GB/qdot
+    // (realizeVelocity) at (q0, the CURRENT lambda).
+
+    // BUG FIX (state/energy-assembly inconsistency, freeze root cause): the
+    // PERTURB substep in ncmcMove (lambda change) refreshes FORCES via
+    // bridge_.evaluate but never recomputes udot/qdotdot -- it doesn't need to
+    // for Construction I, whose stepTo call seeds that chain once at the top
+    // of the move and never revisits it mid-substep. Construction II calls
+    // THIS function once per substep, immediately after the SAME perturb
+    // block may have just changed lambda, so without a local reseed here
+    // `state_.udot()`/`qdotdot()` at verletStep's entry (the `a0` term of its
+    // velocity-Verlet trapezoid) are evaluated at the STALE, PRE-perturb
+    // lambda's forces -- a genuine assembly inconsistency baked directly into
+    // the proposal itself (dt-INDEPENDENT: it does not shrink at small h the
+    // way ordinary shadow work does, since it is a wrong-physics `a0`, not a
+    // discretization-error `a0`). That corrupts the GHMC proposal and, given
+    // alchemical decoupling can change intermolecular forces by orders of
+    // magnitude at low lambda, is large enough to make every dH huge
+    // regardless of dt -- exactly the observed 100x-dt-invariant freeze.
+    // realizeArticulatedBodyInertias is called again UNCONDITIONALLY (cheap,
+    // idempotent) rather than relying on calcFixman's internal call above, so
+    // this reseed is correct even with useFixman=false. Scoped to
+    // ncmcInnerGhmcStep (Construction-II-only code, never called by
+    // Construction I), so Construction I's shared perturb block and stepTo
+    // call are untouched -- bit-for-bit preserved.
+    RobotEngine::realizeArticulatedBodyInertias(model_, state_);
+    RobotEngine::calcUDot(model_, state_);
+    RobotEngine::calcQDot(model_, state_, state_.qdot());
+    RobotEngine::calcQDotDot(model_, state_);
+
+    bool converged = true;
+    const bool stepOk =
+        RobotEngine::stepTo(model_, state_, bridge_, constraints_, state_.time + h, &converged);
+    if (!stepOk) {
+        // Non-finite force/velocity: verletStep already restored its own
+        // pre-step state internally. Mirror stepTo's contract exactly -- the
+        // caller (ncmcMove) treats false as a hard abort of the whole move,
+        // orthogonal to the F3 corrector-convergence guard below.
+        if (ncmcDebugEnabled()) {
+            std::fprintf(stderr,
+                         "[ncmc-inner] world %d substep %d: h=%.6g stepTo FAILED (non-finite) -> abort move\n",
+                         index_,
+                         substepIndex,
+                         (double)h);
+        }
+        return false;
+    }
+
+    bool accept = false;
+    double Hafter = std::numeric_limits<double>::quiet_NaN();
+    double dH = std::numeric_limits<double>::quiet_NaN();
+    if (converged) {
+        Hafter = currentTotalEnergy(); // same lambda; H_lambda at the proposed state
+        dH = Hafter - Hbefore;
+        accept = std::isfinite(dH) && (dH <= 0.0 || uniform_(rng_) < std::exp(-beta_ * dH));
+    }
+    // else: corrector did not converge at this dt -- F3 forces `accept = false`
+    // rather than silently taking a proposal that need not be F-reversible.
+
+    if (ncmcDebugEnabled()) {
+        std::fprintf(stderr,
+                     "[ncmc-inner] world %d substep %d: h=%.6g Hbefore=%.6f Hafter=%.6f dH=%+.6f "
+                     "converged=%s accept=%s\n",
+                     index_,
+                     substepIndex,
+                     (double)h,
+                     Hbefore,
+                     Hafter,
+                     dH,
+                     converged ? "true" : "false",
+                     accept ? "true" : "false");
+    }
+
+    if (!accept) {
+        std::copy(q0.begin(), q0.end(), state_.q());
+        std::copy(u0.begin(), u0.end(), state_.u());
+        for (std::size_t j = 0; j < solv.size(); ++j) {
+            posG[solv[j]] = xs0[j];
+            velG[solv[j]] = vs0[j];
+        }
+        // Reject-flip: negate the persistent momenta (GHMC).
+        Real* u = state_.u();
+        for (int i = 0; i < model_.nu; ++i) {
+            u[i] = -u[i];
+        }
+        for (std::size_t j = 0; j < solv.size(); ++j) {
+            robo::Vec3& v = velG[solv[j]];
+            v = robo::Vec3(-v[0], -v[1], -v[2]);
+        }
+        // Re-seed the derivative chain at the restored (q0,-u0,x_s0,-v_s0) state,
+        // mirroring ncmcApplyTroughTeleport's post-mutation reseed.
+        RobotEngine::realizePosition(model_, state_);
+        RobotEngine::fillAtomPositionsFromBodies(model_, state_);
+        bridge_.evaluate(state_);
+        RobotEngine::realizeVelocity(model_, state_);
+        RobotEngine::realizeArticulatedBodyInertias(model_, state_);
+        RobotEngine::calcUDot(model_, state_);
+        RobotEngine::calcQDot(model_, state_, state_.qdot());
+        RobotEngine::calcQDotDot(model_, state_);
+    }
+    if (acceptedOut) {
+        *acceptedOut = accept;
+    }
+    return true;
+}
+
 bool World::ncmcMove() {
     // Per-molecule NCMC (Nilmeier, Crooks, Minh & Chodera 2011): a lambda:1->0->1
     // alchemical decouple-move-recouple proposal. During the switch the
@@ -1914,6 +2313,12 @@ bool World::ncmcMove() {
     bridge_.setAlchemicalLambda(1.0);
     reinitialize(); // draws p ~ N(0, RT M(q0)); sets Hold_ = V1 + K + F + J
     const double Hstart = Hold_;
+    // Diagnostic-only (docs/specs/ncmc-explicit-solvent/40-reproducer-and-oracles.md
+    // Sec.2/Sec.6): the Fixman/pitch state-function values at the START, so the
+    // reproducer can compute dU_F = fixman_end - fixman_start and dJ from the log
+    // without re-deriving them. Zero unless useFixman/useOrientationJacobian.
+    const double fixmanStart = state_.energy.fixman;
+    const double logSineSqrStart = state_.energy.logSineSqrGamma2;
 
     // No explicit momentum flip. Momenta are resampled from Maxwell-Boltzmann at
     // the start of every block (reinitialize, above), itself a Gibbs move on the
@@ -1960,6 +2365,13 @@ bool World::ncmcMove() {
                      "docking site, and an acyclic system) -- using the plain uncaged stride\n");
     }
 
+    // Per-move inner-GHMC acceptance count (Construction II only; stays 0/0 for
+    // Construction I). Makes inner acceptance visible in the [ncmc] summary
+    // line without inferring it from a frozen PE (the symptom that made the
+    // Construction-II freeze a black box).
+    int innerAccepted = 0;
+    int innerAttempted = 0;
+
     for (int s = 0; ok && s < sampler_.ncmcSteps; ++s) {
         // (i) PERTURB: change lambda at FIXED q; accumulate work = V(lam_new) - V(lam_old).
         const double lam = protocolLambda(s);
@@ -1980,8 +2392,22 @@ bool World::ncmcMove() {
             ncmcApplyTroughTeleport(teleRoot);
             Vprev = bridge_.calcPotentialEnergy(); // λ=0 => unchanged; refresh for the heat bookkeeping
         }
-        // (ii) PROPAGATE one Verlet step at fixed lambda (deterministic, reversible).
-        ok = RobotEngine::stepTo(model_, state_, bridge_, constraints_, state_.time + h);
+        // (ii) PROPAGATE one Verlet step at fixed lambda.
+        if (sampler_.useMetropolizedInner) {
+            // Construction II (10-acceptance-construction.md Sec.3): the substep
+            // is an inner GHMC kernel, Metropolized against the FULL H_lambda, so
+            // its shadow work is absorbed into inner rejections and never reaches
+            // the outer acceptance. ncmcInnerGhmcStep returns false ONLY on a
+            // genuinely unrecoverable non-finite condition (mirrors stepTo).
+            bool innerAccept = false;
+            ok = ncmcInnerGhmcStep(h, s, &innerAccept);
+            ++innerAttempted;
+            innerAccepted += innerAccept ? 1 : 0;
+        } else {
+            // Construction I (endpoint-DeltaH, unchanged): deterministic,
+            // unadjusted, reversible Verlet.
+            ok = RobotEngine::stepTo(model_, state_, bridge_, constraints_, state_.time + h);
+        }
         if (ok) {
             Vprev = bridge_.calcPotentialEnergy(); // fixed-lambda V drift = heat, not work
         }
@@ -2002,8 +2428,14 @@ bool World::ncmcMove() {
     if (finite) {
         bridge_.setAlchemicalLambda(1.0);
         const double Hend = currentTotalEnergy(); // V1(qend) + K + F + J at lambda=1
+        const double fixmanEnd = state_.energy.fixman;
+        const double logSineSqrEnd = state_.energy.logSineSqrGamma2;
 
-        // ACCEPTANCE: this NCMC trajectory is a valid HMC proposal -- a
+        // ACCEPTANCE. Two exact constructions (docs/specs/ncmc-explicit-solvent/
+        // 10-acceptance-construction.md); SHALL NOT mix them (Sec.2 CLAIM C1):
+        //
+        // Construction I (endpoint-DeltaH, sampler_.useMetropolizedInner == false,
+        // unchanged): this NCMC trajectory is a valid HMC proposal -- a
         // DETERMINISTIC, volume-preserving map T on (q,p) that is momentum-flip
         // reversible, F T F == T^-1. T is the composition of the per-substep
         // fixed-lambda Verlet steps (the fixed-q lambda perturbations do not move
@@ -2011,27 +2443,35 @@ bool World::ncmcMove() {
         // BECAUSE the lambda schedule is a PALINDROME pinned to lambda = 1 at both
         // endpoints (protocolLambda / NCMCProtocol.hpp). We therefore accept on the
         // FULL Hamiltonian difference at the lambda=1 endpoints (Nilmeier et al.
-        // 2011, Eq. 20; bistable-dimer Eq. 28), NOT on the work. The protocol being
-        // its own reverse sets the protocol ratio to 1 and the fixed-q perturbation
-        // has unit coordinate Jacobian (alpha-ratio = 1), so no extra factors enter
-        // dH. NOTE the work `w` is NOT equal to Hend - Hstart at finite dt (it omits
-        // the integrator heat AND the Fixman/Jacobian state-function drift that ARE
-        // in Hend - Hstart) -- which is exactly why acceptance uses Hend - Hstart
-        // and the work is diagnostic only. GATE: lambda == 1 throughout => work == 0
-        // and Hend - Hstart is the plain Verlet dH => reduces EXACTLY to the
-        // torsional-HMC metropolis test, which is the existing metropolis() call.
+        // 2011, Eq. 20; bistable-dimer Eq. 28), NOT on the work. GATE: lambda == 1
+        // throughout => work == 0 and Hend - Hstart is the plain Verlet dH =>
+        // reduces EXACTLY to the torsional-HMC metropolis test.
+        //
+        // Construction II (Metropolized-dynamics NCMC, useMetropolizedInner ==
+        // true): every fixed-lambda substep was ALREADY Metropolized against the
+        // full H_lambda inside the loop above (ncmcInnerGhmcStep), so shadow work
+        // never reaches this acceptance -- accepting again on Hend - Hstart here
+        // would double-count it and also re-admit the very bath shadow work the
+        // construction exists to remove (10-...:Sec.3). The OUTER move instead
+        // accepts on the protocol work ALONE: a = min(1, exp(-beta*W)) (Sec.3).
+        // metropolis(0.0, work) computes exactly that (dH = work - 0 = work).
         const double dH = Hend - Hstart;
         // Per-move diagnostic breakdown (Phase 0): the gap = work - dH flags
         // integrator energy pumping (propagator: dt / mass-scale) plus the Fixman/
         // Jacobian drift, while the recoupling potential change dPE isolates the
-        // irreducible reorganization (insertion) cost. dKE should stay ~0.
+        // irreducible reorganization (insertion) cost. dKE should stay ~0. This
+        // breakdown is diagnostic under BOTH constructions (gap is never used in
+        // Construction II's acceptance either -- only `work` is).
         const double dPE = state_.energy.pe - peStart;
         const double dKE = state_.energy.ke - keStart;
         const double dKEsolv = state_.energy.keSolvent - keSolvStart;
         std::fprintf(stderr,
-                     "[ncmc] world %d: Hstart=%.2f Hend=%.2f dH=%+.2f kJ/mol  "
-                     "dPE=%+.2f dKE=%+.2f dKEsolv=%+.2f work(diag)=%.2f gap=%+.2f (steps=%d, teleport=%s)\n",
+                     "[ncmc] world %d: construction=%s Hstart=%.2f Hend=%.2f dH=%+.2f kJ/mol  "
+                     "dPE=%+.2f dKE=%+.2f dKEsolv=%+.2f work(diag)=%.2f gap=%+.2f "
+                     "fixman_start=%.4f fixman_end=%.4f logSineSqr_start=%.4f logSineSqr_end=%.4f "
+                     "inner_accepted=%d/%d (steps=%d, teleport=%s)\n",
                      index_,
+                     sampler_.useMetropolizedInner ? "II" : "I",
                      Hstart,
                      Hend,
                      dH,
@@ -2040,9 +2480,18 @@ bool World::ncmcMove() {
                      dKEsolv,
                      work,
                      work - dH,
+                     fixmanStart,
+                     fixmanEnd,
+                     logSineSqrStart,
+                     logSineSqrEnd,
+                     innerAccepted,
+                     innerAttempted,
                      sampler_.ncmcSteps,
                      doTele ? "on" : "off");
-        if (std::isfinite(dH) && metropolis(Hstart, Hend)) {
+        const bool moveAccept = sampler_.useMetropolizedInner
+                                     ? (std::isfinite(work) && metropolis(0.0, work))
+                                     : (std::isfinite(dH) && metropolis(Hstart, Hend));
+        if (moveAccept) {
             RobotEngine::fillAtomPositionsFromBodies(model_, state_);
             accepted = true;
         }

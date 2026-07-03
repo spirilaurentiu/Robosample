@@ -45,6 +45,7 @@ dcd::Box boxFromReducedVectors(const std::vector<double>& bv) {
     box.angleGamma = std::acos(std::max(-1.0, std::min(1.0, cosGamma))) * kRad2Deg;
     return box;
 }
+
 } // namespace
 
 Context::Context(std::string baseName, std::uint32_t seed)
@@ -60,18 +61,28 @@ Context::Context(std::string baseName, std::uint32_t seed)
 // ---------------------------------------------------------------------------
 //  Worlds
 // ---------------------------------------------------------------------------
-World& Context::addCartesianWorld() {
+World& Context::addCartesianWorld(bool wantReactionReporter) {
     const int idx = static_cast<int>(worlds_.size());
     worlds_.push_back(std::make_unique<World>(idx, /*cartesian*/ true, seed));
-    worlds_.back()->buildModel(systemTopology, Selection{}, systemTopology.rootMobilities);
-    return *worlds_.back();
+    World& world = *worlds_.back();
+    world.buildModel(systemTopology, Selection{}, systemTopology.rootMobilities);
+    if (wantReactionReporter) {
+        // Always throws (Sec.3 integrator guard): a Cartesian world's
+        // internal-coordinate articulated reaction is not meaningful.
+        world.enableReactionReporter();
+    }
+    return world;
 }
 
-World& Context::addRoboticWorld(const Selection& sel) {
+World& Context::addRoboticWorld(const Selection& sel, bool wantReactionReporter) {
     const int idx = static_cast<int>(worlds_.size());
     worlds_.push_back(std::make_unique<World>(idx, /*cartesian*/ false, seed));
-    worlds_.back()->buildModel(systemTopology, sel, systemTopology.rootMobilities);
-    return *worlds_.back();
+    World& world = *worlds_.back();
+    world.buildModel(systemTopology, sel, systemTopology.rootMobilities);
+    if (wantReactionReporter) {
+        world.enableReactionReporter();
+    }
+    return world;
 }
 
 World& Context::addDockingWorld(const std::vector<int>& ligandMoleculeIndices) {
@@ -480,6 +491,28 @@ void Context::runREX(int equilRounds, int prodRounds, int writeFreq, bool verbos
         if (production && writeFreq > 0 && ((round - equilRounds) % writeFreq == 0)) {
             for (int r = 0; r < R; ++r) {
                 writeOutputs(r, round, verbose);
+
+                // Reaction-force reporter (docs/specs/reaction-force-monitoring.md):
+                // one per-body force snapshot per reporter world, per replica,
+                // on every DCD-write round -- the same cadence writeOutputs
+                // just used.
+                for (auto& w : worlds_) {
+                    if (!w->isReactionReporter()) {
+                        continue;
+                    }
+                    // Re-sync to replica r's FINAL coordinates (post adjacent-
+                    // replica swap above, if any) -- the SAME conformation
+                    // writeOutputs just wrote to the DCD frame -- so the CSV row
+                    // and the DCD frame are guaranteed to agree (Sec.1 item 3)
+                    // even when a swap relabelled replicaCoords_ this round.
+                    // Read-only: the next thing that touches this world is
+                    // always a fresh setAtomsLocationsInGround at the top of its
+                    // next generateSample() turn, so this cannot perturb the
+                    // sampler (Sec.3/6).
+                    w->setAtomsLocationsInGround(replicaCoords_[r]);
+                    w->captureReactionSnapshot();
+                    writeReactionRows(r, writeCounter_, w->reactionSamples());
+                }
             }
             ++writeCounter_;
         }
@@ -592,6 +625,34 @@ void Context::writeOutputs(int replica, int round, bool verbose) {
         }
 
         dcdWriters_[replica].append(dcdScratch_, boxFromReducedVectors(systemTopology.boxVectors));
+    }
+}
+
+// docs/specs/reaction-force-monitoring.md Sec.4: one CSV per replica (the
+// filename carries the replica, matching the per-replica .dcd), comma-
+// delimited, appended as frames are produced. No-op on an empty row set (a
+// non-write round never reaches here, and a reporter world with zero
+// interesting bodies would otherwise write an empty file with only a header).
+// Always the same 10 columns regardless of which term(s) the reporter world
+// summed into `force`/`torque` (docs/specs/reaction-force-monitoring.md
+// Sec.1.2) -- that choice is made once, at World::enableReactionReporter,
+// and is invisible to the CSV format.
+void Context::writeReactionRows(int replica, int frame, const std::vector<ReactionSample>& rows) {
+    if (rows.empty()) {
+        return;
+    }
+    const std::string path = baseName + "." + std::to_string(replica) + ".reactions.csv";
+    std::ofstream out(path, std::ios::app);
+    if (!out) {
+        return;
+    }
+    if (out.tellp() == 0) {
+        out << "# frame,replica,body_idx,atom_idx,fx,fy,fz,tx,ty,tz\n";
+    }
+    for (const auto& s : rows) {
+        out << frame << ',' << replica << ',' << s.bodyIdx << ',' << s.atomIdx << ',' << s.force[0] << ','
+            << s.force[1] << ',' << s.force[2] << ',' << s.torque[0] << ',' << s.torque[1] << ',' << s.torque[2]
+            << '\n';
     }
 }
 

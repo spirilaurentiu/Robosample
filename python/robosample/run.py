@@ -116,18 +116,23 @@ context.add_ncmc_world(
     # put). If you see "[verlet] ... corrector did not converge" warnings with
     # everything rejected, reduce this further; raise it only while moves keep
     # being accepted.
-    # 1 fs. Measured on tip3p/2ala (parameter sweep): per-move acceptance is set
-    # almost entirely by the integrator drift, which scales ~dt^2 over the freed-
-    # water DOF: dH(5fs)=+70, dH(2fs)=+15, dH(1fs)=+2.5 kJ/mol -> acceptance 0%, 0%,
-    # ~55%. Watch the [ncmc] "dH" column (acc ~ exp(-dH/RT) -> needs a few kJ/mol),
-    # NOT "gap": gap = alchemical work - dH is large-and-FINE (the work is recovered
-    # reversibly). If dH is tens-hundreds, the propagator is pumping -> LOWER dt.
-    timestep=0.001,
-    ncmc_steps=20,  # do NOT raise this to "switch slower": more steps = more
-    # integration time = MORE pumping (ncmc_steps=40 at 1fs took acceptance back to
-    # 0). In this integrator-limited regime, fewer/shorter steps + small dt wins.
+    # 1 fs. Historically (Construction I, endpoint-DeltaH) per-move acceptance was
+    # set almost entirely by the integrator drift, which scales ~dt^2 over the
+    # freed-water DOF: dH(5fs)=+70, dH(2fs)=+15, dH(1fs)=+2.5 kJ/mol -> acceptance
+    # 0%, 0%, ~55%, and ncmc_steps 20->40 @ 1fs drove acceptance back to 0 (bath
+    # shadow work is extensive in the propagated-DOF count, docs/specs/
+    # ncmc-explicit-solvent/00-diagnosis-and-scaling.md). use_metropolized_inner
+    # below (Construction II) removes that bath term from the OUTER acceptance
+    # entirely, so this dt is no longer acceptance-critical the same way; kept at
+    # 1fs as a conservative default for the inner GHMC's own per-substep accept.
+    timestep=0.005,
+    ncmc_steps=100,  # protocol length; under Construction II more steps mainly
+    # buys smoother reorganization work, not more shadow-work exposure.
     hold_fraction=0.1,
-    use_fixman=True,  # rigorous Boltzmann sampling of the constrained world
+    use_fixman=True,  # rigorous Boltzmann sampling of the constrained world; ALSO
+    # required correctness-wise for Construction II's inner GHMC accept (F1/F2:
+    # the inner H_lambda must include U_F, docs/specs/ncmc-explicit-solvent/
+    # 10-acceptance-construction.md Sec.3 NOTE F2).
     # All solvent is welded here (no Free-rooted shell waters), so there is no water
     # libration to mass-scale away; physical masses (None) are the default. A
     # kinetic-metric mass_scale on the moving (Torsion) joints can still raise the
@@ -136,11 +141,17 @@ context.add_ncmc_world(
     accept_reject_mode=robosample.rb.AcceptRejectMode.MetropolisHastings,
     # Solvent-relaxing NCMC: the welded waters' atoms are advanced in flat
     # Cartesian space by OpenMM-force velocity-Verlet INSIDE the proposal, so the
-    # cage relaxes during the lambda stride instead of being a rigid wall. This is
-    # the fix for the abysmal explicit-solvent acceptance (the cage could never
-    # accommodate the solute, so every move self-rejected). See
-    # docs/specs/ncmc_solvent_relax.md.
+    # cage relaxes during the lambda stride instead of being a rigid wall.
     relax_solvent=True,
+    # Construction II (Metropolized-dynamics NCMC, docs/specs/ncmc-explicit-solvent/
+    # 10-acceptance-construction.md): each fixed-lambda propagate substep
+    # (including the relax_solvent Cartesian-Verlet steps) is Metropolized
+    # against the full H_lambda, so the bath's shadow work is absorbed into inner
+    # rejections instead of crushing the outer acceptance. This is the fix for
+    # the near-zero explicit-solvent NCMC acceptance Construction I hit above --
+    # relax_solvent is now pure benefit (lowers reorganization work) instead of
+    # self-defeating (every relaxation step charged as shadow work).
+    use_metropolized_inner=True,
 )
 
 

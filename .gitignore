@@ -2,8 +2,15 @@
 build*
 doc/html
 
-# Exclude profile data
-profile-data
+# Exclude profile data (nox -s profile / build_optimized write here)
+profile-data/
+# Profiling artifacts if a tool is run outside profile-data/
+perf.data
+perf.data.old
+*.nsys-rep
+*.ncu-rep
+*.sqlite
+*.qdrep
 
 # Development artifacts
 robo_*.yaml

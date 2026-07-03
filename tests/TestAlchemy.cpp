@@ -411,6 +411,74 @@ TEST(AlchemyDecoupling, ChargeOffsetMatchesScaledChargeSystemPME) {
     }
 }
 
+// Region A as a NON-CONTIGUOUS atom-index SET (docs/specs/ncmc-explicit-solvent/
+// 30-region-and-protocol-policy.md Sec.2, DECIDED: arbitrary set, not only
+// [begin,end)). A = {atom 0, atom 2} out of a 4-atom base, deliberately skipping
+// atom 1 so the PME charge-offset loop and the aSet/restSet split (both driven by
+// enableAlchemy's stored index set) are exercised over a genuinely disjoint
+// selection. Same "exact PME" oracle as ChargeOffsetMatchesScaledChargeSystemPME:
+// the alchemical system at lambda must match a separately built plain system
+// whose atoms 0 AND 2 (only) carry lambda*q.
+TEST(AlchemyDecoupling, NonContiguousRegionAMatchesScaledChargeSystemPME) {
+    auto& omm = OpenMMContext::get();
+    std::vector<Atom> base = {
+        {+0.6, 0.30, 0.0, 1.00, 1.0, 1.0, 16.0}, // A (atom 0), LJ eps = 0
+        {-0.3, 0.30, 0.0, 0.70, 1.0, 1.0, 16.0}, // rest (atom 1)
+        {+0.4, 0.30, 0.0, 1.30, 1.0, 1.0, 16.0}, // A (atom 2), LJ eps = 0
+        {-0.7, 0.30, 0.0, 1.00, 1.3, 1.0, 16.0}, // rest (atom 3)
+    };
+    const std::vector<int> regionA = {0, 2}; // non-contiguous
+    SystemTopology sAlch = buildSystem(base, NonbondedMethod::PME, 2.0, 0.6);
+    const auto pos = positions(sAlch);
+
+    omm.shutdown();
+    omm.enableAlchemy(regionA);
+    omm.initialize(sAlch);
+
+    for (double lam : {1.0, 0.6, 0.25, 0.0}) {
+        omm.setAlchemicalLambda(lam);
+        const double Ealch = omm.computePotentialEnergy(pos);
+
+        // Reference: plain system with atoms 0 AND 2 charges scaled to lam*q;
+        // atom 1 (inside the [0,2) contiguous range but NOT in regionA) and atom
+        // 3 stay physical -- the discriminator against a stale contiguous-range
+        // implementation that would wrongly scale atom 1 too.
+        std::vector<Atom> scaled = base;
+        for (int a : regionA) {
+            scaled[a].q = lam * base[a].q;
+        }
+        SystemTopology sRef = buildSystem(scaled, NonbondedMethod::PME, 2.0, 0.6);
+        omm.shutdown();
+        omm.initialize(sRef);
+        const double Eref = omm.computePotentialEnergy(pos);
+
+        EXPECT_NEAR(Ealch, Eref, 5.0e-3)
+            << "non-contiguous region-A charge offset != directly charge-scaled system at lambda=" << lam;
+
+        omm.shutdown();
+        omm.enableAlchemy(regionA);
+        omm.initialize(sAlch);
+    }
+
+    // Sanity: atom 1 (never in Region A) must stay fully coupled at lambda=0 --
+    // i.e. its interaction with atom 0/2 vanishes only through THEIR decoupling,
+    // not through any accidental inclusion of atom 1 in the A set. We check this
+    // indirectly: at lambda=0 (A fully decoupled from rest) the alchemical energy
+    // must equal a plain system with ONLY atoms 0 and 2 charges zeroed (their
+    // charge(lambda=0) = 0), atom 1/3 untouched.
+    omm.setAlchemicalLambda(0.0);
+    const double Ealch0 = omm.computePotentialEnergy(pos);
+    std::vector<Atom> zeroed = base;
+    for (int a : regionA) {
+        zeroed[a].q = 0.0;
+    }
+    SystemTopology sZeroed = buildSystem(zeroed, NonbondedMethod::PME, 2.0, 0.6);
+    omm.shutdown();
+    omm.initialize(sZeroed);
+    const double Ezeroed = omm.computePotentialEnergy(pos);
+    EXPECT_NEAR(Ealch0, Ezeroed, 5.0e-3) << "lambda=0 non-contiguous decoupling left a stray charge";
+}
+
 // ===========================================================================
 //  C. shutdown() reset regression
 // ===========================================================================
