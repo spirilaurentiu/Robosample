@@ -153,7 +153,9 @@ world.add_sampler(
     use_nuts=False,
     use_fixman=True,
 )
-world.enable_reaction_reporter(report_free_bodies=False)  # 2 values (force,torque) = net OpenMM applied, same as before. include_reaction=True adds the reaction term to the sum; include_openmm=False + include_reaction=True = reaction only.
+world.enable_reaction_reporter(
+    report_free_bodies=False, include_openmm=True, include_reaction=True
+)
 
 # ---- Run --------------------------------------------------------------------
 context.initialize([300])

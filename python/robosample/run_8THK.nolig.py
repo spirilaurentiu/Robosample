@@ -1,4 +1,4 @@
-"""Per-body force monitoring for 7JJO (turkey beta1-AR) WITH agonist, in a nanodisc.
+"""Per-body force monitoring for 8THK (human alpha1A-AR) WITHOUT agonist (apo), in a nanodisc.
 
 One rigid body per TM helix (TM1..TM7): weld the whole receptor and free a SINGLE
 phi joint in each of the six inter-helix loops -> 7 rigid TM bodies. The reporter
@@ -7,14 +7,18 @@ spatial force (bodyForceG: force+torque about the body origin, in Ground) per bo
 per DCD frame, to `<name>.<replica>.reactions.csv`. Identify each body from the
 CSV's atom_idx (-> residue -> which TM). See
 docs/specs/reaction-force-monitoring.md and
-docs/specs/gpcr-world-design/20-monitoring-selections-beta-adrenergic.md (5B).
+docs/specs/gpcr-world-design/20-monitoring-selections-beta-adrenergic.md (method).
 
 Receptor-only nanodisc (molecule 0 = receptor; molecules 1,2 = MSP belt; then
-lipids; then agonist). Implicit solvent (no box) -> load_amber selects GBSA-OBC2.
-NOTE: 7JJO is TURKEY beta1AR.
+lipids). Implicit solvent (no box) -> load_amber selects GBSA-OBC2.
+NOTE: 8THK is HUMAN alpha1A-adrenergic (ADRA1A, UniProt P35348), a class-A aminergic
+homolog of the beta-ARs -- NOT yet in the beta-adrenergic spec's per-structure table.
+The microswitch anchors below were derived directly from this model's prmtop by the
+spec's own conserved-motif method (DRY/CWxP/NPxxY + D2.50), and the TM cores from DSSP
+on the minimized coordinates. This construct's chain ends at NPxxY (296): no H8.
 
 Run from the repo root:
-    python3 python/robosample/run_7JJO.lig.py
+    python3 python/robosample/run_8THK.nolig.py
 """
 
 import argparse
@@ -24,32 +28,31 @@ import parmed as pmd
 import robosample
 
 # ---- Per-model configuration -----------------------------------------------
-NAME = "7JJO.lig"
-PRMTOP = "examples/febs/7JJO.lig.nanodisc.prmtop"
-INPCRD = "examples/febs/7JJO.lig.nanodisc.min.rst7"
+NAME = "8THK.noLig"
+PRMTOP = "examples/febs/8THK.noLig.nanodisc.prmtop"
+INPCRD = "examples/febs/8THK.noLig.nanodisc.min.rst7"
 
-# Ordered, contiguous LABELED rigid bodies (model/prmtop numbering; turkey beta1AR / 7JJO).
+# Ordered, contiguous LABELED rigid bodies (model/prmtop numbering; human alpha1A-AR / 8THK).
 # ONE dihedral is flexed at the START of each segment after the first (phi; psi at
 # prolines, whose phi is ring-locked), so each segment becomes one rigid body.
-# TM cores + microswitch anchors are from docs/specs/gpcr-world-design/
-# 20-monitoring-selections-beta-adrenergic.md (verified); loop/H8 boundaries are
-# approximate -- edit freely. Insert a (label, lo, hi) row to add a sub-helix body.
-# Labels print in the run log; tag CSV rows with examples/febs/label_reactions.py.
+# Microswitch anchors (D2.50=40, DRY R3.50=92, CWxP W6.48=253/P6.50=255, NPxxY Y7.53=294)
+# were located in this prmtop's sequence; TM cores are from DSSP on the min coords --
+# loop boundaries are approximate -- edit freely. Insert a (label, lo, hi) row to add a
+# sub-helix body. Labels print in the run log; tag CSV rows with examples/febs/label_reactions.py.
 SEGMENTS = [
-    ("TM1", 1, 39),
-    ("TM2_EC", 40, 47),
-    ("Na_D2.50", 48, 49),  # Na+ pocket microswitch (D2.50)
-    ("TM2_IC", 50, 72),
-    ("TM3", 73, 98),
-    ("DRY_ionic", 99, 120),  # DRY / ionic-lock microswitch (R3.50)
-    ("TM4", 121, 165),
-    ("TM5", 166, 250),
-    ("TM6_EC", 251, 262),  # TM6 extracellular half
-    ("CWxP_toggle", 263, 266),  # CWxP toggle + P6.50 kink (W6.48)
-    ("TM6_cyto", 267, 284),  # TM6 cytoplasmic half (G-protein swing)
-    ("TM7", 285, 299),
-    ("NPxxY", 300, 304),  # NPxxY microswitch (Y7.53)
-    ("H8", 305, 318),  # amphipathic helix 8
+    ("TM1", 1, 28),
+    ("TM2_EC", 29, 39),
+    ("Na_D2.50", 40, 41),  # Na+ pocket microswitch (D2.50)
+    ("TM2_IC", 42, 64),
+    ("TM3", 65, 90),
+    ("DRY_ionic", 91, 111),  # DRY / ionic-lock microswitch (R3.50)
+    ("TM4", 112, 150),
+    ("TM5", 151, 235),
+    ("TM6_EC", 236, 251),  # TM6 extracellular half
+    ("CWxP_toggle", 252, 255),  # CWxP toggle + P6.50 kink (W6.48)
+    ("TM6_cyto", 256, 273),  # TM6 cytoplasmic half (G-protein swing)
+    ("TM7", 274, 289),
+    ("NPxxY", 290, 296),  # NPxxY microswitch (Y7.53); chain ends here (no H8)
 ]
 
 # ---- Run parameters (override on the CLI) ----------------------------------

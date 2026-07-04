@@ -1,0 +1,8 @@
+ROBO_CUDA_KINEMATICS=1 python3 python/robosample/run_8THK.nolig.py  --seed 6000 --equil 0 --prod 10000000 --write_freq 100
+ROBO_CUDA_KINEMATICS=1 python3 python/robosample/run_8THK.lig.py    --seed 6000 --equil 0 --prod 10000000 --write_freq 100
+ROBO_CUDA_KINEMATICS=1 python3 python/robosample/run_7JJO.nolig.py  --seed 6000 --equil 0 --prod 10000000 --write_freq 100
+ROBO_CUDA_KINEMATICS=1 python3 python/robosample/run_7JJO.lig.py    --seed 6000 --equil 0 --prod 10000000 --write_freq 100
+ROBO_CUDA_KINEMATICS=1 python3 python/robosample/run_7DH5.nolig.py  --seed 6000 --equil 0 --prod 10000000 --write_freq 100
+ROBO_CUDA_KINEMATICS=1 python3 python/robosample/run_7DH5.lig.py    --seed 6000 --equil 0 --prod 10000000 --write_freq 100
+ROBO_CUDA_KINEMATICS=1 python3 python/robosample/run_3SN6.nolig.py  --seed 6000 --equil 0 --prod 10000000 --write_freq 100
+ROBO_CUDA_KINEMATICS=1 python3 python/robosample/run_3SN6.lig.py    --seed 6000 --equil 0 --prod 10000000 --write_freq 100
