@@ -6,9 +6,9 @@ Atom positions can be represented in Cartesian (X/Y/Z) or generalized-coordinate
 
 Each Gibbs block is defined by a robot factorization, which exposes a particular subset of generalized-coordinates. Multiple robot factorizations are applied sequentially over the course of a Gibbs sweep. All robot factorizations represent the same molecular configuration; only the choice of active generalized-coordinates changes between Gibbs blocks. Each Gibbs block samples one subset of generalized-coordinates while conditioning on the remaining coordinates. By holding selected BAT coordinates fixed within a Gibbs block, the dimensionality of the sampled state space is reduced. Within each Gibbs block, Hamiltonian Monte Carlo evolves the active generalized-coordinates together with their conjugate momenta defined by the corresponding robot factorization.
 
-The Cartesian coordinates produced at the end of one Gibbs block are used to initialize the robot representation for the next Gibbs block. **Per-atom** forces computed by OpenMM are accumulated into per-body spatial wrenches (net force and torque about the body origin) for the articulated-body solver. The articulated-body solver uses these body-level wrenches to compute the joint-space dynamics required for HMC integration.
+The Cartesian coordinates produced at the end of one Gibbs block are used to initialize the robot representation for the next Gibbs block. Per-atom forces computed by OpenMM are accumulated into body-level spatial wrenches (net force and net torque about each body frame) for the articulated-body solver. The articulated-body solver uses these body-level wrenches to compute the joint-space dynamics required for HMC integration.
 
-Robosample is a `conda` package that ships:
+Robosample is a Linux-only `conda` package that ships:
 
 - A molecular simulation engine written in C++17/CUDA and compiled with PyBind11 as an `.so`.
 - A Python library built on top of it.
@@ -22,9 +22,7 @@ The target systems are up to **1M atoms** clustered in up to **100k rigid bodies
 - Spliceosome in explicit solvent
 - Entire bacteriophages in explicit solvent
 
-Correctness is measured not against intuition, but against theory (see `references/index.yaml`).
-
-## Agents and references
+## Agents
 
 Each agent's authoritative behavior lives in its own frontmatter under `.claude/agents/`:
 
@@ -32,13 +30,8 @@ Each agent's authoritative behavior lives in its own frontmatter under `.claude/
 - `.coder.md` - implements a reviewed spec or a self-contained task. **Auto-mode, surgical**. Correctness over performance - never optimizes speculatively.
 - `.reviewer.md` - **independent, hostile, read-only.** Runs after the coder, before merge. Reviews science, conventions and implementation together. Hands confirmed findings back to `coder`, never patches.
 - `optimizer.md` - **opt-in, user-invoked only; never inside a feature loop.** Static-analysis-guided source optimization measured with `perf`; hands every change to `reviewer`.
-- `references/index.yaml`: summary of all papers Robosample is based on with link to their Markdown versions stored locally.
 
-If in doubt, iteratively ask questions until the implementation plan is complete. After that, enter auto mode and finish coding independently. Do not ask further questions.
-
-## Style
-
-**Write and think** in clear, direct English. Prefer short, declarative sentences where they improve clarity. Introduce technical terms only when they improve precision. Avoid rhetorical flourish. Prefer precise, literal language over metaphor. Explain mechanisms explicitly rather than replacing them with slogans.
+Agents SHALL **write and think** in clear, direct English. Prefer short (under 25 words), declarative sentences where they improve clarity. Prefer active voice. Avoid marketing language, rhetorical flourish and metaphors. Prefer concrete nouns over abstractions. Introduce technical terms only when they improve precision. Prefer precise, literal language over metaphor. State mechanisms explicitly rather than replacing them with slogans.
 
 Authoritative examples for good and bad writing/thinking are under `styles/`:
 
@@ -68,29 +61,158 @@ Avoid excessive normative statements: *binding*, *mandatory*, *fail loud*, *must
 - **Optional**: *MAY*.
 - **Implementation notes:** *NOTE*.
 
-## Building and testing
+## Build prerequisites
 
-A `conda` env must be active since `CONDA_PREFIX` is required by both `cmake` presets and `nox`.
+A `conda` env must be active since `CONDA_PREFIX`.
+
+## Build configurations
 
 CMake presets `${CONFIG}` are `<platform>-<type>` where:
 
 - `platform` is `reference`, `cpu`, `cuda`, `opencl`.
 - `type` is `debug`, `release`, `relwithdebinfo`, `tests`, `pgo-train`, `pgo-use`.
 
-Unless otherwise prompted, you will assume the platform is `cuda`. `tests` does not build the `.so` library, so you cannot run `python/robosample/run.py` or any other driver.
+Default platform is `cuda` unless otherwise prompted. `cuda-tests` does not build the `.so` library, so you cannot run `python/robosample/run.py` or any other driver.
 
-Configure: `cmake --preset ${CONFIG}`
-
-Build & install: `cmake --build --preset ${CONFIG}`.
-
-Every change must either pass the suite of tests and physical invariants stated here or change **deliberately and with justification**. A test encodes WHY behavior matters; "tests pass" is false if any were skipped. Since tests can run for a very long time, you will prompt the user whether to run or not. Regardless of the response, you will always run::
+## Configure
 
 ```bash
-python3 python/robosample/run.py --name ala-dipeptide --prmtop examples/ala-dipeptide.prmtop --inprcrd examples/ala-dipeptide.rst7 --seed 6000 --equil_steps 0 --prod_steps 10 --write_freq 1 --validate true
+cmake --preset ${CONFIG}
 ```
 
-If prmompted to run tests, execute:
+## Build
 
 ```bash
-nox -s tests`
+cmake --build --preset ${CONFIG}
 ```
+
+## Validation levels
+
+Every change must either pass the suite of tests and physical invariants stated here or change **deliberately and with justification**. A test encodes WHY behavior matters; "tests pass" is false if any were skipped. Since tests can run for a very long time, you will prompt the user whether to run or not.
+
+- Level 0: compile only
+- Level 1: compile and run basic example
+
+    ```bash
+    python3 python/robosample/run.py --name ala-dipeptide --prmtop examples/ala-dipeptide.prmtop --inprcrd examples/ala-dipeptide.rst7 --seed 6000 --equil_steps 0 --prod_steps 10 --write_freq 1 --validate true
+    ```
+
+- Level 2: compile, run basic example and run test suite
+
+    ```bash
+    nox -s tests`
+    ```
+
+Default validation is level 1. Request confirmation before escalading to higher levels.
+
+## Workflow
+
+Workflow is encoded as a state machine: Issue -> Research -> Specification -> Implementation -> Review -> Revision -> Merge. For each state, define the following, but not limited to: inputs, outputs and exit criteria. Examples:
+
+- Research:
+  - Output: accepted specification
+  - Exit: no unresolved scientific questions
+- Implementation:
+  - Exit: builds successfully, requested validation completed
+- Review:
+  - Exit: no confirmed high-severity findings
+
+## Severity
+
+Severity is determined by impact, not effort required to fix.
+
+- Critical:
+  - Produces incorrect probability distributions.
+  - Violates detailed balance.
+  - Violates physical invariants.
+  - Prevents successful build or execution.
+- High:
+  - Produces incorrect behavior without invalidating the sampling algorithm.
+  - Introduces regressions.
+  - Breaks public APIs.
+- Medium:
+  - Maintainability.
+  - Documentation.
+  - Testing gaps.
+- Low:
+  - Formatting.
+  - Naming.
+  - Style.
+
+A **specification** SHALL define:
+
+- Motivation
+- Behavior
+- Invariants
+- Interface
+- Validation strategy
+
+Implementation details SHOULD be omitted unless they are necessary to define externally observable behavior.
+
+**Architectural** changes SHALL reference an existing decision record or introduce a new one under docs/decisions/.
+
+Review priority:
+
+1. Physical correctness
+2. Numerical correctness
+3. API correctness
+4. Test coverage
+5. Performance
+6. Style
+
+## Evidence
+
+Claims based on inference SHOULD be explicitly identified as such.
+
+Behavioral claims SHALL cite one of:
+
+- Published literature
+- Project specification
+- Existing regression test
+
+Performance claims SHALL include reproducible benchmark results.
+
+Numerical correctness claims SHALL include validation evidence against theory, regression tests, or reference implementations.
+
+## Decision policy
+
+When multiple sources define behavior, conflicts SHALL be resolved using the following precedence:
+
+1. Published theory (see `references/index.yaml`).
+2. Project specifications.
+3. Existing tests.
+4. Existing implementation.
+5. Model intuition.
+
+If in doubt, iteratively ask questions until the implementation plan is complete. After planning is complete, continue implementation without waiting for confirmation and stop only if blocked by missing information such as:
+
+- Conflicting specifications.
+- Missing external information.
+- Ambiguous user intent.
+- Missing repository files.
+
+If supporting evidence cannot be located,
+
+- State uncertainty explicitly.
+- Do not invent references.
+- Distinguish inference from established behavior.
+
+## Engineering principles
+
+Prefer localized changes.
+
+Prefer correctness over optimization.
+
+Prefer explicitness over cleverness.
+
+Prefer local reasoning over global abstractions.
+
+Preserve existing APIs unless specifications change.
+
+Refactoring SHALL preserve observable behavior.
+
+Behavioral changes SHALL update specifications.
+
+Avoid introducing dependencies without justification.
+
+Optimize only after measurement.
