@@ -15,17 +15,17 @@ import robosample
 # solvateBox / solvateOct). The rst7 is read for both coordinates AND the box.
 
 parser = argparse.ArgumentParser(description="Explicit-solvent (PME) Robosample run.")
-parser.add_argument("name", type=str, help="Name of the simulation.")
-parser.add_argument("prmtop", type=str, help="Path to the .prmtop file.")
+parser.add_argument("--name", type=str, help="Name of the simulation.")
+parser.add_argument("--prmtop", type=str, help="Path to the .prmtop file.")
 parser.add_argument(
     "inpcrd", type=str, help="Path to the .inpcrd/.rst7 file (with box)."
 )
-parser.add_argument("seed", type=int, help="The seed.")
-parser.add_argument("equil_steps", type=int, help="Number of equilibration rounds.")
-parser.add_argument("prod_steps", type=int, help="Number of production rounds.")
-parser.add_argument("write_freq", type=int, help="CSV and DCD write frequency.")
+parser.add_argument("--seed", type=int, help="The seed.")
+parser.add_argument("--equil_steps", type=int, help="Number of equilibration rounds.")
+parser.add_argument("--prod_steps", type=int, help="Number of production rounds.")
+parser.add_argument("--write_freq", type=int, help="CSV and DCD write frequency.")
 parser.add_argument(
-    "validate", type=bool, help="Whether to run the OpenMM validation (0 or 1)."
+    "--validate", type=bool, help="Whether to run the OpenMM validation (0 or 1)."
 )
 args = parser.parse_args()
 

@@ -1,114 +1,96 @@
 # Robosample
 
-Robosample is a molecular simulation software implementing blocked Gibbs Sampling coupled with Hamiltonian Monte Carlo [load paper]. Each molecule is represented as a **robot** (kinematic tree of rigid bodies connected by joints, or *mobilizers*) and each Gibbs block consists of the set of joints of a forest a forest of kinematic trees rooted at a shared single ground frame. Each robot is based on the previous robot i.e. Cartesian coordinates from the previous robot are assigned to the next robot. **Per-atom** forces computed by OpenMM are reduced to per-body spatial forces (net force + torque about the body origin) for the articulated-body solver.
+Robosample is a molecular simulation software implementing blocked Gibbs Sampling coupled with Hamiltonian Monte Carlo. Its goal is to enhance sampling of rare conformational transitions.
+
+Atom positions can be represented in Cartesian (X/Y/Z) or generalized-coordinates. A common generalized-coordinate representation uses internal Bond/Angle/Torsion (BAT) coordinates. Each molecule is represented as an articulated robot - a kinematic tree of rigid bodies connected by joints. Each joint introduces one or more generalized-coordinates corresponding to bond, angle, or torsional motion, while omitted coordinates remain constrained. The molecular system is thus represented as a forest of such kinematic trees sharing a common ground frame.
+
+Each Gibbs block is defined by a robot factorization, which exposes a particular subset of generalized-coordinates. Multiple robot factorizations are applied sequentially over the course of a Gibbs sweep. All robot factorizations represent the same molecular configuration; only the choice of active generalized-coordinates changes between Gibbs blocks. Each Gibbs block samples one subset of generalized-coordinates while conditioning on the remaining coordinates. By holding selected BAT coordinates fixed within a Gibbs block, the dimensionality of the sampled state space is reduced. Within each Gibbs block, Hamiltonian Monte Carlo evolves the active generalized-coordinates together with their conjugate momenta defined by the corresponding robot factorization.
+
+The Cartesian coordinates produced at the end of one Gibbs block are used to initialize the robot representation for the next Gibbs block. **Per-atom** forces computed by OpenMM are accumulated into per-body spatial wrenches (net force and torque about the body origin) for the articulated-body solver. The articulated-body solver uses these body-level wrenches to compute the joint-space dynamics required for HMC integration.
 
 Robosample is a `conda` package that ships:
 
-- A molecular simulation engine written in C++17/CUDA and compiled compiled with PyBind11 as an `.so`.
+- A molecular simulation engine written in C++17/CUDA and compiled with PyBind11 as an `.so`.
 - A Python library built on top of it.
 
-The build toolchain (`cmake`, `ninja`, `gcc`, `cuda` etc) lives in its own `conda` environment which the user must create and activate. Before running build commands, check if running any environment inside `envs/robo_cuda*.yaml` or `envs/robo_cpu.yaml`.
+The build toolchain (`cmake`, `ninja`, `gcc`, `cuda` etc) lives in its own `conda` environment which the user must create and activate. Before running build commands, check that one of the environments in `envs/robo_cuda*.yaml` or `envs/robo_cpu.yaml` is active.
 
-The goal is to accelerate sampling of molecular conformations, maximizing sampling of **rare events** (basin hopping). Correctness is measured against the theory, not against intuition.
-
-The systems it is supposed to simulate are to **1M atoms** clustered in up to **100k rigid bodies**. Examples:
+The target systems are up to **1M atoms** clustered in up to **100k rigid bodies** across **10k robots**. Examples:
 
 - Alanine dipeptide in vacuum
-- Deca alanine in explicit solvent
 - FFAR1 (GPCR) in implicit solvent and with explicit membrane nanodisc
 - Spliceosome in explicit solvent
+- Entire bacteriophages in explicit solvent
+
+Correctness is measured not against intuition, but against theory (see `references/index.yaml`).
 
 ## Agents and references
 
-Each agent's authoritative behavior lives in its own frontmatter; the line below is the routing gloss -
-what it does, where it sits in the pipeline, and its binding constraint.
+Each agent's authoritative behavior lives in its own frontmatter under `.claude/agents/`:
 
-- `.claude/agents/researcher.md` - **read-only.** Theory / sampling research -> a precise spec under `docs/specs/`. Runs first, before any physics-touching change. Never writes code.
-- `.claude/agents/coder.md` - implements a reviewed spec or a self-contained task. **Auto-mode, surgical** (Rules 2, 3, 7). Correctness over performance - never optimizes speculatively.
-- `.claude/agents/reviewer.md` - **independent, hostile, read-only.** Runs after the coder, before merge. Reviews science + conventions + implementation together; hands confirmed findings back to `coder`, never patches.
-- `.claude/agents/optimizer.md` - **opt-in, user-invoked only; never inside a feature loop.** Static-analysis-guided source optimization measured with `perf`; hands every change to `reviewer`.
-
+- `.researcher.md` - **read-only.** Theory / sampling research -> a precise spec under `docs/specs/`. Runs first, before any physics-touching change. Never writes code.
+- `.coder.md` - implements a reviewed spec or a self-contained task. **Auto-mode, surgical**. Correctness over performance - never optimizes speculatively.
+- `.reviewer.md` - **independent, hostile, read-only.** Runs after the coder, before merge. Reviews science, conventions and implementation together. Hands confirmed findings back to `coder`, never patches.
+- `optimizer.md` - **opt-in, user-invoked only; never inside a feature loop.** Static-analysis-guided source optimization measured with `perf`; hands every change to `reviewer`.
 - `references/index.yaml`: summary of all papers Robosample is based on with link to their Markdown versions stored locally.
 
-## Spec writing style
+If in doubt, iteratively ask questions until the implementation plan is complete. After that, enter auto mode and finish coding independently. Do not ask further questions.
 
-Avoid using too many normative statements (e.g. *binding*, *mandatory*, *fail loud*, *must*, *resolved*, *almost*) everywhere since everything becomes equally important.
+## Style
 
-Example: *state the SphericalCoords ctor args explicitly* and *compare pre-projection recursion* have vastly different importance: one is documentation and the other one is correctness.
+**Write and think** in clear, direct English. Prefer short, declarative sentences where they improve clarity. Introduce technical terms only when they improve precision. Avoid rhetorical flourish. Prefer precise, literal language over metaphor. Explain mechanisms explicitly rather than replacing them with slogans.
 
-Instead, classify requirements:
+Authoritative examples for good and bad writing/thinking are under `styles/`:
 
-- **Normative:** *SHALL*, *MUST*
+- `architecture.md`: explanation of internals / how a system is built.
+- `decision.md`: design proposals / rationale documents.
+- `documentation.md`: tutorials, how-tos, and conceptual explanation - teachin.
+- `issues.md`: bug reports, feature requests, and triage-ready problem writeups.
+- `readme.md`: project overview / first-contact document.
+- `reference.md`: lookup material - you arrive knowing what you want, you leave with the exact signature/behavior/return codes/errors/edge cases.
+- `spec.md`: specification writing.
+- `review.md`: code review comments and exchanges - giving and receiving.
 
-- **Recommended:** *SHOULD*
+Match their style unless the user explicitly requests otherwise.
 
-- **Implementation notes:** *NOTE*
+Assume the reader is an experienced software engineer familiar with molecular simulation. Scale response length to the task. Lead with technical substance. Avoid performative tics and conversational filler:
 
-This makes review dramatically easier.
+- Unnecessary validation: *fair point*.
+- Narrating the next move: *let me name them plainly*.
+- Flagging significance: *this is the real issue*
+- Advertising honesty: *to be honest*.
+- Corporate jargon and metaphorical engineering slang: *load-bearing*, *blast radius*, *footgun*, *yak shaving*, *belt-and-suspenders*, *fan out*, *clique*, *bespoke*, *circuit-breaker*, *heavy-lifting*, *money shot*, *this lands*, *sidecar* etc.
 
-Do not mix implementation order into architecture. Specifications should answer *What is correct?*, not *What should be coded first?*. Implementation order changes, but requirements don't.
-The spec should define/explain terms only once and must avoid repeated discussions.
-To make maintenance and auditing easier, consider splitting the spec into multiple files if things happen to share infrastructure, but conceptually validate different things.
+Avoid excessive normative statements: *binding*, *mandatory*, *fail loud*, *must*, *resolved*, *almost* since everything becomes equally important. Instead, classify requirements:
 
-## How to run shell commands (mandatory)
+- **Normative:** *SHALL*, *MUST*, *MUST NOT*.
+- **Recommended:** *SHOULD*, *SHOULD NOT*.
+- **Optional**: *MAY*.
+- **Implementation notes:** *NOTE*.
 
-Permissions are **generous-allow + hard-deny**: almost every command runs without a prompt; a short
-deny-list in `.claude/settings.json` (sudo, `rm -rf`, history/remote-mutating git, network tools,
-secret reads) is the real boundary and cannot be overridden. So a prompt or block now means one of two
-things - you tried a genuinely denied operation, or you wrote the command in a form the matcher can't
-analyze. Never route around a block by asking to widen permissions; rewrite the command.
+## Building and testing
 
-Claude Code splits compound commands on `&&`, `||`, `;`, `|`, and newlines and matches each piece
-independently, and it auto-runs bare read-only commands (`ls`, `cat`, `grep`, `find`, `head`, `tail`,
-`git log/status/diff/show`, ...). Write commands so they stay in that clean, analyzable form:
+A `conda` env must be active since `CONDA_PREFIX` is required by both `cmake` presets and `nox`.
 
-- **No `cd` prefixes.** Pass explicit paths: `ctest --test-dir build/cuda-tests -R <name>`, `cmake --preset <p>`, `grep -rn 'pat' tests/ src/`, `sed -n '1,40p' path/to/file`. A `cd X; ...` prefix trips the path-resolution guard and buys nothing.
-- **Run git from the repo root, without `-C`.** Plain `git log -- references/`, `git status --short`, `git diff ...` - these hit the built-in read-only-git safelist and never prompt. `git -C /path log ...` does not match that safelist and will prompt; the `-C` is redundant since the repo is already the `cwd`.
-- **No command substitution.** Never `$(...)` or backticks. For parallelism use `-j0` (`cmake` / `ninja` / `ctest` read 0 as *all cores* - maximum parallelism, the project default). Not `-j$(nproc)`.
-- **No heredocs and no shell loops.** Never `python3 - <<'PY' ... PY`, never `for ...; do ... done`. Write a script to a file and run `python3 file.py`.
-  For a file-existence sweep use one command, not a loop: `find references/papers -maxdepth 2 -name meta.yaml` or `ls references/papers/*/meta.yaml`.
-  For a multi-pattern search use one `grep -rn 'a\|b\|c' <dir>` (or `rg`).
-- **Avoid chaining unrelated commands with `;`/`&&`/`|`.** Each piece must match on its own, and a long chain is where analysis breaks. Prefer one command per step; when you must combine, keep every piece a plain allowed form.
-- **Environment variables via `env`, not a bare prefix.** `env ROBOSAMPLE_SLOW_TESTS=1 ctest ...`, not `ROBOSAMPLE_SLOW_TESTS=1 ctest ...` - a bare `VAR=val` prefix stops the command matching its rule.
-- **Run tests through `ctest`, not the binaries.** `ctest --test-dir build/cuda-tests -R <name> --output-on-failure`, not `./TestFoo`.
+CMake presets `${CONFIG}` are `<platform>-<type>` where:
 
-**Do not approve slips into `settings.local.json`.** Approving a blocked command writes a frozen exact string that never generalizes - the next variant prompts again. A block is a signal to rewrite the command (or that it is genuinely denied), never to allowlist it. Any existing `.claude/settings.local.json` accumulated this way should be deleted (it is git-ignored by default; if you created it yourself, add it to `.gitignore`).
+- `platform` is `reference`, `cpu`, `cuda`, `opencl`.
+- `type` is `debug`, `release`, `relwithdebinfo`, `tests`, `pgo-train`, `pgo-use`.
 
-## The test gate (non-negotiable)
+Unless otherwise prompted, you will assume the platform is `cuda`. `tests` does not build the `.so` library, so you cannot run `python/robosample/run.py` or any other driver.
 
-Every change must either pass the suite of tests and physical invariats stated here or change **deliberately and with justification**. A test encodes WHY behavior matters; "tests pass" is false if any were skipped.
+Configure: `cmake --preset ${CONFIG}`
 
-- Fast smoke (<1 min, use while iterating): `python3 python/robosample/roborun.py ala-dipeptide examples/ala-dipeptide.prmtop examples/ala-dipeptide.rst7 6000 0 100 1 true`
-- Full authoritative gate (before declaring done): `nox -s tests` - will build `cuda-tests`.
-- A `mamba`/`conda` env must be active (`CONDA_PREFIX` is required by both the presets and `noxfile`).
-- **A red `tests` session is a failed gate even though coverage/badge were still produced.** The session tolerates ctest exit 8 (tests-failed) and pytest exit 5 (no tests collected) so coverage still runs, then `session.error`s at the end if anything failed. Judge the gate by the session's final status and `LastTestsFailed.log`, never by a raw exit code mid-run - a suite that failed still emits artifacts.
+Build & install: `cmake --build --preset ${CONFIG}`.
 
-## Build (CUDA)
+Every change must either pass the suite of tests and physical invariants stated here or change **deliberately and with justification**. A test encodes WHY behavior matters; "tests pass" is false if any were skipped. Since tests can run for a very long time, you will prompt the user whether to run or not. Regardless of the response, you will always run::
 
-Can build `${CONFIG}` as production (`cuda-release` - no tests) or testing (`cuda-tests` - no `.so`/Python built).
+```bash
+python3 python/robosample/run.py --name ala-dipeptide --prmtop examples/ala-dipeptide.prmtop --inprcrd examples/ala-dipeptide.rst7 --seed 6000 --equil_steps 0 --prod_steps 10 --write_freq 1 --validate true
+```
 
-- Configure: `cmake --preset ${CONFIG}$`
-- Build & install into `python/robosample/`: `cmake --build --preset ${CONFIG}`
-- Builds run **locally** on this machine's GPU (`CMAKE_CUDA_ARCHITECTURES=native`). This is why Remote Control (phone) works and Claude Code on the web does not - the cloud has no CUDA toolchain.
+If prmompted to run tests, execute:
 
-## Profiling and optimization
-
-- Day-to-day optimization is **static-analysis-guided source optimization**, measured with `perf record` (`-e cycles:u -j any,u`), driven by the `optimizer` agent. This is the normal path.
-- `nox -s build_optimized` is a **separate, opt-in PGO+BOLT facility** - not part of any feature or optimization loop. It:
-  - **requires a human** to first run `sudo sysctl -w kernel.perf_event_paranoid=-1`; agents cannot (sudo is denied in `.claude/settings.json`), so an agent that needs it must stop and ask, not escalate;
-  - **destructively overwrites** the installed `robo_bindings*.so` in `python/robosample/`;
-  - currently trains PGO on the smallest system (`ala-dipeptide`) only - a **known stopgap, not a validated policy**; do not treat it as a convention to enforce or preserve.
-
-## How work is delegated
-
-Research and design are read-only and produce a spec.
-
-Implementation is surgical (Rules 2, 3, 7).
-
-Validation runs the gate.
-
-Review is hostile (Rule 12) and read-only.
-
-See `.claude/agents/`. Optimization (`optimizer`) is a **separate, opt-in** pipeline - never invoke it inside a feature loop.
-
-If in doubt, iteratively ask questions until the implementation plan is complete. After that, enter auto mode and finish coding independently. Do not ask further questions. Everything is permitted (read `.claude/settings.json`).
+```bash
+nox -s tests`
+```
