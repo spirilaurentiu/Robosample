@@ -42,13 +42,15 @@ A frame is projected by ...
 
 State invariants instead of intentions. Prefer *The cache SHALL contain at most one entry per UUID* over *The cache tries to avoid duplicates*.
 
-State assumptions explicitly. Do not rely on implied context. When writing designs or specifications, explain:
+State assumptions explicitly. Do not rely on implied context. A specification uses the canonical headings defined in CLAUDE.md; use these exact names:
 
-1. Problem
-2. Constraints
-3. Invariants
-4. Design
-5. Consequences and trade-offs
+1. Motivation - the problem, quantified, with binding constraints and assumptions.
+2. Behavior - what the system SHALL do, and why the design is correct.
+3. Invariants - the properties that hold after the change.
+4. Interface - the externally observable interface and the components it touches.
+5. Validation strategy - checks that distinguish a correct implementation from a plausible-but-biased one.
+
+A specification MAY add *Consequences and trade-offs* when the design forecloses alternatives, and *Open questions* when unresolved unknowns block a correct derivation.
 
 Present evidence and reasoning before conclusions. Explain why a design is correct before describing its implementation. Do not begin with implementation details before the problem has been defined.
 

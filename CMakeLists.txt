@@ -244,9 +244,10 @@ set(ROBOSAMPLE_SANITIZER_LINK_FLAGS -fsanitize=${ROBOSAMPLE_SANITIZERS})
 
 set(ROBOSAMPLE_BASE_COMPILE_OPTIONS
     -march=x86-64-v3
-    # SIMD-only OpenMP: enables `#pragma omp simd` for the hot per-atom transform loops
-    # (RobotEngine) WITHOUT pulling in the OpenMP threading runtime (libgomp). No effect
-    # on TUs without the pragma. Robosample's code only (not openmm_objects).
+    # SIMD-only OpenMP: enables `#pragma omp simd` for the hot per-atom
+    # transform loops (RobotEngine) WITHOUT pulling in the OpenMP threading
+    # runtime (libgomp). No effect on TUs without the pragma. Robosample's code
+    # only (not openmm_objects).
     -fopenmp-simd
     -Wno-deprecated-declarations # OpenMM double4 / double4_16a / double4_32a
     $<$<CONFIG:Debug>:-fno-omit-frame-pointer
@@ -605,21 +606,26 @@ if(BUILD_TESTING)
   # cnpy/zlib, so this is added onto the TestRoboticsOracle* targets alone
   # rather than into robosample_add_test()/robosample_objects. Matches BOTH
   # TestRoboticsOracle (Scope A, tests/fixtures/robotics_oracle) and
-  # TestRoboticsOracleMolecule (Scope B, tests/fixtures/robotics_oracle_molecules)
-  # -- same cnpy/JSON machinery, disjoint fixture directories (§4.2/§9).
+  # TestRoboticsOracleMolecule (Scope B,
+  # tests/fixtures/robotics_oracle_molecules) -- same cnpy/JSON machinery,
+  # disjoint fixture directories (§4.2/§9).
   # ---------------------------------------------------------------------------
   foreach(_oracle_target TestRoboticsOracle TestRoboticsOracleMolecule)
     if(TARGET ${_oracle_target})
       find_package(ZLIB REQUIRED)
-      target_sources(${_oracle_target} PRIVATE
-        ${CMAKE_SOURCE_DIR}/tests/third_party/cnpy/cnpy.cpp)
-      target_include_directories(${_oracle_target} PRIVATE
-        ${CMAKE_SOURCE_DIR}/tests/third_party/cnpy
-        ${CMAKE_SOURCE_DIR}/tests/third_party/sha256)
+      target_sources(
+        ${_oracle_target}
+        PRIVATE ${CMAKE_SOURCE_DIR}/tests/third_party/cnpy/cnpy.cpp)
+      target_include_directories(
+        ${_oracle_target} PRIVATE ${CMAKE_SOURCE_DIR}/tests/third_party/cnpy
+                                  ${CMAKE_SOURCE_DIR}/tests/third_party/sha256)
       target_link_libraries(${_oracle_target} PRIVATE ZLIB::ZLIB)
-      target_compile_definitions(${_oracle_target} PRIVATE
-        ROBOTICS_ORACLE_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures/robotics_oracle"
-        ROBOTICS_ORACLE_MOLECULES_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures/robotics_oracle_molecules")
+      target_compile_definitions(
+        ${_oracle_target}
+        PRIVATE
+          ROBOTICS_ORACLE_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures/robotics_oracle"
+          ROBOTICS_ORACLE_MOLECULES_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures/robotics_oracle_molecules"
+      )
     endif()
   endforeach()
 

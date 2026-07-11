@@ -195,19 +195,25 @@ inline Real safeLogSineSqr(Real pitch) {
 }
 
 // Unit quaternion (w,x,y,z) -> rotation matrix (row-major).
-inline Rotation quatToRotation(Real qw, Real qx, Real qy, Real qz) {
-    const Real xx = qx * qx, yy = qy * qy, zz = qz * qz;
-    const Real xy = qx * qy, xz = qx * qz, yz = qy * qz;
-    const Real wx = qw * qx, wy = qw * qy, wz = qw * qz;
-    return Rotation(robo::Mat33(1 - 2 * (yy + zz),
-                                2 * (xy - wz),
-                                2 * (xz + wy),
-                                2 * (xy + wz),
-                                1 - 2 * (xx + zz),
-                                2 * (yz - wx),
-                                2 * (xz - wy),
-                                2 * (yz + wx),
-                                1 - 2 * (xx + yy)));
+inline auto quatToRotation(Real qw, Real qx, Real qy, Real qz) -> Rotation {
+    const Real xx = qx * qx;
+    const Real yy = qy * qy;
+    const Real zz = qz * qz;
+    const Real xy = qx * qy;
+    const Real xz = qx * qz;
+    const Real yz = qy * qz;
+    const Real wx = qw * qx;
+    const Real wy = qw * qy;
+    const Real wz = qw * qz;
+    return {robo::Mat33(1 - (2 * (yy + zz)),
+                        2 * (xy - wz),
+                        2 * (xz + wy),
+                        2 * (xy + wz),
+                        1 - (2 * (xx + zz)),
+                        2 * (yz - wx),
+                        2 * (xz - wy),
+                        2 * (yz + wx),
+                        1 - (2 * (xx + yy)))};
 }
 
 } // namespace
@@ -359,7 +365,9 @@ void World::enableReactionReporter(bool reportFreeBodies, bool includeOpenmm, bo
     // body) IS included here -- excluding it would silently drop that root
     // body's own applied-force reading (e.g. TM1 of a 7-body TM bundle).
     std::set<int> interesting;
-    auto reportable = [](int body) { return body != 0; };
+    auto reportable = [](int body) {
+        return body != 0;
+    };
     for (int b = 1; b < model_.numBodies; ++b) {
         if (model_.bodyNU[b] == 0) {
             continue; // Weld: not a flexed joint
@@ -2222,11 +2230,12 @@ bool World::ncmcInnerGhmcStep(robo::Real h, int substepIndex, bool* acceptedOut)
         // caller (ncmcMove) treats false as a hard abort of the whole move,
         // orthogonal to the F3 corrector-convergence guard below.
         if (ncmcDebugEnabled()) {
-            std::fprintf(stderr,
-                         "[ncmc-inner] world %d substep %d: h=%.6g stepTo FAILED (non-finite) -> abort move\n",
-                         index_,
-                         substepIndex,
-                         (double)h);
+            std::fprintf(
+                stderr,
+                "[ncmc-inner] world %d substep %d: h=%.6g stepTo FAILED (non-finite) -> abort move\n",
+                index_,
+                substepIndex,
+                (double)h);
         }
         return false;
     }
@@ -2358,8 +2367,8 @@ bool World::ncmcMove() {
     const int teleRamp = std::max((sampler_.ncmcSteps - teleHold) / 2, 1);
     const int teleStep = teleRamp + teleHold / 2; // center of the hold
     const int teleRoot = ncmcTeleportRoot();
-    const bool doTele = sampler_.ncmcTeleport && teleHold > 0 && teleRoot > 0 && !siteAtoms_.empty()
-                        && constraints_.empty();
+    const bool doTele =
+        sampler_.ncmcTeleport && teleHold > 0 && teleRoot > 0 && !siteAtoms_.empty() && constraints_.empty();
     if (sampler_.ncmcTeleport && !doTele) {
         std::fprintf(stderr,
                      "[ncmc] teleport requested but inactive (needs hold>0, a Free-root region, a "
@@ -2490,8 +2499,8 @@ bool World::ncmcMove() {
                      sampler_.ncmcSteps,
                      doTele ? "on" : "off");
         const bool moveAccept = sampler_.useMetropolizedInner
-                                     ? (std::isfinite(work) && metropolis(0.0, work))
-                                     : (std::isfinite(dH) && metropolis(Hstart, Hend));
+                                    ? (std::isfinite(work) && metropolis(0.0, work))
+                                    : (std::isfinite(dH) && metropolis(Hstart, Hend));
         if (moveAccept) {
             RobotEngine::fillAtomPositionsFromBodies(model_, state_);
             accepted = true;

@@ -29,22 +29,23 @@ Note that the user need not be an expert in your domain. The questions may be po
 
   4. Identify which definitions you need from the literature vs. which are already binding in the codebase.
 
-  5. Return as structured text; the orchestrator persists it under `docs/specs/`:
+  5. Return as structured text under the canonical spec headings (see CLAUDE.md); the orchestrator persists it under `docs/specs/`:
 
-      - **Problem restatement** - the reformulated problem in the codebase's vocabulary, alongside the user's original phrasing, so any gap between what was asked and what is being solved is visible to a reviewer. If the question admits materially different readings, state them and which one you proceeded on rather than silently choosing.
-      - **Claims.**
-      - **Derivation sketch** - the minimal math, in the codebase's notation, with citations (`references/index.yaml`, any `references/papers/*` passage, or external DOI/arXiv).
-      - **Correctness conditions.**
-      - **Touch list** - which components change (e.g. sampler, integrator, acceptance, mass operator) and which conventions are at risk (e.g Frame F/M, angular-over-linear, `Phi`/`~Phi`).
-      - **Verification plan** - the analytic/numeric check that would distinguish a correct implementation from a plausible-but-biased one (e.g. detailed-balance check, known free-energy difference, alanine cis to trans isomerization which is gated by 1-4 clash and needs angle+torsion together). This includes checkable oracles the coder must implement, each tagged:
+      - **Motivation** - *Problem restatement*: the reformulated problem in the codebase's vocabulary, alongside the user's original phrasing, so any gap between what was asked and what is being solved is visible to a reviewer. If the question admits materially different readings, state them and which one you proceeded on rather than silently choosing.
+      - **Behavior**:
+        - *Claims* - the normative statements the spec asserts.
+        - *Derivation sketch* - the minimal math, in the codebase's notation, with citations (`references/index.yaml`, any `references/papers/*` passage, or external DOI/arXiv).
+      - **Invariants** - *Correctness conditions*: the properties that hold after the change.
+      - **Interface** - *Touch list*: which components change (e.g. sampler, integrator, acceptance, mass operator) and which conventions are at risk (e.g Frame F/M, angular-over-linear, `Phi`/`~Phi`).
+      - **Validation strategy** - *Verification plan*: the analytic/numeric check that would distinguish a correct implementation from a plausible-but-biased one (e.g. detailed-balance check, known free-energy difference, alanine cis to trans isomerization which is gated by 1-4 clash and needs angle+torsion together). This includes checkable oracles the coder must implement, each tagged:
 
         - **PRECONDITION** - taken as given; becomes a runtime guard, not a test.
-        - **INVARIANT** - must hold after the change; becomes a test that can fail if it breaks.
+        - **INVARIANT** - SHALL hold after the change; becomes a test that can fail if it breaks.
         - **LEMMA** - a derived fact with an expected value/relation and tolerance.
 
         State expected values where analytically derivable; otherwise state the discriminating structure (what the check must exercise together, what it must fail on). Do NOT file a must-check condition as an assumption.
 
-      - **Open questions / blocking unknowns** - when the literature and codebase are not enough to pin down a correct derivation, do not guess or fill the gap to make the solution look sound. List each unresolved question, state what behavior of adjacent physical invariants depends on it, and say what answer you'd need to proceed. If an unknown is blocking, return early with these questions rather than fabricating a resolution; the orchestrator can round-trip to the human and re-invoke you with the answers.
+      - **Open questions** - when the literature and codebase are not enough to pin down a correct derivation, do not guess or fill the gap to make the solution look sound. List each unresolved question, state what behavior of adjacent physical invariants depends on it, and say what answer you'd need to proceed. If an unknown is blocking, return early with these questions rather than fabricating a resolution; the orchestrator can round-trip to the human and re-invoke you with the answers.
 
 ## Core Principles
 

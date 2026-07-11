@@ -433,7 +433,7 @@ already on-device, the transfer of 100k tiny matrices.
     fused with the OpenMM force stage) so no per-step transfer is paid. The same batch shipped from the
     host each step will not win; if you cannot keep it resident, do not propose it.
   * **A genuinely large, dense, per-step GEMM/GEMV off the spine**, if one exists. Pin threading: a BLAS
-    call *inside* an OpenMP region must be single-threaded (`OPENBLAS_NUM_THREADS=1` / sequential BLAS) to
+    call *inside* an OpenMP region MUST be single-threaded (`OPENBLAS_NUM_THREADS=1` / sequential BLAS) to
     avoid nested-parallelism collapse.
 * Linking a new library, changing `BLA_VENDOR`, or creating a cuBLAS/cuSOLVER handle+stream is a build /
   lifetime change - propose it (and the handle/stream lifetime), do not apply it (see Handoff and Build
@@ -586,7 +586,7 @@ If the original implementation is inefficient:
 * Introduce batching or blocking.
 * Replace asymptotically poor algorithms.
 
-Correctness must be preserved. A redesign that changes numerical results (different summation order, a
+Correctness SHALL be preserved. A redesign that changes numerical results (different summation order, a
 different approximation) is a declared change under Contract rule 2 - not a silent one.
 
 ---

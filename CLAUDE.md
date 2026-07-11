@@ -13,7 +13,7 @@ Robosample is a Linux-only `conda` package that ships:
 - A molecular simulation engine written in C++17/CUDA and compiled with PyBind11 as an `.so`.
 - A Python library built on top of it.
 
-The build toolchain (`cmake`, `ninja`, `gcc`, `cuda` etc) lives in its own `conda` environment which the user must create and activate. Before running build commands, check that one of the environments in `envs/robo_cuda*.yaml` or `envs/robo_cpu.yaml` is active.
+The build toolchain (`cmake`, `ninja`, `gcc`, `cuda` etc) lives in its own `conda` environment which the user SHALL create and activate. Before running build commands, check that one of the environments in `envs/robo_cuda*.yaml` or `envs/robo_cpu.yaml` is active.
 
 The target systems are up to **1M atoms** clustered in up to **100k rigid bodies** across **10k robots**. Examples:
 
@@ -26,10 +26,14 @@ The target systems are up to **1M atoms** clustered in up to **100k rigid bodies
 
 Each agent's authoritative behavior lives in its own frontmatter under `.claude/agents/`:
 
-- `.researcher.md` - **read-only.** Theory / sampling research -> a precise spec under `docs/specs/`. Runs first, before any physics-touching change. Never writes code.
-- `.coder.md` - implements a reviewed spec or a self-contained task. **Auto-mode, surgical**. Correctness over performance - never optimizes speculatively.
-- `.reviewer.md` - **independent, hostile, read-only.** Runs after the coder, before merge. Reviews science, conventions and implementation together. Hands confirmed findings back to `coder`, never patches.
+- `researcher.md` - **read-only.** Theory / sampling research -> a precise spec under `docs/specs/`. Runs first, before any physics-touching change. Never writes code.
+- `coder.md` - implements a reviewed spec or a self-contained task. **Auto-mode, surgical**. Correctness over performance - never optimizes speculatively.
+- `reviewer.md` - **independent, hostile; does not modify production source.** Runs after the coder, before merge. Reviews science, conventions and implementation together. MAY author reproducers under `tests/`. Hands confirmed findings back to `coder`, never patches source.
 - `optimizer.md` - **opt-in, user-invoked only; never inside a feature loop.** Static-analysis-guided source optimization measured with `perf`; hands every change to `reviewer`.
+- `paper-ingestor.md` - **user-invoked, single-paper.** Ingests one PDF-converted `.md` into `references/`: dedups, classifies, cleans to `paper.md`, extracts equations / notation / numeric-check fixtures, validates the LaTeX, and upserts `references/index.yaml`. Writes only under `references/`. Returns a one-line status.
+- `cuda-documentation.md` - produces Doxygen documentation that states the behavioral contract of each symbol in CUDA kernels.
+
+The `ingest-papers` slash command (`.claude/commands/ingest-papers.md`) fans one `paper-ingestor` instance out per file across a directory or glob. It is a command, not an agent - its frontmatter has `argument-hint`/`allowed-tools` and no `name:`.
 
 Agents SHALL **write and think** in clear, direct English. Prefer short (under 25 words), declarative sentences where they improve clarity. Prefer active voice. Avoid marketing language, rhetorical flourish and metaphors. Prefer concrete nouns over abstractions. Introduce technical terms only when they improve precision. Prefer precise, literal language over metaphor. State mechanisms explicitly rather than replacing them with slogans.
 
@@ -54,7 +58,7 @@ Assume the reader is an experienced software engineer familiar with molecular si
 - Advertising honesty: *to be honest*.
 - Corporate jargon and metaphorical engineering slang: *load-bearing*, *blast radius*, *footgun*, *yak shaving*, *belt-and-suspenders*, *fan out*, *clique*, *bespoke*, *circuit-breaker*, *heavy-lifting*, *money shot*, *this lands*, *sidecar* etc.
 
-Avoid excessive normative statements: *binding*, *mandatory*, *fail loud*, *must*, *resolved*, *almost* since everything becomes equally important. Instead, classify requirements:
+Avoid emphatics used for emphasis rather than obligation: *binding*, *mandatory*, *fail loud*, *resolved*, *almost*, and lowercase *must*. They flatten priority when everything reads as equally important. Reserve requirement force for the RFC 2119 keywords (see `styles/spec.md`) and classify each requirement:
 
 - **Normative:** *SHALL*, *MUST*, *MUST NOT*.
 - **Recommended:** *SHOULD*, *SHOULD NOT*.
@@ -63,7 +67,7 @@ Avoid excessive normative statements: *binding*, *mandatory*, *fail loud*, *must
 
 ## Build prerequisites
 
-A `conda` env must be active since `CONDA_PREFIX`.
+A `conda` env SHALL be active (`CONDA_PREFIX` set).
 
 ## Build configurations
 
@@ -88,7 +92,7 @@ cmake --build --preset ${CONFIG}
 
 ## Validation levels
 
-Every change must either pass the suite of tests and physical invariants stated here or change **deliberately and with justification**. A test encodes WHY behavior matters; "tests pass" is false if any were skipped. Since tests can run for a very long time, you will prompt the user whether to run or not.
+Every change SHALL either pass the suite of tests and physical invariants stated here or depart **deliberately and with justification**. A test encodes WHY behavior matters; "tests pass" is false if any were skipped. Since tests can run for a very long time, you will prompt the user whether to run or not.
 
 - Level 0: compile only
 - Level 1: compile and run basic example
@@ -100,10 +104,10 @@ Every change must either pass the suite of tests and physical invariants stated 
 - Level 2: compile, run basic example and run test suite
 
     ```bash
-    nox -s tests`
+    nox -s tests
     ```
 
-Default validation is level 1. Request confirmation before escalading to higher levels.
+Default validation is level 1. Request confirmation before escalating to higher levels.
 
 ## Workflow
 
@@ -115,7 +119,7 @@ Workflow is encoded as a state machine: Issue -> Research -> Specification -> Im
 - Implementation:
   - Exit: builds successfully, requested validation completed
 - Review:
-  - Exit: no confirmed high-severity findings
+  - Exit: no confirmed Blocking findings (severity Critical or High)
 
 ## Severity
 
@@ -139,17 +143,43 @@ Severity is determined by impact, not effort required to fix.
   - Naming.
   - Style.
 
-A **specification** SHALL define:
+The reviewer emits findings graded Blocking, Should-fix, or Nit. Grade maps to severity:
 
-- Motivation
-- Behavior
-- Invariants
-- Interface
-- Validation strategy
+| Reviewer grade | Severity |
+| --- | --- |
+| Blocking | Critical or High |
+| Should-fix | Medium |
+| Nit | Low |
+
+The reviewer's evidence tier (Reproducer, Re-derivation, Suppress) is orthogonal to severity. It governs whether a finding counts as *confirmed* for the Review exit criterion. A finding blocks merge only when it is both Blocking and confirmed. NOTE: the tier semantics are defined in `reviewer.md`; this mapping SHALL be cross-checked against that file.
+
+A **specification** SHALL define, using these exact headings:
+
+- **Motivation** - the problem in the codebase's vocabulary, quantified, with binding constraints and assumptions. Researcher specs SHALL include the user's original phrasing alongside the restatement here.
+- **Behavior** - what the system SHALL do, with the rationale that makes it correct. Physics specs SHALL include the claims and a derivation sketch with citations here.
+- **Invariants** - the properties that hold after the change.
+- **Interface** - the externally observable interface and the components and conventions that change.
+- **Validation strategy** - the analytic or numeric checks that distinguish a correct implementation from a plausible-but-biased one, with oracles tagged PRECONDITION, INVARIANT, or LEMMA.
+
+A specification MAY add:
+
+- **Consequences and trade-offs** - SHOULD appear when the design forecloses alternatives.
+- **Open questions** - SHALL appear when unresolved unknowns block a correct derivation; otherwise omitted.
+
+These headings are canonical. `styles/spec.md` uses them directly. The researcher's artifact maps its domain-specific sections onto them as subsections:
+
+| Canonical | Researcher subsection |
+| --- | --- |
+| Motivation | Problem restatement |
+| Behavior | Claims, Derivation sketch |
+| Invariants | Correctness conditions |
+| Interface | Touch list |
+| Validation strategy | Verification plan |
+| Open questions | Open questions |
 
 Implementation details SHOULD be omitted unless they are necessary to define externally observable behavior.
 
-**Architectural** changes SHALL reference an existing decision record or introduce a new one under docs/decisions/.
+**Architectural** changes SHALL reference a decision record under `docs/decisions/`, creating one if none applies.
 
 Review priority:
 

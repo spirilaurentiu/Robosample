@@ -1,5 +1,6 @@
 CompileFlags:
   CompilationDatabase: "build/latest"
+  Compiler: x86_64-conda-linux-gnu-g++
 
 Diagnostics:
   ClangTidy:
@@ -7,3 +8,33 @@ Diagnostics:
     Remove: [readability-magic-numbers]
     CheckOptions:
       readability-identifier-naming.VariableCase: camelCase
+
+---
+If:
+  PathMatch: ['.*\.cu$', '.*/tools/clangd/cuda_kernel_prelude\.h$']
+  PathExclude: ['.*/common\.cu$', '.*/vectorOps\.cu$']
+CompileFlags:
+  Add:
+    - -xcuda
+    - --cuda-path=/home/victor/miniforge3/envs/robo_cuda13.0/targets/x86_64-linux
+    - --cuda-gpu-arch=sm_86
+    - --cuda-host-only
+    - -nocudalib
+    - -std=c++17
+    - -include
+    - /home/victor/Robosample/tools/clangd/cuda_kernel_prelude.h
+  Remove: [-fopenmp*]
+---
+If:
+  PathMatch: ['.*/common\.cu$', '.*/vectorOps\.cu$', '.*/tools/clangd/cuda_types\.h$']
+CompileFlags:
+  Add:
+    - -xcuda
+    - --cuda-path=/home/victor/miniforge3/envs/robo_cuda13.0/targets/x86_64-linux
+    - --cuda-gpu-arch=sm_86
+    - --cuda-host-only
+    - -nocudalib
+    - -std=c++17
+    - -include
+    - /home/victor/Robosample/tools/clangd/cuda_types.h
+  Remove: [-fopenmp*]

@@ -492,7 +492,8 @@ void symSqrt(const Real* A, int n, Real* S) {
 // that still avoids inf.
 void symSqrtInv(const Real* A, int n, Real* S) {
     if (n == 1) {
-        const bool locked = A[0] <= kNullLockAbs; // DI >= 0 always; <=0 means locked (or non-PSD, caught downstream)
+        const bool locked =
+            A[0] <= kNullLockAbs; // DI >= 0 always; <=0 means locked (or non-PSD, caught downstream)
         S[0] = locked ? Real(0) : (Real(1) / std::sqrt(A[0]));
         return;
     }
@@ -704,7 +705,9 @@ void RobotEngine::realizeVelocity(const RobotModel& m, RobotState& s) {
         //   extraLin_F = sum_j (Hdot_lin(j) - r_MB_F x Hdot_ang(j)) u_j
         // (The -rdot_MB_F x H_ang(j) part of the full d/dt(H_MB_F) is already
         //  captured by centripetal_G, so it is NOT re-added here.)
-        Vec3 extraAng_F(0, 0, 0), extraLin_F(0, 0, 0);
+        Vec3 extraAng_F(0, 0, 0);
+        Vec3 extraLin_F(0, 0, 0);
+
         if (!RobotModel::jointHasConstantHFM(jt)) {
             std::array<SpatialVec, 5> Hdot; // max dof = 5 (FreeLine)
             jointHDot_FM(jt, X_FM[b], V_FM[b], Hdot.data());
@@ -861,7 +864,8 @@ void RobotEngine::factorizeArticulatedInertias(const RobotModel& m, RobotState& 
         // recognition is the provably-safe substitute while it is deferred.
         // Any OTHER locked body (non-leaf, non-Torsion, or multi-dof) is NOT
         // this shape and throws instead of silently locking (Rule 11).
-        if (numLocked > 0 && !(m.bodyChildrenBeg[b] == m.bodyChildrenEnd[b] && m.bodyJoint[b] == JointType::Torsion)) {
+        if (numLocked > 0
+            && !(m.bodyChildrenBeg[b] == m.bodyChildrenEnd[b] && m.bodyJoint[b] == JointType::Torsion)) {
             Real eig[6];
             Real eigV[36];
             Real eigTol;
@@ -870,10 +874,11 @@ void RobotEngine::factorizeArticulatedInertias(const RobotModel& m, RobotState& 
             for (int k = 1; k < dof; ++k) {
                 minEig = std::min(minEig, std::abs(eig[k]));
             }
-            std::string msg = "realizeArticulatedBodyInertias: invertDense null-locked " + std::to_string(numLocked)
-                             + " direction(s) of D_b on body " + std::to_string(b)
-                             + " (JointType=" + std::to_string(static_cast<int>(m.bodyJoint[b]))
-                             + ", dof=" + std::to_string(dof) + ", atoms=[";
+            std::string msg = "realizeArticulatedBodyInertias: invertDense null-locked "
+                              + std::to_string(numLocked) + " direction(s) of D_b on body "
+                              + std::to_string(b)
+                              + " (JointType=" + std::to_string(static_cast<int>(m.bodyJoint[b]))
+                              + ", dof=" + std::to_string(dof) + ", atoms=[";
             // bodyAtomsBeg/End are only populated for a fully-built (real-molecule)
             // RobotModel; a hand-built synthetic test model (tests/RobotBuilders.hpp
             // buildForest without attachAtoms) leaves them empty -- guard the index
@@ -890,8 +895,8 @@ void RobotEngine::factorizeArticulatedInertias(const RobotModel& m, RobotState& 
                 msg += "unavailable: synthetic model with no atom map";
             }
             msg += "], min-eig(D)=" + std::to_string(minEig)
-                 + ") that is not a recognized structural phantom (leaf Torsion) -- "
-                   "see docs/specs/singular-dof-fixman.md STEP 3";
+                   + ") that is not a recognized structural phantom (leaf Torsion) -- "
+                     "see docs/specs/singular-dof-fixman.md STEP 3";
             throw std::runtime_error(msg);
         }
 
@@ -1324,8 +1329,8 @@ void RobotEngine::calcMobilizerReactionForces(const RobotModel& m,
     }
 }
 
-SpatialVec
-RobotEngine::findMobilizerReactionOnBodyAtMInGround(const RobotModel& m, const RobotState& s, int body) {
+auto RobotEngine::findMobilizerReactionOnBodyAtMInGround(const RobotModel& m, const RobotState& s, int body)
+    -> SpatialVec {
     std::vector<SpatialVec> atM(static_cast<std::size_t>(m.numBodies), SpatialVec(Vec3(0), Vec3(0)));
     calcMobilizerReactionForces(m, s, nullptr, atM.data());
     if (body < 0 || body >= m.numBodies) {
