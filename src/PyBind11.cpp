@@ -1,8 +1,12 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <unordered_map>
+
+#include "BatScaling.hpp"
 #include "Context.hpp"
 #include "OpenMMContext.hpp"
+#include "ReplicaExchange.hpp"
 #include "TopologyElements.hpp"
 #include "World.hpp"
 
@@ -28,9 +32,16 @@ PYBIND11_MODULE(robo_bindings, m) {
         .value("RigidKick", MoveType::RigidKick)
         .value("NcmcSwitch", MoveType::NcmcSwitch);
 
-    // Velocity-distortion option for the HMC momentum draw (simtk "NMA scaling").
-    // Pass distort_option=DistortOption.NMA to add_sampler; None (default) = off.
-    py::enum_<DistortOption>(m, "DistortOption").value("NMA", DistortOption::NMA);
+    // Velocity-distortion option for the HMC momentum draw (simtk "NMA scaling")
+    // or the position (BAT bond/angle) scaling drive (spec B4/D7). Pass
+    // distort_option=DistortOption.NMA / .ScaleBendStretch to add_sampler;
+    // None (default) = off. ScaleBendStretch requires mdSteps=0 (D7/INV-8 hard
+    // SHALL, enforced by World::add_sampler / applyBatScalingDrive).
+    py::enum_<DistortOption>(m, "DistortOption")
+        .value("NMA", DistortOption::NMA, "Velocity distortion at momentum-draw time.")
+        .value("ScaleBendStretch",
+               DistortOption::ScaleBendStretch,
+               "Deterministic BAT bond/angle position-scaling drive (B4/D7); requires mdSteps=0.");
 
     py::enum_<JointType>(m, "JointType")
         .value("Rigid", JointType::Rigid, "No mobility across the joint (Weld): 0 dof.")
@@ -171,6 +182,58 @@ PYBIND11_MODULE(robo_bindings, m) {
              "Ground-frame coords (nm, flat x,y,z, global atom order) and load the softest "
              "non-trivial mode into the world's NMA uScaleFactors. Call AFTER add_sampler "
              "with distort_option=DistortOption.NMA. Returns omega^2 of the chosen mode.")
+        // ---- BAT-scaling drive (docs/specs/replica-exchange-nonequilibrium-
+        // work.md B4/D5/D6/D7 -- Stage 2a) ----------------------------------
+        // Python boundary uses FLAT [x0,y0,z0,x1,...] doubles (nm, global atom
+        // order), matching set_nma_soft_mode_from_hessian's convention -- no
+        // new bound value type.
+        .def(
+            "preview_bat_scaling",
+            [](const World& w,
+               const std::vector<double>& atomPosFlat,
+               double s,
+               const std::unordered_map<int, double>& anchorR,
+               const std::unordered_map<int, double>& anchorTheta) {
+                const auto n = atomPosFlat.size() / 3;
+                std::vector<robo::Vec3> pos(n);
+                for (std::size_t a = 0; a < n; ++a) {
+                    pos[a] = robo::Vec3(atomPosFlat[(3 * a) + 0], atomPosFlat[(3 * a) + 1], atomPosFlat[(3 * a) + 2]);
+                }
+                const World::BatScalingResult result = w.previewBatScaling(pos, s, anchorR, anchorTheta);
+                std::vector<double> outFlat(result.atomPos.size() * 3);
+                for (std::size_t a = 0; a < result.atomPos.size(); ++a) {
+                    outFlat[(3 * a) + 0] = result.atomPos[a][0];
+                    outFlat[(3 * a) + 1] = result.atomPos[a][1];
+                    outFlat[(3 * a) + 2] = result.atomPos[a][2];
+                }
+                return py::make_tuple(outFlat, result.nScaled, result.lnJac);
+            },
+            py::arg("atom_pos_ground"),
+            py::arg("s"),
+            py::arg("anchor_r") = std::unordered_map<int, double>{},
+            py::arg("anchor_theta") = std::unordered_map<int, double>{},
+            "Side-effect-free preview of the deterministic BAT-scaling drive (B4/D7): "
+            "scale this world's D5-selected bond/angle DOFs by s about the given, "
+            "atom-index-keyed anchors (INV-9's shared/frozen anchor snapshot -- "
+            "Context.bat_anchor_snapshot()), WITHOUT mutating this world. Returns "
+            "(scaled_atom_pos_ground_flat, n_scaled, ln_jac) -- the same D6 "
+            "lnJac = (J(x')-J(x0)) + n_scaled*ln(s) apply_bat_scaling_drive commits.")
+        .def("apply_bat_scaling_drive",
+             &World::applyBatScalingDrive,
+             py::arg("s"),
+             py::arg("anchor_r") = std::unordered_map<int, double>{},
+             py::arg("anchor_theta") = std::unordered_map<int, double>{},
+             "Apply the BAT-scaling drive to THIS world's CURRENT geometry (mutates "
+             "state; the world's q/frames are re-fit so the driven endpoint x^tau=x' is "
+             "immediately readable). THROWS unless mdSteps==0 (D7/INV-8) and "
+             "distort_option==DistortOption.ScaleBendStretch.")
+        .def("get_distort_jacobian_det_log",
+             &World::getDistortJacobianDetLog,
+             "D6 lnJac of the last apply_bat_scaling_drive() call on this world (0.0 "
+             "if never driven).")
+        .def("get_last_n_scaled",
+             &World::getLastNScaled,
+             "D5 N_scaled of the last apply_bat_scaling_drive() call on this world.")
         .def_property_readonly("index", &World::index)
         .def_property_readonly("is_cartesian", &World::isCartesian)
         .def_property_readonly("is_docking", &World::isDocking)
@@ -430,6 +493,54 @@ PYBIND11_MODULE(robo_bindings, m) {
         .def_readwrite("collision_frequency", &SystemTopology::collisionFrequency)
         .def_readwrite("seed", &SystemTopology::seed);
 
+    // -- BAT-scaling shared anchor (spec INV-9, D2 revision 2) ---------------
+    // A frozen snapshot of Context's running-mean anchor, keyed by scaled-body
+    // atom index (World.preview_bat_scaling / apply_bat_scaling_drive's
+    // anchor_r/anchor_theta arguments). Context-owned, NOT per-ThermodynamicState
+    // -- see Context.accumulate_bat_anchor_stats / .bat_anchor_snapshot.
+    py::class_<robo::BatAnchorStats::Snapshot>(m, "BatAnchorSnapshot")
+        .def_readonly("mean_r", &robo::BatAnchorStats::Snapshot::meanR)
+        .def_readonly("mean_theta", &robo::BatAnchorStats::Snapshot::meanTheta);
+
+    // -- Replica exchange (docs/specs/replica-exchange-nonequilibrium-work.md,
+    //    Interface I1/I3) ------------------------------------------------------
+    // Exchange acceptance rule (B9). Stage 1: REMC (label-swap parallel
+    // tempering). Stage 2b: RENE/REBASONTOP (driven BAT-scaling exchange) are
+    // fully wired through run_rex_label_swap. RENEMC's acceptance formula is
+    // wired in attempt_rex_swap, but its OWN driven round-loop (the velocity/
+    // NMA drive segment) is a Stage 2c TODO -- run_rex_label_swap THROWS for
+    // RunType.RENEMC (attempt_rex_swap does not; call it directly to exercise
+    // RENEMC's acceptance algebra in isolation). NONE of the Stage 2b/2c C++
+    // has been compiled or run (coordinator directive, 2026-07-12) -- treat
+    // it as reviewed-on-paper only until a build confirms it.
+    py::enum_<RUN_TYPE>(m, "RunType")
+        .value("DEFAULT", RUN_TYPE::Default, "No exchange; independent replicas.")
+        .value("REMC",
+               RUN_TYPE::REMC,
+               "Replica Exchange MC (parallel tempering): accept on -Δβ·ΔU.")
+        .value("RENEMC",
+               RUN_TYPE::RENEMC,
+               "Replica Exchange Non-Equilibrium MC (volume-preserving velocity drive): "
+               "-Δβ·ΔU on driven endpoints, no Jacobian (INV-10). Acceptance formula wired "
+               "(attempt_rex_swap); the velocity/NMA driven round-loop is Stage 2c -- "
+               "run_rex_label_swap throws if selected.")
+        .value("RENE",
+               RUN_TYPE::RENE,
+               "Replica Exchange Non-Equilibrium (BAT-scaling drive): accept on nonequilibrium "
+               "work -(W_X+W_Y), includes lnJac; driven worlds run mdSteps=0 (INV-8). Stage 2b: "
+               "fully wired (WORK_* accumulation, F4 atomic commit, INV-7/INV-10 guards).")
+        .value("REBASONTOP",
+               RUN_TYPE::REBASONTOP,
+               "RENE work-swaps plus interleaved REMC neighbour swaps layered on top (D4). "
+               "Stage 2b: fully wired (set_interleave_remc_every/set_rebasontop_subrounds "
+               "configure the interleave).");
+
+    // Exchange topology (B7): Neighboring pairs adjacent thermodynamic states
+    // with alternating parity (the Stage 1 default); All draws random pairs.
+    py::enum_<ReplicaMixingScheme>(m, "ReplicaMixingScheme")
+        .value("All", ReplicaMixingScheme::All)
+        .value("Neighboring", ReplicaMixingScheme::Neighboring);
+
     // -- Context -------------------------------------------------------------
     py::class_<Context>(m, "Context")
         .def(py::init<std::string, std::uint32_t>(), py::arg("base_name"), py::arg("seed"))
@@ -480,7 +591,81 @@ PYBIND11_MODULE(robo_bindings, m) {
              py::arg("prod_rounds"),
              py::arg("write_freq"),
              py::arg("verbose"),
-             "Run replica exchange: Gibbs sweep over worlds + adjacent swaps.")
+             "COORDINATE-swap replica exchange (legacy): Gibbs sweep over worlds + adjacent "
+             "swaps, temperature-only. Retained as the INVARIANT-EQUIV oracle for "
+             "run_rex_label_swap (docs/specs/replica-exchange-nonequilibrium-work.md).")
+        .def("run_rex_label_swap",
+             &Context::RunREX,
+             py::arg("run_type"),
+             py::arg("equil_rounds"),
+             py::arg("prod_rounds"),
+             py::arg("write_freq"),
+             py::arg("verbose"),
+             "LABEL-swap replica exchange (Replica/ThermodynamicState object model, docs/specs/"
+             "replica-exchange-nonequilibrium-work.md B6-B7). RunType.DEFAULT/REMC/RENE/"
+             "REBASONTOP are fully wired; RunType.RENEMC raises (its driven round-loop is "
+             "Stage 2c -- its acceptance formula is exercised via attempt_rex_swap directly). "
+             "Output CSV/DCD files are indexed by thermodynamic-state, matching run_rex's "
+             "convention. NOT compiled/run since Stage 2b landed (coordinator directive) -- "
+             "treat as reviewed-on-paper.")
+        .def("attempt_rex_swap",
+             &Context::attemptREXSwap,
+             py::arg("thermo_c"),
+             py::arg("thermo_h"),
+             "Attempt one label swap between thermodynamic states thermo_c/thermo_h (B6: "
+             "ETerm_equal for REMC, ETerm_nonequil for RENEMC, WTerm for RENE/REBASONTOP). "
+             "Requires run_rex_label_swap (or setup_replica_exchange-equivalent state) to have "
+             "been built first.")
+        .def("check_inv7_and_inv10_guards",
+             &Context::checkInv7AndInv10Guards,
+             py::arg("run_type"),
+             "INV-7/V9 (Fixman-on in every non-Cartesian sampler) and INV-10 (drive/run-type "
+             "pairing) preconditions for a driven run type. No-op for DEFAULT/REMC. Reads only "
+             "the configured worlds (no run_rex_label_swap needed first) -- callable directly "
+             "to test the guard in isolation.")
+        .def("set_replica_mixing_scheme",
+             &Context::setReplicaMixingScheme,
+             py::arg("scheme"),
+             "Select ReplicaMixingScheme.Neighboring (default) or .All for run_rex_label_swap.")
+        .def("set_swap_every",
+             &Context::setSwapEvery,
+             py::arg("n"),
+             "Attempt an exchange mix only every n-th round of run_rex_label_swap (default 1).")
+        .def("set_n_swap_attempts",
+             &Context::setNSwapAttempts,
+             py::arg("n"),
+             "Number of random state pairs drawn per mix under ReplicaMixingScheme.All.")
+        .def("set_swap_fixman",
+             &Context::setSwapFixman,
+             py::arg("enabled"),
+             "OFF-by-default diagnostic flag (D3): Fixman never enters the swap acceptance "
+             "(INV-7) regardless of this setting; stored for port-target interface parity (I3).")
+        .def("set_interleave_remc_every",
+             &Context::setInterleaveRemcEvery,
+             py::arg("n"),
+             "REBASONTOP (D4): run the interleaved REMC sub-round every n driven rounds (default 10).")
+        .def("set_rebasontop_subrounds",
+             &Context::setRebasontopSubrounds,
+             py::arg("n"),
+             "REBASONTOP (D4): number of alternating-parity REMC sub-rounds per interleave "
+             "(default 6, matching the original's own count).")
+        .def("attempted_swaps_matrix",
+             &Context::attemptedSwapsMatrix,
+             "T x T symmetric matrix of attempted swaps per thermodynamic-state pair.")
+        .def("accepted_swaps_matrix",
+             &Context::acceptedSwapsMatrix,
+             "T x T symmetric matrix of accepted swaps per thermodynamic-state pair.")
+        .def("accumulate_bat_anchor_stats",
+             &Context::accumulateBatAnchorStats,
+             py::arg("world"),
+             "Update the shared/global BAT-scaling anchor (INV-9) from `world`'s CURRENT "
+             "committed geometry. Call only after an EQUILIBRIUM move (never on a driven "
+             "world's output -- that would feed the anchor from nonequilibrium samples).")
+        .def("bat_anchor_snapshot",
+             &Context::batAnchorSnapshot,
+             "Frozen BatAnchorSnapshot of the current running means (INV-9): take ONE per "
+             "round and pass its mean_r/mean_theta dicts to every drive that round.")
+        .def("reset_bat_anchor_stats", &Context::resetBatAnchorStats, "Clear the running-mean anchor.")
         .def("set_mts",
              &Context::setMTS,
              py::arg("enabled"),

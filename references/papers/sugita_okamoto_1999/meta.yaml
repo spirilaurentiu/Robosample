@@ -1,0 +1,40 @@
+- key: sugita_okamoto_1999
+  doc_type: methods
+  title: "Replica-exchange molecular dynamics method for protein folding"
+  authors: [Sugita, Okamoto]
+  year: "1999"
+  venue: Chemical Physics Letters
+  doi: 10.1016/S0009-2614(99)01123-9
+  summary: "Molecular-dynamics formulation of the replica-exchange method (parallel
+    tempering) for Cartesian-coordinate MD. M non-interacting replicas run at
+    different temperatures; neighboring-temperature pairs are swapped with a
+    Metropolis criterion whose argument Delta=(beta_n-beta_m)(E_i-E_j) depends only
+    on potential energies. The MD-specific ingredient is a uniform velocity rescale
+    by sqrt(T_new/T_old) on each swap, which cancels the kinetic terms and preserves
+    equipartition, reducing the criterion to the original MC-REM one. Multiple-histogram
+    (WHAM) reweighting gives thermodynamic quantities at any intermediate temperature
+    from one run."
+  has_implementable_math: true
+  methods: [replica exchange, parallel tempering, temperature-swap Metropolis
+      criterion, velocity/momentum rescaling on swap, constraint-thermostat MD,
+      multiple-histogram reweighting, WHAM, neighboring-pair exchange]
+  provides: [REM/parallel-tempering swap move, momentum-rescaling rule
+      sqrt(Tn/Tm), potential-energy-only swap acceptance Delta, permutation-function
+      replica<->temperature bookkeeping, WHAM self-consistent reweighting equations,
+      statistical-inefficiency g=1+2tau]
+  key_equations: [{label: "12", desc: "momentum rescaling on swap sqrt(Tn/Tm) p"},
+    {label: "15", desc: "swap cost Delta=(beta_n-beta_m)(E_i-E_j), momenta cancel"},
+    {label: "17", desc: "Metropolis swap acceptance min{1,exp(-Delta)}"},
+    {label: "7", desc: "product-of-Boltzmann-factors generalized-ensemble weight"},
+    {label: "21", desc: "WHAM reweighted density of states"},
+    {label: "22", desc: "WHAM self-consistent free-energy normalization"},
+    {label: "4", desc: "equipartition condition <K>=3/2 N kB T preserved by swap"}]
+  keywords: [replica exchange, parallel tempering, molecular dynamics, generalized
+      ensemble, enhanced sampling, protein folding, temperature swap, detailed
+      balance, WHAM, multiple-histogram reweighting, Met-enkephalin, multiple-minima]
+  domains: [molecular-sim, sampling, statistics]
+  depends_on: [hukushima_1996_replica, swendsen_wang_1986, geyer_1991,
+    marinari_1992, berg_neuhaus_1991, ferrenberg_swendsen_1989, kumar_1992_wham,
+    weiner_1986_amber, metropolis_1953_monte_carlo]
+  path: references/papers/sugita_okamoto_1999
+  content_hash: "8b1da0b2f9133307"

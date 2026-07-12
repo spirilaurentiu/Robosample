@@ -1,0 +1,55 @@
+- key: kofke_2002
+  doc_type: methods
+  title: "On the acceptance probability of replica-exchange Monte Carlo trials"
+  authors: [Kofke]
+  year: "2002"
+  venue: J. Chem. Phys.
+  doi: 10.1063/1.1507776
+  summary: "Analyzes the average acceptance probability of parallel-tempering
+    (replica-exchange) swap trials. Relates it to the inter-replica entropy
+    difference (p_acc ~ exp(-DeltaS/k)), then derives an exact overlap-integral
+    form over the two replicas' energy distributions. Under constant heat
+    capacity gives an exact 1D-integral formula, its large-system asymptotic
+    form, and a Gaussian-approximation formula; shows acceptance depends on
+    temperatures only through their ratio, justifying geometric temperature
+    ladders. Includes the 2004 erratum corrections to Eqs. 12 and 13."
+  has_implementable_math: true
+  methods: [replica exchange, parallel tempering, Metropolis swap acceptance,
+      energy-distribution overlap integral, constant-heat-capacity density of
+      states, gamma-distributed energy model, large-C asymptotic expansion,
+      Gaussian energy-distribution approximation, thermodynamic integration of
+      internal energy]
+  provides: [replica-exchange swap acceptance rule min[1,exp(-(b0-b1)(U1-U0))],
+      average-acceptance entropy scaling exp(-DeltaS/k), temperature-ratio
+      power law (T0/T1)^(N cV/k), exact overlap-integral acceptance formula,
+      constant-heat-capacity exact acceptance integral, large-system asymptotic
+      acceptance formula, Gaussian-approximation erfc acceptance formula,
+      geometric temperature-ladder justification]
+  key_equations:
+  - label: "1"
+    desc: replica-exchange swap Metropolis acceptance min[1,exp(-(b0-b1)(U1-U0))]
+  - label: "2"
+    desc: average acceptance scales as exp(-DeltaS/k) (entropy model)
+  - label: "3"
+    desc: constant-heat-capacity power law (T0/T1)^(N cV/k)
+  - label: "7"
+    desc: exact acceptance as overlap integral of the two energy distributions
+  - label: "9"
+    desc: gamma-distributed energy distribution for constant heat capacity
+  - label: "10"
+    desc: exact constant-C acceptance as a 1D integral over kappa
+  - label: "11"
+    desc: entropy difference DeltaS/k = -C ln(beta1/beta0)
+  - label: "12"
+    desc: large-system asymptotic acceptance (erratum-corrected)
+  - label: "13"
+    desc: Gaussian-approximation erfc acceptance formula (erratum-corrected)
+  keywords: [replica exchange, parallel tempering, acceptance probability,
+      temperature ladder, entropy, heat capacity, energy distribution overlap,
+      detailed balance, Metropolis, enhanced sampling, Lennard-Jones, MCMC]
+  domains: [molecular-sim, statistics, statistical-mechanics]
+  depends_on: [swendsen_wang_1986, hansmann_1997, hukushima_nemoto_1996,
+      sugita_okamoto_1999, sugita_kitao_okamoto_2000, yan_depablo_1999,
+      falcioni_deem_1999]
+  path: references/papers/kofke_2002
+  content_hash: "04c800478f43882b"

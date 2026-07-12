@@ -63,6 +63,78 @@ papers:
   - andersen_1980
   path: references/papers/andersen_1983_rattle
   content_hash: 1fab969586119913
+- key: ballard_2009_rens
+  doc_type: methods
+  title: Replica Exchange with Nonequilibrium Switches
+  authors:
+  - Ballard
+  - Jarzynski
+  year: '2009'
+  venue: PNAS
+  doi: 10.1073/pnas.0900406106
+  summary: Replica exchange (parallel tempering) where swaps between replicas are proposed by finite-time
+    nonequilibrium work simulations that drag each configuration toward the neighbor ensemble, then accepted
+    with a Crooks-work criterion min{1,e^-w}. Increases phase-space overlap so fewer replicas are needed;
+    tau=0 recovers ordinary REM, tau->inf gives P_acc=1.
+  has_implementable_math: true
+  methods:
+  - nonequilibrium work switching
+  - Crooks work acceptance
+  - momentum-scaling thermostat
+  - replica exchange
+  - parallel tempering
+  - Andersen thermostat MD
+  - block-averaged correlation time
+  provides:
+  - RENS swap move
+  - work-based acceptance criterion
+  - reduced-work formula with Jacobian heat term
+  - augmented Hamilton equations for temperature switching
+  - sample-cost figure of merit
+  - sudden and quasi-static limits
+  key_equations:
+  - label: '2'
+    desc: RENS work-based swap acceptance min{1,e^-w}
+  - label: '4.1'
+    desc: reduced work with ln J heat term
+  - label: '1'
+    desc: REM reduced-energy swap change (tau=0 limit)
+  - label: '13'
+    desc: augmented Hamilton equations with momentum scaling
+  - label: '14'
+    desc: Jacobian (T_B/T_A)^{N/2} for scaling dynamics
+  - label: '17'
+    desc: sample cost figure of merit
+  - label: '18'
+    desc: fraction of time in work intervals f_sw
+  keywords:
+  - replica exchange
+  - parallel tempering
+  - nonequilibrium work
+  - Jarzynski
+  - Crooks fluctuation theorem
+  - detailed balance
+  - phase-space overlap
+  - rough landscapes
+  - MCMC
+  - enhanced sampling
+  domains:
+  - molecular-sim
+  - statistics
+  depends_on:
+  - crooks_1998
+  - sugita_okamoto_1999
+  - kofke_2002
+  - wyczalkowski_pappu_2008
+  - frenkel_smit_2002
+  - andersen_1980
+  - hummer_szabo_2001
+  - vaikuntanathan_jarzynski_2008
+  - swendsen_wang_1986
+  - opps_schofield_2001
+  - brown_headgordon_2003
+  path: references/papers/ballard_2009_rens
+  content_hash: cb68ff432253ed4a
 - key: betancourt_2016_xhmc
   doc_type: methods
   title: Identifying the Optimal Integration Time in Hamiltonian Monte Carlo
@@ -489,6 +561,89 @@ papers:
   - chodera_2007_correlation
   path: references/papers/chodera_2011_gibbs_replica_exchange
   content_hash: 0ce563a64e6eccc5
+- key: crooks_1998
+  doc_type: methods
+  title: Nonequilibrium Measurements of Free Energy Differences for Microscopically
+    Reversible Markovian Systems
+  authors:
+  - Crooks
+  year: '1998'
+  venue: Journal of Statistical Physics
+  doi: 10.1023/A:1023208217925
+  summary: Derives the Jarzynski work equality (mean of exp(-beta W) equals exp(-beta
+    Delta F)) from two assumptions only - Markovian dynamics and microscopic reversibility
+    (single-step detailed balance). Establishes generalized detailed balance for multi-step
+    driven processes (forward/reverse path probability ratio = exp(-beta Q) = exp(beta
+    W_d) with equilibrium endpoints), the work/heat/energy bookkeeping (Delta E = Q
+    + W), and the isothermal-isobaric generalization to Gibbs free energy. Thermodynamic
+    integration (slow) and thermodynamic perturbation (fast, Zwanzig) appear as limits.
+    Foundation for the Crooks-work acceptance criterion used in nonequilibrium-switch
+    replica exchange.
+  has_implementable_math: true
+  methods:
+  - nonequilibrium work switching
+  - Jarzynski free-energy equality
+  - generalized (multi-step) detailed balance
+  - discrete-time Markov transition kernel
+  - work/heat/energy path bookkeeping
+  - exponential-average free-energy estimator
+  - thermodynamic integration limit
+  - thermodynamic perturbation (Zwanzig) limit
+  provides:
+  - work equality mean exp(-beta W) = exp(-beta Delta F)
+  - dissipative-work path-ensemble ratio exp(beta W_d)
+  - per-step work and heat definitions
+  - forward/reverse path probability ratio exp(-beta Q)
+  - canonical transition detailed-balance condition
+  - isothermal-isobaric generalization to Delta G
+  - reversible and instantaneous switching limits
+  key_equations:
+  - label: '1'
+    desc: Jarzynski/Crooks work equality mean exp(-beta W) = exp(-beta Delta F)
+  - label: '2'
+    desc: infinitely-fast switching limit (Zwanzig thermodynamic perturbation)
+  - label: '3'
+    desc: canonical equilibrium state probability P(A|lambda)
+  - label: '5'
+    desc: total switching work W (sum over control-parameter updates)
+  - label: '6'
+    desc: total heat Q (sum over state-evolution substeps)
+  - label: '7'
+    desc: first law Delta E = Q + W
+  - label: '8'
+    desc: single-step detailed balance at fixed control parameter
+  - label: '9'
+    desc: multi-step generalized detailed balance ratio = exp(-beta Q)
+  - label: '10'
+    desc: forward/reverse path-ensemble probability ratio = exp(beta W_d)
+  - label: '13'
+    desc: isothermal-isobaric detailed balance and Delta G generalization
+  keywords:
+  - nonequilibrium statistical mechanics
+  - free energy difference
+  - Jarzynski equality
+  - Crooks fluctuation theorem
+  - work
+  - dissipative work
+  - detailed balance
+  - microscopic reversibility
+  - Markov process
+  - thermodynamic integration
+  - thermodynamic perturbation
+  - isothermal-isobaric ensemble
+  domains:
+  - molecular-sim
+  - statistical-mechanics
+  - free-energy
+  depends_on:
+  - jarzynski_1997_nonequilibrium_equality
+  - jarzynski_1997_master_equation
+  - zwanzig_1954_perturbation
+  - metropolis_1953
+  - mon_griffiths_1985_particle_insertion
+  - jaynes_1957_information_theory
+  path: references/papers/crooks_1998
+  content_hash: 5f0273738dd4ea88
 - key: duane_1987_hmc
   doc_type: methods
   title: Hybrid Monte Carlo
@@ -1503,6 +1658,87 @@ papers:
   - brooks_1995_harmonic_analysis
   path: references/papers/konig_2014_constraint_correction
   content_hash: bef5b366b146942a
+- key: kofke_2002
+  doc_type: methods
+  title: On the acceptance probability of replica-exchange Monte Carlo trials
+  authors:
+  - Kofke
+  year: '2002'
+  venue: J. Chem. Phys.
+  doi: 10.1063/1.1507776
+  summary: Analyzes the average acceptance probability of parallel-tempering (replica-exchange)
+    swap trials. Relates it to the inter-replica entropy difference (p_acc ~ exp(-DeltaS/k)),
+    then derives an exact overlap-integral form over the two replicas' energy distributions.
+    Under constant heat capacity gives an exact 1D-integral formula, its large-system
+    asymptotic form, and a Gaussian-approximation formula; shows acceptance depends
+    on temperatures only through their ratio, justifying geometric temperature ladders.
+    Includes the 2004 erratum corrections to Eqs. 12 and 13.
+  has_implementable_math: true
+  methods:
+  - replica exchange
+  - parallel tempering
+  - Metropolis swap acceptance
+  - energy-distribution overlap integral
+  - constant-heat-capacity density of states
+  - gamma-distributed energy model
+  - large-C asymptotic expansion
+  - Gaussian energy-distribution approximation
+  - thermodynamic integration of internal energy
+  provides:
+  - replica-exchange swap acceptance rule min[1,exp(-(b0-b1)(U1-U0))]
+  - average-acceptance entropy scaling exp(-DeltaS/k)
+  - temperature-ratio power law (T0/T1)^(N cV/k)
+  - exact overlap-integral acceptance formula
+  - constant-heat-capacity exact acceptance integral
+  - large-system asymptotic acceptance formula
+  - Gaussian-approximation erfc acceptance formula
+  - geometric temperature-ladder justification
+  key_equations:
+  - label: '1'
+    desc: replica-exchange swap Metropolis acceptance min[1,exp(-(b0-b1)(U1-U0))]
+  - label: '2'
+    desc: average acceptance scales as exp(-DeltaS/k) (entropy model)
+  - label: '3'
+    desc: constant-heat-capacity power law (T0/T1)^(N cV/k)
+  - label: '7'
+    desc: exact acceptance as overlap integral of the two energy distributions
+  - label: '9'
+    desc: gamma-distributed energy distribution for constant heat capacity
+  - label: '10'
+    desc: exact constant-C acceptance as a 1D integral over kappa
+  - label: '11'
+    desc: entropy difference DeltaS/k = -C ln(beta1/beta0)
+  - label: '12'
+    desc: large-system asymptotic acceptance (erratum-corrected)
+  - label: '13'
+    desc: Gaussian-approximation erfc acceptance formula (erratum-corrected)
+  keywords:
+  - replica exchange
+  - parallel tempering
+  - acceptance probability
+  - temperature ladder
+  - entropy
+  - heat capacity
+  - energy distribution overlap
+  - detailed balance
+  - Metropolis
+  - enhanced sampling
+  - Lennard-Jones
+  - MCMC
+  domains:
+  - molecular-sim
+  - statistics
+  - statistical-mechanics
+  depends_on:
+  - swendsen_wang_1986
+  - hansmann_1997
+  - hukushima_nemoto_1996
+  - sugita_okamoto_1999
+  - sugita_kitao_okamoto_2000
+  - yan_depablo_1999
+  - falcioni_deem_1999
+  path: references/papers/kofke_2002
+  content_hash: 04c800478f43882b
 - key: larsen_2014_gneimo_casp_refinement
   doc_type: article
   title: Protein Structure Refinement of CASP Target Proteins Using GNEIMO Torsional Dynamics Method
@@ -2029,6 +2265,111 @@ papers:
   - chodera_2016_equilibration
   path: references/papers/minh_2019_algdock
   content_hash: db1d9fe4046fef75a1e
+- key: nilmeier_2011_ncmc
+  doc_type: methods
+  title: "Nonequilibrium candidate Monte Carlo is an efficient tool for equilibrium simulation"
+  authors:
+  - Nilmeier, Jerome P.
+  - Crooks, Gavin E.
+  - Minh, David D. L.
+  - Chodera, John D.
+  year: "2011"
+  venue: PNAS
+  doi: 10.1073/pnas.1106094108
+  summary: "Nonequilibrium candidate Monte Carlo (NCMC): MCMC where candidates come from a finite-time driven switching protocol of interleaved perturbation and propagation kernels, accepted with a Metropolis-Hastings rule whose exponent is the nonequilibrium work (plus a conditional path-action term) instead of the instantaneous energy difference. Enforces pathwise detailed balance with a mandatory momentum flip, preserving the exact equilibrium or expanded-ensemble distribution. Gives explicit path-action expressions for symplectic (Delta S = 0), reversible-MCMC (Delta S = -heat), Ermak-Yeh overdamped Langevin, and BBK Langevin propagators."
+  has_implementable_math: true
+  methods:
+  - nonequilibrium candidate Monte Carlo
+  - pathwise detailed balance
+  - super-detailed balance with momentum reversal
+  - interleaved perturbation/propagation switching protocol
+  - work-based Metropolis-Hastings acceptance
+  - conditional path-action difference
+  - expanded-ensemble sampling
+  - von Mises torsion perturbation
+  - simulation box scaling barostat
+  - Ermak-Yeh overdamped Langevin integrator
+  - BBK Langevin integrator
+  - GHMC propagation
+  - umbrella sampling reweighting
+  - log-sum-exp acceptance estimator
+  provides:
+  - NCMC acceptance rule
+  - nonequilibrium work acceptance criterion
+  - path-action difference for symplectic integrator
+  - path-action difference for reversible MCMC
+  - path-action difference for overdamped Langevin
+  - path-action difference for BBK Langevin
+  - momentum-flip rule for detailed balance
+  - protocol/reverse-protocol construction
+  - mixed MD+NCMC effective correlation time formula
+  - efficiency-gain metric
+  - WCA bistable-dimer test system
+  key_equations:
+  - label: '11'
+    desc: "main result: forward/reverse NCMC acceptance ratio from pathwise detailed balance"
+  - label: '12'
+    desc: Metropolis-Hastings NCMC acceptance probability
+  - label: '16'
+    desc: nonequilibrium work as sum of perturbation-step energy changes
+  - label: '18'
+    desc: path-action difference equals minus heat for reversible MCMC
+  - label: '19'
+    desc: acceptance ratio with work replacing energy difference
+  - label: '20'
+    desc: acceptance ratio for symplectic propagation (Delta S = 0)
+  - label: '39'
+    desc: corrected Ermak-Yeh overdamped Langevin step
+  - label: '43'
+    desc: path-action difference for Ermak-Yeh integrator
+  - label: '44'
+    desc: BBK velocity-Verlet Langevin integrator step
+  - label: '48'
+    desc: path-action difference for BBK integrator
+  - label: '54'
+    desc: effective correlation time for mixed MD+NCMC
+  keywords:
+  - NCMC
+  - nonequilibrium candidate Monte Carlo
+  - Markov chain Monte Carlo
+  - Metropolis-Hastings
+  - nonequilibrium work
+  - Crooks fluctuation theorem
+  - detailed balance
+  - momentum flip
+  - expanded ensemble
+  - alchemical
+  - hybrid Monte Carlo
+  - Langevin dynamics
+  - enhanced sampling
+  - switching trajectory
+  domains:
+  - molecular-sim
+  - statistics
+  - sampling
+  depends_on:
+  - metropolis_1953_monte_carlo
+  - hastings_1970
+  - duane_1987_hmc
+  - crooks_1998
+  - crooks_1999
+  - jarzynski_1997
+  - jarzynski_2000
+  - neal_2004
+  - andersen_1983_rattle
+  - ermak_1974
+  - ermak_1975
+  - brunger_1984_bbk
+  - weeks_1971_wca
+  - swope_1982_velocity_verlet
+  - shirts_2008_mbar
+  - chodera_2007_autocorrelation
+  - lelievre_2010_free_energy
+  - frenkel_2004_rejected_states
+  - ballard_2009_replica_exchange_switch
+  - minh_2011_multiple_timeslice
+  path: references/papers/nilmeier_2011_ncmc
+  content_hash: be2ff1d2784a32d6
 - key: pear_1979_brownian_rigid_chain
   doc_type: methods
   title: Brownian dynamics study of a polymer chain of linked rigid bodies
@@ -2764,6 +3105,84 @@ papers:
   - brunger_1993_hybrid_energy
   path: references/papers/stein_1997_torsion_angle_md
   content_hash: f469883d820c5c37
+- key: sugita_okamoto_1999
+  doc_type: methods
+  title: Replica-exchange molecular dynamics method for protein folding
+  authors:
+  - Sugita
+  - Okamoto
+  year: '1999'
+  venue: Chemical Physics Letters
+  doi: 10.1016/S0009-2614(99)01123-9
+  summary: 'Molecular-dynamics formulation of the replica-exchange method (parallel
+    tempering) for Cartesian-coordinate MD. M non-interacting replicas run at different
+    temperatures; neighboring-temperature pairs are swapped with a Metropolis criterion
+    whose argument Delta=(beta_n-beta_m)(E_i-E_j) depends only on potential energies.
+    The MD-specific ingredient is a uniform velocity rescale by sqrt(T_new/T_old) on
+    each swap, which cancels the kinetic terms and preserves equipartition, reducing
+    the criterion to the original MC-REM one. Multiple-histogram (WHAM) reweighting
+    gives thermodynamic quantities at any intermediate temperature from one run.'
+  has_implementable_math: true
+  methods:
+  - replica exchange
+  - parallel tempering
+  - temperature-swap Metropolis criterion
+  - velocity/momentum rescaling on swap
+  - constraint-thermostat MD
+  - multiple-histogram reweighting
+  - WHAM
+  - neighboring-pair exchange
+  provides:
+  - REM/parallel-tempering swap move
+  - momentum-rescaling rule sqrt(Tn/Tm)
+  - potential-energy-only swap acceptance Delta
+  - permutation-function replica<->temperature bookkeeping
+  - WHAM self-consistent reweighting equations
+  - statistical-inefficiency g=1+2tau
+  key_equations:
+  - label: '12'
+    desc: momentum rescaling on swap sqrt(Tn/Tm) p
+  - label: '15'
+    desc: swap cost Delta=(beta_n-beta_m)(E_i-E_j), momenta cancel
+  - label: '17'
+    desc: Metropolis swap acceptance min{1,exp(-Delta)}
+  - label: '7'
+    desc: product-of-Boltzmann-factors generalized-ensemble weight
+  - label: '21'
+    desc: WHAM reweighted density of states
+  - label: '22'
+    desc: WHAM self-consistent free-energy normalization
+  - label: '4'
+    desc: equipartition condition <K>=3/2 N kB T preserved by swap
+  keywords:
+  - replica exchange
+  - parallel tempering
+  - molecular dynamics
+  - generalized ensemble
+  - enhanced sampling
+  - protein folding
+  - temperature swap
+  - detailed balance
+  - WHAM
+  - multiple-histogram reweighting
+  - Met-enkephalin
+  - multiple-minima
+  domains:
+  - molecular-sim
+  - sampling
+  - statistics
+  depends_on:
+  - hukushima_1996_replica
+  - swendsen_wang_1986
+  - geyer_1991
+  - marinari_1992
+  - berg_neuhaus_1991
+  - ferrenberg_swendsen_1989
+  - kumar_1992_wham
+  - weiner_1986_amber
+  - metropolis_1953_monte_carlo
+  path: references/papers/sugita_okamoto_1999
+  content_hash: 8b1da0b2f9133307
 - key: tao_2012_shape
   doc_type: methods
   title: Maintain rigid structures in Verlet based Cartesian molecular dynamics simulations
@@ -3502,3 +3921,107 @@ papers:
   - wu_2003_sgld
   path: references/papers/wu_2016_sgld_gle
   content_hash: 7f7338e6dacbe272
+- key: wyczalkowski_pappu_2008
+  doc_type: methods
+  title: Satisfying the fluctuation theorem in free-energy calculations with Hamiltonian
+    replica exchange
+  authors:
+  - Wyczalkowski
+  - Pappu
+  year: '2008'
+  venue: Physical Review E
+  doi: 10.1103/PhysRevE.77.026104
+  summary: Defines the hysteresis error (difference between forward and reverse FEP
+    estimators) as a directly measurable sampling-quality metric derived from the Crooks
+    fluctuation theorem, and shows Hamiltonian replica exchange minimizes it by populating
+    swapped configuration pairs so the interreplica equilibrium relation rho_N'/rho_N
+    = exp(-beta dU_swap) is satisfied. Relates the average swap probability to the overlap
+    of neighboring equilibrium ensembles and to the rate at which the hysteresis error
+    falls; the linearized swap probability 1/2 - (beta^2 delta^2/4) C_lambda with C_lambda
+    = var(dU/dlambda) gives a criterion for building an optimal lambda schedule. Demonstrated
+    on the free energy of hydration of acetamide.
+  has_implementable_math: true
+  methods:
+  - Hamiltonian replica exchange
+  - free-energy perturbation (forward/reverse FEP)
+  - Bennett acceptance ratio
+  - Crooks fluctuation theorem
+  - Metropolis swap acceptance
+  - Fermi swap probability
+  - dissipated-work bookkeeping
+  - linear-response Taylor expansion of swap probability
+  - soft-core lambda-scaled Coulomb/Lennard-Jones potentials
+  - bootstrap error estimation
+  provides:
+  - hysteresis error metric eps_H = dF_FEP^F - dF_FEP^R
+  - interreplica equilibrium relation rho_N'/rho_N = exp(-beta dU_swap)
+  - swap energy dU_swap = W^F + W^R = W_D^F + W_D^R
+  - Metropolis and Fermi swap acceptance rules
+  - average swap probability as ensemble-overlap integral
+  - linearized swap probability with C_lambda = var(dU/dlambda)
+  - optimal lambda-schedule criterion (uniform swap probability)
+  - soft-core scaled Coulomb (eq B1) and Lennard-Jones (eq B2, B3a, B3b)
+  - Jarzynski identity form <exp(-beta W_D^F)>_0 = 1
+  key_equations:
+  - label: '1'
+    desc: Crooks fluctuation theorem, forward/reverse dissipated-work distribution ratio
+  - label: '6'
+    desc: hysteresis error definition eps_H = dF_FEP^F - dF_FEP^R
+  - label: '9'
+    desc: hysteresis error from fluctuation error eps_H = -beta^-1 ln<exp(-beta eps_FT)>
+  - label: '10'
+    desc: Metropolis replica-exchange swap acceptance min[1, exp(-beta dU_swap)]
+  - label: 11a
+    desc: swap energy change dU_swap in terms of cross potentials
+  - label: '13'
+    desc: interreplica equilibrium relation rho_N'/rho_N = exp(-beta dU_swap)
+  - label: '15'
+    desc: Fermi swap probability f(x) = 1/(1+exp x)
+  - label: 17b
+    desc: average swap probability as overlap integral of rho_N and rho_N'
+  - label: '18'
+    desc: linearized swap probability with C_lambda = var(dU/dlambda)
+  - label: '19'
+    desc: Jarzynski identity <exp(-beta W_D^F)>_0 = 1
+  - label: B1
+    desc: soft-core lambda-scaled Coulomb potential
+  - label: B3a
+    desc: exponential soft-core Lennard-Jones radial factor
+  keywords:
+  - replica exchange
+  - Hamiltonian replica exchange
+  - free-energy calculation
+  - Crooks fluctuation theorem
+  - hysteresis error
+  - dissipated work
+  - free-energy perturbation
+  - Bennett acceptance ratio
+  - swap probability
+  - lambda schedule
+  - soft-core potential
+  - solvation free energy
+  - detailed balance
+  - enhanced sampling
+  domains:
+  - molecular-sim
+  - statistical-mechanics
+  - free-energy
+  depends_on:
+  - crooks_1999
+  - bennett_1976
+  - zwanzig_1954
+  - sugita_okamoto_1999
+  - fukunishi_2002
+  - lu_kofke_2001
+  - zuckerman_woolf_2004
+  - shirts_pande_2005
+  - jarzynski_2006
+  - kirkwood_1935
+  - jorgensen_1996_oplsaa
+  - jorgensen_1983_tip4p
+  - martin_siepmann_1999_towhee
+  - predescu_2005
+  - pitera_vangunsteren_2002
+  - frenkel_smit_2002
+  path: references/papers/wyczalkowski_pappu_2008
+  content_hash: 6872f5ddd2000933

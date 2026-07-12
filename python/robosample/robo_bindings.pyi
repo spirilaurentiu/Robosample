@@ -4,7 +4,7 @@ Robosample C++ bindings (robo_bindings)
 from __future__ import annotations
 import collections.abc
 import typing
-__all__: list[str] = ['AcceptRejectMode', 'Context', 'DistortOption', 'ForceGroupEnergy', 'JointType', 'MoveType', 'NonbondedMethod', 'Selection', 'SystemTopology', 'World']
+__all__: list[str] = ['AcceptRejectMode', 'BatAnchorSnapshot', 'Context', 'DistortOption', 'ForceGroupEnergy', 'JointType', 'MoveType', 'NonbondedMethod', 'ReplicaMixingScheme', 'RunType', 'Selection', 'SystemTopology', 'World']
 class AcceptRejectMode:
     """
     Members:
@@ -50,10 +50,25 @@ class AcceptRejectMode:
     @property
     def value(self) -> int:
         ...
+class BatAnchorSnapshot:
+    @property
+    def mean_r(self) -> dict[int, float]:
+        ...
+    @property
+    def mean_theta(self) -> dict[int, float]:
+        ...
 class Context:
     system_topology: SystemTopology
     def __init__(self, base_name: str, seed: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
+    def accepted_swaps_matrix(self) -> list[list[int]]:
+        """
+        T x T symmetric matrix of accepted swaps per thermodynamic-state pair.
+        """
+    def accumulate_bat_anchor_stats(self, world: World) -> None:
+        """
+        Update the shared/global BAT-scaling anchor (INV-9) from `world`'s CURRENT committed geometry. Call only after an EQUILIBRIUM move (never on a driven world's output -- that would feed the anchor from nonequilibrium samples).
+        """
     def add_cartesian_world(self, want_spatial_force_history: bool = False) -> World:
         """
         Add a Cartesian (OpenMM-MD) world; returns it for .add_sampler(...). want_spatial_force_history=True always raises (docs/specs/reaction-force-monitoring.md Sec.3): a Cartesian world's internal-coordinate body indexing is not meaningful.
@@ -70,6 +85,18 @@ class Context:
         """
         Alias of add_robotic_world.
         """
+    def attempt_rex_swap(self, thermo_c: typing.SupportsInt | typing.SupportsIndex, thermo_h: typing.SupportsInt | typing.SupportsIndex) -> bool:
+        """
+        Attempt one label swap between thermodynamic states thermo_c/thermo_h (B6: ETerm_equal for REMC, ETerm_nonequil for RENEMC, WTerm for RENE/REBASONTOP). Requires run_rex_label_swap (or setup_replica_exchange-equivalent state) to have been built first.
+        """
+    def attempted_swaps_matrix(self) -> list[list[int]]:
+        """
+        T x T symmetric matrix of attempted swaps per thermodynamic-state pair.
+        """
+    def bat_anchor_snapshot(self) -> BatAnchorSnapshot:
+        """
+        Frozen BatAnchorSnapshot of the current running means (INV-9): take ONE per round and pass its mean_r/mean_theta dicts to every drive that round.
+        """
     def build_flexibilities(self, bonds: collections.abc.Sequence[tuple[typing.SupportsInt | typing.SupportsIndex, typing.SupportsInt | typing.SupportsIndex]] | None, mobility: JointType, flag: bool) -> Selection:
         """
         Build a per-bond mobility selection (bonds=None => all eligible).
@@ -82,6 +109,10 @@ class Context:
         """
         Compute potential energy by OpenMM force group, returning (group, name, energy) tuples.
         """
+    def check_inv7_and_inv10_guards(self, run_type: RunType) -> None:
+        """
+        INV-7/V9 (Fixman-on in every non-Cartesian sampler) and INV-10 (drive/run-type pairing) preconditions for a driven run type. No-op for DEFAULT/REMC. Reads only the configured worlds (no run_rex_label_swap needed first) -- callable directly to test the guard in isolation.
+        """
     def initialize(self, temperatures: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex] = []) -> None:
         """
         Build OpenMM, set the replica temperature ladder, seed coordinates.
@@ -90,30 +121,65 @@ class Context:
         """
         Build the single OpenMM System/Context from system_topology.
         """
+    def reset_bat_anchor_stats(self) -> None:
+        """
+        Clear the running-mean anchor.
+        """
     def run_rex(self, equil_rounds: typing.SupportsInt | typing.SupportsIndex, prod_rounds: typing.SupportsInt | typing.SupportsIndex, write_freq: typing.SupportsInt | typing.SupportsIndex, verbose: bool) -> None:
         """
-        Run replica exchange: Gibbs sweep over worlds + adjacent swaps.
+        COORDINATE-swap replica exchange (legacy): Gibbs sweep over worlds + adjacent swaps, temperature-only. Retained as the INVARIANT-EQUIV oracle for run_rex_label_swap (docs/specs/replica-exchange-nonequilibrium-work.md).
+        """
+    def run_rex_label_swap(self, run_type: RunType, equil_rounds: typing.SupportsInt | typing.SupportsIndex, prod_rounds: typing.SupportsInt | typing.SupportsIndex, write_freq: typing.SupportsInt | typing.SupportsIndex, verbose: bool) -> None:
+        """
+        LABEL-swap replica exchange (Replica/ThermodynamicState object model, docs/specs/replica-exchange-nonequilibrium-work.md B6-B7). RunType.DEFAULT/REMC/RENE/REBASONTOP are fully wired; RunType.RENEMC raises (its driven round-loop is Stage 2c -- its acceptance formula is exercised via attempt_rex_swap directly). Output CSV/DCD files are indexed by thermodynamic-state, matching run_rex's convention. NOT compiled/run since Stage 2b landed (coordinator directive) -- treat as reviewed-on-paper.
         """
     def set_enforce_periodic_box(self, enabled: bool) -> None:
         """
         Whether OpenMM wraps coordinates into the primary box when state is pulled back. MUST stay False (the default) under explicit solvent so the robot engine receives whole molecules; energies/forces are unaffected (minimum image is always applied internally).
         """
+    def set_interleave_remc_every(self, n: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        REBASONTOP (D4): run the interleaved REMC sub-round every n driven rounds (default 10).
+        """
     def set_mts(self, enabled: bool, inner_substeps: typing.SupportsInt | typing.SupportsIndex = 4) -> None:
         """
         Enable r-RESPA multiple-timestep OpenMM MD (Cartesian world): slow forces once per outer step, fast bonded forces inner_substeps times. Call before initialize().
+        """
+    def set_n_swap_attempts(self, n: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Number of random state pairs drawn per mix under ReplicaMixingScheme.All.
+        """
+    def set_rebasontop_subrounds(self, n: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        REBASONTOP (D4): number of alternating-parity REMC sub-rounds per interleave (default 6, matching the original's own count).
+        """
+    def set_replica_mixing_scheme(self, scheme: ReplicaMixingScheme) -> None:
+        """
+        Select ReplicaMixingScheme.Neighboring (default) or .All for run_rex_label_swap.
         """
     def set_separate_force_groups(self, enabled: bool) -> None:
         """
         Enable/disable separate OpenMM force groups for each Force.
         """
+    def set_swap_every(self, n: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Attempt an exchange mix only every n-th round of run_rex_label_swap (default 1).
+        """
+    def set_swap_fixman(self, enabled: bool) -> None:
+        """
+        OFF-by-default diagnostic flag (D3): Fixman never enters the swap acceptance (INV-7) regardless of this setting; stored for port-target interface parity (I3).
+        """
 class DistortOption:
     """
     Members:
     
-      NMA
+      NMA : Velocity distortion at momentum-draw time.
+    
+      ScaleBendStretch : Deterministic BAT bond/angle position-scaling drive (B4/D7); requires mdSteps=0.
     """
     NMA: typing.ClassVar[DistortOption]  # value = <DistortOption.NMA: 0>
-    __members__: typing.ClassVar[dict[str, DistortOption]]  # value = {'NMA': <DistortOption.NMA: 0>}
+    ScaleBendStretch: typing.ClassVar[DistortOption]  # value = <DistortOption.ScaleBendStretch: 1>
+    __members__: typing.ClassVar[dict[str, DistortOption]]  # value = {'NMA': <DistortOption.NMA: 0>, 'ScaleBendStretch': <DistortOption.ScaleBendStretch: 1>}
     @typing.overload
     def __eq__(self, other: DistortOption) -> bool:
         ...
@@ -319,6 +385,105 @@ class NonbondedMethod:
         ...
     @typing.overload
     def __ne__(self, other: typing.SupportsInt | typing.SupportsIndex) -> bool:
+        ...
+    @typing.overload
+    def __ne__(self, other: typing.Any) -> bool:
+        ...
+    def __repr__(self) -> str:
+        ...
+    def __setstate__(self, state: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def __str__(self) -> str:
+        ...
+    @property
+    def name(self) -> str:
+        ...
+    @property
+    def value(self) -> int:
+        ...
+class ReplicaMixingScheme:
+    """
+    Members:
+    
+      All
+    
+      Neighboring
+    """
+    All: typing.ClassVar[ReplicaMixingScheme]  # value = <ReplicaMixingScheme.All: 0>
+    Neighboring: typing.ClassVar[ReplicaMixingScheme]  # value = <ReplicaMixingScheme.Neighboring: 1>
+    __members__: typing.ClassVar[dict[str, ReplicaMixingScheme]]  # value = {'All': <ReplicaMixingScheme.All: 0>, 'Neighboring': <ReplicaMixingScheme.Neighboring: 1>}
+    @typing.overload
+    def __eq__(self, other: ReplicaMixingScheme) -> bool:
+        ...
+    @typing.overload
+    def __eq__(self, other: typing.Any) -> bool:
+        ...
+    def __getstate__(self) -> int:
+        ...
+    def __hash__(self) -> int:
+        ...
+    def __index__(self) -> int:
+        ...
+    def __init__(self, value: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def __int__(self) -> int:
+        ...
+    @typing.overload
+    def __ne__(self, other: ReplicaMixingScheme) -> bool:
+        ...
+    @typing.overload
+    def __ne__(self, other: typing.Any) -> bool:
+        ...
+    def __repr__(self) -> str:
+        ...
+    def __setstate__(self, state: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def __str__(self) -> str:
+        ...
+    @property
+    def name(self) -> str:
+        ...
+    @property
+    def value(self) -> int:
+        ...
+class RunType:
+    """
+    Members:
+    
+      DEFAULT : No exchange; independent replicas.
+    
+      REMC : Replica Exchange MC (parallel tempering): accept on -Δβ·ΔU.
+    
+      RENEMC : Replica Exchange Non-Equilibrium MC (volume-preserving velocity drive): -Δβ·ΔU on driven endpoints, no Jacobian (INV-10). Acceptance formula wired (attempt_rex_swap); the velocity/NMA driven round-loop is Stage 2c -- run_rex_label_swap throws if selected.
+    
+      RENE : Replica Exchange Non-Equilibrium (BAT-scaling drive): accept on nonequilibrium work -(W_X+W_Y), includes lnJac; driven worlds run mdSteps=0 (INV-8). Stage 2b: fully wired (WORK_* accumulation, F4 atomic commit, INV-7/INV-10 guards).
+    
+      REBASONTOP : RENE work-swaps plus interleaved REMC neighbour swaps layered on top (D4). Stage 2b: fully wired (set_interleave_remc_every/set_rebasontop_subrounds configure the interleave).
+    """
+    DEFAULT: typing.ClassVar[RunType]  # value = <RunType.DEFAULT: 0>
+    REBASONTOP: typing.ClassVar[RunType]  # value = <RunType.REBASONTOP: 4>
+    REMC: typing.ClassVar[RunType]  # value = <RunType.REMC: 1>
+    RENE: typing.ClassVar[RunType]  # value = <RunType.RENE: 3>
+    RENEMC: typing.ClassVar[RunType]  # value = <RunType.RENEMC: 2>
+    __members__: typing.ClassVar[dict[str, RunType]]  # value = {'DEFAULT': <RunType.DEFAULT: 0>, 'REMC': <RunType.REMC: 1>, 'RENEMC': <RunType.RENEMC: 2>, 'RENE': <RunType.RENE: 3>, 'REBASONTOP': <RunType.REBASONTOP: 4>}
+    @typing.overload
+    def __eq__(self, other: RunType) -> bool:
+        ...
+    @typing.overload
+    def __eq__(self, other: typing.Any) -> bool:
+        ...
+    def __getstate__(self) -> int:
+        ...
+    def __hash__(self) -> int:
+        ...
+    def __index__(self) -> int:
+        ...
+    def __init__(self, value: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def __int__(self) -> int:
+        ...
+    @typing.overload
+    def __ne__(self, other: RunType) -> bool:
         ...
     @typing.overload
     def __ne__(self, other: typing.Any) -> bool:
@@ -1045,6 +1210,10 @@ class World:
         """
         Configure this world's sampler; returns the world for chaining. sphere_factor scales the auto-sized per-ligand binding sphere (R = R_receptor + sphere_factor*R_ligand). The docking kick relocates a ligand only when its COM leaves the sphere (always_kick=True perturbs every round). A proposed pose is rejected -- in ALL modes, including AlwaysAccept -- if its potential energy is non-finite or |PE| exceeds clash_threshold, so overlapping geometry never passes. use_fixman=None auto-enables Fixman+logSineSqr on non-Cartesian worlds. max_initial_kick_tries>0 enables a pre-round-0 retry loop that keeps drawing random placements until a clash-free starting pose is found (dPE <= maxStartPE), or raises RuntimeError after the budget is exhausted. distort_option=DistortOption.NMA draws the HMC momentum from a symmetric Gaussian mixture biased by +/- nma_bias_scale*uhat (uhat = unit NMA direction); detailed balance is preserved by a matching ln-cosh kinetic term. None (default) leaves the draw a plain Gaussian. nma_bias_scale (alpha, default 1.0) is the directed push in thermal-sigma units along uhat: the bias injects ~1/2 RT alpha^2 of directed energy, so alpha trades proposal boldness against acceptance. Guidance: alpha in [0.3, 1.0] is gentle (acceptance close to plain HMC); 1.0-3.0 is bolder; >5 collapses acceptance under a real Metropolis test. alpha=0 reproduces plain HMC. NOTE: until real soft-mode factors are supplied, uhat is the (physically meaningless) unit direction of the all-ones uScaleFactors, so the bias is safe (alpha-controlled) but not yet a useful soft-mode push.
         """
+    def apply_bat_scaling_drive(self, s: typing.SupportsFloat | typing.SupportsIndex, anchor_r: collections.abc.Mapping[typing.SupportsInt | typing.SupportsIndex, typing.SupportsFloat | typing.SupportsIndex] = {}, anchor_theta: collections.abc.Mapping[typing.SupportsInt | typing.SupportsIndex, typing.SupportsFloat | typing.SupportsIndex] = {}) -> None:
+        """
+        Apply the BAT-scaling drive to THIS world's CURRENT geometry (mutates state; the world's q/frames are re-fit so the driven endpoint x^tau=x' is immediately readable). THROWS unless mdSteps==0 (D7/INV-8) and distort_option==DistortOption.ScaleBendStretch.
+        """
     def configure_ncmc(self, atom_begin: typing.SupportsInt | typing.SupportsIndex, atom_end: typing.SupportsInt | typing.SupportsIndex, ncmc_steps: typing.SupportsInt | typing.SupportsIndex, hold_fraction: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
         """
         Make this a per-molecule NCMC world: soften [atom_begin,atom_end) x rest nonbonded during a lambda:1->0->1 switch. Call AFTER add_sampler. Convenience overload for a single contiguous Region A; see configure_ncmc_region for an arbitrary atom-index set.
@@ -1085,6 +1254,18 @@ class World:
         
         USAGE
           Prefer the want_spatial_force_history=True argument to context.add_*_world(); call this directly ONLY when the world is rebuilt after construction (e.g. add_ncmc_world / set_root_mobilities), so the derivation sees the FINAL body indexing. Raises on a Cartesian world (internal-coordinate body indexing is not meaningful there).
+        """
+    def get_distort_jacobian_det_log(self) -> float:
+        """
+        D6 lnJac of the last apply_bat_scaling_drive() call on this world (0.0 if never driven).
+        """
+    def get_last_n_scaled(self) -> int:
+        """
+        D5 N_scaled of the last apply_bat_scaling_drive() call on this world.
+        """
+    def preview_bat_scaling(self, atom_pos_ground: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], s: typing.SupportsFloat | typing.SupportsIndex, anchor_r: collections.abc.Mapping[typing.SupportsInt | typing.SupportsIndex, typing.SupportsFloat | typing.SupportsIndex] = {}, anchor_theta: collections.abc.Mapping[typing.SupportsInt | typing.SupportsIndex, typing.SupportsFloat | typing.SupportsIndex] = {}) -> tuple[list[float], int, float]:
+        """
+        Side-effect-free preview of the deterministic BAT-scaling drive (B4/D7): scale this world's D5-selected bond/angle DOFs by s about the given, atom-index-keyed anchors (INV-9's shared/frozen anchor snapshot -- Context.bat_anchor_snapshot()), WITHOUT mutating this world. Returns (scaled_atom_pos_ground_flat, n_scaled, ln_jac) -- the same D6 lnJac = (J(x')-J(x0)) + n_scaled*ln(s) apply_bat_scaling_drive commits.
         """
     def set_body_mass_scale(self, body: typing.SupportsInt | typing.SupportsIndex, scale: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """

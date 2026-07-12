@@ -1,0 +1,104 @@
+key: wyczalkowski_pappu_2008
+doc_type: methods
+title: Satisfying the fluctuation theorem in free-energy calculations with Hamiltonian
+  replica exchange
+authors:
+- Wyczalkowski
+- Pappu
+year: '2008'
+venue: Physical Review E
+doi: 10.1103/PhysRevE.77.026104
+summary: Defines the hysteresis error (difference between forward and reverse FEP
+  estimators) as a directly measurable sampling-quality metric derived from the Crooks
+  fluctuation theorem, and shows Hamiltonian replica exchange minimizes it by populating
+  swapped configuration pairs so the interreplica equilibrium relation rho_N'/rho_N
+  = exp(-beta dU_swap) is satisfied. Relates the average swap probability to the overlap
+  of neighboring equilibrium ensembles and to the rate at which the hysteresis error
+  falls; the linearized swap probability 1/2 - (beta^2 delta^2/4) C_lambda with C_lambda
+  = var(dU/dlambda) gives a criterion for building an optimal lambda schedule. Demonstrated
+  on the free energy of hydration of acetamide.
+has_implementable_math: true
+methods:
+- Hamiltonian replica exchange
+- free-energy perturbation (forward/reverse FEP)
+- Bennett acceptance ratio
+- Crooks fluctuation theorem
+- Metropolis swap acceptance
+- Fermi swap probability
+- dissipated-work bookkeeping
+- linear-response Taylor expansion of swap probability
+- soft-core lambda-scaled Coulomb/Lennard-Jones potentials
+- bootstrap error estimation
+provides:
+- hysteresis error metric eps_H = dF_FEP^F - dF_FEP^R
+- interreplica equilibrium relation rho_N'/rho_N = exp(-beta dU_swap)
+- swap energy dU_swap = W^F + W^R = W_D^F + W_D^R
+- Metropolis and Fermi swap acceptance rules
+- average swap probability as ensemble-overlap integral
+- linearized swap probability with C_lambda = var(dU/dlambda)
+- optimal lambda-schedule criterion (uniform swap probability)
+- soft-core scaled Coulomb (eq B1) and Lennard-Jones (eq B2, B3a, B3b)
+- Jarzynski identity form <exp(-beta W_D^F)>_0 = 1
+key_equations:
+- label: '1'
+  desc: Crooks fluctuation theorem, forward/reverse dissipated-work distribution ratio
+- label: '6'
+  desc: hysteresis error definition eps_H = dF_FEP^F - dF_FEP^R
+- label: '9'
+  desc: hysteresis error from fluctuation error eps_H = -beta^-1 ln<exp(-beta eps_FT)>
+- label: '10'
+  desc: Metropolis replica-exchange swap acceptance min[1, exp(-beta dU_swap)]
+- label: 11a
+  desc: swap energy change dU_swap in terms of cross potentials
+- label: '13'
+  desc: interreplica equilibrium relation rho_N'/rho_N = exp(-beta dU_swap)
+- label: '15'
+  desc: Fermi swap probability f(x) = 1/(1+exp x)
+- label: 17b
+  desc: average swap probability as overlap integral of rho_N and rho_N'
+- label: '18'
+  desc: linearized swap probability with C_lambda = var(dU/dlambda)
+- label: '19'
+  desc: Jarzynski identity <exp(-beta W_D^F)>_0 = 1
+- label: B1
+  desc: soft-core lambda-scaled Coulomb potential
+- label: B3a
+  desc: exponential soft-core Lennard-Jones radial factor
+keywords:
+- replica exchange
+- Hamiltonian replica exchange
+- free-energy calculation
+- Crooks fluctuation theorem
+- hysteresis error
+- dissipated work
+- free-energy perturbation
+- Bennett acceptance ratio
+- swap probability
+- lambda schedule
+- soft-core potential
+- solvation free energy
+- detailed balance
+- enhanced sampling
+domains:
+- molecular-sim
+- statistical-mechanics
+- free-energy
+depends_on:
+- crooks_1999
+- bennett_1976
+- zwanzig_1954
+- sugita_okamoto_1999
+- fukunishi_2002
+- lu_kofke_2001
+- zuckerman_woolf_2004
+- shirts_pande_2005
+- jarzynski_2006
+- kirkwood_1935
+- jorgensen_1996_oplsaa
+- jorgensen_1983_tip4p
+- martin_siepmann_1999_towhee
+- predescu_2005
+- pitera_vangunsteren_2002
+- frenkel_smit_2002
+path: references/papers/wyczalkowski_pappu_2008
+content_hash: 6872f5ddd2000933

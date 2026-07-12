@@ -1,0 +1,82 @@
+key: crooks_1998
+doc_type: methods
+title: Nonequilibrium Measurements of Free Energy Differences for Microscopically Reversible
+  Markovian Systems
+authors:
+- Crooks
+year: '1998'
+venue: Journal of Statistical Physics
+doi: 10.1023/A:1023208217925
+summary: Derives the Jarzynski work equality (mean of exp(-beta W) equals exp(-beta
+  Delta F)) from two assumptions only - Markovian dynamics and microscopic reversibility
+  (single-step detailed balance). Establishes generalized detailed balance for multi-step
+  driven processes (forward/reverse path probability ratio = exp(-beta Q) = exp(beta W_d)
+  with equilibrium endpoints), the work/heat/energy bookkeeping (Delta E = Q + W),
+  and the isothermal-isobaric generalization to Gibbs free energy. Thermodynamic integration
+  (slow) and thermodynamic perturbation (fast, Zwanzig) appear as limits. Foundation
+  for the Crooks-work acceptance criterion used in nonequilibrium-switch replica exchange.
+has_implementable_math: true
+methods:
+- nonequilibrium work switching
+- Jarzynski free-energy equality
+- generalized (multi-step) detailed balance
+- discrete-time Markov transition kernel
+- work/heat/energy path bookkeeping
+- exponential-average free-energy estimator
+- thermodynamic integration limit
+- thermodynamic perturbation (Zwanzig) limit
+provides:
+- work equality mean exp(-beta W) = exp(-beta Delta F)
+- dissipative-work path-ensemble ratio exp(beta W_d)
+- per-step work and heat definitions
+- forward/reverse path probability ratio exp(-beta Q)
+- canonical transition detailed-balance condition
+- isothermal-isobaric generalization to Delta G
+- reversible and instantaneous switching limits
+key_equations:
+- label: '1'
+  desc: Jarzynski/Crooks work equality mean exp(-beta W) = exp(-beta Delta F)
+- label: '2'
+  desc: infinitely-fast switching limit (Zwanzig thermodynamic perturbation)
+- label: '3'
+  desc: canonical equilibrium state probability P(A|lambda)
+- label: '5'
+  desc: total switching work W (sum over control-parameter updates)
+- label: '6'
+  desc: total heat Q (sum over state-evolution substeps)
+- label: '7'
+  desc: first law Delta E = Q + W
+- label: '8'
+  desc: single-step detailed balance at fixed control parameter
+- label: '9'
+  desc: multi-step generalized detailed balance ratio = exp(-beta Q)
+- label: '10'
+  desc: forward/reverse path-ensemble probability ratio = exp(beta W_d)
+- label: '13'
+  desc: isothermal-isobaric detailed balance and Delta G generalization
+keywords:
+- nonequilibrium statistical mechanics
+- free energy difference
+- Jarzynski equality
+- Crooks fluctuation theorem
+- work
+- dissipative work
+- detailed balance
+- microscopic reversibility
+- Markov process
+- thermodynamic integration
+- thermodynamic perturbation
+- isothermal-isobaric ensemble
+domains:
+- molecular-sim
+- statistical-mechanics
+- free-energy
+depends_on:
+- jarzynski_1997_nonequilibrium_equality
+- jarzynski_1997_master_equation
+- zwanzig_1954_perturbation
+- metropolis_1953
+- mon_griffiths_1985_particle_insertion
+- jaynes_1957_information_theory
+path: references/papers/crooks_1998
+content_hash: 5f0273738dd4ea88

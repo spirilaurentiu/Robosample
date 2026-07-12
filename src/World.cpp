@@ -247,6 +247,19 @@ World& World::add_sampler(double timeStep,
     sampler_.distortOption = distortOption; // nullopt => no velocity distortion
     sampler_.nmaBiasScale = nmaBiasScale;   // NMA Route B bias magnitude (thermal sigmas)
 
+    // D7 hard SHALL (docs/specs/replica-exchange-nonequilibrium-work.md,
+    // INV-8): a BAT-scaling-driven world runs ZERO post-scale MD -- the
+    // two-endpoint work acceptance is exact only in the pure deterministic-
+    // scaling-map limit. Fail loud at construction, not silently truncate
+    // like the timeStep==0/mdSteps==0 "pure proposal mode" branch below
+    // (that branch is a convenience default for OTHER move types; here a
+    // nonzero mdSteps is a caller error, not a mode to auto-correct).
+    if (distortOption.has_value() && *distortOption == DistortOption::ScaleBendStretch && mdSteps != 0) {
+        throw std::invalid_argument(
+            "World::add_sampler: distort_option=ScaleBendStretch requires mdSteps=0 (D7/INV-8 hard "
+            "SHALL) -- got mdSteps=" + std::to_string(mdSteps));
+    }
+
     if (sampler_.timeStep == 0.0 || sampler_.mdSteps == 0) {
         // Pure proposal world: no internal dynamics. For docking this means a
         // rigid teleport only -- placement energy is the sole criterion.
@@ -289,6 +302,60 @@ void World::setTemperature(double T) {
     temperature_ = T;
     RT_ = kBoltzmann_kJ * T;
     beta_ = (RT_ > 0) ? 1.0 / RT_ : 0.0;
+}
+
+void World::setTimeStep(double dt) {
+    sampler_.timeStep = dt;
+}
+
+void World::setMdSteps(int n) {
+    sampler_.mdSteps = n;
+}
+
+void World::setAcceptRejectMode(AcceptRejectMode mode) {
+    sampler_.acceptRejectMode = mode;
+}
+
+// ----------------------------------------------------------------------------
+//  BAT-scaling drive (docs/specs/replica-exchange-nonequilibrium-work.md
+//  B4/D5/D6/D7). Stage 2a: drive + Jacobian only.
+// ----------------------------------------------------------------------------
+World::BatScalingResult World::previewBatScaling(const std::vector<robo::Vec3>& atomPosIn,
+                                                  double s,
+                                                  const std::unordered_map<int, double>& anchorR,
+                                                  const std::unordered_map<int, double>& anchorTheta) const {
+    BatScalingResult out;
+    out.atomPos = robo::applyBatScaling(model_, atomPosIn, s, anchorR, anchorTheta, out.nScaled, out.lnJac);
+    return out;
+}
+
+void World::applyBatScalingDrive(double s,
+                                 const std::unordered_map<int, double>& anchorR,
+                                 const std::unordered_map<int, double>& anchorTheta) {
+    // D7 hard SHALL: a driven world runs NO post-scale MD (the deterministic-
+    // map limit the exact two-endpoint work acceptance relies on, INV-8).
+    if (sampler_.mdSteps != 0) {
+        throw std::logic_error(
+            "World::applyBatScalingDrive: mdSteps must be 0 for a driven (ScaleBendStretch) "
+            "world (D7/INV-8) -- got mdSteps=" + std::to_string(sampler_.mdSteps));
+    }
+    if (!sampler_.distortOption.has_value() || *sampler_.distortOption != DistortOption::ScaleBendStretch) {
+        throw std::logic_error(
+            "World::applyBatScalingDrive: called on a world without "
+            "distortOption=DistortOption.ScaleBendStretch (caller error, not a silent no-op)");
+    }
+
+    std::vector<robo::Vec3> current(model_.numAtoms);
+    std::copy(state_.atomPosG(), state_.atomPosG() + model_.numAtoms, current.begin());
+
+    const BatScalingResult result = previewBatScaling(current, s, anchorR, anchorTheta);
+    lastNScaled_ = result.nScaled;
+    lastDistortJacobianDetLog_ = result.lnJac;
+
+    // Re-fit this world's internal frames/q to the scaled geometry (same path
+    // every Gibbs-block handoff uses, World.hpp:930) so the driven endpoint is
+    // immediately readable via getAtomsLocationsInGround() (D7: x^tau = x').
+    setAtomsLocationsInGround(result.atomPos);
 }
 
 // ----------------------------------------------------------------------------
@@ -559,6 +626,7 @@ void World::buildModel(const SystemTopology& sys,
     if (cartesian_) {
         model_.numBodies = 1;
         model_.numZRows = 0;
+        model_.bodyZRow.assign(1, -1);
         model_.atomBody.assign(nAtoms, 0);
         state_.allocateCompact(model_);
         return;
@@ -772,7 +840,33 @@ void World::buildModel(const SystemTopology& sys,
     model_.nq = qc;
     model_.nu = uc;
     model_.nuSq = usq;
-    model_.numZRows = 0;
+
+    // ---- z-matrix (BAT) rows, one per FLEXIBLE body (RobotModel.hpp doc) ---
+    // bodyParent/bodyRootAtom are already in their FINAL topological order
+    // (the relabel above), so this is a pure lookup, no further BFS needed.
+    model_.zI.clear();
+    model_.zJ.clear();
+    model_.zK.clear();
+    model_.zL.clear();
+    model_.bodyZRow.assign(B, -1);
+    for (int b = 1; b < B; ++b) {
+        if (!isFlexible(model_.bodyJoint[b])) {
+            continue; // Rigid/Weld bodies carry no BAT coordinate
+        }
+        const int p1 = model_.bodyParent[b];
+        const int zI = model_.bodyRootAtom[b];
+        const int zJ = (p1 > 0) ? model_.bodyRootAtom[p1] : -1;
+        const int p2 = (p1 > 0) ? model_.bodyParent[p1] : -1;
+        const int zK = (p2 > 0) ? model_.bodyRootAtom[p2] : -1;
+        const int p3 = (p2 > 0) ? model_.bodyParent[p2] : -1;
+        const int zL = (p3 > 0) ? model_.bodyRootAtom[p3] : -1;
+        model_.bodyZRow[b] = static_cast<int>(model_.zI.size());
+        model_.zI.push_back(zI);
+        model_.zJ.push_back(zJ);
+        model_.zK.push_back(zK);
+        model_.zL.push_back(zL);
+    }
+    model_.numZRows = static_cast<int>(model_.zI.size());
 
     model_.bodyAtomsBeg.assign(B, 0);
     model_.bodyAtomsEnd.assign(B, 0);

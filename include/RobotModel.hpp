@@ -141,8 +141,19 @@ struct RobotModel {
     // if a very large single robot wants a strict sequential reduction.
 
     // ---- z-matrix rows (BAT) ----------------------------------------------
+    // One row per FLEXIBLE (non-Rigid) body: zI = this body's root ("placed")
+    // atom; zJ/zK/zL = parent/grandparent/great-grandparent BODY's root atom
+    // (root-ward, standard Z-matrix convention -- see the file-header index
+    // convention block above). -1 sentinels where the ancestor chain reaches
+    // Ground before 3/4 atoms are collected (root-adjacent bodies). Populated
+    // by World::buildModel (docs/specs/replica-exchange-nonequilibrium-work.md
+    // D6/D5 -- the BAT-scaling Jacobian reads r=dist(zI,zJ), theta=
+    // angle(zI,zJ,zK) from these rows). A scaled joint (Slider/Cylinder/
+    // BendStretch/SphericalCoords) can never be a molecule root
+    // (jointIsLegalRoot excludes them), so those bodies' zJ is always valid.
     std::vector<int> zI, zJ, zK, zL; // [numZRows]; -1 sentinels in leading rows
     int numZRows = 0;
+    std::vector<int> bodyZRow; // [numBodies] index into zI/zJ/zK/zL, or -1 (Rigid bodies)
 
     // ---- convenience -------------------------------------------------------
     [[nodiscard]] bool isQuaternionBody(int b) const {

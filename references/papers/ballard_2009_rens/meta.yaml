@@ -1,0 +1,35 @@
+- key: ballard_2009_rens
+  doc_type: methods
+  title: "Replica Exchange with Nonequilibrium Switches"
+  authors: [Ballard, Jarzynski]
+  year: "2009"
+  venue: PNAS
+  doi: 10.1073/pnas.0900406106
+  summary: "Replica exchange (parallel tempering) where swaps between replicas are
+    proposed by finite-time nonequilibrium work simulations that drag each config
+    toward the neighbor ensemble, then accepted with a Crooks-work criterion
+    min{1,e^-w}. Increases phase-space overlap, so fewer replicas are needed;
+    tau=0 recovers ordinary REM, tau->inf gives P_acc=1."
+  has_implementable_math: true
+  methods: [nonequilibrium work switching, Crooks work acceptance, momentum-scaling
+      thermostat, replica exchange, parallel tempering, Andersen thermostat MD,
+      block-averaged correlation time]
+  provides: [RENS swap move, work-based acceptance criterion, reduced-work formula
+      with Jacobian heat term, augmented Hamilton equations for temperature
+      switching, sample-cost figure of merit, sudden/quasi-static limits]
+  key_equations: [{label: "2", desc: "RENS work-based swap acceptance min{1,e^-w}"},
+    {label: "4.1", desc: "reduced work with ln J heat term"},
+    {label: "1", desc: "REM reduced-energy swap change (tau=0 limit)"},
+    {label: "13", desc: "augmented Hamilton equations with momentum scaling"},
+    {label: "14", desc: "Jacobian (T_B/T_A)^{N/2} for scaling dynamics"},
+    {label: "17", desc: "sample cost figure of merit"},
+    {label: "18", desc: "fraction of time in work intervals f_sw"}]
+  keywords: [replica exchange, parallel tempering, nonequilibrium work, Jarzynski,
+    Crooks fluctuation theorem, detailed balance, phase-space overlap, rough
+    landscapes, MCMC, enhanced sampling]
+  domains: [molecular-sim, statistics]
+  depends_on: [crooks_1998, sugita_okamoto_1999, kofke_2002, wyczalkowski_pappu_2008,
+    frenkel_smit_2002, andersen_1980, hummer_szabo_2001, vaikuntanathan_jarzynski_2008,
+    swendsen_wang_1986, opps_schofield_2001, brown_headgordon_2003]
+  path: references/papers/ballard_2009_rens
+  content_hash: "cb68ff432253ed4a"

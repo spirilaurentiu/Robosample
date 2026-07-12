@@ -21,8 +21,10 @@
 #include <cstdint>
 #include <optional>
 #include <random>
+#include <unordered_map>
 #include <vector>
 
+#include "BatScaling.hpp"
 #include "Constraints.hpp"
 #include "ForceBridge.hpp"
 #include "RobotEngine.hpp"
@@ -56,8 +58,17 @@ enum class MoveType : std::uint8_t {
 // so the effective factors are unity and the distortion reduces to the plain
 // Gaussian draw unless non-unit factors are supplied. A nullopt option (Python
 // None, the default) means the distortion is not applied at all.
+// ScaleBendStretch (I2, spec B4/D7): the deterministic position (BAT
+// bond/angle) scaling drive used by the RENE/REBASONTOP nonequilibrium
+// exchange (docs/specs/replica-exchange-nonequilibrium-work.md). Distinct
+// FAMILY from NMA (a velocity distortion applied at momentum-draw time):
+// ScaleBendStretch is a POSITION map applied once, before any MD (D7: driven
+// worlds run mdSteps == 0 -- see World::applyBatScalingDrive, which asserts
+// this). Named enum value, not a magic sign/int (I2 -- the original's
+// `distortOption < 0` convention is replaced by this named member).
 enum class DistortOption : std::uint8_t {
-    NMA = 0
+    NMA = 0,
+    ScaleBendStretch = 1
 };
 
 // Per-bond mobility selection produced by Context::build_flexibilities. The
@@ -389,6 +400,45 @@ class World {
 
     void setTemperature(double T);
 
+    // Runtime schedule setters for replica exchange (docs/specs/
+    // replica-exchange-nonequilibrium-work.md Consequences "Feasibility gap
+    // -- World runtime setters"). Mirror setTemperature: let the REX driver
+    // reset a world's timestep/MD-step-count/accept-mode from a
+    // ThermodynamicState's per-world schedule each round, the same way
+    // setTemperature already resets temperature per replica each sweep
+    // (Context::runREX). No side effects beyond the raw field write --
+    // add_sampler's timeStep==0/mdSteps==0 "pure proposal mode" warning and
+    // the timeStep>0.005 warning are one-time construction-time diagnostics,
+    // not invariants these setters need to re-check every round.
+    void setTimeStep(double dt);
+    void setMdSteps(int n);
+    void setAcceptRejectMode(AcceptRejectMode mode);
+    [[nodiscard]] double getTimeStep() const {
+        return sampler_.timeStep;
+    }
+    [[nodiscard]] int getMdSteps() const {
+        return sampler_.mdSteps;
+    }
+    [[nodiscard]] AcceptRejectMode getAcceptRejectMode() const {
+        return sampler_.acceptRejectMode;
+    }
+    // INV-7/V9 (REX): the swap acceptance excludes Fixman ONLY correctly if
+    // Fixman IS enabled in every sampler (D3 biconditional). RunREX reads
+    // this at setup to fail loud rather than silently target the wrong
+    // marginal.
+    [[nodiscard]] bool getUseFixman() const {
+        return sampler_.useFixman;
+    }
+    // INV-10 (REX): which drive (if any) this world's schedule position runs.
+    // RunREX's driven-segment dispatch and the INV-10 pairing guard both read
+    // this: DistortOption::ScaleBendStretch => the BAT-scaling drive
+    // (World::applyBatScalingDrive, RENE/REBASONTOP only); DistortOption::NMA
+    // => the velocity/NMA drive (RENEMC only, via the EXISTING momentum-draw
+    // distortion already wired in reinitialize()); nullopt => equilibrium.
+    [[nodiscard]] std::optional<DistortOption> getDistortOption() const {
+        return sampler_.distortOption;
+    }
+
     // Kinetic-metric preconditioning (fictitious mass; sampling only). Inflates
     // the spatial inertia used ONLY in the proposal (momentum draw, KE, Fixman
     // ln det M) for selected bodies, raising their stable dt ~sqrt(scale) with
@@ -512,6 +562,53 @@ class World {
                                      double h = 1e-5,
                                      double zeroTol = 1e-6);
 
+    // ---- BAT-scaling drive (docs/specs/replica-exchange-nonequilibrium-
+    // work.md B4/D5/D6/D7 -- Stage 2a: the drive + Jacobian ONLY, no
+    // acceptance/WORK/commit, Stage 2b) --------------------------------------
+    //
+    // Side-effect-free preview: apply the D5-selected deterministic BAT
+    // scaling (B4) to a COPY of `atomPosIn`, returning the scaled positions
+    // plus the D6 Jacobian pieces. Does NOT touch this world's state -- used
+    // both by the actual drive (applyBatScalingDrive, below) and by the V5
+    // finite-difference oracle, so both exercise the IDENTICAL code path.
+    // `anchorR`/`anchorTheta` are the INV-9 shared, frozen scaling anchor
+    // (Context-owned; see BatScaling.hpp), keyed by each scaled body's zI
+    // (placed) atom index; a missing key defaults to 0.0 (isotropic scale
+    // about the origin -- the map's Jacobian does not depend on the anchor,
+    // only its round-trip/involution property does, INV-9).
+    struct BatScalingResult {
+        std::vector<robo::Vec3> atomPos; // scaled positions, this world's atom order
+        int nScaled = 0;                 // D5 N_scaled (DOFs the map actually moved)
+        double lnJac = 0.0;              // D6 lnJac = (J(x')-J(x0)) + nScaled*ln(s)
+    };
+    [[nodiscard]] BatScalingResult
+    previewBatScaling(const std::vector<robo::Vec3>& atomPosIn,
+                      double s,
+                      const std::unordered_map<int, double>& anchorR = {},
+                      const std::unordered_map<int, double>& anchorTheta = {}) const;
+
+    // Apply the drive to THIS world's CURRENT geometry (state_.atomPosG()),
+    // via previewBatScaling + setAtomsLocationsInGround (so the world's
+    // internal frames/q are re-fit to the scaled geometry, ready for the next
+    // read-back). Stores nScaled/lnJac for getDistortJacobianDetLog()/
+    // getLastNScaled(). D7 hard SHALL: THROWS if sampler_.mdSteps != 0 (a
+    // driven world runs NO post-scale MD) or if sampler_.distortOption !=
+    // ScaleBendStretch (calling this without the matching distort option is a
+    // caller error, not a silent no-op).
+    void applyBatScalingDrive(double s,
+                              const std::unordered_map<int, double>& anchorR = {},
+                              const std::unordered_map<int, double>& anchorTheta = {});
+
+    // The D6 log-Jacobian / D5 N_scaled of the last applyBatScalingDrive()
+    // call on this world (0 / 0 if never driven). Mirrors the original's
+    // HMCSampler::getDistortJacobianDetLog() name (B5).
+    [[nodiscard]] double getDistortJacobianDetLog() const {
+        return lastDistortJacobianDetLog_;
+    }
+    [[nodiscard]] int getLastNScaled() const {
+        return lastNScaled_;
+    }
+
     private:
     // --- internal (torsional) HMC pieces ---
     void reinitialize(); // seed velocities, record initial H (incl. Fixman)
@@ -605,6 +702,10 @@ class World {
     // Reset on any acceptance; when it reaches sampler_.maxStuckRounds a kick is
     // forced unconditionally so a locally non-integrable pose cannot trap the run.
     int dockingStuckCount_ = 0;
+
+    // Last applyBatScalingDrive() result (0/0 until first driven, B5/D6).
+    double lastDistortJacobianDetLog_ = 0.0;
+    int lastNScaled_ = 0;
 
     double temperature_ = 300.0;
     double RT_ = 0;

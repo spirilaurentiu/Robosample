@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <limits>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -533,6 +534,639 @@ void Context::runREX(int equilRounds, int prodRounds, int writeFreq, bool verbos
     }
 }
 
+// ---------------------------------------------------------------------------
+//  Label-swap replica exchange (docs/specs/replica-exchange-nonequilibrium-
+//  work.md). Stage 1: RUN_TYPE::REMC only.
+// ---------------------------------------------------------------------------
+void Context::setupReplicaExchange(RUN_TYPE runType) {
+    runType_ = runType;
+
+    const int R = static_cast<int>(temperatures_.size());
+    const int W = static_cast<int>(worlds_.size());
+    if (R == 0) {
+        throw std::runtime_error("Context::RunREX: no replicas -- call initialize(temperatures) first");
+    }
+
+    replicas_.assign(R, Replica{});
+    thermodynamicStates_.assign(R, ThermodynamicState{});
+    for (int i = 0; i < R; ++i) {
+        // Seeded from the same reference coordinates initialize() already put
+        // in replicaCoords_ (B0: both drivers start from an identical state).
+        replicas_[i].atomsLocations = replicaCoords_[i];
+
+        ThermodynamicState& st = thermodynamicStates_[i];
+        st.temperature = temperatures_[i];
+        st.worldIndexes.resize(W);
+        st.timeSteps.resize(W);
+        st.mdSteps.resize(W);
+        st.acceptRejectModes.resize(W);
+        for (int w = 0; w < W; ++w) {
+            st.worldIndexes[w] = w; // B0: every state schedules the SAME full ordered world list.
+            st.timeSteps[w] = worlds_[w]->getTimeStep();
+            st.mdSteps[w] = worlds_[w]->getMdSteps();
+            st.acceptRejectModes[w] = worlds_[w]->getAcceptRejectMode();
+        }
+    }
+
+    // PRE-RUN INITIAL KICK (S1 fix, mirrors runREX Context.cpp:409-429
+    // verbatim): for every docking world with maxInitialKickTries>0, find a
+    // clash-free starting pose for each replica BEFORE round 0. Without this
+    // RunREX starts every replica from the unrepaired seed on a docking
+    // config (e.g. FFAR1), diverging from the coordinate-swap oracle and
+    // risking a clashing first generateSample(); it is a no-op for
+    // non-docking systems (findGoodStartingPose no-ops when
+    // maxInitialKickTries == 0), which is why the ala-dipeptide
+    // INVARIANT-EQUIV run didn't exercise it.
+    for (auto& w : worlds_) {
+        if (!w->isDocking()) {
+            continue;
+        }
+        for (int i = 0; i < R; ++i) {
+            w->setTemperature(temperatures_[i]);
+            w->setAtomsLocationsInGround(replicas_[i].atomsLocations);
+            w->findGoodStartingPose(); // no-op if maxInitialKickTries == 0
+            const robo::Vec3* p = w->getAtomsLocationsInGround();
+            std::copy(p, p + systemTopology.numAtoms, replicas_[i].atomsLocations.begin());
+        }
+    }
+
+    // Committed potentials, evaluated AFTER the pose-repair loop above so
+    // INV-6 (stored potential == energy of stored coordinates) holds from
+    // round 0 even when a docking world just moved the seed coordinates.
+    for (int i = 0; i < R; ++i) {
+        replicas_[i].potential = openmmPotential(replicas_[i].atomsLocations);
+        replicas_[i].referencePotential = replicas_[i].potential;
+    }
+
+    // B0 NOTE: "the model is W shared worlds, R = T replicas/states". In
+    // Stage 1 this is a STRUCTURAL invariant, not a runtime check:
+    // replicas_ and thermodynamicStates_ are both `.assign(R, ...)` from the
+    // SAME local `R` above, so replicas_.size() == thermodynamicStates_.size()
+    // holds by construction and no input combination here can violate it --
+    // an `if` guard here would be permanently dead code (reviewer S2). This
+    // stops being vacuous, and SHALL regain a real runtime check, the moment
+    // a future change (Stage 2's ThermodynamicState list, e.g. an explicit
+    // addThermodynamicState() API per the original design) sources the state
+    // count from a SECOND, independent input.
+
+    // Identity maps (B0).
+    replica2ThermoIxs_.resize(R);
+    thermo2ReplicaIxs_.resize(R);
+    for (int i = 0; i < R; ++i) {
+        replica2ThermoIxs_[i] = i;
+        thermo2ReplicaIxs_[i] = i;
+    }
+
+    nofAttemptedSwapsMatrix_.assign(R, std::vector<std::int64_t>(R, 0));
+    nofAcceptedSwapsMatrix_.assign(R, std::vector<std::int64_t>(R, 0));
+    exchangeRound_ = 0;
+    exchangePairList_.clear();
+}
+
+void Context::swapThermodynamicStates(int thermoC, int thermoH) {
+    const int X = thermo2ReplicaIxs_[thermoC];
+    const int Y = thermo2ReplicaIxs_[thermoH];
+    std::swap(replica2ThermoIxs_[X], replica2ThermoIxs_[Y]);
+    std::swap(thermo2ReplicaIxs_[thermoC], thermo2ReplicaIxs_[thermoH]);
+}
+
+bool Context::attemptREXSwap(int thermoC, int thermoH) {
+    // Fail loud on misuse (e.g. called from Python before RunREX/
+    // setupReplicaExchange has built the objects, or with an out-of-range
+    // state index) rather than reading/writing past the end of an empty
+    // vector.
+    if (thermodynamicStates_.empty()) {
+        throw std::logic_error(
+            "Context::attemptREXSwap: no thermodynamic states -- call RunREX (run_rex_label_swap) "
+            "at least once first");
+    }
+    nofAttemptedSwapsMatrix_.at(thermoC).at(thermoH) += 1;
+    nofAttemptedSwapsMatrix_.at(thermoH).at(thermoC) += 1;
+
+    const int X = thermo2ReplicaIxs_.at(thermoC);
+    const int Y = thermo2ReplicaIxs_.at(thermoH);
+    const double betaC = 1.0 / (kBoltzmann_kJ * thermodynamicStates_.at(thermoC).temperature);
+    const double betaH = 1.0 / (kBoltzmann_kJ * thermodynamicStates_.at(thermoH).temperature);
+    const double refU_Xset = replicas_.at(X).referencePotential;
+    const double refU_Yset = replicas_.at(Y).referencePotential;
+
+    // correctionTerm (B6 step 4, D2/INV-9): the Hastings ratio of the
+    // scale-factor proposal densities. == 1 (log == 0) PROVIDED the shared,
+    // frozen, state-independent anchor precondition (INV-9) holds -- which is
+    // exactly what Context::batAnchorStats_ (ONE global instance, not
+    // per-state) and driveReplica's "one frozen snapshot per round, passed to
+    // BOTH partners" discipline guarantee. Kept as an explicit named zero
+    // (not simply omitted) so a future stochastic scale-factor randomiser
+    // (perturbScalingFactor, deliberately NOT ported, D2) has an obvious
+    // place to add its own log-density-ratio term instead of silently
+    // reusing this one.
+    const double logCorrectionTerm = 0.0;
+
+    double logPAccept = 0.0;
+    switch (runType_) {
+        case RUN_TYPE::REMC:
+            // ETerm_equal = -[(beta_H - beta_C)(refU_Xset - refU_Yset)] (B6 step 3).
+            logPAccept = -((betaH - betaC) * (refU_Xset - refU_Yset));
+            break;
+        case RUN_TYPE::RENEMC: {
+            // ETerm_nonequil (B6 step 3): the SAME parallel-tempering form,
+            // but on the DRIVEN-ENDPOINT reference potentials -- no Jacobian
+            // (INV-10: RENEMC's velocity/NMA drive is volume-preserving, so
+            // there is none to carry). NOTE (Stage 2c TODO): the round-loop
+            // that actually POPULATES referenceWORK_potential for RENEMC (the
+            // velocity/NMA driven segment) is not wired yet (RunREX throws
+            // for RUN_TYPE::RENEMC) -- this branch is exercised directly by
+            // tests/TestRexAcceptanceAlgebra.cpp, which sets
+            // referenceWORK_potential by hand.
+            const double refU_Xtau = replicas_.at(X).referenceWORK_potential;
+            const double refU_Ytau = replicas_.at(Y).referenceWORK_potential;
+            logPAccept = -((betaH - betaC) * (refU_Xtau - refU_Ytau)) + logCorrectionTerm;
+            break;
+        }
+        case RUN_TYPE::RENE:
+        case RUN_TYPE::REBASONTOP: {
+            // WTerm (B6 step 3, Derivation sketch; D7-simplified single-step
+            // work since mdSteps==0 makes x^tau == x'):
+            //   Work_partner = beta_target*U(x_partner^tau)
+            //                - beta_source*U(x_partner^0) - lnJac_partner
+            //   WTerm = -(Work_X + Work_Y)
+            // X currently occupies thermoC (source beta_C, driving TOWARD
+            // thermoH's temperature, so its endpoint is scored at beta_H);
+            // Y occupies thermoH (source beta_H, driving toward thermoC,
+            // scored at beta_C). This is the Ballard-Jarzynski / Nilmeier
+            // deterministic-map acceptance (Derivation sketch; V8 proves
+            // detailed balance for this exact form).
+            const double refU_Xtau = replicas_.at(X).referenceWORK_potential;
+            const double refU_Ytau = replicas_.at(Y).referenceWORK_potential;
+            const double lnJacX = replicas_.at(X).WORK_Jacobian;
+            const double lnJacY = replicas_.at(Y).WORK_Jacobian;
+            const double workX = (betaH * refU_Xtau) - (betaC * refU_Xset) - lnJacX;
+            const double workY = (betaC * refU_Ytau) - (betaH * refU_Yset) - lnJacY;
+            logPAccept = -(workX + workY) + logCorrectionTerm;
+            break;
+        }
+        default: // RUN_TYPE::Default
+            // mixReplicas/runDrivenRound never reach here for Default (gated
+            // out, B7); a direct call is a caller error, not a silent no-op.
+            throw std::logic_error("Context::attemptREXSwap: called with RUN_TYPE::Default");
+    }
+
+    // NaN/inf fail-loud (reviewer N2): a non-finite acceptance exponent --
+    // e.g. driveReplica forced WORK_Jacobian to -infinity after a Stage 2a
+    // domain-invalid drive (r1<=0 or theta1 outside (0,pi)), or an OpenMM PE
+    // blew up on a driven endpoint -- is an EXPLICIT automatic reject, not a
+    // silent comparison. (IEEE754 already makes `NaN >= 0` and `u < exp(NaN)`
+    // both false, and `-inf` already rejects naturally too, but a stray
+    // "+inf, wrong sign" case from an unanticipated bug would NOT reject
+    // naturally -- this guard forces the correct, conservative outcome
+    // regardless of sign and makes the event visible.)
+    bool forcedReject = false;
+    if (std::isnan(logPAccept) || std::isinf(logPAccept)) {
+        std::fprintf(stderr,
+                     "[rexlabel] WARNING: non-finite acceptance exponent (logPAccept=%g) for "
+                     "thermoC=%d thermoH=%d, runType=%d -- automatic reject (reviewer N2)\n",
+                     logPAccept,
+                     thermoC,
+                     thermoH,
+                     static_cast<int>(runType_));
+        forcedReject = true;
+    }
+
+    const bool accept =
+        !forcedReject && ((logPAccept >= 0.0) || (rexUniform_(rexRng_) < std::exp(logPAccept)));
+    if (accept) {
+        nofAcceptedSwapsMatrix_[thermoC][thermoH] += 1;
+        nofAcceptedSwapsMatrix_[thermoH][thermoC] += 1;
+        if (runType_ == RUN_TYPE::RENEMC || runType_ == RUN_TYPE::RENE || runType_ == RUN_TYPE::REBASONTOP) {
+            // F4 atomic commit (INV-4): promote BOTH replicas' WORK_* trial
+            // to committed together (coords + potential + referencePotential
+            // + FixmanPotential), before the label swap. REMC/Default never
+            // reach here (their accept is label-swap only, B6 step 7 -- this
+            // IS the F4 fix: the original unconditionally ran the WORK commit
+            // even for REMC, reverting coordinates from an unpopulated WORK
+            // buffer).
+            replicas_.at(X).commitWorkAsFinal();
+            replicas_.at(Y).commitWorkAsFinal();
+        }
+        swapThermodynamicStates(thermoC, thermoH); // label swap only (INV-3)
+    }
+    return accept;
+}
+
+void Context::prepareExchangePairs(int round, int oddity) {
+    exchangePairList_.clear();
+    const int K = static_cast<int>(thermodynamicStates_.size());
+    const int startIdx = (round + oddity) % 2;
+    for (int thIx = startIdx; thIx + 1 < K; thIx += 2) {
+        exchangePairList_.emplace_back(thIx, thIx + 1);
+    }
+}
+
+void Context::mixAllReplicas(int nAttempts) {
+    const int T = static_cast<int>(thermodynamicStates_.size());
+    if (T <= 1) {
+        return;
+    }
+    std::uniform_int_distribution<int> pick(0, T - 1);
+    for (int a = 0; a < nAttempts; ++a) {
+        int i = pick(rexRng_);
+        int j = pick(rexRng_);
+        while (j == i) {
+            j = pick(rexRng_);
+        }
+        attemptREXSwap(i, j);
+    }
+}
+
+void Context::mixReplicas(int mixi) {
+    if (swapEvery_ <= 0 || (mixi % swapEvery_) != 0) {
+        return;
+    }
+    const int T = static_cast<int>(thermodynamicStates_.size());
+    if (runType_ == RUN_TYPE::Default || T <= 1) {
+        return;
+    }
+    if (mixingScheme_ == ReplicaMixingScheme::Neighboring) {
+        // Parity from the dedicated exchangeRound_ counter, NOT mixi (B7
+        // revision-2 fix): keeps both pairing parities reachable regardless
+        // of swapEvery_.
+        prepareExchangePairs(exchangeRound_, /*oddity=*/0);
+        for (const auto& pr : exchangePairList_) {
+            attemptREXSwap(pr.first, pr.second);
+        }
+        ++exchangeRound_; // once per EXECUTED mix
+    } else {
+        mixAllReplicas(nSwapAttempts_);
+    }
+}
+
+void Context::printSwapMatrix() const {
+    const int T = static_cast<int>(thermodynamicStates_.size());
+    std::fprintf(stderr, "[rexlabel] accepted/attempted swap matrix (by thermodynamic-state index):\n");
+    for (int i = 0; i < T; ++i) {
+        std::fprintf(stderr, "[rexlabel]  ");
+        for (int j = 0; j < T; ++j) {
+            std::fprintf(stderr,
+                        "%4lld/%-4lld ",
+                        static_cast<long long>(nofAcceptedSwapsMatrix_[i][j]),
+                        static_cast<long long>(nofAttemptedSwapsMatrix_[i][j]));
+        }
+        std::fprintf(stderr, "\n");
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Stage 2b: INV-7/INV-10 preconditions, the driven (RENE/REBASONTOP) round,
+//  and the REBASONTOP interleave (D4). NOT compiled or run (coordinator
+//  directive, 2026-07-12) -- reviewed on paper only.
+// ---------------------------------------------------------------------------
+void Context::checkInv7AndInv10Guards(RUN_TYPE runType) const {
+    if (runType != RUN_TYPE::RENE && runType != RUN_TYPE::RENEMC && runType != RUN_TYPE::REBASONTOP) {
+        return; // INV-7 (as scoped by the Stage 2b directive) and INV-10 are driven-only preconditions
+    }
+
+    // INV-7/V9 (D3 biconditional): the swap acceptance excludes Fixman ONLY
+    // correctly if Fixman IS enabled in every (non-Cartesian) sampler. A
+    // Cartesian world has a flat metric (no Fixman term is meaningful there;
+    // World::add_sampler auto-forces useFixman=false for it), so Cartesian
+    // worlds are exempt.
+    for (const auto& w : worlds_) {
+        if (w->isCartesian()) {
+            continue;
+        }
+        if (!w->getUseFixman()) {
+            throw std::logic_error(
+                "Context::checkInv7AndInv10Guards: INV-7/V9 violated -- world "
+                + std::to_string(w->index())
+                + " has Fixman disabled but the run type drives (RENE/RENEMC/REBASONTOP). The "
+                  "swap acceptance excludes Fixman ONLY correctly when Fixman is enabled in "
+                  "every sampler (D3 biconditional); a Fixman-off torsional world here would "
+                  "target the wrong joint distribution.");
+        }
+    }
+
+    // INV-10 (drive/run-type pairing): RENE/REBASONTOP SHALL drive with a
+    // volume-changing BAT-scaling world (distortOption == ScaleBendStretch,
+    // carrying lnJac); RENEMC SHALL drive with a volume-preserving velocity/
+    // NMA world (distortOption == NMA, omitting it). Any world configured
+    // with the WRONG drive for the active run type biases acceptance
+    // (B9/INV-1) -- reject the pairing outright.
+    bool anyDriven = false;
+    for (const auto& w : worlds_) {
+        const auto opt = w->getDistortOption();
+        if (!opt.has_value()) {
+            continue;
+        }
+        anyDriven = true;
+        if ((runType == RUN_TYPE::RENE || runType == RUN_TYPE::REBASONTOP)
+            && *opt != DistortOption::ScaleBendStretch) {
+            throw std::logic_error(
+                "Context::checkInv7AndInv10Guards: INV-10 violated -- world "
+                + std::to_string(w->index())
+                + " has a non-ScaleBendStretch distortOption under RUN_TYPE::RENE/REBASONTOP.");
+        }
+        if (runType == RUN_TYPE::RENEMC && *opt != DistortOption::NMA) {
+            throw std::logic_error(
+                "Context::checkInv7AndInv10Guards: INV-10 violated -- world "
+                + std::to_string(w->index())
+                + " has a non-NMA distortOption under RUN_TYPE::RENEMC.");
+        }
+    }
+    if (!anyDriven) {
+        throw std::logic_error(
+            "Context::checkInv7AndInv10Guards: run type drives (RENE/RENEMC/REBASONTOP) but no "
+            "world has a matching distortOption configured -- the drive would be silently inert.");
+    }
+}
+
+void Context::driveReplica(int replicaIx,
+                           int thermoIx,
+                           double targetTemperature,
+                           const robo::BatAnchorStats::Snapshot& anchor) {
+    Replica& rep = replicas_.at(replicaIx);
+    const ThermodynamicState& st = thermodynamicStates_.at(thermoIx);
+    const double s = std::sqrt(targetTemperature / st.temperature); // B4 Q-scale-factor
+
+    rep.WORK = 0.0;
+    rep.WORK_Jacobian = 0.0;
+    rep.WORK_atomsLocations = rep.atomsLocations; // start from the committed (equilibrium) endpoint x^0
+
+    bool anyDriven = false;
+    for (std::size_t pos = 0; pos < st.worldIndexes.size(); ++pos) {
+        const int worldIx = st.worldIndexes[pos];
+        World& w = *worlds_[worldIx];
+        const auto distortOpt = w.getDistortOption();
+        if (!distortOpt.has_value() || *distortOpt != DistortOption::ScaleBendStretch) {
+            continue; // not a BAT-scaling driven world position (checkInv7AndInv10Guards already
+                      // confirmed no OTHER-typed driven world exists for RENE/REBASONTOP)
+        }
+        anyDriven = true;
+        const double uPrev = openmmPotential(rep.WORK_atomsLocations);
+        w.setAtomsLocationsInGround(rep.WORK_atomsLocations);
+        try {
+            w.applyBatScalingDrive(s, anchor.meanR, anchor.meanTheta);
+        } catch (const std::domain_error& e) {
+            // S2 (reviewer, 2026-07-12): Stage 2a's r1<=0 / theta1 outside
+            // (0,pi) domain guard fired for THIS (s, anchor) pair -- an
+            // invalid scaled configuration. MUST NOT propagate and abort the
+            // whole REX run: map it to an automatic reject of THIS swap
+            // (reviewer N2 fail-loud, applied at the swap level) and let the
+            // run continue. Force the reject by driving WORK_Jacobian to
+            // -infinity: attemptREXSwap's Work_partner term then reads
+            //   beta_target*U(x^tau) - beta_source*U(x^0) - (-inf) = +inf,
+            // so WTerm = -(Work_X+Work_Y) = -inf and the swap always rejects
+            // regardless of the (now-irrelevant) potential values -- setting
+            // WORK_potential to a "plausible" finite number would NOT
+            // reliably force rejection (the beta_target/beta_source weights
+            // differ, so a finite-but-equal U(x^tau)==U(x^0) does not
+            // generally give a negative logPAccept). The trial endpoint is
+            // left at the last valid geometry (x^0 for this drive) rather
+            // than the invalid target.
+            std::fprintf(stderr,
+                         "[rexlabel] WARNING: applyBatScalingDrive domain error for replica=%d "
+                         "world=%d s=%g -- forcing automatic reject of this swap (%s)\n",
+                         replicaIx,
+                         worldIx,
+                         s,
+                         e.what());
+            rep.WORK_Jacobian = -std::numeric_limits<double>::infinity();
+            rep.WORK_potential = uPrev;
+            rep.referenceWORK_potential = uPrev;
+            return;
+        }
+        const robo::Vec3* p = w.getAtomsLocationsInGround();
+        rep.WORK_atomsLocations.assign(p, p + systemTopology.numAtoms);
+        const double uCurr = openmmPotential(rep.WORK_atomsLocations);
+        rep.WORK += (uCurr - uPrev); // B5 per-driven-world work (Fixman excluded, D3)
+        rep.WORK_Jacobian += w.getDistortJacobianDetLog(); // B12 live += accumulation
+    }
+
+    // D7: x^tau == x' (no post-scale MD) -- the driven endpoint's potential
+    // is read directly off the final scaled geometry. If no driven world was
+    // actually visited (e.g. an odd-T unpaired replica reaching here, or a
+    // state schedule with none), fall back to the committed values so
+    // referenceWORK_potential/WORK_Jacobian stay internally consistent (a
+    // null drive == REMC's ETerm_equal limit, V4).
+    rep.WORK_potential = anyDriven ? openmmPotential(rep.WORK_atomsLocations) : rep.potential;
+    rep.referenceWORK_potential = rep.WORK_potential;
+    if (!anyDriven) {
+        rep.WORK_Jacobian = 0.0;
+    }
+}
+
+void Context::runInterleavedRemcSubround() {
+    const RUN_TYPE saved = runType_;
+    runType_ = RUN_TYPE::REMC; // borrow attemptREXSwap's ETerm_equal branch (D4)
+    for (int sub = 0; sub < rebasontopSubrounds_; ++sub) {
+        prepareExchangePairs(exchangeRound_, /*oddity=*/sub % 2);
+        for (const auto& pr : exchangePairList_) {
+            attemptREXSwap(pr.first, pr.second);
+        }
+        ++exchangeRound_;
+    }
+    runType_ = saved;
+}
+
+void Context::runDrivenRound(int round, bool verbose) {
+    const int R = static_cast<int>(replicas_.size());
+
+    // (1) Equilibrium segment (B8): every replica's non-driven worlds, in
+    // schedule order, exactly like the REMC sweep -- SKIP any world whose
+    // distortOption is set (that is this state's nonequilibrium segment, run
+    // separately below once pairing is known).
+    for (int k = 0; k < R; ++k) {
+        const int r = thermo2ReplicaIxs_[k];
+        const ThermodynamicState& st = thermodynamicStates_[k];
+        for (std::size_t pos = 0; pos < st.worldIndexes.size(); ++pos) {
+            const int worldIx = st.worldIndexes[pos];
+            World& w = *worlds_[worldIx];
+            if (w.getDistortOption().has_value()) {
+                continue; // driven world -- nonequilibrium segment, below
+            }
+            w.setTemperature(st.temperature);
+            w.setTimeStep(st.timeSteps[pos]);
+            w.setMdSteps(st.mdSteps[pos]);
+            w.setAcceptRejectMode(st.acceptRejectModes[pos]);
+            w.setAtomsLocationsInGround(replicas_[r].atomsLocations);
+            const bool accepted = w.generateSample();
+            const robo::Vec3* p = w.getAtomsLocationsInGround();
+            std::copy(p, p + systemTopology.numAtoms, replicas_[r].atomsLocations.begin());
+
+            // INV-9 accumulation: feed the shared/global anchor from THIS
+            // equilibrium sample (B3/item 4). Safe/cheap on every world
+            // (BatAnchorStats::accumulate no-ops on bodies with no scaled
+            // DOF, e.g. every body in a Cartesian or purely-torsional world).
+            accumulateBatAnchorStats(w);
+
+            if (verbose) {
+                std::printf("[rexlabel] round=%d state=%d replica=%d T=%.1f world=%d(%s) acc=%s "
+                            "PE=%.4f KE=%.4f Fix=%.4f H=%.4f [equil]\n",
+                            round,
+                            k,
+                            r,
+                            st.temperature,
+                            w.index(),
+                            w.typeName(),
+                            accepted ? "ACC" : "rej",
+                            w.lastPE(),
+                            w.lastKE(),
+                            w.lastFixman(),
+                            w.lastTotalEnergy());
+            }
+        }
+        // INV-6: refresh the committed potential from the equilibrium
+        // endpoint x^0 (D3: no Fixman/driven term in the physical potential).
+        replicas_[r].potential = openmmPotential(replicas_[r].atomsLocations);
+        replicas_[r].referencePotential = replicas_[r].potential;
+    }
+
+    // (2) Pairing FIRST (B4/B7): the Q-scale-factor needs the partner's
+    // temperature before any drive can run.
+    prepareExchangePairs(exchangeRound_, /*oddity=*/0);
+    ++exchangeRound_; // once per EXECUTED (driven) round, mirrors mixReplicas' B7 rule
+
+    // (3) ONE frozen anchor snapshot for this round (INV-9): every drive this
+    // round -- both partners of every pair -- reads the SAME snapshot, taken
+    // AFTER the equilibrium segment above has fed it.
+    const robo::BatAnchorStats::Snapshot anchor = batAnchorSnapshot();
+
+    // (4) Drive each paired replica toward its partner's temperature. A
+    // domain-invalid drive (S2) is handled INSIDE driveReplica (forces that
+    // replica's WORK_Jacobian to -infinity, an automatic reject at step (5)
+    // below) -- it never throws out of this loop.
+    for (const auto& pr : exchangePairList_) {
+        const int thermoC = pr.first;
+        const int thermoH = pr.second;
+        const double tC = thermodynamicStates_[thermoC].temperature;
+        const double tH = thermodynamicStates_[thermoH].temperature;
+        const int x = thermo2ReplicaIxs_[thermoC];
+        const int y = thermo2ReplicaIxs_[thermoH];
+        driveReplica(x, thermoC, /*targetTemperature=*/tH, anchor);
+        driveReplica(y, thermoH, /*targetTemperature=*/tC, anchor);
+    }
+
+    // (5) Attempt every pair's swap (main WTerm/ETerm_nonequil acceptance).
+    for (const auto& pr : exchangePairList_) {
+        attemptREXSwap(pr.first, pr.second);
+    }
+
+    // (6) REBASONTOP interleave (D4): periodic REMC sub-rounds "on top".
+    if (runType_ == RUN_TYPE::REBASONTOP && interleaveRemcEvery_ > 0 && (round % interleaveRemcEvery_) == 0) {
+        runInterleavedRemcSubround();
+    }
+}
+
+void Context::RunREX(RUN_TYPE runType, int equilRounds, int prodRounds, int writeFreq, bool verbose) {
+    if (runType == RUN_TYPE::RENEMC) {
+        throw std::logic_error(
+            "Context::RunREX: RUN_TYPE::RENEMC's driven round-loop (the velocity/NMA drive segment) "
+            "is not wired yet -- Stage 2c (docs/specs/replica-exchange-nonequilibrium-work.md). Its "
+            "acceptance formula (ETerm_nonequil) IS implemented in attemptREXSwap and is directly "
+            "testable there; RUN_TYPE::Default/REMC/RENE/REBASONTOP are fully wired.");
+    }
+
+    setupReplicaExchange(runType);
+
+    const bool driven = (runType == RUN_TYPE::RENE || runType == RUN_TYPE::REBASONTOP);
+    if (driven) {
+        checkInv7AndInv10Guards(runType); // INV-7/V9, INV-10 -- fail loud before any round runs
+    }
+
+    const int R = static_cast<int>(replicas_.size());
+    const int total = equilRounds + prodRounds;
+
+    for (int round = 0; round < total; ++round) {
+        const bool production = round >= equilRounds;
+
+        for (auto& w : worlds_) {
+            w->setEquilPhase(!production);
+        }
+
+        if (driven) {
+            // RENE/REBASONTOP (Stage 2b): the driven round (B6/B7/B8) --
+            // equilibrium segment, pairing, drive, WTerm swap attempt, and
+            // REBASONTOP's interleave -- is entirely encapsulated in
+            // runDrivenRound (see its doc comment in Context.hpp).
+            runDrivenRound(round, verbose);
+        } else {
+            // REMC/Default (Stage 1, INVARIANT-EQUIV-tested, UNCHANGED):
+            // Gibbs sweep, iterate by THERMODYNAMIC STATE (not by replica
+            // identity) and look up which replica currently occupies it
+            // (thermo2ReplicaIxs_). A Gibbs sweep's per-replica draw order is
+            // a free choice (each replica's draw is conditionally
+            // independent given the others, B0) -- iterating by state,
+            // rather than by replica, makes RunREX visit the shared worlds
+            // in the SAME temporal order as the legacy coordinate-swap
+            // runREX (which iterates by fixed temperature slot). Since a
+            // shared world's RNG stream is consumed in call order regardless
+            // of which coordinates are loaded, this ordering choice is what
+            // makes label-swap and coordinate-swap REMC produce IDENTICAL
+            // per-round trajectories (INVARIANT-EQUIV), not merely matching
+            // statistics -- both are legitimate Gibbs sweep orders, but this
+            // one is directly comparable to the retained oracle. The
+            // schedule's per-world timestep/mdSteps/acceptRejectMode are
+            // reset onto the shared worlds every position (Consequences
+            // "Feasibility gap") -- in Stage 1 these are identical across
+            // states (B0 NOTE), but resetting them unconditionally keeps
+            // this loop correct.
+            for (int k = 0; k < R; ++k) {
+                const int r = thermo2ReplicaIxs_[k];
+                const ThermodynamicState& st = thermodynamicStates_[k];
+                for (std::size_t pos = 0; pos < st.worldIndexes.size(); ++pos) {
+                    const int worldIx = st.worldIndexes[pos];
+                    World& w = *worlds_[worldIx];
+                    w.setTemperature(st.temperature);
+                    w.setTimeStep(st.timeSteps[pos]);
+                    w.setMdSteps(st.mdSteps[pos]);
+                    w.setAcceptRejectMode(st.acceptRejectModes[pos]);
+                    w.setAtomsLocationsInGround(replicas_[r].atomsLocations);
+                    const bool accepted = w.generateSample();
+                    const robo::Vec3* p = w.getAtomsLocationsInGround();
+                    std::copy(p, p + systemTopology.numAtoms, replicas_[r].atomsLocations.begin());
+
+                    if (verbose) {
+                        std::printf("[rexlabel] round=%d state=%d replica=%d T=%.1f world=%d(%s) acc=%s "
+                                    "PE=%.4f KE=%.4f Fix=%.4f H=%.4f\n",
+                                    round,
+                                    k,
+                                    r,
+                                    st.temperature,
+                                    w.index(),
+                                    w.typeName(),
+                                    accepted ? "ACC" : "rej",
+                                    w.lastPE(),
+                                    w.lastKE(),
+                                    w.lastFixman(),
+                                    w.lastTotalEnergy());
+                    }
+                }
+            }
+
+            // INV-6: a replica's stored potential SHALL equal the energy of
+            // its stored coordinates at swap time -- refresh before
+            // attemptREXSwap reads referencePotential. REMC has no Fixman/
+            // driven term (D3), so potential == referencePotential.
+            for (int r = 0; r < R; ++r) {
+                const double pe = openmmPotential(replicas_[r].atomsLocations);
+                replicas_[r].potential = pe;
+                replicas_[r].referencePotential = pe;
+            }
+
+            mixReplicas(round);
+        }
+
+        if (production && writeFreq > 0 && ((round - equilRounds) % writeFreq == 0)) {
+            for (int k = 0; k < R; ++k) {
+                const int r = thermo2ReplicaIxs_[k];
+                writeOutputsCore(k, round, verbose, replicas_[r].atomsLocations, thermodynamicStates_[k].temperature);
+            }
+            ++writeCounter_;
+        }
+    }
+
+    printSwapMatrix();
+}
+
 double Context::openmmPotential(const std::vector<robo::Vec3>& coords) {
     std::vector<OpenMM::Vec3> pos;
     pos.reserve(coords.size());
@@ -543,22 +1177,26 @@ double Context::openmmPotential(const std::vector<robo::Vec3>& coords) {
 }
 
 void Context::writeOutputs(int replica, int round, bool verbose) {
-    const double pe = openmmPotential(replicaCoords_[replica]);
-    const std::string path = baseName + "." + std::to_string(replica) + ".csv";
+    writeOutputsCore(replica, round, verbose, replicaCoords_[replica], temperatures_[replica]);
+}
+
+// Pure extraction from the former writeOutputs body -- `idx` used to be
+// `replica`/`replicaCoords_[replica]`/`temperatures_[replica]` verbatim.
+// RunREX (the label-swap driver) reuses this on Replica-owned coordinates,
+// indexed by THERMODYNAMIC STATE rather than replica-object identity (see
+// the RunREX doc comment in Context.hpp).
+void Context::writeOutputsCore(int idx, int round, bool verbose, const std::vector<robo::Vec3>& coords, double T) {
+    const double pe = openmmPotential(coords);
+    const std::string path = baseName + "." + std::to_string(idx) + ".csv";
     std::ofstream out(path, std::ios::app);
     if (out) {
-        out << round << "," << replica << "," << temperatures_[replica] << "," << pe << "\n";
+        out << round << "," << idx << "," << T << "," << pe << "\n";
     }
     if (verbose) {
-        std::printf("[rex] round=%d replica=%d T=%.1f PE=%.4f kJ/mol\n",
-                    round,
-                    replica,
-                    temperatures_[replica],
-                    pe);
+        std::printf("[rex] round=%d replica=%d T=%.1f PE=%.4f kJ/mol\n", round, idx, T, pe);
     }
 
-    if (replica >= 0 && replica < static_cast<int>(dcdWriters_.size())) {
-        const auto& coords = replicaCoords_[replica]; // read-only; engine state untouched
+    if (idx >= 0 && idx < static_cast<int>(dcdWriters_.size())) {
         const int n = systemTopology.numAtoms;
         const auto& perm = systemTopology.atomsPrmtopIndex;
         const bool havePerm = (static_cast<int>(perm.size()) == n);
@@ -638,7 +1276,7 @@ void Context::writeOutputs(int replica, int round, bool verbose) {
             }
         }
 
-        dcdWriters_[replica].append(dcdScratch_, boxFromReducedVectors(systemTopology.boxVectors));
+        dcdWriters_[idx].append(dcdScratch_, boxFromReducedVectors(systemTopology.boxVectors));
     }
 }
 
