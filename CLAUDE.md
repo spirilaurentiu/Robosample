@@ -31,7 +31,8 @@ Each agent's authoritative behavior lives in its own frontmatter under `.claude/
 - `reviewer.md` - **independent, hostile; does not modify production source.** Runs after the coder, before merge. Reviews science, conventions and implementation together. MAY author reproducers under `tests/`. Hands confirmed findings back to `coder`, never patches source.
 - `optimizer.md` - **opt-in, user-invoked only; never inside a feature loop.** Static-analysis-guided source optimization measured with `perf`; hands every change to `reviewer`.
 - `paper-ingestor.md` - **user-invoked, single-paper.** Ingests one PDF-converted `.md` into `references/`: dedups, classifies, cleans to `paper.md`, extracts equations / notation / numeric-check fixtures, validates the LaTeX, and upserts `references/index.yaml`. Writes only under `references/`. Returns a one-line status.
-- `cuda-documentation.md` - produces Doxygen documentation that states the behavioral contract of each symbol in CUDA kernels.
+- `documenter.md` - produces Doxygen documentation that states the behavioral contract of each symbol and their context.
+- `architect.md` - recovers the design that already exists inside a bloated C++ codebase.
 
 The `ingest-papers` slash command (`.claude/commands/ingest-papers.md`) fans one `paper-ingestor` instance out per file across a directory or glob. It is a command, not an agent - its frontmatter has `argument-hint`/`allowed-tools` and no `name:`.
 
