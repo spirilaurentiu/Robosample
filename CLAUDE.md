@@ -24,32 +24,57 @@ The target systems are up to **1M atoms** clustered in up to **100k rigid bodies
 
 ## Agents
 
-Each agent's authoritative behavior lives in its own frontmatter under `.claude/agents/`:
+Each agent's authoritative behavior lives in its own file under `.claude/agents/`. The one-line docs below are pointers, not the contract.
 
-- `researcher.md` - **read-only.** Theory / sampling research -> a precise spec under `docs/specs/`. Runs first, before any physics-touching change. Never writes code.
-- `coder.md` - implements a reviewed spec or a self-contained task. **Auto-mode, surgical**. Correctness over performance - never optimizes speculatively.
-- `reviewer.md` - **independent, hostile; does not modify production source.** Runs after the coder, before merge. Reviews science, conventions and implementation together. MAY author reproducers under `tests/`. Hands confirmed findings back to `coder`, never patches source.
-- `optimizer.md` - **opt-in, user-invoked only; never inside a feature loop.** Static-analysis-guided source optimization measured with `perf`; hands every change to `reviewer`.
-- `paper-ingestor.md` - **user-invoked, single-paper.** Ingests one PDF-converted `.md` into `references/`: dedups, classifies, cleans to `paper.md`, extracts equations / notation / numeric-check fixtures, validates the LaTeX, and upserts `references/index.yaml`. Writes only under `references/`. Returns a one-line status.
-- `documenter.md` - produces Doxygen documentation that states the behavioral contract of each symbol and their context.
-- `architect.md` - recovers the design that already exists inside a bloated C++ codebase.
+Implementation and review:
+
+- `coder.md` - implements a reviewed spec or a self-contained task in C++17 / CUDA / Python. Auto-mode and surgical; correctness over performance, never optimizes speculatively.
+- `reviewer.md` - independent, adversarial review of a change or module before merge. Reviews science, conventions, and implementation together; delivers confirmed findings as reproducers under `tests/` and hands them to `coder`, never patches source.
+- `optimizer.md` - user-invoked only, never inside a feature loop. Profiles first, then optimizes for speed while preserving behavior; hands every change to `reviewer`.
+- `documenter.md` - writes contract-focused Doxygen for C/C++/CUDA symbols and gtest files, derived from behavior across all call sites. Documents only; never changes code.
+- `architect.md` - recovers the design already present in the bloated C++ engine and emits it as `ARCHITECTURE.md`, `MODULES.md`, `TESTS.md`, and split/doc tickets. Preserves behavior; proposes no behavioral change.
+
+Research pipeline:
+
+- `research-orchestrator.md` - drives the deep-research pipeline end to end and is the only agent that addresses the user. Routes tiered evidence between stages; never derives, verifies, or synthesizes.
+- `scout.md` - Stage-0 orientation. Cheap, wide, parallel discovery: terminology map, candidate canonical sources, convention-contradiction flags. Does not derive or verify.
+- `bibliometrics.md` - Stage-1 citation-graph construction from the approved canonical set. Clusters papers into research programmes and attaches scite status; hop-1 by default.
+- `corpus.md` - cross-cutting retrieval from `references/` under strict passage hygiene. Returns only the requested passage or symbol verbatim, with a provenance id. The only agent that returns authority-tier text.
+- `researcher.md` - deep statistical-mechanics / enhanced-sampling research mapped onto the literature and codebase, producing a precise spec under `docs/specs/`. Read-only; never writes code.
+- `spec-reviewer.md` - adversarial review of the researcher's spec before it is spent on verifier runs or implementation. Audits tier discipline, provenance, and discriminating power. Reviews specs, not implementations.
+- `verifier.md` - Stage-2 deterministic reviewer. Translates one classified claim into executable evidence and runs it, returning pass/fail plus a re-runnable artifact. A falsification gate, not a certifier.
+
+Knowledge base:
+
+- `paper-ingestor.md` - user-invoked, single-paper. Ingests one PDF-converted `.md` into `references/`: dedups, classifies, cleans to `paper.md`, extracts equations / notation / numeric-check fixtures, validates the LaTeX, and upserts `references/index.yaml`. Writes only under `references/`; returns a one-line status.
 
 The `ingest-papers` slash command (`.claude/commands/ingest-papers.md`) fans one `paper-ingestor` instance out per file across a directory or glob. It is a command, not an agent - its frontmatter has `argument-hint`/`allowed-tools` and no `name:`.
 
-Agents SHALL **write and think** in clear, direct English. Prefer short (under 25 words), declarative sentences where they improve clarity. Prefer active voice. Avoid marketing language, rhetorical flourish and metaphors. Prefer concrete nouns over abstractions. Introduce technical terms only when they improve precision. Prefer precise, literal language over metaphor. State mechanisms explicitly rather than replacing them with slogans.
+Agents SHALL write in clear, direct English. Prefer short (under 25 words), declarative sentences where they improve clarity. Prefer active voice. Avoid marketing language, rhetorical flourish, and metaphors. Prefer concrete nouns over abstractions. State mechanisms explicitly rather than replacing them with slogans.
 
-Authoritative examples for good and bad writing/thinking are under `styles/`:
+Two vocabularies with opposite disciplines:
 
-- `architecture.md`: explanation of internals / how a system is built.
-- `decision.md`: design proposals / rationale documents.
-- `documentation.md`: tutorials, how-tos, and conceptual explanation - teachin.
-- `issues.md`: bug reports, feature requests, and triage-ready problem writeups.
-- `readme.md`: project overview / first-contact document.
-- `reference.md`: lookup material - you arrive knowing what you want, you leave with the exact signature/behavior/return codes/errors/edge cases.
-- `spec.md`: specification writing.
-- `review.md`: code review comments and exchanges - giving and receiving.
+- Expression vocabulary - any text a reader consumes (writeups, specs, docs, reviews). Precise and minimal: one term per concept, and a technical term only where it improves precision.
+- Retrieval vocabulary - search queries and the reformulation that drives them in research mode. Recall-maximizing: many synonyms, cross-discipline names, deliberately broad. The precision rules above SHALL NOT be applied to queries; narrowing a query to a preferred term suppresses recall. See `styles/research.md`.
 
-Match their style unless the user explicitly requests otherwise.
+Style governs reader-visible output, not private reasoning:
+
+- Surface rules (sentence length, active voice, no emphatics, no marketing) apply to reader-visible artifacts only. Chain-of-thought stays exploratory and MAY hedge; do not impose surface rules on it.
+- Epistemic rules apply to reasoning and to every intermediate handoff between agents: keep measured, derived, and conjectured claims separate; label a hypothesis and fence it off; quantify uncertainty ("probably < 1/6, certainly < 1/4") instead of shrugging; state evidence before the claim it supports.
+
+Style exemplars for reader-visible artifacts live under `styles/`; each pairs good and bad examples for one output category. Output visible to the user SHALL be written in the matching style. The load is lazy: an agent reads a style only when it is about to write the matching artifact, reads only the part it needs, and an invocation that produces no reader-visible artifact loads nothing. Map artifact to style here:
+
+| Artifact | Style |
+| --- | --- |
+| Spec (`docs/specs/`) | `styles/spec.md` |
+| Decision record (`docs/decisions/`) | `styles/decision.md` |
+| Recovered design (`ARCHITECTURE.md`, module maps) | `styles/architecture.md` |
+| API / symbol contract, Doxygen, reference docs | `styles/reference.md` |
+| Tutorial, how-to, conceptual explainer | `styles/documentation.md` |
+| Research report, reformulation, discovery writeup | `styles/research.md` |
+| Code-review or spec-review findings | `styles/review.md` |
+| Bug report, triage writeup | `styles/issues.md` |
+| Project overview, README | `styles/readme.md` |
 
 Assume the reader is an experienced software engineer familiar with molecular simulation. Scale response length to the task. Lead with technical substance. Avoid performative tics and conversational filler:
 
@@ -59,7 +84,7 @@ Assume the reader is an experienced software engineer familiar with molecular si
 - Advertising honesty: *to be honest*.
 - Corporate jargon and metaphorical engineering slang: *load-bearing*, *blast radius*, *footgun*, *yak shaving*, *belt-and-suspenders*, *fan out*, *clique*, *bespoke*, *circuit-breaker*, *heavy-lifting*, *money shot*, *this lands*, *sidecar* etc.
 
-Avoid emphatics used for emphasis rather than obligation: *binding*, *mandatory*, *fail loud*, *resolved*, *almost*, and lowercase *must*. They flatten priority when everything reads as equally important. Reserve requirement force for the RFC 2119 keywords (see `styles/spec.md`) and classify each requirement:
+Avoid emphatics used for emphasis rather than obligation: *binding*, *mandatory*, *fail loud*, *resolved*, *almost*, and lowercase *must*. They flatten priority when everything reads as equally important. NOTE: this bans vague emphasis, not quantified uncertainty - a hedge that carries a number ("probably < 1/6") is required in reasoning and handoffs, not discouraged. Reserve requirement force for the RFC 2119 keywords (see `styles/spec.md`) and classify each requirement:
 
 - **Normative:** *SHALL*, *MUST*, *MUST NOT*.
 - **Recommended:** *SHOULD*, *SHOULD NOT*.
@@ -93,7 +118,7 @@ cmake --build --preset ${CONFIG}
 
 ## Validation levels
 
-Every change SHALL either pass the suite of tests and physical invariants stated here or depart **deliberately and with justification**. A test encodes WHY behavior matters; "tests pass" is false if any were skipped. Since tests can run for a very long time, you will prompt the user whether to run or not.
+Every change SHALL either pass the tests and physical invariants stated here or depart from them deliberately, with justification. A test encodes why the behavior matters; "tests pass" is false if any were skipped. Tests can run for a long time, so prompt the user before running them.
 
 - Level 0: compile only
 - Level 1: compile and run basic example
@@ -112,7 +137,7 @@ Default validation is level 1. Request confirmation before escalating to higher 
 
 ## Workflow
 
-Workflow is encoded as a state machine: Issue -> Research -> Specification -> Implementation -> Review -> Revision -> Merge. For each state, define the following, but not limited to: inputs, outputs and exit criteria. Examples:
+Workflow is a state machine: Issue -> Research -> Specification -> Implementation -> Review -> Revision -> Merge. Each state defines at least its inputs, outputs, and exit criteria. Examples:
 
 - Research:
   - Output: accepted specification
@@ -156,7 +181,7 @@ The reviewer's evidence tier (Reproducer, Re-derivation, Suppress) is orthogonal
 
 A **specification** SHALL define, using these exact headings:
 
-- **Motivation** - the problem in the codebase's vocabulary, quantified, with binding constraints and assumptions. Researcher specs SHALL include the user's original phrasing alongside the restatement here.
+- **Motivation** - the problem in the codebase's vocabulary, quantified, with its constraints and assumptions. Researcher specs SHALL include the user's original phrasing alongside the restatement here.
 - **Behavior** - what the system SHALL do, with the rationale that makes it correct. Physics specs SHALL include the claims and a derivation sketch with citations here.
 - **Invariants** - the properties that hold after the change.
 - **Interface** - the externally observable interface and the components and conventions that change.

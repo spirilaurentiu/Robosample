@@ -13,8 +13,12 @@
 //  therefore UNCHANGED -- this file only changes where the struct's data
 //  comes from, never what is compared (the migration's hard constraint).
 //
-//  Included by exactly one TU (TestRoboticsOracle.cpp), so everything here
-//  can be `inline`/header-only without ODR risk.
+//  Included by tests/support/RoboticsOracleRunners.hpp (TEST-005), which is
+//  in turn included by every TestRoboticsOracle{SingleState,MultiSystem,
+//  Aggregate,Fuzz}.cpp split binary and TestRoboticsOracleMolecule{Symbolic,
+//  Numeric}.cpp -- one binary per TU, so everything here is `inline`/
+//  header-only without ODR risk (the `inline` functions already tolerate
+//  multiple TUs).
 //
 //  JSON: the manifest is small, fixed-schema, machine-written-by-us-only
 //  JSON (§9: "small and human-reviewable"). A full JSON library dependency

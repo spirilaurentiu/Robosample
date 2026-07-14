@@ -1,0 +1,61 @@
+# Robosample engine Doxyfile. Run from the repo root: `doxygen docs/Doxyfile`.
+# Scope: the C++/CUDA engine under include/ and src/ only. The vendored submodules
+# (openmm, pybind11, units, pcg-cpp) and the nested Robosample/ Simbody tree are
+# out of scope (they carry their own Doxyfiles). Added by the refactor DOC phase.
+
+DOXYFILE_ENCODING      = UTF-8
+PROJECT_NAME           = "Robosample Engine"
+PROJECT_BRIEF          = "Blocked Gibbs / Hamiltonian Monte Carlo molecular sampler"
+OUTPUT_DIRECTORY       = docs/doxygen
+CREATE_SUBDIRS         = NO
+OPTIMIZE_OUTPUT_FOR_C  = NO
+MARKDOWN_SUPPORT       = YES
+AUTOLINK_SUPPORT       = YES
+
+# --- input ---
+INPUT                  = include src
+RECURSIVE              = YES
+FILE_PATTERNS          = *.hpp *.h *.cuh *.cpp *.cu
+# INPUT is already scoped to the engine's include/ + src/; the vendored submodules
+# (openmm, pybind11, units, pcg-cpp) and the nested Robosample/ Simbody tree live
+# at the repo root, outside INPUT, so no EXCLUDE is needed. (A */Robosample/*
+# pattern would wrongly match the repo root, which is itself named Robosample.)
+EXCLUDE_PATTERNS       =
+
+# --- extraction ---
+# House style is Javadoc (/** ... */). @brief is the first sentence.
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = NO
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = NO
+INLINE_INHERITED_MEMB  = YES
+SORT_MEMBER_DOCS       = NO
+
+# Parse the CUDA-guarded and always-on debug paths so their contracts are seen.
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = USE_CUDA=1 ROBO_DEBUG=1
+
+# --- warnings: the gate ---
+# Warn (and fail) on malformed doc comments (bad @param, unbalanced blocks). We do
+# NOT yet require 100% symbol coverage, so WARN_IF_UNDOCUMENTED stays off until the
+# coverage sweep is a separate, enforced gate.
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+WARN_AS_ERROR          = FAIL_ON_WARNINGS
+WARN_LOGFILE           = docs/doxygen/doxygen_warnings.log
+
+# --- output ---
+GENERATE_HTML          = YES
+USE_MATHJAX            = YES
+GENERATE_LATEX         = NO
+GENERATE_XML           = NO
+HAVE_DOT               = NO

@@ -28,6 +28,8 @@
 #include "RobotState.hpp"
 #include "StatTest.hpp"
 #include "TestHelpers.hpp"
+#include "support/SamplingHarness.hpp"
+#include "support/TestPhysConstants.hpp"
 
 using namespace robo;
 using rtest::attachAtoms;
@@ -36,18 +38,14 @@ using rtest::buildForest;
 using rtest::HmcDriver;
 using rtest::randomizeState;
 using rtest::Rng;
+using rtest::phys::kT300;
 using rtest::stat::chiSquareCritical;
 using rtest::stat::chiSquareStatistic;
 using rtest::stat::expectedFromWeights;
 using rtest::stat::Histogram;
+using rtest::stat::slowEnabled;
 
 namespace {
-
-constexpr double kT300 = 0.0083144626 * 300.0;
-
-bool slowEnabled() {
-    return std::getenv("ROBOSAMPLE_SLOW_TESTS") != nullptr;
-}
 
 RobotModel twoTorsionChain() {
     const Rotation bend(Real(M_PI_2), XAxis);
@@ -165,12 +163,9 @@ Histogram samplePhi2(double scale, bool useFixman, std::uint64_t seed, long nMov
     HmcDriver<AnalyticForceBridge> drv(m, s, bridge, cs, kT300, Real(0.02), 12, seed);
     drv.useFixman = useFixman;
     Histogram h(-M_PI, M_PI, 24);
-    for (long i = 0; i < nMoves; ++i) {
-        drv.move();
-        if (i % stride == 0) {
-            h.add(wrapPi(static_cast<double>(s.q()[1])));
-        }
-    }
+    rtest::runHmcChain(drv, nMoves, stride, [&](long /*i*/, bool /*acc*/) {
+        h.add(wrapPi(static_cast<double>(s.q()[1])));
+    });
     return h;
 }
 

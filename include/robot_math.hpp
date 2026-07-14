@@ -1,27 +1,26 @@
 #pragma once
-// ============================================================================
-//  robot_math_v2.hpp -- in-house POD value types, SimTK-free.
-//
-//  TARGET: x86-64-v3 (AVX2 + FMA + BMI). Build with
-//      -O3 -march=x86-64-v3 -ffp-contract=fast -funroll-loops
-//
-//  Scalar PODs for the per-body articulated recursion (sequential parent<->child,
-//  not vectorisable across a branch; the win is flat topological-order layout +
-//  FMA contraction, not intrinsics). The per-ATOM bulk SIMD work (position
-//  broadcast, force gather) lives in the engine's hot loops over RobotState
-//  arrays, NOT here -- value types stay branch-free PODs. (The earlier AtomSoA /
-//  transformAtomsInPlace helpers were never referenced by the engine, so they
-//  are removed; when the per-atom kernels are migrated they belong in
-//  ForceBridge / RobotState next to the CSR body->atom map, gathering rather
-//  than scattering.)
-//
-//  PRECISION: double throughout the dynamics. Only the OpenMM transfer narrows.
-//  Highest numeric risk: the quaternion kinematics -- golden-test them.
-//
-//  clang-tidy: std::array (no C arrays), trailing return types, parameter names
-//  >= 3 chars, explicit parentheses around '*' vs '+/-', no redundant `inline`
-//  (constexpr / in-class members are implicitly inline).
-// ============================================================================
+/**
+ * @file robot_math.hpp
+ * @brief SimTK-free POD value types of spatial algebra: vectors, rotations,
+ *        transforms, quaternions, and the spatial/articulated inertia operators
+ *        the articulated-body recursion runs on.
+ *
+ * Every type here is a trivially-destructible value: copied by value, holds no
+ * heap, and introduces no aliasing or ownership concern. The elementary
+ * arithmetic operators (@c +, @c -, scalar @c *, @c [], @c +=) implement the
+ * obvious componentwise algebra of the type that declares them and inherit that
+ * type's contract; this file documents each type's meaning, storage convention,
+ * and the semantically-loaded operations (quaternion kinematic map, frame
+ * re-expression, spatial-inertia products) where a caller relies on more than
+ * componentwise arithmetic.
+ *
+ * @note Precision: @ref robo::Real is @c double throughout the dynamics; only
+ *       the transfer to OpenMM narrows. The quaternion kinematics carry the
+ *       highest numeric risk and are pinned by golden tests.
+ * @note Layout is fixed by @c static_assert (see end of file): the arena frees
+ *       slabs without running destructors, so these types SHALL stay trivially
+ *       destructible with the asserted sizes.
+ */
 
 #include <array>
 #include <cmath>
@@ -31,21 +30,25 @@
 
 namespace robo {
 
+/// The scalar type of the whole dynamics; @c double.
 using Real = double;
 
 inline constexpr Real Pi = Real(3.14159265358979323846);
 inline constexpr Real Deg2Rad = Pi / Real(180);
 
-// coordinate axes (unscoped so `XAxis` etc. read like the SimTK names)
+/// Coordinate axis selector; unscoped so @c XAxis etc. read like the SimTK names.
 enum CoordinateAxis : int {
     XAxis = 0,
     YAxis = 1,
     ZAxis = 2
 };
 
-// ---------------------------------------------------------------------------
-//  Vec3
-// ---------------------------------------------------------------------------
+/**
+ * @brief A 3-vector over @ref Real.
+ * @note @c operator% is the cross product (not modulo): @c a % b. The free
+ *       function @ref dot(const Vec3&, const Vec3&) is the inner product;
+ *       @ref normSqr avoids the square root when only a comparison is needed.
+ */
 struct alignas(8) Vec3 {
     std::array<Real, 3> elems;
 
@@ -107,9 +110,12 @@ constexpr auto operator*(Real scalar, const Vec3& vec) -> Vec3 {
     return vec * scalar;
 }
 
-// ---------------------------------------------------------------------------
-//  Mat33 (row-major). Non-aggregate: diagonal ctor + 9-element ctor.
-// ---------------------------------------------------------------------------
+/**
+ * @brief A dense 3x3 matrix, row-major (@c elems[row*3+col]).
+ * @note @c operator* multiplies @c M*v; @ref transposeTimes computes @c M^T*v
+ *       without forming the transpose. @c operator()(row,col) is the element
+ *       accessor.
+ */
 struct Mat33 {
     std::array<Real, 9> elems; // row-major: elems[(row*3)+col]
 
@@ -201,13 +207,22 @@ struct Mat33 {
     }
 };
 
-constexpr auto crossMat(const Vec3& vec) -> Mat33 { // crossMat(v)*x == v % x
+/**
+ * @brief Skew-symmetric cross-product matrix of @p vec.
+ * @param[in] vec Source vector.
+ * @return The matrix @c S with @c S*x == vec % x for every @c x.
+ */
+constexpr auto crossMat(const Vec3& vec) -> Mat33 {
     return Mat33(0, -vec[2], vec[1], vec[2], 0, -vec[0], -vec[1], vec[0], 0);
 }
 
-// ---------------------------------------------------------------------------
-//  UnitVec3 (normalized on construction)
-// ---------------------------------------------------------------------------
+/**
+ * @brief A unit-length 3-vector, normalized at construction.
+ * @note Constructing from a vector shorter than 1e-300 yields the fallback
+ *       direction @c (0,0,1) rather than a NaN. Converts implicitly to
+ *       @ref Vec3 (a @c UnitVec3 is-a direction), so it may be passed anywhere a
+ *       @c Vec3 is expected.
+ */
 struct UnitVec3 {
     Vec3 dir{0, 0, 1};
 
@@ -227,9 +242,12 @@ struct UnitVec3 {
     }
 };
 
-// ---------------------------------------------------------------------------
-//  Vec4 (raw quaternion storage / qdot result)
-// ---------------------------------------------------------------------------
+/**
+ * @brief A 4-vector, used as raw quaternion storage @c (w,x,y,z) and as a
+ *        @c qdot / @c qddot result before it is wrapped in a normalized @ref Quat.
+ * @note Unlike @ref Quat, @c Vec4 is not normalized and carries no orientation
+ *       contract; it is plain storage.
+ */
 struct alignas(8) Vec4 {
     std::array<Real, 4> elems;
 
@@ -245,28 +263,26 @@ struct alignas(8) Vec4 {
     }
 };
 
-// ---------------------------------------------------------------------------
-//  Parent-frame quaternion kinematic map  qdot = N(q) * w_FM   (THEORY S3.4).
-//
-//  INTENDED BEHAVIOR: q represents R_FM (body orientation in the parent frame
-//  F), built by Rotation::fromQuaternion as the STANDARD map. The engine's
-//  generalized angular speed w_FM is expressed in F. The matching qdot map is
-//  therefore the PARENT-frame map (left Hamilton product, qdot = 1/2 (0,w) (x) q):
-//
-//      qdot_w = 1/2 ( -qx*wx - qy*wy - qz*wz )
-//      qdot_x = 1/2 (  qw*wx + qz*wy - qy*wz )
-//      qdot_y = 1/2 ( -qz*wx + qw*wy + qx*wz )
-//      qdot_z = 1/2 (  qy*wx - qx*wy + qw*wz )
-//
-//  This is exactly Simbody's calcUnnormalizedNForQuaternion. The body-frame map
-//  (right product, q (x) (0,w)) negates the off-diagonal cross terms and assumes
-//  w in M; pairing it with the standard R_FM advances the orientation with a
-//  wrong-handed angular velocity and pumps kinetic energy (conflict C-4, fixed).
-//
-//  SINGLE SOURCE OF TRUTH: both Quat::angVelToQdot and
-//  Rotation::convertAngVelToQuaternionDot delegate here, so the two cannot
-//  silently diverge -- the duplication is what let C-4 hide under
-//  self-consistency.
+/**
+ * @brief Parent-frame quaternion kinematic map @f$ \dot q = N(q)\,\omega_{FM} @f$.
+ * @param[in] qw Scalar component of @c q (the orientation @c R_FM of the body
+ *               frame M in its parent F, as built by @ref Rotation::fromQuaternion).
+ * @param[in] qx Vector component of @c q, x.
+ * @param[in] qy Vector component of @c q, y.
+ * @param[in] qz Vector component of @c q, z.
+ * @param[in] w  Generalized angular velocity @c w_FM, expressed in the parent
+ *               frame F.
+ * @return @c qdot as a @ref Vec4, the left Hamilton product
+ *         @f$ \tfrac12 (0,\omega)\otimes q @f$.
+ * @warning The @p w argument SHALL be expressed in the parent frame F to match
+ *          the standard @c R_FM convention of @ref Rotation::fromQuaternion.
+ *          Feeding a body-frame angular velocity (the right-product map) advances
+ *          the orientation with a wrong-handed velocity and pumps kinetic energy
+ *          (INV-9).
+ * @note Single source of truth: @ref Quat::angVelToQdot and
+ *       @ref Rotation::convertAngVelToQuaternionDot both delegate here, so the
+ *       two quaternion-derivative paths cannot diverge.
+ */
 inline auto quaternionDotFromAngVel(Real qw, Real qx, Real qy, Real qz, const Vec3& w) -> Vec4 {
     return Vec4(Real(0.5) * ((-qx * w[0]) - (qy * w[1]) - (qz * w[2])),
                 Real(0.5) * ((qw * w[0]) + (qz * w[1]) - (qy * w[2])),
@@ -274,10 +290,16 @@ inline auto quaternionDotFromAngVel(Real qw, Real qx, Real qy, Real qz, const Ve
                 Real(0.5) * ((qy * w[0]) - (qx * w[1]) + (qw * w[2])));
 }
 
-// ---------------------------------------------------------------------------
-//  Quaternion (w, x, y, z). q represents R_FM; angVel is w_FM in F (== u[0..2]).
-//  qdot = N(q) * w (parent-frame, see quaternionDotFromAngVel above).
-// ---------------------------------------------------------------------------
+/**
+ * @brief A unit quaternion @c (w,x,y,z) representing the body orientation
+ *        @c R_FM (frame M in its parent F).
+ * @note Constructing from a @ref Vec4 normalizes; @ref normalize renormalizes in
+ *       place and falls back to the identity @c (1,0,0,0) when the norm is below
+ *       1e-12. @ref angVelToQdot takes a parent-frame angular velocity @c w_FM
+ *       (the leading generalized speeds of a free/quaternion joint) and returns
+ *       @c qdot via @ref quaternionDotFromAngVel. Represents an orientation up to
+ *       the double cover @c q ~ -q (INV-9).
+ */
 struct Quat {
     std::array<Real, 4> elems; // w, x, y, z
 
@@ -313,10 +335,16 @@ struct Quat {
 };
 using Quaternion = Quat; // SimTK-compatible name
 
-// ---------------------------------------------------------------------------
-//  SymMat33. Storage order matches the engine's 6-arg ctor: (xx, xy, yy, xz, yz, zz).
-//      full = [[xx xy xz],[xy yy yz],[xz yz zz]]
-// ---------------------------------------------------------------------------
+/**
+ * @brief A symmetric 3x3 matrix stored as 6 elements in order
+ *        @c (xx, xy, yy, xz, yz, zz).
+ *
+ * The full matrix is @c [[xx xy xz],[xy yy yz],[xz yz zz]]. Aliased as
+ * @ref UnitInertia (inertia per unit mass about a point).
+ * @note @ref fromSymmetricPart symmetrizes an arbitrary @ref Mat33;
+ *       @ref reexpress rotates the tensor into a new frame as @c ~R * (*this) * R
+ *       (SimTK convention).
+ */
 struct Rotation; // fwd: needed by SymMat33::reexpress
 
 struct SymMat33 {
@@ -398,9 +426,18 @@ struct SymMat33 {
 };
 using UnitInertia = SymMat33; // inertia per unit mass about a point
 
-// ---------------------------------------------------------------------------
-//  Rotation: orthonormal Mat33 with assorted constructors / setters.
-// ---------------------------------------------------------------------------
+/**
+ * @brief An orthonormal @ref Mat33 representing a rigid-body rotation.
+ *
+ * Columns are the rotated axes; @c operator~ returns the transpose, which for an
+ * orthonormal matrix is the inverse rotation. Constructors build a rotation from
+ * an angle about a coordinate axis, from a quaternion (@ref fromQuaternion,
+ * which normalizes its argument), or from one/two direction axes.
+ * @note @ref fromQuaternion realizes the standard @c R_FM map paired with
+ *       @ref quaternionDotFromAngVel (INV-9). @ref setRotationFromTwoAxes aligns
+ *       @c primaryAxis exactly and places @c planeAxis as close to @c planeVec as
+ *       orthonormality allows (Gram-Schmidt).
+ */
 struct Rotation : Mat33 {
     Rotation()
         : Mat33(Real(1)) {
@@ -540,7 +577,15 @@ inline auto SymMat33::reexpress(const Rotation& rot) const -> SymMat33 {
     return SymMat33::fromSymmetricPart(rotated);
 }
 
-// free dihedral angle (radians), SimTK::calcDihedralAngle(a, b, c, d)
+/**
+ * @brief Dihedral (torsion) angle of the four points @p atomA -> @p atomD.
+ * @param[in] atomA First point.
+ * @param[in] atomB Second point (first bond axis end).
+ * @param[in] atomC Third point (second bond axis end).
+ * @param[in] atomD Fourth point.
+ * @return The signed dihedral angle in radians, in @c (-Pi, Pi], measured about
+ *         the @c B->C axis with the SimTK sign convention.
+ */
 inline auto calcDihedralAngle(const Vec3& atomA, const Vec3& atomB, const Vec3& atomC, const Vec3& atomD)
     -> Real {
     const Vec3 edge1 = atomB - atomA;
@@ -552,9 +597,14 @@ inline auto calcDihedralAngle(const Vec3& atomA, const Vec3& atomB, const Vec3& 
     return std::atan2(dot(frame, normal2), dot(normal1, normal2));
 }
 
-// ---------------------------------------------------------------------------
-//  Transform: rotation + translation, X_AB (frame B expressed in A).
-// ---------------------------------------------------------------------------
+/**
+ * @brief A rigid-body transform @c X_AB: frame B expressed in frame A
+ *        (rotation @ref R plus translation @ref p).
+ *
+ * @c operator*(Transform) composes frames (@c X_AB * X_BC == X_AC);
+ * @c operator*(Vec3) maps a point from B into A (@c R*point + p);
+ * @ref inverse (also @c operator~) returns @c X_BA.
+ */
 struct Transform {
     Rotation rot;
     Vec3 trans{0, 0, 0};
@@ -602,9 +652,13 @@ struct Transform {
     }
 };
 
-// ---------------------------------------------------------------------------
-//  SpatialVec : 6-vector [angular; linear]. Index [0]=angular, [1]=linear.
-// ---------------------------------------------------------------------------
+/**
+ * @brief A spatial 6-vector split into an angular and a linear @ref Vec3.
+ * @note @c operator[] indexes @c [0] == angular, @c [1] == linear (SimTK
+ *       convention). Used for spatial velocities, accelerations, and wrenches
+ *       (angular = moment/torque, linear = force). The free @ref dot sums both
+ *       halves.
+ */
 struct SpatialVec {
     Vec3 angular;
     Vec3 linear;
@@ -644,9 +698,15 @@ inline auto operator*(Real scalar, const SpatialVec& vec) -> SpatialVec {
     return vec * scalar;
 }
 
-// ---------------------------------------------------------------------------
-//  Inertia: full 2nd mass moment about a point. SimTK Inertia(p, m) / Inertia(0).
-// ---------------------------------------------------------------------------
+/**
+ * @brief The full second mass moment (mass-weighted inertia tensor) about a point.
+ *
+ * Built either as an isotropic diagonal (@c Inertia(moment)) or as the inertia of
+ * a point mass at an offset (@c Inertia(point, mass) == @c m(|p|^2 I - p p^T));
+ * additive via @c operator+. Distinct from @ref MassProperties (which stores the
+ * per-unit-mass @ref UnitInertia) and from @ref SpatialInertia (the 6x6 operator);
+ * see the OQ-4 note in the module findings.
+ */
 struct Inertia {
     SymMat33 moments{SymMat33::zero()};
 
@@ -686,11 +746,15 @@ struct Inertia {
     }
 };
 
-// ---------------------------------------------------------------------------
-//  SpatialInertia: rigid-body spatial inertia about the body origin.
-//  Mk_G = SpatialInertia(mass, p_BBc_G, G_Bo_G).  Block form (about origin):
-//      [[mass*G, mass*crossMat(com)], [~., mass*I]].
-// ---------------------------------------------------------------------------
+/**
+ * @brief Rigid-body spatial inertia about the body origin, as mass, mass center
+ *        offset @c com (origin->COM), and @ref UnitInertia about the origin.
+ *
+ * Acts as the 6x6 spatial mass operator: @c operator*(SpatialVec) maps a spatial
+ * velocity to spatial momentum (block form @c [[m*G, m*crossMat(com)],[~., m*I]],
+ * delegated to @ref ArticulatedInertia for a single source of truth). Distinct
+ * from @ref MassProperties and @ref Inertia; see the OQ-4 note in the findings.
+ */
 struct SpatialInertia {
     Real mass{0};
     Vec3 com{0, 0, 0};                         // p_BBc (origin -> COM)
@@ -717,12 +781,17 @@ struct SpatialInertia {
     [[nodiscard]] auto operator*(const SpatialVec& vel) const -> SpatialVec;
 };
 
-// ---------------------------------------------------------------------------
-//  ArticulatedInertia: symmetric 6x6 in 3 blocks
-//      P = [[angAng, angLin],[~angLin, linLin]]
-//      out.angular = angAng*w + angLin*v ;  out.linear = ~angLin*w + linLin*v
-//  Engine ctor order: (mass=linLin, massMoment=angLin, inertia=angAng).
-// ---------------------------------------------------------------------------
+/**
+ * @brief A symmetric spatial 6x6 inertia in three 3x3 blocks
+ *        @c P = [[angAng, angLin],[~angLin, linLin]].
+ *
+ * Acting on a spatial vector: @c out.angular = angAng*w + angLin*v,
+ * @c out.linear = ~angLin*w + linLin*v. The three-block constructor takes
+ * @c (massBlock=linLin, momentBlock=angLin, inertiaBlock=angAng), matching the
+ * engine's call order. @ref shift rigidly translates the inertia to a point
+ * @c offset away (@c Phi(offset) P ~Phi(offset)); the articulated-body recursion
+ * uses @c operator+= / @c operator- to assemble and remove child contributions.
+ */
 struct ArticulatedInertia {
     SymMat33 angAng{SymMat33::zero()}; // J
     Mat33 angLin{Mat33::zero()};       // F
@@ -780,11 +849,14 @@ inline auto SpatialInertia::operator*(const SpatialVec& vel) const -> SpatialVec
     return ArticulatedInertia(*this) * vel; // identical block math, single source of truth
 }
 
-// ---------------------------------------------------------------------------
-//  PhiMatrix: rigid shift with offset l() (parent origin -> child).
-//      Phi(l)  * [a; b] = [a + l x b; b]
-//      ~Phi(l) * [a; b] = [a; b + a x l]
-// ---------------------------------------------------------------------------
+/**
+ * @brief The rigid-body shift operator @c Phi(l) with offset @c l (parent origin
+ *        -> child origin).
+ *
+ * @c Phi(l) * [a; b] == [a + l x b; b] shifts a spatial force/velocity across a
+ * rigid offset; its transpose @ref PhiMatrixTranspose gives
+ * @c ~Phi(l) * [a; b] == [a; b + a x l]. @c operator~ returns the transpose.
+ */
 struct PhiMatrixTranspose;
 
 struct PhiMatrix {
@@ -815,9 +887,17 @@ inline auto PhiMatrix::operator~() const -> PhiMatrixTranspose {
     return PhiMatrixTranspose{offset};
 }
 
-// ---------------------------------------------------------------------------
-//  MassProperties: mass + COM + unit inertia.
-// ---------------------------------------------------------------------------
+/**
+ * @brief Body mass properties: mass, mass center @c com, and @ref UnitInertia
+ *        (inertia per unit mass) about the mass center.
+ *
+ * Constructing from a full @ref Inertia divides by mass to store the unit
+ * inertia (and yields a zero tensor for a massless body). @ref reexpress rotates
+ * the properties into a new frame (@c com' = ~R*com, unit inertia re-expressed);
+ * @ref toSpatialInertia converts to the 6x6 @ref SpatialInertia operator. This is
+ * the storage/description type; @ref SpatialInertia and @ref Inertia are the
+ * operator and full-tensor forms (OQ-4, see findings).
+ */
 struct MassProperties {
     Real mass{0};
     Vec3 com{0, 0, 0};

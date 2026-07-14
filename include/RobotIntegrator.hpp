@@ -1,36 +1,20 @@
 #pragma once
-// ============================================================================
-//  RobotIntegrator.hpp -- the fixed-step velocity-Verlet driver, as FUNCTION
-//  TEMPLATES on the force-bridge type.
-//
-//  WHY A TEMPLATE. verletStep/stepTo/checkReversibility only ever touch the
-//  bridge through `bridge.evaluate(s)`. Templating on the bridge type lets the
-//  unit tests drive the REAL integrator with a test-only, OpenMM-free bridge
-//  (tests/AnalyticForceBridge.hpp) -- no faking, no std::function indirection,
-//  zero runtime cost in production (the only instantiation there is the real
-//  ForceBridge). This is the minimal change that unlocks every integrator /
-//  energy-conservation / reversibility / ensemble test without OpenMM.
-//
-//  These definitions were moved verbatim out of src/RobotEngine.cpp (only
-//  `ForceBridge& bridge` -> `Bridge& bridge`); advanceQuatExp was a file-local
-//  static there and moves here with them (its sole caller is verletStep). Note
-//  RobotEngine / RobotModel / JointType are in the GLOBAL namespace (only the
-//  math types live in `robo`), so these definitions and the using-block below
-//  mirror the file-scope environment RobotEngine.cpp provided.
-//
-//  LEAF HEADER: include this from the TUs that actually call the integrator
-//  (src/World.cpp and the integrator tests). It is intentionally NOT included by
-//  RobotEngine.hpp, to avoid the RobotEngine.hpp <-> Constraints.hpp cycle
-//  (Constraints.hpp includes RobotEngine.hpp; this header needs the COMPLETE
-//  ConstraintSet, so it includes Constraints.hpp itself).
-//
-//  ROBO_CHECK: the optional per-step NaN-scan macro is a development aid defined
-//  inside src/RobotEngine.cpp. The always-on correctness guards (forcesFinite /
-//  velocitiesSane local lambdas, and the corrector-convergence throw) live in
-//  the bodies below and are unaffected. When this header is included by a TU
-//  that has NOT defined ROBO_CHECK (every caller), it is a no-op, which keeps all
-//  instantiations of a given Bridge identical across TUs (no ODR surprise).
-// ============================================================================
+/**
+ * @file RobotIntegrator.hpp
+ * @brief Template definitions of the fixed-step leapfrog HMC driver
+ *        (@c RobotEngine::verletStep / @c stepTo / @c checkReversibility) and
+ *        their private position/velocity helpers.
+ *
+ * The three public entry points are declared in @c RobotEngine.hpp (documented
+ * there) and defined here as templates on the force-bridge type: they touch the
+ * bridge only through @c bridge.evaluate(s), so the same integrator runs against
+ * the production @c ForceBridge and against test-only OpenMM-free bridges with no
+ * runtime indirection. The private helpers below are internal to this
+ * translation unit.
+ * @note Include this from the translation units that call the integrator; it is
+ *       deliberately not included by @c RobotEngine.hpp, to avoid the
+ *       @c RobotEngine.hpp <-> @c Constraints.hpp include cycle.
+ */
 
 #include <algorithm>
 #include <array>
@@ -39,6 +23,7 @@
 #include <vector>
 
 #include "Constraints.hpp"
+#include "JointKernels.hpp"
 #include "RobotEngine.hpp"
 #include "robot_math.hpp"
 
@@ -63,40 +48,278 @@ using robo::Transform;
 using robo::Vec3;
 using robo::Vec4;
 
-// exact unit-quaternion advance (exponential map); sole caller is verletStep.
-// -------- exact unit-quaternion advance (exponential map) ------------------
-// Advance a unit quaternion under a constant angular velocity w_F expressed in
-// the PARENT (F) frame, consistent with the engine's qdot = 1/2 (0,w_F) (x) q
-// (left multiply; matches convertAngVelToQuaternionDot / N(q)). With theta =
-// 1/2 |w| h: Dq = (cos theta, sin theta * w_hat) and q1 = Dq (x) q0. Both
-// operands are unit, so q1 is unit BY CONSTRUCTION -- the |q|^2 -> Inf ->
-// q/sqrt(Inf) = 0 overflow path of the linear "q += h*qdot" drift cannot occur.
-// Reversible: negating w gives Dq^-1, so q0 = Dq^-1 (x) q1 (HMC needs this).
-// As h -> 0 it reduces to q0 + h * (1/2 (0,w) (x) q0) = q0 + h * qdot0.
-inline void advanceQuatExp(const Real* q0, const Vec3& wF, Real h, Real* q1) {
-    const Real wn = std::sqrt(wF[0] * wF[0] + wF[1] * wF[1] + wF[2] * wF[2]);
-    Real a, b, c, d; // Dq = (a, b, c, d)
-    if (wn > Real(1e-12)) {
-        const Real theta = Real(0.5) * wn * h;
-        const Real ssc = std::sin(theta) / wn; // sin(theta) / |w|
-        a = std::cos(theta);
-        b = ssc * wF[0];
-        c = ssc * wF[1];
-        d = ssc * wF[2];
-    } else {
-        a = Real(1); // small-angle limit: Dq ~ (1, 1/2 h w)
-        b = Real(0.5) * h * wF[0];
-        c = Real(0.5) * h * wF[1];
-        d = Real(0.5) * h * wF[2];
+// verletStep helpers (SPLIT-I1): every expression below is unchanged from
+// verletStep's former inline body, only the function boundary and parameter
+// threading are new. driftPositions/cartesianSolvent* are non-template (they
+// never touch Bridge); velocityCorrector is a template over the evalVel /
+// velocitiesSane / restorePreStep closure types (unique per verletStep<Bridge>
+// instantiation), held by reference.
+
+/**
+ * @brief Drift the generalized coordinates over one step (internal helper).
+ * @param[in]     m     Immutable model.
+ * @param[in,out] s     State; writes the drifted @c q and renormalizes
+ *                      quaternion blocks.
+ * @param[in]     q0    Pre-step coordinates.
+ * @param[in]     qdot0 Pre-step coordinate rates.
+ * @param[in]     u0    Pre-step generalized speeds.
+ * @param[in]     udot0 Pre-step accelerations.
+ * @param[in]     qdd0  Pre-step coordinate second derivatives.
+ * @param[in]     h     Step size.
+ * @param[in]     nq    Coordinate count.
+ * @post Scalar DOFs use the second-order Taylor drift; quaternion DOFs advance by
+ *       the exact exponential map from the midpoint angular velocity, staying
+ *       unit and reversible (INV-9).
+ * @note The exponential-map quaternion drift deliberately diverges from a
+ *       linear-Taylor-plus-renormalize update: it bypasses the quaternion second
+ *       derivative and so is robust to a latent N/qddot inconsistency in the
+ *       Free-joint kinematics that otherwise pumps kinetic energy. It reduces to
+ *       the linear update as @c h -> 0, so it changes only the proposal, not the
+ *       target distribution.
+ */
+inline void driftPositions(const RobotModel& m,
+                           RobotState& s,
+                           const std::vector<Real>& q0,
+                           const std::vector<Real>& qdot0,
+                           const std::vector<Real>& u0,
+                           const std::vector<Real>& udot0,
+                           const std::vector<Real>& qdd0,
+                           Real h,
+                           int nq) {
+    Real* q = s.q();
+    for (int i = 0; i < nq; ++i) {
+        q[i] = q0[i] + (h * qdot0[i]) + ((h * h / 2) * qdd0[i]);
     }
-    const Real w = q0[0], x = q0[1], y = q0[2], z = q0[3];
-    // Hamilton product q1 = Dq (x) q0  (LEFT multiply), consistent with the
-    // parent-frame map qdot = 1/2 (0,w) (x) q. (C-3 fix: the body previously
-    // computed the right product q0 (x) Dq, which pairs with the body-frame map.)
-    q1[0] = a * w - b * x - c * y - d * z;
-    q1[1] = a * x + b * w + c * z - d * y;
-    q1[2] = a * y + c * w + d * x - b * z;
-    q1[3] = a * z + d * w + b * y - c * x;
+
+    for (int bodyIx = 1; bodyIx < m.numBodies; ++bodyIx) {
+        if (!m.isQuaternionBody(bodyIx)) {
+            continue;
+        }
+        const int qOff = m.bodyQIndex[bodyIx];
+        const int uOff = m.bodyUIndex[bodyIx];
+        std::array<Real, 4> qNew;
+        robo::jointDriftQuat(
+            m.bodyJoint[bodyIx], q0.data(), qOff, u0.data(), udot0.data(), uOff, s.X_FM()[bodyIx], h, qNew.data());
+        q[qOff + 0] = qNew[0];
+        q[qOff + 1] = qNew[1];
+        q[qOff + 2] = qNew[2];
+        q[qOff + 3] = qNew[3];
+        // translation block (Free q[qOff+4..6], FreeLine q[qOff+4..6]) keeps its
+        // Taylor update from the loop above; Ball has no translation block.
+    }
+    RobotEngine::normalizeQuaternions(m, s); // mops up ~1e-16 rounding after the exp-map; never rescues an overflow
+}
+
+/**
+ * @brief Explicit Verlet position drift of the Cartesian solvent atoms
+ *        (internal helper): @c x1 = x0 + h*v0 + (h^2/2)*f0/m.
+ * @param[in]  solvAtoms Indices of the Cartesian solvent atoms.
+ * @param[in]  solvInvM  Inverse masses, aligned with @p solvAtoms.
+ * @param[in]  xs0       Pre-step positions.
+ * @param[in]  vs0       Pre-step velocities.
+ * @param[in]  fs0       Pre-step forces.
+ * @param[out] posG      Ground positions; only the solvent slots are written.
+ * @param[in]  h         Step size.
+ * @param[in]  nSolv     Solvent atom count.
+ * @note Written directly into @p posG, which the body-frame position refresh
+ *       skips for these atoms, so the drift survives into the force evaluation.
+ */
+inline void cartesianSolventDrift(const std::vector<int>& solvAtoms,
+                                  const std::vector<Real>& solvInvM,
+                                  const std::vector<Vec3>& xs0,
+                                  const std::vector<Vec3>& vs0,
+                                  const std::vector<Vec3>& fs0,
+                                  Vec3* posG,
+                                  Real h,
+                                  int nSolv) {
+    const Real h2half = Real(0.5) * h * h;
+    for (int j = 0; j < nSolv; ++j) {
+        const int a = solvAtoms[j];
+        const Real im = solvInvM[j];
+        posG[a] = Vec3(xs0[j][0] + h * vs0[j][0] + h2half * im * fs0[j][0],
+                       xs0[j][1] + h * vs0[j][1] + h2half * im * fs0[j][1],
+                       xs0[j][2] + h * vs0[j][2] + h2half * im * fs0[j][2]);
+    }
+}
+
+/**
+ * @brief Explicit Verlet velocity half-kick of the Cartesian solvent atoms
+ *        (internal helper): @c v1 = v0 + (h/2)*(f0 + f1)/m.
+ * @param[in]  solvAtoms Indices of the Cartesian solvent atoms.
+ * @param[in]  solvInvM  Inverse masses, aligned with @p solvAtoms.
+ * @param[in]  vs0       Pre-step velocities.
+ * @param[in]  fs0       Pre-step forces.
+ * @param[in]  frcG      End-of-step Ground forces (evaluated once at the drifted
+ *                       positions).
+ * @param[out] velG      Ground velocities; only the solvent slots are written.
+ * @param[in]  h         Step size.
+ * @param[in]  nSolv     Solvent atom count.
+ * @post Completes the symmetric Verlet step for the solvent atoms; the positions
+ *       are frozen through the solute corrector, so this half-kick is explicit
+ *       and needs no iteration.
+ */
+inline void cartesianSolventKick(const std::vector<int>& solvAtoms,
+                                 const std::vector<Real>& solvInvM,
+                                 const std::vector<Vec3>& vs0,
+                                 const std::vector<Vec3>& fs0,
+                                 const Vec3* frcG,
+                                 Vec3* velG,
+                                 Real h,
+                                 int nSolv) {
+    for (int j = 0; j < nSolv; ++j) {
+        const int a = solvAtoms[j];
+        const Real hHalfInvM = Real(0.5) * h * solvInvM[j];
+        velG[a] = Vec3(vs0[j][0] + hHalfInvM * (fs0[j][0] + frcG[a][0]),
+                       vs0[j][1] + hHalfInvM * (fs0[j][1] + frcG[a][1]),
+                       vs0[j][2] + hHalfInvM * (fs0[j][2] + frcG[a][2]));
+    }
+}
+
+/**
+ * @brief Implicit-trapezoid velocity correction by functional iteration
+ *        (internal helper).
+ * @tparam VelSaneFn Predicate reporting whether the current velocities are finite.
+ * @tparam EvalVelFn Re-evaluates the velocity-dependent state and forces.
+ * @tparam RestoreFn Restores the pre-step @c q / @c u on an early reject.
+ * @param[in]     u0    Pre-step generalized speeds.
+ * @param[in]     udot0 Pre-step accelerations.
+ * @param[in]     h     Step size.
+ * @param[in]     nu    Generalized-speed count.
+ * @param[in,out] u     Generalized speeds refined toward
+ *                      @c u1 = u0 + (h/2)(udot0 + udot1).
+ * @param[in]     udot  Current accelerations, refreshed by @p evalVel.
+ * @param[in]     velocitiesSane Sanity predicate (@p VelSaneFn).
+ * @param[in]     evalVel        Velocity re-evaluation (@p EvalVelFn).
+ * @param[in]     restorePreStep Pre-step restore (@p RestoreFn).
+ * @param[out]    correctorConverged Optional; whether the fixed point was reached.
+ * @return @c false for every early-reject outcome (after @p restorePreStep has
+ *         run); @c true otherwise, whether or not the corrector converged.
+ * @note The step is taken unconditionally on non-convergence; only a caller that
+ *       reads @p correctorConverged reacts to it (see @c RobotEngine::verletStep).
+ */
+template <class VelSaneFn, class EvalVelFn, class RestoreFn>
+inline bool velocityCorrector(const std::vector<Real>& u0,
+                              const std::vector<Real>& udot0,
+                              Real h,
+                              int nu,
+                              Real* u,
+                              const Real* udot,
+                              VelSaneFn&& velocitiesSane,
+                              EvalVelFn&& evalVel,
+                              RestoreFn&& restorePreStep,
+                              bool* correctorConverged) {
+    for (int i = 0; i < nu; ++i) {
+        u[i] = u0[i] + (h * udot0[i]); // u1_est
+    }
+
+    // second half of the original combined `evalPos() || evalVel()` check;
+    // the caller already verified evalPos() before calling this function.
+    if (!evalVel()) {
+        restorePreStep();
+        return false;
+    }
+
+    // Simbody: tol = min(1e-4, 0.1*accuracy). For fixed-step HMC (default accuracy
+    // ~1e-3) this evaluates to 1e-4. Plain functional iteration, no under-relaxation,
+    // max 10 sweeps -- matching VerletIntegrator::attemptDAEStep exactly.
+    const Real tol = Real(1e-4);
+    Real prevChange = std::numeric_limits<Real>::infinity();
+    Real lastChange = std::numeric_limits<Real>::infinity(); // for the dt-too-large message
+    int usedIters = 0;
+    bool converged = false;
+
+    for (int iter = 0; iter < 10; ++iter) {
+        ++usedIters;
+        Real num = 0;
+        Real den = 0; // Simbody's relative 2-norm change
+
+        for (int i = 0; i < nu; ++i) {
+            const Real un = u0[i] + ((h / 2) * (udot0[i] + udot[i]));
+            const Real d = un - u[i];
+            num += d * d;
+            den += u[i] * u[i];
+            u[i] = un;
+        }
+
+        // Genuine non-finite / runaway. In Simbody this is the realize()/project()
+        // exception path: caught, and in fixed-step mode the step still "succeeds",
+        // propagating the bad state to the move-level energy validation, which
+        // rejects the MOVE. We short-circuit to the same outcome by rejecting here.
+        if (!velocitiesSane()) {
+            restorePreStep();
+            return false;
+        }
+        // q is unchanged by the corrector, so positions/forces (evalPos) are already
+        // current from the single evaluation above; only re-derive velocity terms.
+        if (!evalVel()) {
+            restorePreStep();
+            return false;
+        }
+
+        const Real change = std::sqrt(num) / (std::sqrt(den) + Real(1e-30));
+        lastChange = change;
+        if (!std::isfinite(change) || change > Real(1e6)) {
+            restorePreStep();
+            return false;
+        }
+
+        if (change <= tol) {
+            converged = true;
+            break; // converged
+        }
+
+        // Functional iteration stopped contracting (after iter > 1, to skip the
+        // crude forward-Euler seed's first non-monotone blip). We stop iterating
+        // here; whether to take the step or reject is decided after the loop.
+        if (iter > 1 && change > prevChange) {
+            break;
+        }
+
+        prevChange = change;
+    }
+
+    // dt-too-large guard (deliberately STRICTER than Simbody's "take the step").
+    // Reaching here without convergence means the implicit-trapezoid corrector
+    // could not find its fixed point at this dt for the CURRENT configuration --
+    // a FINITE, bounded solve that simply will not contract. This is distinct from
+    // a steric clash (non-finite force / runaway u), which is handled above as a
+    // move rejection (return false) because clashes are a normal, transient part of
+    // sampling.
+    //
+    // THEORY (boilerplate "Propagation" / RATTLE): the fixed step is taken
+    // UNCONDITIONALLY -- "a non-converged corrector does not shrink dt or reject
+    // the step ... the best available velocity estimate is accepted", and "it is
+    // the trajectory-level Metropolis test, not per-step control, that supplies
+    // correctness." So on non-convergence we KEEP the advanced position q (set by
+    // the position drift before this loop; the corrector only refines u) and the
+    // last/best velocity iterate, and return success. A step that pumps energy
+    // then shows up as a large dH and is rejected at the MOVE level (the caller
+    // restores its saved q), which is the correct, theory-sanctioned behavior.
+    //
+    // The previous code instead called restorePreStep() here and still returned
+    // true: that silently UNDID the step (q == q0) while reporting success, so the
+    // move-level dH was always ~0 and every proposal was "accepted" as a no-op --
+    // i.e. the trajectory froze in place. That both violated the theory above and
+    // produced exactly that frozen-coordinate symptom; it is removed. The warning
+    // is kept (fail-loud diagnostic): a non-converged corrector means dt is too
+    // large for this geometry, so most such steps will be rejected by Metropolis
+    // until the world's timestep is reduced.
+    if (correctorConverged) {
+        *correctorConverged = converged;
+    }
+    if (!converged) {
+        std::fprintf(stderr,
+                     "[verlet] world: velocity corrector did not converge at dt=%.6g ps "
+                     "(relative change %.3e > tol %.3e after %d iterations). The timestep is "
+                     "likely too large for the current configuration; the step is still taken "
+                     "(THEORY: trajectory-level Metropolis supplies correctness) but expect "
+                     "rejections until the timestep is reduced.\n",
+                     (double)h,
+                     (double)lastChange,
+                     (double)tol,
+                     usedIters);
+    }
+    return true;
 }
 
 template <class Bridge>
@@ -206,74 +429,12 @@ bool RobotEngine::verletStep(const RobotModel& m,
     };
 
     // ---- position drift ----
-    // Scalar DOFs (Torsion, Translation, and the Free TRANSLATION block): 2nd-order
-    // Taylor q1 = q0 + h*qdot0 + (h^2/2)*qddot0 (local error O(h^3); global method
-    // order 2 -- see THEORY 5.2).
-    //
-    // Quaternion DOFs (Free, Ball): EXACT exponential-map advance from the
-    // midpoint angular velocity wHalf = u0 + (h/2)*udot0, applied as a left
-    // Hamilton product onto q0. This DELIBERATELY diverges from Simbody's
-    // linear-Taylor-plus-renormalize quaternion update, and is NOT a bug to be
-    // "matched away": it keeps |q| = 1 by construction, is reversible, reduces to
-    // the linear update as h -> 0 (so it changes only the proposal, not the target
-    // -- THEORY 5.4), and -- crucially -- it advances the orientation purely from
-    // the angular velocity, BYPASSING the quaternion second derivative qddot.
-    // The linear-Taylor update instead leans on qddot (calcQDotDot); with the
-    // port's reimplemented Free-joint kinematics that path injects kinetic energy
-    // through the root body and (via the articulated recursion) the whole tree --
-    // an observed ~+1300 kJ/mol/traj KE pump even at 1 fs. The exp-map is robust to
-    // that latent N/qddot inconsistency. ROOT-CAUSE TODO: golden-test the Free-joint
-    // quaternion kinematics (N, Ndot, qddot) against Simbody on a single free body
-    // (THEORY 3.4); until that is closed, the exp-map is the correct propagator.
-    for (int i = 0; i < nq; ++i) {
-        q[i] = q0[i] + (h * qdot0[i]) + ((h * h / 2) * qdd0[i]);
-    }
-
-    for (int bodyIx = 1; bodyIx < m.numBodies; ++bodyIx) {
-        if (!m.isQuaternionBody(bodyIx)) {
-            continue;
-        }
-        const int qOff = m.bodyQIndex[bodyIx];
-        const int uOff = m.bodyUIndex[bodyIx];
-        // Half-step angular velocity in F. Ball/Free: the first 3 u ARE w_FM.
-        // FreeLine: the 2 rotational speeds are (x,y) of w_FM expressed in M, so
-        // w_FM = R_FM*(u0,u1,0) (R_FM from the step-start X_FM, still valid here).
-        Vec3 wHalf;
-        if (m.bodyJoint[bodyIx] == JointType::FreeLine) {
-            const Rotation& R_FM = s.X_FM()[bodyIx].R();
-            wHalf = R_FM
-                    * Vec3(u0[uOff + 0] + (0.5 * h * udot0[uOff + 0]),
-                           u0[uOff + 1] + (0.5 * h * udot0[uOff + 1]),
-                           0);
-        } else {
-            wHalf = Vec3(u0[uOff + 0] + (0.5 * h * udot0[uOff + 0]),
-                         u0[uOff + 1] + (0.5 * h * udot0[uOff + 1]),
-                         u0[uOff + 2] + (0.5 * h * udot0[uOff + 2])); // w_FM in F, step start
-        }
-        std::array<Real, 4> qNew;
-        advanceQuatExp(&q0[qOff], wHalf, h, qNew.data()); // overrides the 4 quaternion slots
-        q[qOff + 0] = qNew[0];
-        q[qOff + 1] = qNew[1];
-        q[qOff + 2] = qNew[2];
-        q[qOff + 3] = qNew[3];
-        // translation block (Free q[qOff+4..6], FreeLine q[qOff+4..6]) keeps its
-        // Taylor update from the loop above; Ball has no translation block.
-    }
-    normalizeQuaternions(m, s); // mops up ~1e-16 rounding after the exp-map; never rescues an overflow
+    driftPositions(m, s, q0, qdot0, u0, udot0, qdd0, h, nq);
 
     // Cartesian solvent position drift: x1 = x0 + h v0 + (h^2/2) a0, a0 = f0/m.
     // Written straight into posG; fillAtomPositionsFromBodies (below) skips these
     // atoms, so the drift survives and feeds the OpenMM force eval.
-    {
-        const Real h2half = Real(0.5) * h * h;
-        for (int j = 0; j < nSolv; ++j) {
-            const int a = solvAtoms[j];
-            const Real im = solvInvM[j];
-            posG[a] = Vec3(xs0[j][0] + h * vs0[j][0] + h2half * im * fs0[j][0],
-                           xs0[j][1] + h * vs0[j][1] + h2half * im * fs0[j][1],
-                           xs0[j][2] + h * vs0[j][2] + h2half * im * fs0[j][2]);
-        }
-    }
+    cartesianSolventDrift(solvAtoms, solvInvM, xs0, vs0, fs0, posG, h, nSolv);
 
     auto refreshPos = [&]() {
         realizePosition(m, s);
@@ -281,11 +442,6 @@ bool RobotEngine::verletStep(const RobotModel& m,
     };
     refreshPos();
     cset.enforcePositionConstraints(m, s, refreshPos); // localProjectQ
-
-    // ---- velocity: implicit trapezoid + functional iteration ----
-    for (int i = 0; i < nu; ++i) {
-        u[i] = u0[i] + (h * udot0[i]); // u1_est
-    }
 
     // Position/force derivatives (evalPos) are a pure function of q, and the velocity
     // corrector below NEVER changes q -- only u. So realizePosition and the OpenMM force
@@ -326,110 +482,17 @@ bool RobotEngine::verletStep(const RobotModel& m,
         calcQDotDot(m, s);
         return true;
     };
-    if (!evalPos() || !evalVel()) {
+    // evalPos-only half of the original combined `evalPos() || evalVel()` check;
+    // evalVel's half now runs as velocityCorrector's own first action below, so
+    // the short-circuit (evalVel only runs if evalPos succeeded) is preserved.
+    if (!evalPos()) {
         restorePreStep();
         return false;
     }
 
-    // Simbody: tol = min(1e-4, 0.1*accuracy). For fixed-step HMC (default accuracy
-    // ~1e-3) this evaluates to 1e-4. Plain functional iteration, no under-relaxation,
-    // max 10 sweeps -- matching VerletIntegrator::attemptDAEStep exactly.
-    const Real tol = Real(1e-4);
-    Real prevChange = std::numeric_limits<Real>::infinity();
-    Real lastChange = std::numeric_limits<Real>::infinity(); // for the dt-too-large message
-    int usedIters = 0;
-    bool converged = false;
-
-    for (int iter = 0; iter < 10; ++iter) {
-        ++usedIters;
-        Real num = 0;
-        Real den = 0; // Simbody's relative 2-norm change
-
-        for (int i = 0; i < nu; ++i) {
-            const Real un = u0[i] + ((h / 2) * (udot0[i] + udot[i]));
-            const Real d = un - u[i];
-            num += d * d;
-            den += u[i] * u[i];
-            u[i] = un;
-        }
-
-        // Genuine non-finite / runaway. In Simbody this is the realize()/project()
-        // exception path: caught, and in fixed-step mode the step still "succeeds",
-        // propagating the bad state to the move-level energy validation, which
-        // rejects the MOVE. We short-circuit to the same outcome by rejecting here.
-        if (!velocitiesSane()) {
-            restorePreStep();
-            return false;
-        }
-        // q is unchanged by the corrector, so positions/forces (evalPos) are already
-        // current from the single evaluation above; only re-derive velocity terms.
-        if (!evalVel()) {
-            restorePreStep();
-            return false;
-        }
-
-        const Real change = std::sqrt(num) / (std::sqrt(den) + Real(1e-30));
-        lastChange = change;
-        if (!std::isfinite(change) || change > Real(1e6)) {
-            restorePreStep();
-            return false;
-        }
-
-        if (change <= tol) {
-            converged = true;
-            break; // converged
-        }
-
-        // Functional iteration stopped contracting (after iter > 1, to skip the
-        // crude forward-Euler seed's first non-monotone blip). We stop iterating
-        // here; whether to take the step or reject is decided after the loop.
-        if (iter > 1 && change > prevChange) {
-            break;
-        }
-
-        prevChange = change;
-    }
-
-    // dt-too-large guard (deliberately STRICTER than Simbody's "take the step").
-    // Reaching here without convergence means the implicit-trapezoid corrector
-    // could not find its fixed point at this dt for the CURRENT configuration --
-    // a FINITE, bounded solve that simply will not contract. This is distinct from
-    // a steric clash (non-finite force / runaway u), which is handled above as a
-    // move rejection (return false) because clashes are a normal, transient part of
-    // sampling.
-    //
-    // THEORY (boilerplate "Propagation" / RATTLE): the fixed step is taken
-    // UNCONDITIONALLY -- "a non-converged corrector does not shrink dt or reject
-    // the step ... the best available velocity estimate is accepted", and "it is
-    // the trajectory-level Metropolis test, not per-step control, that supplies
-    // correctness." So on non-convergence we KEEP the advanced position q (set by
-    // the position drift before this loop; the corrector only refines u) and the
-    // last/best velocity iterate, and return success. A step that pumps energy
-    // then shows up as a large dH and is rejected at the MOVE level (the caller
-    // restores its saved q), which is the correct, theory-sanctioned behavior.
-    //
-    // The previous code instead called restorePreStep() here and still returned
-    // true: that silently UNDID the step (q == q0) while reporting success, so the
-    // move-level dH was always ~0 and every proposal was "accepted" as a no-op --
-    // i.e. the trajectory froze in place. That both violated the theory above and
-    // produced exactly that frozen-coordinate symptom; it is removed. The warning
-    // is kept (fail-loud diagnostic): a non-converged corrector means dt is too
-    // large for this geometry, so most such steps will be rejected by Metropolis
-    // until the world's timestep is reduced.
-    if (correctorConverged) {
-        *correctorConverged = converged;
-    }
-    if (!converged) {
-        std::fprintf(stderr,
-                     "[verlet] world: velocity corrector did not converge at dt=%.6g ps "
-                     "(relative change %.3e > tol %.3e after %d iterations). The timestep is "
-                     "likely too large for the current configuration; the step is still taken "
-                     "(THEORY: trajectory-level Metropolis supplies correctness) but expect "
-                     "rejections until the timestep is reduced.\n",
-                     (double)h,
-                     (double)lastChange,
-                     (double)tol,
-                     usedIters);
+    // ---- velocity: implicit trapezoid + functional iteration ----
+    if (!velocityCorrector(u0, udot0, h, nu, u, udot, velocitiesSane, evalVel, restorePreStep, correctorConverged)) {
+        return false;
     }
 
     cset.enforceVelocityConstraints(m, s); // localProjectU (RATTLE)
@@ -439,13 +502,7 @@ bool RobotEngine::verletStep(const RobotModel& m,
     // positions are frozen through the solute corrector, so f1 = frcG (evaluated
     // once at the drifted x1 by evalPos) is the end-of-step force -- the update
     // is explicit and exact, no iteration. This completes the symmetric Verlet.
-    for (int j = 0; j < nSolv; ++j) {
-        const int a = solvAtoms[j];
-        const Real hHalfInvM = Real(0.5) * h * solvInvM[j];
-        velG[a] = Vec3(vs0[j][0] + hHalfInvM * (fs0[j][0] + frcG[a][0]),
-                       vs0[j][1] + hHalfInvM * (fs0[j][1] + frcG[a][1]),
-                       vs0[j][2] + hHalfInvM * (fs0[j][2] + frcG[a][2]));
-    }
+    cartesianSolventKick(solvAtoms, solvInvM, vs0, fs0, frcG, velG, h, nSolv);
 
     s.time += h;
     return true;

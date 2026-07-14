@@ -26,6 +26,8 @@
 #include "RobotState.hpp"
 #include "StatTest.hpp"
 #include "TestHelpers.hpp"
+#include "support/SamplingHarness.hpp"
+#include "support/TestPhysConstants.hpp"
 
 using namespace robo;
 using rtest::attachAtoms;
@@ -34,20 +36,15 @@ using rtest::buildBentTorsionChain;
 using rtest::buildForest;
 using rtest::HmcDriver;
 using rtest::Rng;
+using rtest::phys::kB;
+using rtest::phys::kT300;
 using rtest::stat::chiSquareCritical;
 using rtest::stat::chiSquareStatistic;
 using rtest::stat::expectedFromWeights;
 using rtest::stat::Histogram;
+using rtest::stat::slowEnabled;
 
 namespace {
-
-constexpr double kB = 0.0083144626;
-constexpr double T0 = 300.0;
-constexpr double kT300 = kB * T0;
-
-bool slowEnabled() {
-    return std::getenv("ROBOSAMPLE_SLOW_TESTS") != nullptr;
-}
 
 // Sub-sampled per-bin Gamma(shape, scaleKT) weight over a [0, hiBound] histogram
 // (lo == 0 assumed, matching every Histogram this file builds for a KE domain).
@@ -220,13 +217,12 @@ TEST(EnsembleValidation, PEobeysEnsembleSlope) {
         HmcDriver<AnalyticForceBridge> drv(m, s, bridge, cs, kB * T, Real(2e-3), 10, seed);
         Histogram h(0.0, 60.0, 40);
         const long N = 1'500'000;
-        for (long i = 0; i < N; ++i) {
-            drv.move();
+        rtest::runHmcChain(drv, N, /*stride*/ 1, [&](long /*i*/, bool /*acc*/) {
             RobotEngine::realizePosition(m, s);
             RobotEngine::fillAtomPositionsFromBodies(m, s);
             bridge.evaluate(s);
             h.add(static_cast<double>(bridge.calcPotentialEnergy(s)));
-        }
+        });
         return h;
     };
 

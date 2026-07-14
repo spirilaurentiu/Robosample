@@ -12,7 +12,9 @@
       "Bash(echo \"=== exit: $? ===\")",
       "Bash(git -C /home/victor/Robosample log --oneline -5 -- references/)",
       "Bash(git -C /home/victor/Robosample status --short references/)",
-      "Bash(env ROBOSAMPLE_SLOW_TESTS=1 ROBOSAMPLE_REQUIRE_OPENMM=1 timeout 590 python3 -m pytest tests/test_torsion_conformational.py -q --no-header -k \"ethane\")"
+      "Bash(env ROBOSAMPLE_SLOW_TESTS=1 ROBOSAMPLE_REQUIRE_OPENMM=1 timeout 590 python3 -m pytest tests/test_torsion_conformational.py -q --no-header -k \"ethane\")",
+      "mcp__scite__search_literature",
+      "WebSearch"
     ]
   }
 }

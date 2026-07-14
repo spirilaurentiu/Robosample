@@ -2,27 +2,60 @@
 
 #include <cstddef>
 #include <memory>
-#include <set>
 #include <stdexcept>
 #include <string>
-#include <tuple>
 #include <utility>
 #include <vector>
 
 #include "OpenMM.h"
 #include "TopologyElements.hpp"
+#include "bridge/AlchemyForceFactory.hpp"
 
-// Thin Robosample-owned wrapper around a single OpenMM System/Context (a
-// process-wide singleton). One OpenMM system for the whole run.
+/**
+ * @brief Process-singleton adapter that holds the one OpenMM
+ *        System/Context/Integrator for the whole run and exposes the runtime
+ *        energy/force evaluation surface plus configuration toggles.
+ *
+ * One OpenMM system serves the entire process. After construction the object
+ * owns the OpenMM objects handed to it by `OpenMMSystemBuilder` and (under
+ * `USE_CUDA`) the file-static `gGpuKin` device state. All evaluation entry
+ * points require `initialize()` to have succeeded and throw
+ * `std::runtime_error` otherwise.
+ *
+ * @note Units (INV-3): positions in nm, energies in kJ/mol, forces in
+ *       kJ/mol/nm - the convention `ForceBridge`/`ForceReducer` consume.
+ */
 class OpenMMContext {
     public:
+    /**
+     * @brief Returns the process-wide singleton, constructing it on first call.
+     * @return Reference to the single instance; lives for the whole process.
+     */
     static auto get() -> OpenMMContext& {
         static OpenMMContext omm;
         return omm;
     }
 
+    /**
+     * @brief Builds the OpenMM System/Integrator/Context from @p systemTopology
+     *        (via `OpenMMSystemBuilder`) and marks the singleton initialized.
+     *
+     * Must be called before any evaluation entry point. Reads the pre-set
+     * toggles (`setMTS`, `setSeparateForceGroups`, alchemy enable) and, under
+     * `USE_CUDA`, the `ROBO_CUDA_KINEMATICS` env var as the default for the fused
+     * path.
+     *
+     * @param[in] systemTopology  SoA topology (particles, box, forces, method).
+     *                            Borrowed for the duration of the call.
+     * @return `true` on success; `false` iff OpenMM `Context` construction threw
+     *         (the System/Integrator members are still populated, mirroring the
+     *         builder's partial-write-on-failure).
+     */
     auto initialize(const SystemTopology& systemTopology) -> bool;
 
+    /// @brief Releases device kinematics state then the Context/System/Integrator
+    ///        and resets to the uninitialized state. Safe to call when never
+    ///        initialized.
     void shutdown() {
         releaseGpuKinematics(); // free device buffers BEFORE the CUDA context dies
         integrator.reset();
@@ -33,38 +66,76 @@ class OpenMMContext {
         initialized = false;
     }
 
+    /**
+     * @brief Draws Maxwell-Boltzmann velocities on the live Context.
+     * @param[in] temperature  Target temperature in Kelvin.
+     * @param[in] seed         RNG seed for reproducibility.
+     * @pre `initialize()` succeeded.
+     */
     void setVelocitiesToTemperature(double temperature, int seed) {
         ensureInitialized();
         context->setVelocitiesToTemperature(temperature, seed);
     }
 
     // ---- NCMC alchemy (per-molecule intermolecular decoupling) -------------
-    // enableAlchemy stores the decoupled atom-index SET (Region A, docs/specs/
-    // ncmc-explicit-solvent/30-region-and-protocol-policy.md Sec.2, DECIDED:
-    // arbitrary set, not only contiguous) and a flag; the correction force is
-    // built in initialize() (which has the SystemTopology). PME/periodic is
-    // rejected there. setAlchemicalLambda drives the global "lambda_inter".
+
+    /**
+     * @brief Records Region A (the decoupled atom set) on the owned
+     *        `AlchemyForceFactory`; the decoupling forces are built later in
+     *        `initialize()`, which holds the topology.
+     *
+     * Forwards to `AlchemyForceFactory::enableAlchemy`. Must be called before
+     * `initialize()` to take effect. See @ref AlchemyForceFactory for the lambda
+     * semantics and the endpoint contract.
+     *
+     * @param[in] atomIndices  Region A atom indices; stored ascending and
+     *                         deduplicated (an arbitrary, possibly non-contiguous
+     *                         set is allowed).
+     */
     void enableAlchemy(const std::vector<int>& atomIndices);
-    // Convenience: contiguous [atomBegin,atomEnd) Region A.
+    /// @brief Convenience overload building Region A as the contiguous range
+    ///        `[atomBegin, atomEnd)`. @see enableAlchemy(const std::vector<int>&)
     void enableAlchemy(int atomBegin, int atomEnd);
+    /**
+     * @brief Sets the global `lambda_inter` on the live Context, driving the
+     *        alchemical coupling.
+     *
+     * No-op when alchemy was never enabled. `lambda_inter == 1` reproduces the
+     * unmodified force field (the endpoint HMC/NCMC acceptance relies on);
+     * `lambda_inter == 0` fully removes the A<->rest coupling. See @ref
+     * AlchemyForceFactory for what each path scales.
+     *
+     * @param[in] lambdaInter  Coupling parameter, conventionally in `[0, 1]`.
+     * @pre `initialize()` succeeded (unless alchemy disabled, then no-op).
+     */
     void setAlchemicalLambda(double lambdaInter);
 
+    /// @brief Potential energy [kJ/mol] cached by the last evaluation/integration.
+    /// @pre `initialize()` succeeded.
     [[nodiscard]] auto getPotentialEnergy() const -> double {
         ensureInitialized();
         return potentialEnergy;
     }
+    /// @brief Kinetic energy [kJ/mol] cached by the last `integrateTrajectory`.
+    /// @pre `initialize()` succeeded.
     [[nodiscard]] auto getKineticEnergy() const -> double {
         ensureInitialized();
         return kineticEnergy;
     }
 
-    // OpenMM's own degrees-of-freedom count for the whole system, matching the
-    // convention OpenMM's StateDataReporter uses: 3 per particle with nonzero
-    // mass (massless virtual sites carry no independent dof), minus the number
-    // of SHAKE/SETTLE distance constraints, minus 3 if a CMMotionRemover force
-    // (center-of-mass motion removal) is present. Used as the Cartesian world's
-    // n_dof, since model_.nu is NOT the physical dof there (Cartesian worlds
-    // collapse every atom into a single nu==1 body).
+    /**
+     * @brief OpenMM's whole-system degree-of-freedom count, matching
+     *        `StateDataReporter`'s convention.
+     *
+     * `3 * (particles with nonzero mass)` (massless virtual sites carry no
+     * independent DOF), minus SHAKE/SETTLE distance constraints, minus 3 if a
+     * `CMMotionRemover` is present. Consumed as the Cartesian world's `n_dof`,
+     * because `RobotModel::nu` is not the physical DOF there (a Cartesian world
+     * collapses every atom into a single `nu == 1` body).
+     *
+     * @return Physical degrees of freedom.
+     * @pre `initialize()` succeeded.
+     */
     [[nodiscard]] auto getNumDegreesOfFreedom() const -> int {
         ensureInitialized();
         int dof = 0;
@@ -85,34 +156,54 @@ class OpenMMContext {
         return dof;
     }
 
+    /// @brief One force group's labelled potential-energy contribution [kJ/mol],
+    ///        returned by `computePotentialEnergyByGroup`.
     struct ForceGroupEnergy {
         int group = 0;
         std::string name;
         double energy = 0.0; // kJ/mol
     };
 
+    /// @brief Toggle: when set, `initialize()` assigns each force its own group so
+    ///        `computePotentialEnergyByGroup` can break energy down per force.
+    ///        Set before `initialize()`.
     void setSeparateForceGroups(bool enabled) {
         separateForceGroups = enabled;
     }
+    /// @brief Current separate-force-groups toggle.
     [[nodiscard]] auto getSeparateForceGroups() const -> bool {
         return separateForceGroups;
     }
 
-    // Multiple-timestep (r-RESPA) control. When enabled, initialize() builds an
-    // MTSIntegrator instead of the single-rate VerletIntegrator: slow forces
-    // (Nonbonded, GBSA, NBFIX) go to force group 0 and are evaluated once per
-    // outer step; fast bonded forces go to group 1 and are evaluated
-    // `innerSubsteps` times. Only affects the Cartesian world's on-device MD
-    // (integrateTrajectory); the torsional worlds always get the full force sum.
-    // MUST be called before initialize(). innerSubsteps < 2 disables MTS.
+    /**
+     * @brief Multiple-timestep (r-RESPA) control. When enabled, `initialize()`
+     *        builds an `MTSIntegrator` instead of a plain `VerletIntegrator`.
+     *
+     * Slow forces (Nonbonded, GBSA, NBFIX) go to force group 0 and evaluate once
+     * per outer step; fast bonded forces go to group 1 and evaluate
+     * @p innerSubsteps times. Affects only the Cartesian world's on-device MD
+     * (`integrateTrajectory`); the torsional worlds always get the full force
+     * sum. Must be called before `initialize()`.
+     *
+     * @param[in] enabled       Request MTS.
+     * @param[in] innerSubsteps Fast-group substeps per outer step; a value `< 2`
+     *                          disables MTS regardless of @p enabled.
+     */
     void setMTS(bool enabled, int innerSubsteps) {
         useMTS = enabled && (innerSubsteps >= 2);
         mtsInnerSubsteps = innerSubsteps;
     }
+    /// @brief Whether MTS is active (enabled and `innerSubsteps >= 2`).
     [[nodiscard]] auto getUseMTS() const -> bool {
         return useMTS;
     }
 
+    /**
+     * @brief Pushes positions to the live Context and places virtual sites.
+     * @param[in] positions  Per-atom positions in OpenMM particle order (nm).
+     *                       Borrowed.
+     * @pre `initialize()` succeeded.
+     */
     void setPositions(const std::vector<OpenMM::Vec3>& positions) {
         ensureInitialized();
         context->setPositions(positions);
@@ -120,56 +211,86 @@ class OpenMMContext {
             context->computeVirtualSites();
         }
     }
+    /**
+     * @brief Reads current positions from the live Context.
+     * @param[out] out  Overwritten with per-atom positions in OpenMM particle
+     *                  order (nm); wrapped into the primary box iff
+     *                  `getEnforcePeriodicBox()`.
+     * @pre `initialize()` succeeded.
+     */
     void getPositions(std::vector<OpenMM::Vec3>& out) const {
         ensureInitialized();
         out = context->getState(OpenMM::State::Positions, enforcePeriodicBox).getPositions();
     }
 
-    // Whether OpenMM wraps coordinates into the primary box when we PULL state
-    // (positions/forces/energy getState calls). For Robosample this MUST stay
-    // false under explicit solvent: the robot engine consumes per-atom positions
-    // and rebuilds each molecule's internal frames from contiguous geometry, so a
-    // wrapped molecule that straddles a box face would yield a ~box-length "bond"
-    // and corrupt the frame build. Energies/forces are unaffected by this flag
-    // (OpenMM always applies the minimum image internally); wrapping is purely a
-    // representation of the returned positions. Any periodic-image bookkeeping for
-    // visualization is done as a WHOLE-MOLECULE rigid translation elsewhere, never
-    // here. Default false.
+    /**
+     * @brief Toggle: whether OpenMM wraps coordinates into the primary box when
+     *        state is pulled (positions/forces/energy `getState`). Default false.
+     *
+     * Must stay false under explicit solvent: the robot engine rebuilds each
+     * molecule's internal frames from contiguous geometry, so a wrapped molecule
+     * straddling a box face would yield a ~box-length "bond" and corrupt the
+     * frame build. Energies and forces are unaffected (OpenMM always applies the
+     * minimum image internally); this flag only changes the representation of
+     * returned positions.
+     */
     void setEnforcePeriodicBox(bool v) {
         enforcePeriodicBox = v;
     }
+    /// @brief Current enforce-periodic-box toggle.
     [[nodiscard]] auto getEnforcePeriodicBox() const -> bool {
         return enforcePeriodicBox;
     }
 
-    // True for the methods that require a periodic box (and thus exclude GBSA).
+    /// @brief True for nonbonded methods that require a periodic box
+    ///        (CutoffPeriodic/Ewald/PME) and thus exclude GBSA.
     [[nodiscard]] static auto isPeriodic(NonbondedMethod m) -> bool {
         return m == NonbondedMethod::CutoffPeriodic || m == NonbondedMethod::Ewald
                || m == NonbondedMethod::PME;
     }
 
     // ---- CUDA robot kinematics pipeline (spec docs/specs/gpu-cartesian-kinematics) --
-    // Opt-in, CUDA-only fused path that computes per-atom Ground positions
-    // (posG = X_GB*station + p) directly into OpenMM's device posq and reduces the
-    // per-atom device forces into per-body spatial forces, so per robot step only
-    // O(numBodies) transforms go up and O(numBodies) forces come down (no per-atom
-    // host round trip). No-op / unavailable when not built with USE_CUDA or when the
-    // toggle is off; the caller then uses the existing host path. All array pointers
-    // are POD (this wrapper stays free of robo:: types); layouts are documented per
-    // argument. See ForceBridge for the dispatch.
+
+    /**
+     * @brief Toggle: request the opt-in, CUDA-only fused path that computes
+     *        `posG = X_GB*station + p` directly into OpenMM's device `posq` and
+     *        reduces device forces to per-body wrenches on-device, so each robot
+     *        step moves only `O(numBodies)` data up and down (no per-atom host
+     *        round trip). Unavailable unless built with `USE_CUDA`.
+     */
     void setCudaKinematics(bool enabled) {
         cudaKinematicsEnabled_ = enabled;
     }
+    /// @brief Current fused-CUDA-kinematics toggle (not whether it can run).
     [[nodiscard]] auto getCudaKinematics() const -> bool {
         return cudaKinematicsEnabled_;
     }
-    // True iff the fused CUDA path can run right now (USE_CUDA build + initialized +
-    // toggle on). Under USE_CUDA the active platform is always CUDA (compile-time).
+    /// @brief True iff the fused CUDA path can run now: `USE_CUDA` build,
+    ///        initialized, and toggle on. Always false on non-CUDA builds.
     [[nodiscard]] auto cudaKinematicsAvailable() const -> bool;
-    // Upload the per-world constants once (no-op when worldToken is unchanged), (re)build
-    // the atom->device-slot map, and compile the kernels on first use. station is
-    // 3*numAtoms (xyz per atom, nm, body-frame), isVirtual is numAtoms (nonzero => skip),
-    // the bodyAtoms* triple is the body-sorted atom CSR (RobotModel.bodyAtoms{Beg,End}).
+    /**
+     * @brief Uploads the per-world constants (once per @p worldToken), rebuilds
+     *        the atom->device-slot map, and compiles the two kernels on first use.
+     *
+     * All pointers are POD (no `robo::` types cross this boundary) and borrowed
+     * for the call only. No-op / host-fallback on a non-CUDA platform.
+     *
+     * @param[in] worldToken     Opaque per-world identity; a change forces a full
+     *                           rebuild. Borrowed as an identity value only.
+     * @param[in] numAtoms       Atom count (sizes @p station, @p atomBody,
+     *                           @p isVirtual, @p bodyAtoms).
+     * @param[in] numBodies      Body count (sizes @p bodyAtomsBeg/End).
+     * @param[in] station        Body-frame atom positions, `3*numAtoms` doubles
+     *                           (xyz per atom, nm).
+     * @param[in] atomBody       Body index per atom, `numAtoms`.
+     * @param[in] isVirtual      Per-atom flag, `numAtoms`; nonzero => skipped in
+     *                           the force reduction (INV-2).
+     * @param[in] bodyAtomsBeg   CSR start offsets into @p bodyAtoms, `numBodies`.
+     * @param[in] bodyAtomsEnd   CSR end offsets into @p bodyAtoms, `numBodies`.
+     * @param[in] bodyAtoms      Body-sorted atom indices, `numAtoms`.
+     * @param[in] stationsChanged  When the world is unchanged, re-upload @p station
+     *                           only if true (stations are refit once per round).
+     */
     void ensureKinematicsConstants(const void* worldToken,
                                    int numAtoms,
                                    int numBodies,
@@ -180,31 +301,73 @@ class OpenMMContext {
                                    const int* bodyAtomsEnd,
                                    const int* bodyAtoms,
                                    bool stationsChanged);
-    // Upload X_GB (12*numBodies doubles: 9 row-major rotation + 3 translation per body),
-    // write posq/posqCorrection on device (K1), then place virtual sites on device.
+    /**
+     * @brief K1: uploads @p xgbFlat, writes device `posq` (and `posqCorrection`
+     *        under mixed precision), then places virtual sites on device.
+     * @param[in] xgbFlat  Body transforms, `12*numBodies` doubles per body:
+     *                     9 row-major rotation followed by 3 translation.
+     *                     Borrowed. No-op unless the pipeline is set up.
+     */
     void pushBodyTransforms(const double* xgbFlat);
-    // Compute forces + energy on device for the positions already in posq (no host
-    // download); returns the potential energy [kJ/mol]. Leaves forces in the device
-    // fixed-point buffer for reduceForcesToBodies to consume.
+    /**
+     * @brief Computes forces and energy on device for the positions already in
+     *        `posq`; leaves forces in the device fixed-point buffer for
+     *        `reduceForcesToBodies`. No host download.
+     * @return Potential energy [kJ/mol].
+     * @pre `pushBodyTransforms` populated `posq` this step.
+     */
     auto computeForcesAndEnergyOnDevice() -> double;
-    // Reduce the device force buffer into per-body spatial forces (K2) and download only
-    // bodyForceGFlat (6*numBodies doubles: 3 angular [moment about body origin] + 3 linear
-    // per body, in Ground). Must run after computeForcesAndEnergyOnDevice.
+    /**
+     * @brief K2: reduces the device force buffer to per-body wrenches (INV-1,
+     *        identical to the host `reduceAtomForcesToBodies`) and downloads them.
+     * @param[out] bodyForceGFlat  Per-body wrench, `6*numBodies` doubles per body:
+     *                             3 angular (moment about the body origin) then
+     *                             3 linear (net force), in Ground. Caller-sized.
+     * @pre Runs after `computeForcesAndEnergyOnDevice`.
+     */
     void reduceForcesToBodies(double* bodyForceGFlat);
 
+    /**
+     * @brief Sets @p positions, places virtual sites, and returns the total
+     *        potential energy for that configuration.
+     * @param[in] positions  Per-atom positions, OpenMM particle order (nm).
+     *                       Borrowed.
+     * @return Potential energy [kJ/mol]; also cached for `getPotentialEnergy()`.
+     * @pre `initialize()` succeeded, else throws `std::runtime_error`.
+     */
     auto computePotentialEnergy(const std::vector<OpenMM::Vec3>& positions) -> double;
+    /**
+     * @brief As `computePotentialEnergy`, additionally returning a per-force-group
+     *        energy breakdown.
+     * @param[in] positions  Per-atom positions, OpenMM particle order (nm).
+     * @return `{total PE [kJ/mol], breakdown}`. The breakdown is per labelled
+     *         group when `separateForceGroups` or MTS is active and labels exist;
+     *         otherwise a single `{0, "All", total}` entry.
+     * @pre `initialize()` succeeded, else throws `std::runtime_error`.
+     */
     auto computePotentialEnergyByGroup(const std::vector<OpenMM::Vec3>& positions)
         -> std::pair<double, std::vector<ForceGroupEnergy>>;
+    /**
+     * @brief Sets @p positions, places virtual sites, and returns per-atom forces.
+     * @param[in]  positions  Per-atom positions, OpenMM particle order (nm).
+     * @param[out] outForces  Overwritten with per-atom forces (kJ/mol/nm), same
+     *                        order. These are the input to `ForceReducer`; forces
+     *                        left in massless virtual-site slots are handled by
+     *                        the INV-2 skip downstream.
+     * @pre `initialize()` succeeded, else throws `std::runtime_error`.
+     */
     void evaluateForcesFromPositionsCache(const std::vector<OpenMM::Vec3>& positions,
                                           std::vector<OpenMM::Vec3>& outForces) const;
+    /**
+     * @brief Advances the live Context @p steps with the built integrator (Verlet
+     *        or MTS), then caches the resulting potential and kinetic energy.
+     * @param[in] steps                  Integration steps.
+     * @param[in] timeStepInPicoseconds  Step size [ps]; set on the integrator.
+     * @return `true` on success; `false` iff `integrator->step` threw (energies
+     *         are still refreshed from the post-step state).
+     * @pre `initialize()` succeeded, else throws `std::runtime_error`.
+     */
     auto integrateTrajectory(int steps, double timeStepInPicoseconds) -> bool;
-    auto computePeriodicBoxVectors_Context(double a_length,
-                                           double b_length,
-                                           double c_length,
-                                           double alpha,
-                                           double beta,
-                                           double gamma)
-        -> std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3>;
 
     private:
     OpenMMContext() = default;
@@ -215,48 +378,6 @@ class OpenMMContext {
                                      "before using any other functions.");
         }
     }
-
-    [[nodiscard]] auto createNonbondedForce(const SystemTopology& systemTopology) -> OpenMM::NonbondedForce*;
-    [[nodiscard]] auto createGBSAOBCForce(const SystemTopology& systemTopology) -> OpenMM::GBSAOBCForce*;
-    [[nodiscard]] auto createCustomNonbondedForce(const SystemTopology& systemTopology)
-        -> OpenMM::CustomNonbondedForce*;
-    // Alchemy correction force: total [begin,end) x rest pair energy becomes
-    // lambda_inter * standard (LJ + Coulomb), via a (lambda_inter-1)*standard term
-    // over an interaction group. Every excluded pair is intramolecular (never an
-    // A x rest pair), so the exclusions below are energy-neutral; they exist only
-    // to satisfy the CPU platform's shared-neighbor-list rule.
-    [[nodiscard]] auto createAlchemyCorrectionForce(const SystemTopology& systemTopology)
-        -> OpenMM::CustomNonbondedForce*;
-    // Mirror the main NonbondedForce's exception pairs (all 1-2/1-3 exclusions and
-    // 1-4 scaled pairs) as CustomNonbondedForce exclusions. The CPU platform shares
-    // ONE neighbor list across every exclusion-using force and rejects the Context
-    // ("All Forces must have identical exclusions") unless the lists match exactly;
-    // CUDA/OpenCL route interaction-group custom forces around the shared list, so
-    // this is a CPU-correctness requirement and a no-op on the energy elsewhere.
-    static void addStandardExclusions(OpenMM::CustomNonbondedForce* force,
-                                      const SystemTopology& systemTopology);
-    [[nodiscard]] auto createHarmonicBondForce(const SystemTopology& systemTopology)
-        -> OpenMM::HarmonicBondForce*;
-    [[nodiscard]] auto createHarmonicAngleForce(const SystemTopology& systemTopology)
-        -> OpenMM::HarmonicAngleForce*;
-    [[nodiscard]] auto createPeriodicTorsionForce(const SystemTopology& systemTopology)
-        -> OpenMM::PeriodicTorsionForce*;
-    [[nodiscard]] auto createImproperHarmonicTorsionForce(const SystemTopology& systemTopology)
-        -> OpenMM::CustomTorsionForce*;
-    [[nodiscard]] auto createCMAPTorsionForce(const SystemTopology& systemTopology)
-        -> OpenMM::CMAPTorsionForce*;
-    [[nodiscard]] auto createUreyBradleyForce(const SystemTopology& systemTopology)
-        -> OpenMM::HarmonicBondForce*;
-
-    // PME/explicit-solvent NCMC. Reciprocal space cannot be localized to an
-    // A x rest pair list, so electrostatics are scaled on the MAIN NonbondedForce
-    // via a lambda_inter charge offset (PME-exact), and A's LJ is rebuilt as
-    // soft-core A x rest + hard intra-A custom forces. Mutates `main`; returns the
-    // two custom forces to add. Driven by the SAME lambda_inter global parameter,
-    // so setAlchemicalLambda / ncmcMove need no changes.
-    [[nodiscard]] auto createAlchemyDecouplingForces(const SystemTopology& systemTopology,
-                                                     OpenMM::NonbondedForce* main)
-        -> std::pair<OpenMM::CustomNonbondedForce*, OpenMM::CustomNonbondedForce*>;
 
     std::unique_ptr<OpenMM::Context> context;
     std::unique_ptr<OpenMM::System> system;
@@ -269,20 +390,13 @@ class OpenMMContext {
     bool separateForceGroups = false;
     std::vector<std::pair<int, std::string>> forceGroupLabels;
 
-    // NCMC alchemy state. alchemyAtoms is Region A: an ascending, deduplicated
-    // atom-index set (may be non-contiguous; enableAlchemy(int,int) builds the
-    // contiguous case). alchemyAtomSet mirrors it as a std::set<int> for O(log n)
-    // membership tests in the force builders.
-    bool alchemyEnabled = false;
-    std::vector<int> alchemyAtoms;
-    std::set<int> alchemyAtomSet;
-    OpenMM::CustomNonbondedForce* alchemyForce = nullptr; // owned by `system`
+    // NCMC per-molecule intermolecular decoupling: builders + control +
+    // Region-A state, see bridge/AlchemyForceFactory.hpp (SPLIT-O4).
+    AlchemyForceFactory alchemyFactory_;
 
     // r-RESPA multiple-timestep state.
     bool useMTS = false;
     int mtsInnerSubsteps = 4;
-    static constexpr int kMtsSlowGroup = 0; // Nonbonded, GBSA, NBFIX
-    static constexpr int kMtsFastGroup = 1; // bonds, angles, torsions, CMAP, UB
 
     bool enforcePeriodicBox = false;
     bool hasVirtualSites = false;

@@ -1,4 +1,6 @@
 {
+    "editor.formatOnSaveMode": "file",
+
     // Disable Microsoft C/C++ IntelliSense since we will use clangd
     "C_Cpp.intelliSenseEngine": "disabled",
     "C_Cpp.enhancedColorization": "disabled",
@@ -58,7 +60,7 @@
     },
     "[markdown]": {
         "editor.formatOnSave": true,
-        "editor.defaultFormatter": "davidanson.vscode-markdownlint"
+        "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
     },
     "[toml]": {
         "editor.formatOnSave": true,

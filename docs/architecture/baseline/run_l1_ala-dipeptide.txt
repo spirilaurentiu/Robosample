@@ -1,0 +1,110 @@
+/home/victor/miniforge3/envs/robo_cuda13.0/lib/python3.12/site-packages/openmm/app/internal/amber_file_parser.py:1169: UserWarning: Non-optimal GB parameters detected for GB model OBC2
+  warnings.warn(
+[init] startup geometry check: nAtoms=32  initial PE=-128.7 kJ/mol  min non-bonded distance=0.2039 nm  hard clashes(<0.08 nm)=0
+[hmc] post-MD decision:
+[hmc]   PE_old  =      -128.74   PE_new  =      -146.97   dPE  =       -18.23 kJ/mol
+[hmc]   KE_old  =         3.50   KE_new  =        21.72   dKE  =       +18.22 kJ/mol
+[hmc]   Fix_old =      -141.97   Fix_new =      -141.54   dFix =        +0.43 kJ/mol
+[hmc]   H_old   =      -267.21   H_new   =      -266.79   dH   =        +0.42 kJ/mol
+[hmc]   valid(dPE<=5000)=Y  metropolis=Y  -> ACCEPT
+[hmc] post-MD decision:
+[hmc]   PE_old  =      -146.97   PE_new  =      -148.00   dPE  =        -1.03 kJ/mol
+[hmc]   KE_old  =        13.45   KE_new  =        14.48   dKE  =        +1.03 kJ/mol
+[hmc]   Fix_old =      -141.54   Fix_new =      -141.77   dFix =        -0.23 kJ/mol
+[hmc]   H_old   =      -275.06   H_new   =      -275.28   dH   =        -0.23 kJ/mol
+[hmc]   valid(dPE<=5000)=Y  metropolis=Y  -> ACCEPT
+[hmc] post-MD decision:
+[hmc]   PE_old  =      -148.00   PE_new  =      -157.22   dPE  =        -9.23 kJ/mol
+[hmc]   KE_old  =         1.01   KE_new  =        10.23   dKE  =        +9.23 kJ/mol
+[hmc]   Fix_old =      -141.77   Fix_new =      -141.20   dFix =        +0.57 kJ/mol
+[hmc]   H_old   =      -288.76   H_new   =      -288.19   dH   =        +0.57 kJ/mol
+[hmc]   valid(dPE<=5000)=Y  metropolis=Y  -> ACCEPT
+[hmc] post-MD decision:
+[hmc]   PE_old  =      -157.22   PE_new  =      -159.01   dPE  =        -1.78 kJ/mol
+[hmc]   KE_old  =         1.56   KE_new  =         3.35   dKE  =        +1.78 kJ/mol
+[hmc]   Fix_old =      -141.20   Fix_new =      -141.19   dFix =        +0.01 kJ/mol
+[hmc]   H_old   =      -296.86   H_new   =      -296.85   dH   =        +0.01 kJ/mol
+[hmc]   valid(dPE<=5000)=Y  metropolis=Y  -> ACCEPT
+[hmc] post-MD decision:
+[hmc]   PE_old  =      -159.01   PE_new  =      -158.00   dPE  =        +1.00 kJ/mol
+[hmc]   KE_old  =        10.19   KE_new  =         9.19   dKE  =        -1.00 kJ/mol
+[hmc]   Fix_old =      -141.19   Fix_new =      -141.40   dFix =        -0.21 kJ/mol
+[hmc]   H_old   =      -290.01   H_new   =      -290.22   dH   =        -0.21 kJ/mol
+[hmc]   valid(dPE<=5000)=Y  metropolis=Y  -> ACCEPT
+[hmc] post-MD decision:
+[hmc]   PE_old  =      -158.00   PE_new  =      -157.48   dPE  =        +0.52 kJ/mol
+[hmc]   KE_old  =         1.93   KE_new  =         1.41   dKE  =        -0.52 kJ/mol
+[hmc]   Fix_old =      -141.40   Fix_new =      -141.33   dFix =        +0.08 kJ/mol
+[hmc]   H_old   =      -297.47   H_new   =      -297.40   dH   =        +0.08 kJ/mol
+[hmc]   valid(dPE<=5000)=Y  metropolis=Y  -> ACCEPT
+[hmc] post-MD decision:
+[hmc]   PE_old  =      -157.48   PE_new  =      -154.68   dPE  =        +2.80 kJ/mol
+[hmc]   KE_old  =         8.90   KE_new  =         6.10   dKE  =        -2.80 kJ/mol
+[hmc]   Fix_old =      -141.33   Fix_new =      -141.38   dFix =        -0.05 kJ/mol
+[hmc]   H_old   =      -289.91   H_new   =      -289.97   dH   =        -0.05 kJ/mol
+[hmc]   valid(dPE<=5000)=Y  metropolis=Y  -> ACCEPT
+[hmc] post-MD decision:
+[hmc]   PE_old  =      -154.68   PE_new  =      -160.50   dPE  =        -5.82 kJ/mol
+[hmc]   KE_old  =         2.61   KE_new  =         8.42   dKE  =        +5.82 kJ/mol
+[hmc]   Fix_old =      -141.38   Fix_new =      -141.48   dFix =        -0.10 kJ/mol
+[hmc]   H_old   =      -293.46   H_new   =      -293.55   dH   =        -0.10 kJ/mol
+[hmc]   valid(dPE<=5000)=Y  metropolis=Y  -> ACCEPT
+[hmc] post-MD decision:
+[hmc]   PE_old  =      -160.50   PE_new  =      -159.22   dPE  =        +1.28 kJ/mol
+[hmc]   KE_old  =         4.56   KE_new  =         3.28   dKE  =        -1.28 kJ/mol
+[hmc]   Fix_old =      -141.48   Fix_new =      -141.38   dFix =        +0.10 kJ/mol
+[hmc]   H_old   =      -297.42   H_new   =      -297.32   dH   =        +0.10 kJ/mol
+[hmc]   valid(dPE<=5000)=Y  metropolis=Y  -> ACCEPT
+[hmc] post-MD decision:
+[hmc]   PE_old  =      -159.22   PE_new  =      -152.96   dPE  =        +6.27 kJ/mol
+[hmc]   KE_old  =        12.00   KE_new  =         5.74   dKE  =        -6.26 kJ/mol
+[hmc]   Fix_old =      -141.38   Fix_new =      -141.22   dFix =        +0.16 kJ/mol
+[hmc]   H_old   =      -288.60   H_new   =      -288.44   dH   =        +0.16 kJ/mol
+[hmc]   valid(dPE<=5000)=Y  metropolis=N  -> reject
+OpenMM per-force-group comparison [kJ/mol]
+  force class                           C++        reference     abs diff
+  ------------------------ ---------------- ---------------- ------------
+  CMAPTorsionForce                -3.388162        -3.388164    2.253e-06
+  GBSAOBCForce                   -63.176412       -63.176175    2.377e-04
+  HarmonicAngleForce               2.768989         2.768989    2.201e-07
+  HarmonicBondForce                0.087480         0.087481    1.223e-06
+  NonbondedForce                 -75.046032       -75.046079    4.712e-05
+  PeriodicTorsionForce            10.011799        10.011784    1.502e-05
+  ------------------------ ---------------- ---------------- ------------
+  TOTAL                         -128.742339      -128.742164    1.747e-04
+  total rel diff   : 1.357e-06
+  per-group match  : PASS
+  result           : PASS
+[validate] C++ PME PE = -128.742339 kJ/mol
+[validate] ref PME PE = -128.742164 kJ/mol
+[validate] per-force-group match: OK
+[validate]   CMAPTorsionForce         cpp=       -3.3882  ref=       -3.3882  d=+2.2527e-06
+[validate]   GBSAOBCForce             cpp=      -63.1764  ref=      -63.1762  d=-2.3770e-04
+[validate]   HarmonicAngleForce       cpp=        2.7690  ref=        2.7690  d=-2.2010e-07
+[validate]   HarmonicBondForce        cpp=        0.0875  ref=        0.0875  d=-1.2228e-06
+[validate]   NonbondedForce           cpp=      -75.0460  ref=      -75.0461  d=+4.7121e-05
+[validate]   PeriodicTorsionForce     cpp=       10.0118  ref=       10.0118  d=+1.5019e-05
+Created OpenMM context with CUDA platform with relative speed 100
+[INFO] Initialized OpenMM. Using version 8.5.
+Created OpenMM context with CUDA platform with relative speed 100
+[INFO] Initialized OpenMM. Using version 8.5.
+[rex] round=0 replica=0 T=300.0 world=0(torsional) kick=N acc=ACC PE=-146.9682 KE=21.7226 Fix=-141.5422 H=-266.7877
+[rex] round=0 replica=0 T=300.0 PE=-146.9682 kJ/mol
+[rex] round=1 replica=0 T=300.0 world=0(torsional) kick=N acc=ACC PE=-147.9978 KE=14.4840 Fix=-141.7711 H=-275.2848
+[rex] round=1 replica=0 T=300.0 PE=-147.9978 kJ/mol
+[rex] round=2 replica=0 T=300.0 world=0(torsional) kick=N acc=ACC PE=-157.2243 KE=10.2314 Fix=-141.1968 H=-288.1897
+[rex] round=2 replica=0 T=300.0 PE=-157.2243 kJ/mol
+[rex] round=3 replica=0 T=300.0 world=0(torsional) kick=N acc=ACC PE=-159.0053 KE=3.3454 Fix=-141.1904 H=-296.8503
+[rex] round=3 replica=0 T=300.0 PE=-159.0053 kJ/mol
+[rex] round=4 replica=0 T=300.0 world=0(torsional) kick=N acc=ACC PE=-158.0045 KE=9.1883 Fix=-141.4023 H=-290.2185
+[rex] round=4 replica=0 T=300.0 PE=-158.0045 kJ/mol
+[rex] round=5 replica=0 T=300.0 world=0(torsional) kick=N acc=ACC PE=-157.4834 KE=1.4113 Fix=-141.3272 H=-297.3993
+[rex] round=5 replica=0 T=300.0 PE=-157.4834 kJ/mol
+[rex] round=6 replica=0 T=300.0 world=0(torsional) kick=N acc=ACC PE=-154.6820 KE=6.0967 Fix=-141.3810 H=-289.9662
+[rex] round=6 replica=0 T=300.0 PE=-154.6820 kJ/mol
+[rex] round=7 replica=0 T=300.0 world=0(torsional) kick=N acc=ACC PE=-160.4994 KE=8.4228 Fix=-141.4772 H=-293.5538
+[rex] round=7 replica=0 T=300.0 PE=-160.4994 kJ/mol
+[rex] round=8 replica=0 T=300.0 world=0(torsional) kick=N acc=ACC PE=-159.2223 KE=3.2843 Fix=-141.3786 H=-297.3165
+[rex] round=8 replica=0 T=300.0 PE=-159.2223 kJ/mol
+[rex] round=9 replica=0 T=300.0 world=0(torsional) kick=N acc=rej PE=-152.9563 KE=5.7380 Fix=-141.2192 H=-288.4375
+[rex] round=9 replica=0 T=300.0 PE=-159.2223 kJ/mol

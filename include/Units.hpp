@@ -20,29 +20,51 @@
 
 #include "units.h" // nholthaus
 
+/**
+ * @brief Boundary unit-safety helpers built on the nholthaus compile-time units
+ *        library. Typed quantities live only at I/O edges (prmtop parse, OpenMM
+ *        transfer, DCD write, timestep config); the dynamics core stays raw
+ *        double in the consistent MD system (nm, dalton, ps, kJ/mol).
+ *
+ * @note The engine's inter-world coordinate currency is nm (INV-3). These
+ *       conversions exist for the exact spots where a foreign unit system enters
+ *       (Angstrom, kcal, fs); mass (dalton) and energy-per-mole never leave the
+ *       MD system and so are not wrapped.
+ */
 namespace robo::mdunits {
 
 // boundary unit aliases (use these on function signatures that cross an edge)
+/** @brief Length in nanometers (the engine's internal length unit, INV-3). */
 using Nanometer = units::length::nanometer_t;
+/** @brief Length in Angstrom (prmtop / DCD-file length unit). */
 using Angstrom = units::length::angstrom_t;
+/** @brief Time in picoseconds (the engine's internal time unit). */
 using Picosecond = units::time::picosecond_t;
+/** @brief Time in femtoseconds (a common timestep-input unit). */
 using Femtosecond = units::time::femtosecond_t;
-using Kilojoule = units::energy::kilojoule_t;     // per-mole is implicit in MD
-using Kilocalorie = units::energy::kilocalorie_t; // ratio kcal:kJ is system-independent
+/** @brief Energy in kilojoules; per-mole is implicit in the MD system. */
+using Kilojoule = units::energy::kilojoule_t;
+/** @brief Energy in kilocalories (Amber/CHARMM force-field input unit). */
+using Kilocalorie = units::energy::kilocalorie_t;
 
 // ---- boundary conversions: typed in, raw double out (for the core) ----------
+/** @brief Convert an Angstrom length to nm (engine unit). */
 inline auto angstromToNm(double valAngstrom) -> double {
     return Nanometer(Angstrom(valAngstrom)).value();
 }
+/** @brief Convert an nm length to Angstrom (e.g. the DCD writer's x10). */
 inline auto nmToAngstrom(double valNanometer) -> double {
     return Angstrom(Nanometer(valNanometer)).value(); // the DCD writer's x10
 }
+/** @brief Convert a kcal/mol energy to kJ/mol (engine unit). */
 inline auto kcalToKj(double valKilocalorie) -> double {
     return Kilojoule(Kilocalorie(valKilocalorie)).value();
 }
+/** @brief Convert a kJ/mol energy to kcal/mol. */
 inline auto kjToKcal(double valKilojoule) -> double {
     return Kilocalorie(Kilojoule(valKilojoule)).value();
 }
+/** @brief Convert a femtosecond time to ps (engine unit). */
 inline auto fsToPs(double valFemtosecond) -> double {
     return Picosecond(Femtosecond(valFemtosecond)).value();
 }

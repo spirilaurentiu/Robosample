@@ -36,6 +36,29 @@ auto ConstraintSet::mapAtomForcesToGeneralizedForces(const RobotModel& model,
     }
 }
 
+// Common G-row assembly (INV-6): shared body of the three sites that build
+// tau_c = J^T vecAB and its mass-weighted image M^-1 tau_c for one
+// distance constraint. See the header comment for the invariant this makes
+// structural.
+auto ConstraintSet::assembleConstraintRow(const RobotModel& model,
+                                          RobotState& state,
+                                          const DistanceConstraint& bond,
+                                          std::vector<Vec3>& atomForceScratch,
+                                          Real* jacobianTRow,
+                                          Real* minvJacobianTRow) -> Vec3 {
+    const Vec3* posGround = state.atomPosG();
+    const Vec3 vecAB = posGround[bond.atomA] - posGround[bond.atomB];
+
+    for (Vec3& force : atomForceScratch) {
+        force = Vec3(0);
+    }
+    atomForceScratch[bond.atomA] = vecAB;
+    atomForceScratch[bond.atomB] = Vec3(0) - vecAB;
+    mapAtomForcesToGeneralizedForces(model, state, atomForceScratch.data(), jacobianTRow);
+    RobotEngine::multiplyByMInv(model, state, jacobianTRow, minvJacobianTRow);
+    return vecAB;
+}
+
 // RATTLE: project u so that G u = 0. Requires realizeVelocity() current.
 auto ConstraintSet::enforceVelocityConstraints(const RobotModel& model, RobotState& state) const -> void {
     const int numC = numConstraints();
@@ -56,7 +79,6 @@ auto ConstraintSet::enforceVelocityConstraints(const RobotModel& model, RobotSta
 
     for (int con = 0; con < numC; ++con) {
         const DistanceConstraint& bond = distance[con];
-        const Vec3 vecAB = posGround[bond.atomA] - posGround[bond.atomB];
 
         const int bodyA = model.atomBody[bond.atomA];
         const int bodyB = model.atomBody[bond.atomB];
@@ -64,15 +86,10 @@ auto ConstraintSet::enforceVelocityConstraints(const RobotModel& model, RobotSta
         const Vec3 stationB = posGround[bond.atomB] - xGroundBody[bodyB].p();
         const Vec3 velA = velGroundBody[bodyA].linear + (velGroundBody[bodyA].angular % stationA);
         const Vec3 velB = velGroundBody[bodyB].linear + (velGroundBody[bodyB].angular % stationB);
-        rhs[con] = dot(vecAB, velA - velB);
 
-        for (Vec3& force : atomForce) {
-            force = Vec3(0);
-        }
-        atomForce[bond.atomA] = vecAB;
-        atomForce[bond.atomB] = Vec3(0) - vecAB;
-        mapAtomForcesToGeneralizedForces(model, state, atomForce.data(), jacobianT[con].data());
-        RobotEngine::multiplyByMInv(model, state, jacobianT[con].data(), minvJacobianT[con].data());
+        const Vec3 vecAB = assembleConstraintRow(model, state, bond, atomForce,
+                                                  jacobianT[con].data(), minvJacobianT[con].data());
+        rhs[con] = dot(vecAB, velA - velB);
     }
 
     std::vector<Real> multiplier = solveCoupling(jacobianT, minvJacobianT, rhs, numC, numU);
@@ -142,7 +159,6 @@ auto ConstraintSet::calcConstraintLogDet(const RobotModel& model, RobotState& st
         return Real(0); // no loop closures -> no correction (acyclic case)
     }
     const int numU = model.nu;
-    const Vec3* posGround = state.atomPosG();
 
     std::vector<std::vector<Real>> jacobianT(static_cast<std::size_t>(numC), std::vector<Real>(numU, 0));
     std::vector<std::vector<Real>> minvJacobianT(static_cast<std::size_t>(numC), std::vector<Real>(numU, 0));
@@ -152,14 +168,7 @@ auto ConstraintSet::calcConstraintLogDet(const RobotModel& model, RobotState& st
     // M^-1 G^T per constraint -- identical assembly to enforceVelocityConstraints.
     for (int con = 0; con < numC; ++con) {
         const DistanceConstraint& bond = distance[con];
-        const Vec3 vecAB = posGround[bond.atomA] - posGround[bond.atomB];
-        for (Vec3& force : atomForce) {
-            force = Vec3(0);
-        }
-        atomForce[bond.atomA] = vecAB;
-        atomForce[bond.atomB] = Vec3(0) - vecAB;
-        mapAtomForcesToGeneralizedForces(model, state, atomForce.data(), jacobianT[con].data());
-        RobotEngine::multiplyByMInv(model, state, jacobianT[con].data(), minvJacobianT[con].data());
+        assembleConstraintRow(model, state, bond, atomForce, jacobianT[con].data(), minvJacobianT[con].data());
     }
 
     // Harvest ln|det(G M^-1 G^T)| from the factorization; the solve itself is

@@ -25,22 +25,35 @@
 
 namespace robo { namespace pbc {
 
-// Reduced lower-triangular box vectors, flat 9-array (a,b,c stacked).
+/**
+ * @brief Three reduced (lower-triangular) periodic-box lattice vectors, stored
+ *        flat as [a.x a.y a.z  b.x b.y b.z  c.x c.y c.z] in nm.
+ * @note Reduced form: a=(ax,0,0), b=(bx,by,0), c=(cx,cy,cz), positive diagonal,
+ *       |bx|<=ax/2, |cx|<=ax/2, |cy|<=by/2. Same layout and order as
+ *       SystemTopology::boxVectors and OpenMM's reduction.
+ */
 struct BoxVectors {
+    /** @brief The nine components a,b,c stacked (nm). */
     std::array<double, 9> v{};
 
+    /** @brief Borrowed read pointer to the nine components. */
     [[nodiscard]] auto data() const -> const double* {
         return v.data();
     }
+    /** @brief Borrowed mutable pointer to the nine components. */
     [[nodiscard]] auto data() -> double* {
         return v.data();
     }
 };
 
-// Wrap a displacement (dx,dy,dz) to its minimum image in the reduced cell.
-// Subtract whole lattice vectors in c -> b -> a order (the same order OpenMM
-// reduces them); for a reduced (lower-triangular) cell this single pass yields
-// the canonical minimum image. Verbatim port of the src/Context.cpp lambda.
+/**
+ * @brief Wrap a displacement to its minimum image in a reduced cell, in place.
+ * @param[in,out] dx,dy,dz displacement components (nm), overwritten with the
+ *        minimum-image displacement.
+ * @param[in] bv borrowed reduced box vectors, 9 doubles (BoxVectors layout).
+ * @pre @p bv is reduced (lower-triangular); the single c->b->a subtraction pass
+ *      yields the canonical minimum image only for a reduced cell.
+ */
 inline void minimumImage(double& dx, double& dy, double& dz, const double* bv) {
     // c then b then a  (bv layout: a=[0..2], b=[3..5], c=[6..8]).
     double n = std::round(dz / bv[8]);
@@ -54,7 +67,13 @@ inline void minimumImage(double& dx, double& dy, double& dz, const double* bv) {
     dx -= n * bv[0];
 }
 
-// Minimum-image distance between two points pa, pb (each a 3-array) under bv.
+/**
+ * @brief Minimum-image distance between two points under a reduced cell.
+ * @param[in] pa,pb borrowed 3-component point coordinates (nm).
+ * @param[in] bv borrowed reduced box vectors, 9 doubles.
+ * @return the minimum-image separation (nm).
+ * @pre @p bv is reduced (see minimumImage()).
+ */
 inline double minimumImageDistance(const double* pa, const double* pb, const double* bv) {
     double dx = pa[0] - pb[0];
     double dy = pa[1] - pb[1];
@@ -63,11 +82,18 @@ inline double minimumImageDistance(const double* pa, const double* pb, const dou
     return std::sqrt((dx * dx) + (dy * dy) + (dz * dz));
 }
 
-// Reduced box vectors from cell lengths and angles (radians). This is the pure
-// triclinic construction + lattice reduction OpenMM uses (the body of
-// OpenMMContext::computePeriodicBoxVectors_Context, minus the OpenMM types).
-//   a along x; b in the xy-plane; c fixed by the three angles; then reduce so the
-//   off-diagonals are the smallest images (c -= round(c/.)*., etc.).
+/**
+ * @brief Build reduced box vectors from cell lengths and angles.
+ * @param[in] aLen,bLen,cLen cell edge lengths (nm).
+ * @param[in] alpha,beta,gamma cell angles (radians): alpha=angle(b,c),
+ *        beta=angle(a,c), gamma=angle(a,b).
+ * @return reduced lower-triangular BoxVectors (nm): a along x, b in the xy-plane,
+ *         c fixed by the angles, then off-diagonals reduced to smallest images.
+ * @note This is the triclinic construction + reduction OpenMM applies. In the
+ *       current tree it has no production caller: production consumes ParmEd's
+ *       already-reduced box vectors (SystemTopology::boxVectors) directly. It is
+ *       exercised by TestPeriodicBoundary as the reduction contract (see findings).
+ */
 inline BoxVectors
 reducedBoxVectors(double aLen, double bLen, double cLen, double alpha, double beta, double gamma) {
     constexpr double TOL = 1e-6;
@@ -109,7 +135,11 @@ reducedBoxVectors(double aLen, double bLen, double cLen, double alpha, double be
     return out;
 }
 
-// Orthorhombic convenience: a diagonal reduced box of the given side lengths.
+/**
+ * @brief Diagonal (orthorhombic) reduced box of the given side lengths.
+ * @param[in] lx,ly,lz box edge lengths along x, y, z (nm).
+ * @return BoxVectors with a=(lx,0,0), b=(0,ly,0), c=(0,0,lz).
+ */
 inline BoxVectors orthorhombic(double lx, double ly, double lz) {
     BoxVectors out;
     out.v = {lx, 0, 0, 0, ly, 0, 0, 0, lz};

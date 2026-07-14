@@ -49,16 +49,21 @@
 #include "TestHelpers.hpp"
 #include "TopologyElements.hpp"
 #include "World.hpp"
+#include "support/HarmonicBridge.hpp"
+#include "support/TestPhysConstants.hpp"
 
 using namespace robo;
 using rtest::BodySpec;
 using rtest::buildForest;
 using rtest::attachAtoms;
+using rtest::HarmonicBridge;
+using rtest::SingleWellPolicy;
+using rtest::phys::kT300;
 using rtest::stat::MeanAccumulator;
 
-namespace {
+using TwoRobotBridge = HarmonicBridge<SingleWellPolicy>;
 
-constexpr double kT300 = 0.0083144626 * 300.0; // RT, kJ/mol
+namespace {
 
 // ---------------------------------------------------------------------------
 //  R (twoTorsionChain, TestFixmanBoltzmann.cpp/TestNcmcExplicitSolvent.cpp's
@@ -201,74 +206,14 @@ std::vector<double> sqrtMInvMatrix(const RobotModel& m, RobotState& s) {
     return L;
 }
 
-// ---------------------------------------------------------------------------
-//  A lambda-free analytic bridge: independent per-atom harmonic anchors
-//  (AnalyticForceBridge.hpp's pattern, duplicated here per the established
-//  per-file convention -- see TestNcmcExplicitSolvent.cpp's own header
-//  comment on NcmcLambdaBridge), EXTENDED to also cache the raw per-atom
-//  Cartesian force into atomForceG() when state.wantsAtomForces() -- the
-//  Cartesian-solvent Verlet block (RobotIntegrator.hpp:264-276, 419-429)
-//  reads that cache for E's atoms, exactly matching ForceBridge::
-//  getForcesFromOpenMM's real contract (ForceBridge.hpp:77-108).
-// ---------------------------------------------------------------------------
-class TwoRobotBridge {
-    public:
-    TwoRobotBridge(const RobotModel& model, const RobotState& s0, Real k)
-        : model_(model)
-        , k_(k)
-        , anchor_(static_cast<std::size_t>(model.numAtoms)) {
-        const Vec3* p = s0.atomPosG();
-        for (int a = 0; a < model_.numAtoms; ++a) {
-            anchor_[static_cast<std::size_t>(a)] = p[a];
-        }
-    }
-
-    [[nodiscard]] Real calcPotentialEnergy(const RobotState& s) const {
-        const Vec3* pos = s.atomPosG();
-        Real u = 0;
-        for (int a = 0; a < model_.numAtoms; ++a) {
-            if (model_.atomMass[a] == Real(0)) {
-                continue;
-            }
-            const Vec3 d = pos[a] - anchor_[static_cast<std::size_t>(a)];
-            u += dot(d, d);
-        }
-        return Real(0.5) * k_ * u;
-    }
-
-    void evaluate(RobotState& s) {
-        SpatialVec* BF = s.bodyForceG();
-        for (int b = 0; b < model_.numBodies; ++b) {
-            BF[b] = SpatialVec(Vec3(0), Vec3(0));
-        }
-        Real* mob = s.mobilityForce();
-        for (int i = 0; i < model_.nu; ++i) {
-            mob[i] = Real(0);
-        }
-        const Vec3* posG = s.atomPosG();
-        const Transform* X_GB = s.X_GB();
-        const bool cache = s.wantsAtomForces();
-        Vec3* atomForce = cache ? s.atomForceG() : nullptr;
-        for (int a = 0; a < model_.numAtoms; ++a) {
-            if (model_.atomMass[a] == Real(0)) {
-                continue;
-            }
-            const int b = model_.atomBody[a];
-            const Vec3 f = (anchor_[static_cast<std::size_t>(a)] - posG[a]) * k_;
-            if (atomForce) {
-                atomForce[a] = f;
-            }
-            const Vec3 r = posG[a] - X_GB[b].p();
-            BF[b][1] += f;
-            BF[b][0] += r % f;
-        }
-    }
-
-    private:
-    const RobotModel& model_;
-    Real k_;
-    std::vector<Vec3> anchor_;
-};
+// TwoRobotBridge (a type alias, above) is a lambda-free analytic bridge:
+// independent per-atom harmonic anchors (AnalyticForceBridge.hpp's pattern),
+// EXTENDED (HarmonicBridge<SingleWellPolicy> constructed with cacheAtomForces
+// = true, below) to also cache the raw per-atom Cartesian force into
+// atomForceG() when state.wantsAtomForces() -- the Cartesian-solvent Verlet
+// block (RobotIntegrator.hpp:264-276, 419-429) reads that cache for E's
+// atoms, exactly matching ForceBridge::getForcesFromOpenMM's real contract
+// (ForceBridge.hpp:77-108).
 
 void seedDerivatives(const RobotModel& m, RobotState& s, TwoRobotBridge& bridge) {
     RobotEngine::realizePosition(m, s);
@@ -606,7 +551,7 @@ TEST(TwoRobotContact, INV_REV_JointRoundTripResidualWithinTolerance) {
     s.setCartSolvent(eAt, m.atomMass.data());
 
     robo::ConstraintSet cs; // acyclic fixture: empty
-    TwoRobotBridge bridge(m, s, /*k*/ Real(300.0));
+    TwoRobotBridge bridge(m, s, /*k*/ Real(300.0), /*cacheAtomForces*/ true);
     seedDerivatives(m, s, bridge);
 
     // Seed nonzero momenta on BOTH blocks (a zero-momentum state would make

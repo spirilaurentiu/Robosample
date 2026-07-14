@@ -1,41 +1,44 @@
 #pragma once
-// ============================================================================
-//  NcmcProtocol.hpp -- the pure lambda schedule for the per-molecule NCMC switch
-//  (MoveType::NcmcSwitch). Extracted from World::protocolLambda so the schedule
-//  is a free function of (step, ncmcSteps, holdFraction) with NO dependency on
-//  World / OpenMM / RobotEngine, and can therefore be unit-tested directly.
-//  World::protocolLambda delegates here, so production and tests exercise the
-//  SAME code (no parallel re-implementation that could drift).
-//
-//  Schedule (Nilmeier, Crooks, Minh & Chodera 2011): a PALINDROMIC triangle
-//  lambda: 1 -> 0 -> 1 across step in [0, ncmcSteps), with an OPTIONAL flat
-//  lambda = 0 hold of round(holdFraction * ncmcSteps) steps centered at the
-//  midpoint (the "uncaged stride" where the decoupled molecule moves freely).
-//
-//  REVERSIBILITY (why the schedule shape is load-bearing, not cosmetic). The
-//  whole NCMC trajectory is one map T on (q,p): per substep we set lambda at
-//  fixed q (a parameter change that does NOT move the state) then take ONE
-//  velocity-Verlet step at that fixed lambda. Each fixed-lambda Verlet step is
-//  itself momentum-flip reversible (F V_lambda F == V_lambda^-1), so the
-//  composition T = V_{lambda_{N-1}} ... V_{lambda_0} satisfies F T F == T^-1
-//  -- the condition that makes accept-on-endpoint-H an EXACT Metropolis test --
-//  IFF the lambda sequence is a true palindrome: lambda_s == lambda_{N-1-s},
-//  with BOTH endpoints pinned to lambda = 1 (s = 0 and s = N-1). The schedule
-//  below is palindromic by construction (a symmetric tent in |step - center|),
-//  so there is NO out-of-loop "final jump to lambda = 1" -- that off-by-one
-//  jump is exactly what broke F-reversibility at O(1/ncmcSteps) before.
-// ============================================================================
+/**
+ * @file NCMCProtocol.hpp
+ * @brief The pure lambda(step) coupling schedule for the per-molecule NCMC
+ *        switch (Nilmeier, Crooks, Minh & Chodera 2011).
+ *
+ * @c World::protocolLambda delegates to @ref robo::ncmc::protocolLambda, so
+ * production and tests exercise one definition. The coupling parameter follows
+ * the convention @c lambda == 1 fully coupled, @c lambda == 0 fully decoupled;
+ * the alchemy force this schedule drives SHALL use the same convention, so both
+ * NCMC endpoints sit in the physical (fully-coupled) ensemble the work
+ * accounting assumes.
+ */
 
 #include <algorithm>
 #include <cmath>
 
 namespace robo::ncmc {
 
-// lambda for protocol substep `step` in [0, ncmcSteps). A palindromic tent:
-// lambda(s) == lambda(N-1-s), lambda(0) == lambda(N-1) == 1, descending to a
-// flat lambda = 0 hold centered at the trough. Defined for any integer step
-// (steps outside [0, N) clamp into [0, 1]); ncmcSteps <= 1 is the degenerate
-// single fully-coupled substep.
+/**
+ * @brief Coupling parameter @c lambda for NCMC protocol substep @p step: a
+ *        palindromic tent @c 1 -> 0 -> 1 with an optional flat @c lambda = 0 hold.
+ * @param[in] step         Protocol substep index; conventionally in
+ *                         @c [0, ncmcSteps).
+ * @param[in] ncmcSteps    Total number of switching substeps.
+ * @param[in] holdFraction Fraction of @p ncmcSteps spent in a flat
+ *                         @c lambda = 0 hold centered on the trough
+ *                         (the uncaged stride); 0 for a plain triangle.
+ * @return @c lambda in @c [0, 1].
+ * @post @c protocolLambda(0, N, .) == protocolLambda(N-1, N, .) == 1: both
+ *       endpoints are fully coupled.
+ * @post Palindromic: @c protocolLambda(s, N, .) == protocolLambda(N-1-s, N, .).
+ *       The value decreases monotonically to the trough (@c lambda == 0 at the
+ *       center) and increases monotonically back to 1; it is symmetric, not
+ *       globally monotone. This palindrome is what makes accept-on-endpoint the
+ *       exact Metropolis test for the reversible NCMC map.
+ * @note Defined for any integer @p step: indices outside @c [0, N) clamp into
+ *       @c [0, 1]. @c ncmcSteps <= 1 returns 1 (a single fully-coupled substep);
+ *       a @p holdFraction wide enough to consume the whole protocol returns 0
+ *       away from the pinned endpoints.
+ */
 [[nodiscard]] inline double protocolLambda(int step, int ncmcSteps, double holdFraction) {
     if (ncmcSteps <= 1) {
         return 1.0; // degenerate: a single, fully-coupled (lambda = 1) substep

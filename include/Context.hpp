@@ -15,18 +15,46 @@
 #include "TopologyElements.hpp"
 #include "World.hpp"
 
-// Robosample top-level context. Constructed from Python as Context(base_name,
-// seed); the Python subclass (context.py) adds the dihedral classifier and
-// load_amber, which fills `systemTopology` in place.
-//
-// Owns the worlds (the Gibbs flexibility regimens), the replica temperature
-// ladder, and the REX driver. World order defines the Gibbs sweep order, and
-// per-atom Ground coordinates (nm) are the only currency passed between worlds.
+/**
+ * @brief Robosample top-level run orchestrator: owns the Worlds, the replica
+ *        temperature ladder, and the replica-exchange driver, and delegates a
+ *        run to it.
+ *
+ * The engine is organized around replica exchange; a single-replica run is the
+ * degenerate `R = 1` case of the default REMC driver. World order defines the
+ * Gibbs sweep order, and per-atom Ground-frame coordinates (nm) are the only
+ * currency passed between Worlds (INV-3).
+ *
+ * Lifecycle (the required call order): construct -> `add*World(...)` (one or
+ * more) and `add_sampler` on each -> optional pre-`initialize` configuration
+ * (`setMTS`, `setSeparateForceGroups`, `setEnforcePeriodicBox`, mixing setters)
+ * -> `initialize(temperatures)` -> a run entry (`RunREX` or the legacy
+ * `runREX`). Adding a World after `initialize` is unsupported; a run entry
+ * before `initialize` throws.
+ *
+ * @note Constructed from Python as `Context(base_name, seed)`; the Python
+ *       subclass (context.py) supplies the dihedral classifier and `load_amber`,
+ *       which fills @ref systemTopology in place before any World is added.
+ * @see docs/architecture, MODULES.md (workflow layer).
+ */
 class Context {
     public:
+    /**
+     * @brief Construct an empty context with a run base name and master seed.
+     * @param[in] baseName Output-file stem; per-replica CSV/DCD paths are
+     *                     `baseName.<idx>.{csv,dcd,reactions.csv}` and
+     *                     `baseName.moves.csv`. Taken by value (moved in).
+     * @param[in] seed     Master RNG seed. The REX driver's RNG is derived from
+     *                     it; each World is seeded from it at `add*World`.
+     * @post @ref systemTopology is default-constructed and empty; no Worlds
+     *       exist. The caller (load_amber) fills @ref systemTopology next.
+     */
     Context(std::string baseName, std::uint32_t seed);
 
-    // Bound to Python as `system_topology`. Filled in place by load_amber.
+    /// The molecular system definition (topology, coordinates, box, bonded
+    /// sets). Bound to Python as `system_topology` and filled in place by
+    /// `load_amber` before any World is added. A public member because it is
+    /// the Python<->engine payload; every `add*World` reads it to build a model.
     SystemTopology systemTopology;
 
     // ---- modeling --------------------------------------------------------
@@ -37,331 +65,574 @@ class Context {
     // returned by add*World (see World.hpp), which rebuilds that world's model
     // in isolation -- the same mechanism addDockingWorld already uses.
 
-    // Add a Cartesian world (pure OpenMM MD on device) or a robotic/torsional
-    // world (internal-coordinate HMC). Both return a reference to the new world
-    // so Python can chain .add_sampler(...). The model is built immediately
-    // from the current systemTopology + root mobilities.
-    //
-    // wantReactionReporter (docs/specs/reaction-force-monitoring.md Sec.2): opt
-    // -in, off by default. Flags the new world the per-body applied-force
-    // reporter (World::setReactionReporter). addCartesianWorld always THROWS
-    // when true (Sec.3 integrator guard -- a Cartesian world's articulated
-    // body indexing is not meaningful). addRoboticWorld derives the
-    // interesting-body set from the just-built model: every non-Weld (flexed)
-    // body plus its parent, excluding only Ground itself -- a Free-rooted
-    // body (e.g. a receptor's root, directly attached to Ground) IS included
-    // (Sec.2.1/Sec.4).
+    /**
+     * @brief Append a Cartesian World (pure on-device OpenMM MD) and build its
+     *        model immediately from the current @ref systemTopology.
+     * @param[in] wantReactionReporter Opt-in per-body applied-force reporter.
+     *            @b Always throws when `true`: a Cartesian World has no
+     *            meaningful articulated-body indexing for the reporter.
+     * @return Reference to the newly added World, heap-owned by this Context so
+     *         the reference stays valid across sweeps. Chain `.add_sampler(...)`
+     *         on it.
+     * @pre Call before `initialize`; @ref systemTopology already filled.
+     * @post One World appended; World order (and thus Gibbs sweep order) is
+     *       append order.
+     */
     World& addCartesianWorld(bool wantReactionReporter = false);
+    /**
+     * @brief Append a robotic/torsional World (internal-coordinate HMC) with the
+     *        given per-bond flexibility selection, building its model at once.
+     * @param[in] sel Per-bond mobility (see @ref buildFlexibilities). Borrowed;
+     *            copied into the built model.
+     * @param[in] wantReactionReporter Opt-in per-body applied-force reporter.
+     *            When `true`, flags every flexed (non-Weld) body plus its parent,
+     *            excluding only Ground; a Free-rooted body (attached directly to
+     *            Ground) is included.
+     * @return Reference to the newly added World (heap-owned, stable across
+     *         sweeps). Chain `.add_sampler(...)`.
+     * @pre Call before `initialize`.
+     */
     World& addRoboticWorld(const Selection& sel, bool wantReactionReporter = false);
 
-    // Add a DOCKING world. `ligandMoleculeIndices` lists which molecules are
-    // ligands; their roots become Free (6 external DOF) and ALL their bonds stay
-    // Rigid (rigid-body docking). Every other molecule is Welded to Ground and
-    // rigid. Root mobility is thus a WORLD property here -- it is built from this
-    // argument, NOT from systemTopology.rootMobilities, so the same system can
-    // host a docking world and ordinary worlds at once. The binding-site centre
-    // is the centroid of all non-ligand (receptor) atoms; pass a sphere radius
-    // via add_sampler(...). Returns the world for chaining .add_sampler(...).
+    /**
+     * @brief Append a rigid-body docking World: listed molecules become mobile
+     *        6-DOF ligands, every other molecule is welded rigid to Ground.
+     *
+     * Root mobility here is a World property built from @p ligandMoleculeIndices,
+     * not from `systemTopology.rootMobilities`, so a docking World and ordinary
+     * Worlds can coexist over one system. Each ligand becomes a Free root with
+     * all its bonds Rigid; the binding-site centre is the centroid of all
+     * non-ligand (receptor) atoms; pass the sphere radius via `add_sampler(...)`.
+     *
+     * @param[in] ligandMoleculeIndices Molecule indices to treat as ligands.
+     * @return Reference to the new World (heap-owned, stable). Chain
+     *         `.add_sampler(...)`.
+     * @throws std::out_of_range if any index is outside `[0, numMolecules)`.
+     * @pre Call before `initialize`.
+     */
     World& addDockingWorld(const std::vector<int>& ligandMoleculeIndices);
 
 
-    // Per-bond mobility selection. `bonds` empty/None => every eligible
-    // (non-ring, non-terminal) bond gets `mobility`; otherwise only the listed
-    // (i,j) bonds do. Ring-closing bonds always remain Rigid.
+    /**
+     * @brief Build a per-bond mobility selection for `addRoboticWorld`.
+     * @param[in] bonds    If empty/None, every eligible bond gets @p mobility;
+     *            otherwise only the listed `(i,j)` bonds do. A bond is eligible
+     *            when it is non-ring-closing and both atoms have >= 2 bonds
+     *            (rotatable). Order within a pair is irrelevant.
+     * @param[in] mobility Joint type assigned to selected bonds; all others stay
+     *            Rigid.
+     * @param[in] flag     Currently unused.
+     * @return A Selection with per-bond mobility; ring-closing bonds always
+     *         remain Rigid regardless of @p bonds.
+     */
     Selection buildFlexibilities(const std::optional<std::vector<std::pair<int, int>>>& bonds,
                                  JointType mobility,
                                  bool flag);
 
     // ---- run -------------------------------------------------------------
-    // Build the OpenMM system, set the replica temperature ladder, and seed
-    // every replica with the reference coordinates. Empty list => single 300 K.
+    /**
+     * @brief Bring up OpenMM, run the startup geometry check, set the replica
+     *        temperature ladder, and seed every replica with the reference
+     *        coordinates.
+     *
+     * The transition from configuration to runnable state. Must be called after
+     * every `add*World` and before any run entry.
+     *
+     * @param[in] temperatures Per-replica temperature ladder (K); an empty list
+     *            means a single replica at 300 K. Its size fixes the replica
+     *            count `R` for the run.
+     * @throws std::runtime_error if OpenMM initialization fails, or (via
+     *         `checkStartupGeometry`) if the input geometry is non-finite or
+     *         sterically clashing and `ROBO_ALLOW_BAD_START` is not set.
+     * @post `R = temperatures.size()` replicas seeded from `systemTopology`'s
+     *       coordinates; per-replica CSV outputs truncated and DCD writers
+     *       (re)created; `writeCounter` reset. Adding a World after this is
+     *       unsupported.
+     */
     void initialize(const std::vector<double>& temperatures);
 
-    // Replica-exchange driver: `equil` then `prod` rounds; each round runs a
-    // Gibbs sweep over all worlds for every replica, attempts adjacent-replica
-    // swaps, and writes outputs every `writeFreq` production rounds.
-    //
-    // COORDINATE-swap REMC (INV-3 non-compliant by construction: it swaps
-    // `replicaCoords_`, not labels). Retained verbatim as the
-    // INVARIANT-EQUIV oracle for `RunREX` below (docs/specs/
-    // replica-exchange-nonequilibrium-work.md, "Port-target baseline"). Do
-    // NOT extend this method -- new run types and the label-swap object
-    // model live in `RunREX`.
+    /**
+     * @brief Legacy coordinate-swap replica-exchange driver, retained frozen as
+     *        the differential oracle for the label-swap `RunREX`.
+     *
+     * Runs `equilRounds` then `prodRounds` rounds; each round is a Gibbs sweep
+     * over all Worlds for every replica, followed by alternating-parity
+     * adjacent-replica exchange attempts, then outputs every `writeFreq`
+     * production rounds. On an accepted exchange it swaps the two replicas'
+     * coordinate buffers directly (it moves configurations, not labels), so it
+     * is INV-3 non-compliant by construction. The exchange accept test is the
+     * REMC criterion `(beta_a - beta_b)(E_a - E_b) >= 0` or `u < exp(delta)`.
+     *
+     * Its role is the contract: `runREX` and `RunREX` produce equivalent
+     * sampling (INV-8), and `runREX` @b is the equivalent-sampling reference
+     * `RunREX` is validated against (Python `test_rex_label_swap_equivalence`).
+     *
+     * @param[in] equilRounds Equilibration rounds (all Worlds AlwaysAccept).
+     * @param[in] prodRounds  Production rounds (each World's configured accept
+     *                        mode).
+     * @param[in] writeFreq   Output cadence in rounds; `<= 0` disables periodic
+     *                        output. Also gates the per-move telemetry CSV.
+     * @param[in] verbose     Emit per-World stdout telemetry each move.
+     * @pre `initialize` has run.
+     * @warning Frozen oracle: do @b not extend this method. New run types and
+     *          the label-swap object model live in `RunREX`; extending `runREX`
+     *          would break its role as the differential baseline. Driver scripts
+     *          historically call it at a single replica; that is context, not a
+     *          recommendation.
+     */
     void runREX(int equilRounds, int prodRounds, int writeFreq, bool verbose);
 
-    // ---- label-swap replica exchange (docs/specs/replica-exchange-
-    // nonequilibrium-work.md) ----------------------------------------------
-    // Stage 1: RUN_TYPE::REMC (parallel tempering, B6). RUN_TYPE::Default
-    // runs independent replicas (no exchange attempts). Stage 2b: RUN_TYPE::
-    // RENE/REBASONTOP (driven BAT-scaling exchange, B5/B6/B8, WORK_*
-    // accumulation, F4 atomic commit) are fully wired. RUN_TYPE::RENEMC's
-    // ACCEPTANCE formula (ETerm_nonequil, B6) is wired in attemptREXSwap, but
-    // its own driven ROUND-LOOP (the velocity/NMA drive segment) is a
-    // Stage 2c TODO -- RunREX THROWS std::logic_error for RENEMC (the
-    // acceptance math is directly testable via attemptREXSwap in isolation,
-    // see tests/TestRexAcceptanceAlgebra.cpp).
-    //
-    // NONE of the RENE/REBASONTOP driven-round code below (this method, the
-    // private runDrivenRound/driveReplica/runInterleavedRemcSubround/
-    // checkInv7AndInv10Guards helpers, and attemptREXSwap's RENE/REBASONTOP/
-    // RENEMC branches) has been compiled or run (coordinator directive,
-    // 2026-07-12 "drop compiling and running entirely") -- treat every claim
-    // below as a reviewed-on-paper design, not a build-confirmed one.
-    //
-    // Builds R = temperatures_.size() Replica/ThermodynamicState objects (B0,
-    // asserting R == T) from the current worlds' schedule and the reference
-    // coordinates seeded by `initialize()`, then runs `equil + prod` Gibbs
-    // sweeps. Each round: every replica is propagated through its
-    // ThermodynamicState's world schedule (temperature/timeStep/mdSteps/
-    // acceptRejectMode reset onto the shared worlds via the runtime setters,
-    // World::setTimeStep/setMdSteps/setAcceptRejectMode -- Consequences
-    // "Feasibility gap"); `mixReplicas` (REMC/Default) or `runDrivenRound`
-    // (RENE/REBASONTOP) then attempts a round of exchanges (B7), swapping
-    // LABELS (`swapThermodynamicStates`, INV-3), never coordinates. Output
-    // CSV/DCD files are indexed by THERMODYNAMIC STATE (not by replica-object
-    // identity), matching the coordinate-swap `runREX`'s convention that a
-    // fixed output slot is a fixed temperature -- this is what makes the two
-    // drivers' per-state statistics directly comparable (INVARIANT-EQUIV, a
-    // Stage-1 claim unaffected by the Stage-2b additions below).
-    //
-    // INV-7/V9 and INV-10 preconditions (checkInv7AndInv10Guards) are
-    // asserted for RENE/REBASONTOP right after setup, before the round loop.
+    /**
+     * @brief Label-swap replica-exchange driver: the default center of the
+     *        engine. Runs `R` replicas on the temperature ladder and exchanges
+     *        their thermodynamic-state labels, leaving configurations in place.
+     *
+     * Builds `R = temperatures.size()` Replica/ThermodynamicState objects
+     * (asserting `R == T`) from the current Worlds' schedule and the coordinates
+     * `initialize` seeded, then runs `equilRounds + prodRounds` rounds. Each
+     * round propagates every replica through its state's World schedule (a Gibbs
+     * sweep, iterated by thermodynamic-state index so the shared-World RNG is
+     * consumed in the same order as the legacy `runREX`), refreshes committed
+     * potentials (INV-6), then attempts a round of neighbour swaps via
+     * `mixReplicas` -> `attemptREXSwap`, which swaps @b labels only (INV-3),
+     * never coordinates. Output CSV/DCD are indexed by thermodynamic state (a
+     * fixed output slot is a fixed temperature), matching `runREX` so the two
+     * drivers' per-state statistics are directly comparable.
+     *
+     * Contract (INV-8): `RunREX` and `runREX` produce equivalent sampling; the
+     * two index maps stay mutually inverse and the swap matrix keeps its
+     * alternating-parity structure. The label-swap/coordinate-swap equivalence
+     * is validated (4-replica REMC on CUDA; Python equivalence test).
+     *
+     * @param[in] runType     Acceptance rule / round structure. Runtime-verified:
+     *            `Default`, `REMC`. `RENE`/`REBASONTOP` dispatch to the
+     *            uncompiled driven round (OQ-5). `RENEMC` throws
+     *            (`std::logic_error`): its acceptance formula is wired and
+     *            unit-tested but its driven round-loop is unimplemented.
+     * @param[in] equilRounds  Equilibration rounds.
+     * @param[in] prodRounds   Production rounds.
+     * @param[in] writeFreq    Output cadence in rounds; `<= 0` disables output.
+     * @param[in] verbose      Emit per-move stdout telemetry.
+     * @throws std::runtime_error if `initialize` has not seeded replicas.
+     * @throws std::logic_error for `RUN_TYPE::RENEMC`, or (driven types) if the
+     *         INV-7/INV-10 guards fail before the round loop.
+     * @note This is @b not established as a proven stationary-distribution
+     *       guarantee: the end-to-end detailed-balance / stationary-distribution
+     *       oracle is a pending separate track. Today's evidence is the
+     *       acceptance algebra (`attemptREXSwap`, tested) plus the label-swap
+     *       equivalence to `runREX` (INV-8). Cite it as equivalence-to-`runREX`,
+     *       not as a proven per-replica Boltzmann guarantee.
+     */
     void RunREX(RUN_TYPE runType, int equilRounds, int prodRounds, int writeFreq, bool verbose);
 
-    // Attempt one swap between thermodynamic states thermoC/thermoH (B6).
-    // REMC: accept iff ETerm_equal = -(beta_H - beta_C)(refU_X - refU_Y) >= 0
-    // or U(0,1) < exp(ETerm_equal); on accept, swap LABELS only
-    // (`swapThermodynamicStates`, INV-3).
-    // RENEMC: ETerm_nonequil, the SAME PT form on the DRIVEN-ENDPOINT
-    // reference potentials (referenceWORK_potential), no Jacobian (INV-10:
-    // volume-preserving drive).
-    // RENE/REBASONTOP: WTerm = -(Work_X + Work_Y), Work_partner =
-    // beta_target*U(x_partner^tau) - beta_source*U(x_partner^0) -
-    // lnJac_partner (B6/D7; correctionTerm == 1 under INV-9, D2). On accept,
-    // F4 atomically commits BOTH replicas' WORK_* trial to committed
-    // (Replica::commitWorkAsFinal) BEFORE the label swap; REMC/Default never
-    // call it (their accept is label-swap only, INV-3/B6 -- this is the F4
-    // fix: the original unconditionally ran the WORK commit even for REMC,
-    // reverting coordinates from an unpopulated WORK buffer).
-    // A non-finite acceptance exponent (NaN or +-inf, e.g. from a Stage 2a
-    // domain-invalid drive endpoint or a blown-up OpenMM PE) is an EXPLICIT
-    // automatic reject (reviewer N2 fail-loud), logged to stderr, not a
-    // silent NaN comparison.
-    // THROWS for RUN_TYPE::Default (a direct call is a caller error).
-    // Returns true iff accepted. Exposed (not private) so a reproducer can
-    // drive it directly (V1/INVARIANT-EQUIV do so indirectly via RunREX; V3/
-    // V4/V8 in tests/TestRexAcceptanceAlgebra.cpp call it directly, per the
-    // spec's acceptance-algebra oracles -- this is how RENEMC's acceptance
-    // formula is tested despite its round-loop being unwired, Stage 2c).
+    /**
+     * @brief Attempt one exchange between thermodynamic states @p thermoC and
+     *        @p thermoH under the active run type; on accept, swap labels only.
+     *
+     * The theory-derived acceptance algebra. Increments the attempted-swap
+     * matrix, computes a log-acceptance exponent per run type, then accepts iff
+     * the exponent is non-negative or `u < exp(exponent)`. On accept it
+     * increments the accepted-swap matrix and swaps the two states' labels
+     * (INV-3); it never moves coordinates.
+     *
+     * Per-run-type exponent (`beta = 1/(k_B T)`; `X`,`Y` are the replicas at
+     * `thermoC`,`thermoH`):
+     * - REMC: `ETerm_equal = -(beta_H - beta_C)(refU_X - refU_Y)`.
+     * - RENEMC: `ETerm_nonequil`, the same form on the driven-endpoint reference
+     *   potentials, no Jacobian (INV-10: volume-preserving drive).
+     * - RENE / REBASONTOP: `WTerm = -(Work_X + Work_Y)` where
+     *   `Work_p = beta_target*U(x_p^tau) - beta_source*U(x_p^0) - lnJac_p`
+     *   (Ballard-Jarzynski / Nilmeier deterministic-map acceptance). On accept,
+     *   both replicas' trial state is committed atomically
+     *   (`Replica::commitWorkAsFinal`) @b before the label swap; REMC/Default
+     *   never commit.
+     *
+     * @param[in] thermoC Cold-side thermodynamic-state index.
+     * @param[in] thermoH Hot-side thermodynamic-state index.
+     * @return `true` iff the swap was accepted.
+     * @throws std::logic_error if no thermodynamic states exist (called before a
+     *         run built them) or if the active run type is `RUN_TYPE::Default`.
+     * @warning A non-finite acceptance exponent (NaN or +-inf, e.g. a
+     *          domain-invalid driven endpoint whose sentinel Jacobian is -inf,
+     *          or a blown-up OpenMM PE) forces an explicit automatic reject
+     *          logged to stderr, never a silent NaN comparison (INV-8 guard).
+     * @note Public (not private) so a reproducer can drive it directly; the
+     *       REMC exponent (INV-8 detailed balance), Jacobian sign-flip
+     *       blindness of the symmetric paired swap, RENEMC `ETerm_nonequil`, and
+     *       the domain-error sentinel are pinned by
+     *       tests/TestRexAcceptanceAlgebra.cpp. The RENEMC/RENE/REBASONTOP
+     *       branches are otherwise uncompiled at run scope (OQ-5).
+     */
     bool attemptREXSwap(int thermoC, int thermoH);
 
-    // INV-7/V9 (Fixman-in-sampler <=> Fixman-out-of-acceptance, D3) and
-    // INV-10 (drive/run-type pairing) preconditions for a DRIVEN run type.
-    // Takes `runType` explicitly (not the `runType_` member) and reads only
-    // `worlds_` (no replicas_/thermodynamicStates_ needed), so a reproducer
-    // can call this directly on a hand-built Context (worlds added, no
-    // initialize()/RunREX needed) to test the guard in isolation --
-    // tests/TestRexAcceptanceAlgebra.cpp's INV-10 case does exactly this.
-    // THROWS std::logic_error on violation; no-op for REMC/Default (INV-7 as
-    // stated is a driven-only precondition per the Stage 2b directive; REMC's
-    // own Fixman-off risk is a separate, not-yet-enforced concern, see the
-    // Context.cpp comment). Public so it is independently testable.
+    /**
+     * @brief Enforce the driven-run preconditions INV-7 (Fixman enabled in every
+     *        non-Cartesian sampler) and INV-10 (each driven World's distortion
+     *        matches the run type), or throw.
+     *
+     * A no-op for `REMC`/`Default`; for `RENE`/`RENEMC`/`REBASONTOP` it requires
+     * that (a) every non-Cartesian World has Fixman enabled, because the swap
+     * acceptance excludes Fixman correctly only then (D3 biconditional); (b)
+     * every driven World's `distortOption` is the type the run demands
+     * (`ScaleBendStretch` for RENE/REBASONTOP, `NMA` for RENEMC); and (c) at
+     * least one driven World exists, so the drive is not silently inert.
+     *
+     * @param[in] runType Run type to check against, passed explicitly (not the
+     *            `runType_` member) so it is callable in isolation.
+     * @throws std::logic_error on any INV-7 or INV-10 violation, or if a driven
+     *         run type has no matching driven World.
+     * @note Reads only the Worlds (no replicas/states needed), so a reproducer
+     *       can call it on a hand-built Context without `initialize`/`RunREX`;
+     *       tests/TestRexAcceptanceAlgebra.cpp's INV-10 case does. The guards
+     *       themselves are unexercised at run scope (OQ-5: driven runs never run).
+     */
     void checkInv7AndInv10Guards(RUN_TYPE runType) const;
 
-    // Mixing configuration (Interface I3). swapEvery gates exchange
-    // frequency (attempt a mix only when round % swapEvery == 0);
-    // nSwapAttempts is the draw count for ReplicaMixingScheme::All;
-    // swapFixman is an OFF-by-default DIAGNOSTIC (D3): Fixman is computed by
-    // the sampler but SHALL NOT enter `attemptREXSwap`'s acceptance exponent
-    // (INV-7) -- this flag exists only for the port-target interface parity
-    // required by I3 and has no effect on Stage 1's REMC acceptance.
+    /**
+     * @brief Configure replica-exchange mixing, applied by the next `RunREX`.
+     *
+     * - `setReplicaMixingScheme`: `Neighboring` (default, alternating-parity
+     *   adjacent pairs) or `All` (random pairs).
+     * - `setSwapEvery(n)`: attempt a mix only when `round % n == 0` (clamped to
+     *   `>= 1`).
+     * - `setNSwapAttempts(n)`: draw count for `ReplicaMixingScheme::All`
+     *   (clamped to `>= 1`).
+     * - `setSwapFixman(enabled)`: off-by-default diagnostic only. Fixman is
+     *   computed by the sampler but never enters `attemptREXSwap`'s acceptance
+     *   exponent (INV-7); this flag exists for interface parity and does not
+     *   affect REMC acceptance.
+     */
     void setReplicaMixingScheme(ReplicaMixingScheme scheme) {
         mixingScheme_ = scheme;
     }
+    /// Attempt a mix only every @p n th round (clamped `>= 1`). @see setReplicaMixingScheme
     void setSwapEvery(int n) {
         swapEvery_ = (n > 0) ? n : 1;
     }
+    /// Draw count for `ReplicaMixingScheme::All` (clamped `>= 1`). @see setReplicaMixingScheme
     void setNSwapAttempts(int n) {
         nSwapAttempts_ = (n > 0) ? n : 1;
     }
+    /// Off-by-default diagnostic; never enters acceptance (INV-7). @see setReplicaMixingScheme
     void setSwapFixman(bool enabled) {
         swapFixman_ = enabled;
     }
 
-    // REBASONTOP interleave (D4): "RENE work-swaps plus periodic REMC
-    // neighbour-swap sub-rounds on top". Every `interleaveRemcEvery_` driven
-    // rounds, `rebasontopSubrounds_` REMC-style (ETerm_equal, committed
-    // potentials only, no WORK_* touched) neighbour-swap sub-rounds run in
-    // addition to (not instead of) the main WTerm swap attempt that round.
-    // Defaults (10, 6) are this port's choice -- the original's own count
-    // ("six neighbour-swap sub-rounds", B10) is preserved for the subround
-    // count; the original never specified an every-N cadence for entering
-    // the sub-loop (the whole block was dead code, B10), so 10 is a new,
-    // documented default, not a ported constant.
+    /**
+     * @brief Configure REBASONTOP's interleaved REMC sub-rounds.
+     *
+     * Every `interleaveRemcEvery` driven rounds, `rebasontopSubrounds`
+     * REMC-style neighbour-swap sub-rounds (ETerm_equal, committed potentials
+     * only, no trial state touched) run in addition to that round's main WTerm
+     * swap. Both clamp to `>= 1`. Defaults are (10, 6).
+     *
+     * @note Only meaningful under `RUN_TYPE::REBASONTOP`, which is uncompiled at
+     *       run scope (OQ-5).
+     */
     void setInterleaveRemcEvery(int n) {
         interleaveRemcEvery_ = (n > 0) ? n : 1;
     }
+    /// Number of interleaved REMC sub-rounds per interleave (clamped `>= 1`).
+    /// @see setInterleaveRemcEvery
     void setRebasontopSubrounds(int n) {
         rebasontopSubrounds_ = (n > 0) ? n : 1;
     }
 
-    // Symmetric attempted/accepted swap counts, indexed by thermodynamic
-    // state (T x T; nofAttemptedSwapsMatrix_[i][j] == [j][i]). Populated by
-    // `attemptREXSwap`; V1's "non-zero attempted-swap count and a plausible
-    // acceptance ratio" oracle reads these.
+    /**
+     * @brief Symmetric per-state-pair swap tallies accumulated across a `RunREX`.
+     *
+     * Both matrices are `T x T` and symmetric (`m[i][j] == m[j][i]`), indexed by
+     * thermodynamic-state index, populated by `attemptREXSwap`. The attempted
+     * count and the accepted/attempted ratio are the acceptance-rate diagnostic.
+     * @return Borrowed references valid until the next `RunREX`/`initialize`.
+     */
     [[nodiscard]] const std::vector<std::vector<std::int64_t>>& attemptedSwapsMatrix() const {
         return nofAttemptedSwapsMatrix_;
     }
+    /// @copydoc attemptedSwapsMatrix
     [[nodiscard]] const std::vector<std::vector<std::int64_t>>& acceptedSwapsMatrix() const {
         return nofAcceptedSwapsMatrix_;
     }
 
-    // ---- BAT-scaling shared/global anchor (INV-9, D2 revision 2) ---------
-    // Context (NOT ThermodynamicState) owns the single running-mean anchor
-    // the RENE/REBASONTOP drive scales the deviation around (B4/B3), so it
-    // is state-INDEPENDENT by construction -- the precondition the paired
-    // scaling map needs to be an exact involution (INV-9). Stage 2a provides
-    // the accumulation + frozen-snapshot API; wiring it into the equilibrium
-    // round loop (calling accumulateBatAnchorStats after every equilibrium
-    // world visit) and freezing exactly one snapshot per exchange round are
-    // Stage 2b concerns.
-    //
-    // Reads `world`'s CURRENT committed geometry (getAtomsLocationsInGround)
-    // -- callers SHALL call this only after an EQUILIBRIUM move (distortOption
-    // == nullopt), never on a driven (ScaleBendStretch) world's output (that
-    // would feed the anchor from nonequilibrium samples, biasing it).
+    // ---- BAT-scaling shared/global anchor (driven run types) -------------
+    /**
+     * @brief Fold one World's current committed geometry into the single
+     *        running-mean BAT anchor the driven drive scales deviations around.
+     *
+     * Context owns one anchor, shared across all thermodynamic states, so it is
+     * state-independent by construction -- the precondition the paired scaling
+     * map needs to be an exact involution (INV-9).
+     *
+     * @param[in] world World whose current Ground geometry is accumulated.
+     *            Borrowed, read-only.
+     * @pre Call only after an @b equilibrium move (`distortOption == nullopt`),
+     *      never on a driven World's output, which would bias the anchor with
+     *      nonequilibrium samples.
+     * @note Part of the uncompiled driven path (OQ-5).
+     */
     void accumulateBatAnchorStats(const World& world) {
         const robo::Vec3* p = world.getAtomsLocationsInGround();
         const std::vector<robo::Vec3> pos(p, p + world.model().numAtoms);
         batAnchorStats_.accumulate(world.model(), pos);
     }
-    // Frozen snapshot (INV-9): take ONE and pass it to every drive in a
-    // round -- both partners of a swap pair SHALL read the SAME Snapshot.
+    /**
+     * @brief Freeze the current anchor into an immutable snapshot for one
+     *        exchange round.
+     * @return A value snapshot of the running means. Take exactly one per round
+     *         and pass the same snapshot to both partners of every swap pair
+     *         (INV-9). @note Uncompiled driven path (OQ-5).
+     */
     [[nodiscard]] robo::BatAnchorStats::Snapshot batAnchorSnapshot() const {
         return batAnchorStats_.snapshot();
     }
+    /// Clear the accumulated BAT-anchor running means. @note Uncompiled (OQ-5).
     void resetBatAnchorStats() {
         batAnchorStats_.reset();
     }
 
-    // Enable multiple-timestep (r-RESPA) integration for the Cartesian world's
-    // on-device OpenMM MD: slow forces (Nonbonded, GBSA, ...) are evaluated once
-    // per outer step, fast bonded forces `innerSubsteps` times. No effect on the
-    // torsional worlds (their forces are always the full sum). MUST be called
-    // before initialize(). Forwards to OpenMMContext.
+    /**
+     * @brief Enable multiple-timestep (r-RESPA) integration for the Cartesian
+     *        World's on-device OpenMM MD.
+     * @param[in] enabled       Turn MTS on/off.
+     * @param[in] innerSubsteps Fast bonded-force evaluations per outer step; slow
+     *            forces (Nonbonded, GBSA, ...) are evaluated once per outer step.
+     * @pre Call before `initialize`. No effect on torsional Worlds (they always
+     *      use the full force sum). Forwards to the OpenMM singleton.
+     */
     void setMTS(bool enabled, int innerSubsteps);
 
+    /**
+     * @brief Enable/disable separate OpenMM force groups per Force.
+     * @param[in] enabled Whether each Force gets its own group (needed for
+     *            per-group energy decomposition).
+     * @note Thin forwarder onto the OpenMM singleton, present so callers hold
+     *       only a `Context` and never reach the singleton directly.
+     */
+    void setSeparateForceGroups(bool enabled);
 
-    // ---- energy ingestion / validation (unchanged) ----------------------
+    /**
+     * @brief Set whether OpenMM wraps coordinates into the primary box when
+     *        state is pulled back to the engine.
+     * @param[in] enabled Must stay `false` (the default) under explicit solvent
+     *            so the robot engine receives whole molecules; energies/forces
+     *            are unaffected (minimum image is always applied internally).
+     * @note Thin forwarder onto the OpenMM singleton (same rationale as
+     *       `setSeparateForceGroups`).
+     */
+    void setEnforcePeriodicBox(bool enabled);
+
+
+    // ---- energy ingestion / validation ----------------------------------
+    /// Bring up the OpenMM singleton from @ref systemTopology.
+    /// @return `true` on success. Called by `initialize`.
     auto initializeOpenMM() -> bool;
+    /// @return OpenMM potential energy (kJ/mol) of @ref systemTopology's current
+    /// reference coordinates.
     [[nodiscard]] auto calcOpenMMPotentialEnergy() -> double;
+    /// @return Total potential energy and its per-force-group decomposition for
+    /// the reference coordinates. @pre `setSeparateForceGroups(true)` for a
+    /// meaningful split.
     [[nodiscard]] auto computePotentialEnergyByGroup()
         -> std::pair<double, std::vector<OpenMMContext::ForceGroupEnergy>>;
 
+    /// @return The run output-file base name.
     [[nodiscard]] auto getBaseName() const -> const std::string& {
         return baseName;
     }
+    /// @return The master RNG seed.
     [[nodiscard]] auto getSeed() const -> std::uint32_t {
         return seed;
     }
+    /// @return The number of Worlds added so far.
     [[nodiscard]] int numWorlds() const {
         return static_cast<int>(worlds_.size());
     }
 
     private:
+    /// @return OpenMM potential energy (kJ/mol) of an arbitrary coordinate set.
+    /// @param[in] coords Per-atom Ground coordinates (nm, engine order), borrowed.
     double openmmPotential(const std::vector<robo::Vec3>& coords);
+    /// Write one replica's outputs for @ref runREX. Thin wrapper over
+    /// @ref writeOutputsCore using `replicaCoords_[replica]` and
+    /// `temperatures_[replica]`.
     void writeOutputs(int replica, int round, bool verbose);
-    // Shared CSV+DCD writer core, factored out of writeOutputs so RunREX's
-    // state-indexed output can reuse the same periodic-imaging/DCD-scatter
-    // logic on `coords` (a Replica's committed coordinates) instead of
-    // `replicaCoords_`. `idx` is both the output-file slot (baseName.<idx>.csv
-    // / dcdWriters_[idx]) and the row's "replica" column -- for `runREX` that
-    // is the replica-object index (== its fixed temperature slot); for
-    // `RunREX` it is the THERMODYNAMIC-STATE index (see RunREX doc comment).
-    // Pure extraction: writeOutputs(replica, round, verbose) behaves exactly
-    // as before.
+    /**
+     * @brief Emit one frame for output slot @p idx: append an energy row to the
+     *        per-slot CSV and one imaged frame to the per-slot DCD.
+     *
+     * The single output core shared by both drivers. Recomputes the OpenMM PE of
+     * @p coords, appends `round,idx,T,PE` to `baseName.<idx>.csv`, and (if a DCD
+     * writer exists for @p idx) scatters @p coords into the DCD scratch buffer in
+     * prmtop atom order, converts nm->Angstrom, and appends a frame.
+     *
+     * Whole-molecule periodic imaging is applied @b here and only to the DCD
+     * copy: each molecule is shifted by integer lattice vectors so its mass
+     * -weighted COM lands in the primary cell, then translated rigidly (bonds
+     * never straddle a face). The imaged coordinates are output-only; the
+     * sampled `coords`/`replicaCoords_` stay unwrapped and never re-enter
+     * sampling. Non-periodic systems (or missing molecule ranges) write
+     * coordinates verbatim.
+     *
+     * @param[in] idx     Output-file slot and the row's "replica" column. For
+     *            `runREX` the replica-object index (== its fixed temperature
+     *            slot); for `RunREX` the thermodynamic-state index -- either way
+     *            a fixed slot is a fixed temperature.
+     * @param[in] round   Round number written into the CSV row.
+     * @param[in] verbose Also print the energy line to stdout.
+     * @param[in] coords  Coordinates to image and write (nm, engine order),
+     *            borrowed and not modified.
+     * @param[in] T       Temperature written into the CSV row.
+     */
     void writeOutputsCore(int idx, int round, bool verbose, const std::vector<robo::Vec3>& coords, double T);
-    // Append a reporter world's captured per-body force rows (docs/specs/
-    // reaction-force-monitoring.md Sec.4) to that replica's per-replica CSV,
-    // tagged with the DCD frame index they pair with. No-op if rows is
-    // empty. Always the fixed 10-column schema (Sec.1.2/4).
+    /**
+     * @brief Append a reporter World's captured per-body reaction-force rows to
+     *        that replica's `baseName.<replica>.reactions.csv`.
+     *
+     * Writes the header only when the file is empty, then one row per sample.
+     * The schema is always the fixed 10 columns
+     * `frame,replica,body_idx,atom_idx,fx,fy,fz,tx,ty,tz` regardless of which
+     * force term(s) the reporter World summed.
+     *
+     * @param[in] replica Replica index; the CSV slot and the row's replica column.
+     * @param[in] frame   DCD frame index these rows pair with (for CSV/DCD
+     *            alignment).
+     * @param[in] rows    Captured samples, borrowed. Empty => no-op (no empty
+     *            header-only file is produced).
+     */
     void writeReactionRows(int replica, int frame, const std::vector<ReactionSample>& rows);
 
-    // Refuse to start (or warn, if ROBO_ALLOW_BAD_START is set) when the input
-    // geometry is non-finite or sterically clashing -- the docking world cannot
-    // repair a frozen-receptor clash, so this would otherwise loop forever.
+    /**
+     * @brief Startup geometry sanity scan: refuse to start (or warn) when the
+     *        input structure is unusable.
+     *
+     * A precondition check run once inside `initialize`, before any sampling. It
+     * never mutates sampled state. It flags three conditions: non-finite
+     * coordinates; hard steric clashes (a non-excluded, non-virtual atom pair
+     * closer than a fixed threshold, under minimum-image distance when the box
+     * is periodic); and a non-finite or pathologically positive initial
+     * potential energy. Bonded/excluded pairs (1-2/1-3/1-4) and massless virtual
+     * sites are excluded from the clash scan. It always prints a one-line
+     * summary to stderr.
+     *
+     * @throws std::runtime_error describing the failure (NaN, clashes, and/or
+     *         bad PE) when any condition trips and `ROBO_ALLOW_BAD_START` is
+     *         unset or `"0"`. When that env var is set to anything else, the
+     *         same message is logged as a warning and the run continues.
+     * @note A healthy structure (finite, no hard clashes, sane PE) returns
+     *       silently after the summary line. Rationale: a docking World welds
+     *       the receptor rigid and cannot relax a frozen clash, so an unchecked
+     *       bad start would loop forever rejecting kicks.
+     */
     void checkStartupGeometry();
 
     // ---- label-swap replica exchange (RunREX) private helpers ------------
-    // (Re)build replicas_/thermodynamicStates_/the inverse maps/the swap
-    // matrices from temperatures_ + the current per-world schedule + the
-    // reference coordinates seeded by initialize() (B0, identity maps).
-    // Asserts R == T (B0 NOTE) -- throws std::logic_error otherwise.
+    /**
+     * @brief (Re)build the replica/state objects, the identity index maps, and
+     *        the zeroed swap matrices from `temperatures_` and the current World
+     *        schedule.
+     *
+     * Seeds each replica from the coordinates `initialize` staged, evaluates each
+     * committed potential (INV-6), and applies the pre-run docking pose-repair
+     * kick (a no-op for non-docking systems). Sets both inverse index maps to
+     * identity.
+     * @param[in] runType Stored as the active run type for the run.
+     * @throws std::runtime_error if no replicas exist (`initialize` not called).
+     */
     void setupReplicaExchange(RUN_TYPE runType);
-    // Label swap only (INV-3): swap(replica2ThermoIxs_[X], [Y]),
-    // swap(thermo2ReplicaIxs_[thermoC], [thermoH]) where X/Y are the replicas
-    // currently occupying thermoC/thermoH. No Z-matrix pointer to swap in
-    // Stage 1 (B1: the Z-matrix table is shared/global already; per-replica
-    // BAT values are a Stage 2 concept).
+    /**
+     * @brief Exchange the labels of thermodynamic states @p thermoC and
+     *        @p thermoH, keeping both inverse maps consistent (INV-3).
+     * @post `replica2ThermoIxs_` and `thermo2ReplicaIxs_` remain mutually
+     *       inverse; no coordinates move.
+     */
     void swapThermodynamicStates(int thermoC, int thermoH);
-    // Neighbouring-pairs schedule (B7): startIdx = (round + oddity) % 2, then
-    // (startIdx, startIdx+1), (startIdx+2, startIdx+3), ... over the T
-    // thermodynamic states. Fills exchangePairList_.
+    /**
+     * @brief Fill `exchangePairList_` with the neighbouring-pairs schedule for a
+     *        round: `(startIdx,startIdx+1),(startIdx+2,startIdx+3),...` where
+     *        `startIdx = (round + oddity) % 2`.
+     * @param[in] round  Parity source (the driver passes `exchangeRound_`).
+     * @param[in] oddity Parity offset (0, or `sub%2` for interleaved sub-rounds).
+     */
     void prepareExchangePairs(int round, int oddity);
-    // ReplicaMixingScheme::All (B7): draw nAttempts distinct random
-    // thermo-state pairs and attemptREXSwap each.
+    /// Draw @p nAttempts distinct random thermodynamic-state pairs and attempt a
+    /// swap on each (`ReplicaMixingScheme::All`). No-op when `T <= 1`.
     void mixAllReplicas(int nAttempts);
-    // One round's exchange attempt (B7), gated by swapEvery_ and runType_.
-    // Parity comes from the dedicated exchangeRound_ counter (incremented
-    // once per EXECUTED mix), never from the raw round/mixi index (B7
-    // revision-2 fix, reviewer Should-fix R5) -- see prepareExchangePairs.
+    /**
+     * @brief Run one round's exchange attempts, gated by `swapEvery_` and the
+     *        run type.
+     *
+     * No-op when the mix is not due, the run type is `Default`, or `T <= 1`.
+     * Otherwise attempts the `Neighboring` schedule (parity from the dedicated
+     * `exchangeRound_` counter, incremented once per executed mix, so both
+     * parities stay reachable for any `swapEvery_`) or `mixAllReplicas`.
+     * @param[in] mixi Current round index, tested against `swapEvery_`.
+     */
     void mixReplicas(int mixi);
-    // Diagnostic: print the attempted/accepted swap matrices to stderr
-    // (I4: "a PrintNofAcceptedSwapsMatrix-style acceptance matrix becomes
-    // available"). Called once at the end of RunREX.
+    /// Print the accepted/attempted swap matrices (by thermodynamic-state index)
+    /// to stderr. Called once at the end of `RunREX`.
     void printSwapMatrix() const;
 
-    // ---- Stage 2b: driven (RENE/REBASONTOP) round -------------------------
-    // One driven round (B6/B7/B8): (1) every replica's EQUILIBRIUM worlds run
-    // (a Gibbs sweep exactly like mixReplicas' REMC path, but SKIPPING any
-    // world whose distortOption is set -- B8's equilibrium/nonequilibrium
-    // partition, read per-world via World::getDistortOption rather than a
-    // precomputed N1_wCnt split index, since the current engine's schedule is
-    // homogeneous across states, B0), refreshing potential/referencePotential
-    // and accumulating the BAT anchor (INV-9) from each equilibrium visit;
-    // (2) the neighbour pairing is prepared (B7) BEFORE any drive runs, since
-    // the Q-scale-factor s = sqrt(T_target/T_source) (B4) needs the PARTNER's
-    // temperature; (3) ONE frozen anchor snapshot (INV-9) is taken and passed
-    // to every drive this round; (4) each paired replica is driven toward its
-    // partner's temperature (driveReplica); (5) attemptREXSwap runs for every
-    // pair; (6) REBASONTOP's interleaved REMC sub-rounds (D4) run every
-    // interleaveRemcEvery_ rounds.
+    // ---- driven (RENE/REBASONTOP) round -----------------------------------
+    /**
+     * @brief Run one driven exchange round: equilibrium sweep, pairing, BAT
+     *        drive, work-based swap, then REBASONTOP's optional interleave.
+     *
+     * Intended structure: (1) sweep every replica's non-driven Worlds (skipping
+     * any World with a `distortOption`), refreshing committed potentials (INV-6)
+     * and feeding the BAT anchor from each equilibrium visit; (2) prepare the
+     * neighbour pairing before any drive, since the Q-scale factor
+     * `s = sqrt(T_target/T_source)` needs the partner's temperature; (3) take one
+     * frozen anchor snapshot and share it across every drive this round (INV-9);
+     * (4) drive each paired replica toward its partner's temperature; (5) attempt
+     * every pair's swap; (6) for REBASONTOP, run interleaved REMC sub-rounds
+     * every `interleaveRemcEvery_` rounds.
+     *
+     * @param[in] round   Round index (parity and interleave cadence).
+     * @param[in] verbose Emit per-move stdout telemetry.
+     * @note Assumed: this method and the whole driven path are documented from
+     *       source only; they are compiled-but-not-runtime-exercised (OQ-5) and
+     *       have no test. The structure above is a reviewed-on-paper design, not
+     *       build-confirmed behavior. Recorded as an OPEN-QUESTION in findings.
+     */
     void runDrivenRound(int round, bool verbose);
-    // Drive replica `replicaIx` (currently at thermodynamic state `thermoIx`)
-    // toward `targetTemperature` (B4: s = sqrt(targetTemperature /
-    // thermodynamicStates_[thermoIx].temperature)). Resets WORK/WORK_Jacobian
-    // (INV-5), then for every world position in that state's schedule with
-    // distortOption == ScaleBendStretch (RunREX's INV-10 guard already
-    // confirmed no OTHER-typed driven world exists for RENE/REBASONTOP),
-    // applies World::applyBatScalingDrive with the SHARED frozen `anchor`,
-    // accumulating WORK (B5, live += accumulation, Fixman excluded per D3)
-    // and WORK_Jacobian (B12) across every driven world visited. A
-    // std::domain_error from applyBatScalingDrive (Stage 2a's r1<=0/theta1
-    // outside (0,pi) guard) is caught here and converted to a forced-reject
-    // WORK_Jacobian = -infinity (so attemptREXSwap's Work_partner term goes
-    // to +infinity and the swap always rejects) rather than propagating an
-    // exception out of the round loop (reviewer N2 fail-loud, applied at the
-    // swap level, not a crash).
+    /**
+     * @brief Drive one replica from its current state toward @p targetTemperature
+     *        via BAT scaling, accumulating nonequilibrium work and Jacobian into
+     *        its trial block.
+     *
+     * Intended behavior: computes `s = sqrt(targetTemperature / T_source)`,
+     * resets the trial work fields (INV-5), reseeds the trial coordinates from
+     * the committed endpoint, then for each `ScaleBendStretch` World in the
+     * schedule applies the scaling drive with the shared frozen @p anchor,
+     * accumulating `WORK` (Fixman excluded) and `WORK_Jacobian`. A
+     * `std::domain_error` from the drive (an invalid scaled geometry) is caught
+     * and converted to a forced-reject sentinel `WORK_Jacobian = -infinity` so
+     * `attemptREXSwap` rejects the swap, rather than propagating out of the round.
+     *
+     * @param[in] replicaIx        Replica to drive.
+     * @param[in] thermoIx         Its current thermodynamic state (source temp).
+     * @param[in] targetTemperature Partner's temperature (drive target).
+     * @param[in] anchor           Shared frozen BAT anchor for this round (INV-9),
+     *            borrowed.
+     * @note Assumed: uncompiled/untested driven path (OQ-5). The consuming side
+     *       of the domain-error sentinel is unit-checked in
+     *       tests/TestRexAcceptanceAlgebra.cpp, but this try/catch itself is not
+     *       exercised end-to-end. Recorded in findings.
+     */
     void driveReplica(int replicaIx,
                        int thermoIx,
                        double targetTemperature,
                        const robo::BatAnchorStats::Snapshot& anchor);
-    // D4: REBASONTOP's interleaved REMC neighbour-swap sub-rounds. Runs
-    // rebasontopSubrounds_ full (alternating-parity) REMC-style
-    // (ETerm_equal, committed potentials only) sweeps by temporarily
-    // borrowing attemptREXSwap's REMC branch (runType_ flipped and restored
-    // around the loop) -- these touch only potential/referencePotential,
-    // never WORK_*, so they compose safely with the driven main swap.
+    /**
+     * @brief Run REBASONTOP's interleaved REMC neighbour-swap sub-rounds.
+     *
+     * Intended behavior: runs `rebasontopSubrounds_` alternating-parity
+     * REMC-style sweeps by temporarily borrowing `attemptREXSwap`'s REMC branch
+     * (the run type is flipped and restored around the loop); these touch only
+     * committed potentials, never the trial work fields, so they compose with the
+     * driven main swap.
+     * @note Assumed: uncompiled/untested driven path (OQ-5). Recorded in findings.
+     */
     void runInterleavedRemcSubround();
 
     std::string baseName;
@@ -380,12 +651,15 @@ class Context {
     RUN_TYPE runType_ = RUN_TYPE::Default;
     std::vector<Replica> replicas_;                     // R persistent configurations (B1)
     std::vector<ThermodynamicState> thermodynamicStates_; // T temperatures + schedules (B1)
-    // Two mutually-inverse maps (B0/B6): replica2ThermoIxs_[replicaIx] = the
-    // thermodynamic state currently simulating that replica's coordinates;
-    // thermo2ReplicaIxs_[thermoIx] = the replica currently occupying that
-    // state. Both initialised to identity by setupReplicaExchange (B0).
+    /// Two mutually-inverse permutation maps realizing the label swap.
+    /// `replica2ThermoIxs_[replicaIx]` is the thermodynamic state currently
+    /// simulating that replica's coordinates; `thermo2ReplicaIxs_[thermoIx]` is
+    /// the replica currently occupying that state.
+    /// @invariant They are inverses at all times:
+    ///            `thermo2ReplicaIxs_[replica2ThermoIxs_[r]] == r`. Identity at
+    ///            setup; every `swapThermodynamicStates` preserves the property.
     std::vector<int> replica2ThermoIxs_;
-    std::vector<int> thermo2ReplicaIxs_;
+    std::vector<int> thermo2ReplicaIxs_; ///< @see replica2ThermoIxs_
 
     ReplicaMixingScheme mixingScheme_ = ReplicaMixingScheme::Neighboring;
     int swapEvery_ = 1;

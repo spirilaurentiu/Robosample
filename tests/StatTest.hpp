@@ -23,18 +23,78 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <gtest/gtest.h>
 #include <vector>
+
+#include "TestHelpers.hpp" // warnSlowTierSkipped
 
 namespace rtest {
 namespace stat {
 
-// Gate for the high-N / slow statistical tier (large sample counts, tight
-// alpha=1e-4 distribution tests). The authoritative gate (`nox -s tests`)
-// always sets ROBOSAMPLE_SLOW_TESTS=1; a bare dev `ctest` run leaves it unset
-// so those tests GTEST_SKIP() (see TestHelpers.hpp::warnSlowTierSkipped).
-inline bool slowEnabled() {
-    return std::getenv("ROBOSAMPLE_SLOW_TESTS") != nullptr;
+// The three cost tiers a statistical test may run at (TESTS.md section 8 / TEST-001
+// D1): Smoke (seconds, moment checks only), Standard (every-push CI budget,
+// currently unused pending TEST-001 D3/D4's cheap-statistic redesign -- see
+// below), Exhaustive (nightly, the current millions-sample fine chi-square).
+enum class TestTier { Smoke, Standard, Exhaustive };
+
+// Reads ROBOSAMPLE_TEST_TIER (0=Smoke, 1=Standard, 2=Exhaustive; unset or
+// unparseable defaults to Smoke). Back-compat: ROBOSAMPLE_SLOW_TESTS=1 (with
+// ROBOSAMPLE_TEST_TIER unset) maps to Exhaustive, matching the pre-existing
+// binary gate every call site used before this tier was introduced.
+inline TestTier testTier() {
+    if (const char* t = std::getenv("ROBOSAMPLE_TEST_TIER")) {
+        const int v = std::atoi(t);
+        if (v <= 0) {
+            return TestTier::Smoke;
+        }
+        return v == 1 ? TestTier::Standard : TestTier::Exhaustive;
+    }
+    if (std::getenv("ROBOSAMPLE_SLOW_TESTS") != nullptr) {
+        return TestTier::Exhaustive;
+    }
+    return TestTier::Smoke;
 }
+
+// Pick a sample-count budget by tier -- the single point every test SHOULD
+// size its N from, once TEST-001 D3/D4 give each test tier-specific bodies.
+inline long tierSampleBudget(long smoke, long standard, long exhaustive) {
+    switch (testTier()) {
+        case TestTier::Smoke:
+            return smoke;
+        case TestTier::Standard:
+            return standard;
+        case TestTier::Exhaustive:
+        default:
+            return exhaustive;
+    }
+}
+
+// Gate for the high-N / slow statistical tier (large sample counts, tight
+// alpha=1e-4 distribution tests): true at Standard or Exhaustive tier. The
+// authoritative gate (`nox -s tests`) always sets ROBOSAMPLE_SLOW_TESTS=1
+// (-> Exhaustive); a bare dev `ctest` run leaves both env vars unset (->
+// Smoke) so those tests GTEST_SKIP() (see TestHelpers.hpp::warnSlowTierSkipped).
+inline bool slowEnabled() {
+    return testTier() != TestTier::Smoke;
+}
+
+// Shared gtest fixture base for a slow-tier statistical suite: SetUp() skips
+// the case (loudly, via warnSlowTierSkipped -- declared in TestHelpers.hpp,
+// so callers include that header too) whenever the current tier is Smoke.
+// A per-suite derived fixture (`class MySuite : public rtest::stat::
+// SlowStatTest {};`) keeps the gtest suite name identical to a converted
+// TEST(...)'s original suite -- TEST_F(SlowStatTest, ...) directly would
+// rename every adopting suite to "SlowStatTest", which is a pass-set-breaking
+// rename (VERIFY.md section 5) TEST-001 does not make.
+class SlowStatTest : public ::testing::Test {
+    protected:
+    void SetUp() override {
+        if (!slowEnabled()) {
+            rtest::warnSlowTierSkipped();
+            GTEST_SKIP() << "slow statistical tier (set ROBOSAMPLE_SLOW_TESTS=1)";
+        }
+    }
+};
 
 // ---- inverse normal CDF (Acklam), upper-tail quantile z s.t. P(Z>z)=p --------
 inline double invNormalCdf(double p) {

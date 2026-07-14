@@ -54,7 +54,6 @@
 
 #include "AnalyticForceBridge.hpp"
 #include "Constraints.hpp"
-#include "EngineHelpers.hpp"
 #include "HmcDriver.hpp"
 #include "RobotBuilders.hpp"
 #include "RobotEngine.hpp"
@@ -62,6 +61,9 @@
 #include "RobotState.hpp"
 #include "StatTest.hpp"
 #include "TestHelpers.hpp"
+#include "engine_helpers.hpp"
+#include "support/SamplingHarness.hpp"
+#include "support/TestPhysConstants.hpp"
 
 using namespace robo;
 using rtest::attachAtoms;
@@ -69,19 +71,15 @@ using rtest::BodySpec;
 using rtest::buildForest;
 using rtest::HmcDriver;
 using rtest::Rng;
+using rtest::phys::kT300;
 using rtest::stat::chiSquareCritical;
 using rtest::stat::chiSquareStatistic;
 using rtest::stat::expectedFromWeights;
 using rtest::stat::Histogram;
+using rtest::stat::slowEnabled;
 using rtest::stat::uniformExpected;
 
 namespace {
-
-constexpr double kT300 = 0.0083144626 * 300.0; // RT at 300 K [kJ/mol]
-
-bool slowEnabled() {
-    return std::getenv("ROBOSAMPLE_SLOW_TESTS") != nullptr;
-}
 
 // A single free rigid body on Ground, identity joint frames (so s.q()[0..3] IS
 // the body's orientation quaternion), asymmetric inertia (no symmetric-top
@@ -132,13 +130,7 @@ struct Marginals {
 template <class Driver>
 Marginals sample(Driver& drv, const RobotModel& m, RobotState& s, long nMoves, int stride) {
     Marginals out;
-    for (long i = 0; i < nMoves; ++i) {
-        const bool acc = drv.move();
-        out.accepted += acc ? 1 : 0;
-        ++out.moves;
-        if (i % stride != 0) {
-            continue;
-        }
+    const rtest::Marginals marg = rtest::runHmcChain(drv, nMoves, stride, [&](long /*i*/, bool /*acc*/) {
         const Real w = s.q()[0], x = s.q()[1], y = s.q()[2], z = s.q()[3];
         const Rotation R = EngineHelpers::quatToRotation(w, x, y, z);
         const double sinPitch = std::clamp(2.0 * (w * y - z * x), -1.0, 1.0);
@@ -146,7 +138,9 @@ Marginals sample(Driver& drv, const RobotModel& m, RobotState& s, long nMoves, i
         out.zAxisZ.add(R(2, 2));
         out.azimuth.add(std::atan2(R(1, 2), R(0, 2)));
         out.theta.add(2.0 * std::acos(std::min(1.0, std::abs(double(w)))));
-    }
+    });
+    out.moves = marg.attempted;
+    out.accepted = marg.accepted;
     return out;
 }
 

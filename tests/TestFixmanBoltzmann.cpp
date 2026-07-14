@@ -45,24 +45,22 @@
 #include "RobotState.hpp"
 #include "StatTest.hpp"
 #include "TestHelpers.hpp"
+#include "support/SamplingHarness.hpp"
+#include "support/TestPhysConstants.hpp"
 
 using namespace robo;
 using rtest::BodySpec;
 using rtest::buildForest;
 using rtest::HmcDriver;
+using rtest::phys::kT300;
 using rtest::stat::chiSquareCritical;
 using rtest::stat::chiSquareStatistic;
 using rtest::stat::expectedFromWeights;
 using rtest::stat::Histogram;
+using rtest::stat::slowEnabled;
 using rtest::stat::uniformExpected;
 
 namespace {
-
-constexpr double kT300 = 0.0083144626 * 300.0;
-
-bool slowEnabled() {
-    return std::getenv("ROBOSAMPLE_SLOW_TESTS") != nullptr;
-}
 
 // Two-torsion chain, 90-degree bend between the torsion axes. Off-axis body mass
 // (com offset) makes the inter-axis metric coupling -- and hence det M(phi2) --
@@ -147,13 +145,11 @@ ChainRun sampleChain(bool useFixman, std::uint64_t seed, long nMoves, int stride
     drv.useFixman = useFixman;
 
     ChainRun r;
-    for (long i = 0; i < nMoves; ++i) {
-        r.accepted += drv.move() ? 1 : 0;
-        ++r.moves;
-        if (i % stride == 0) {
-            r.phi2.add(wrapPi(static_cast<double>(s.q()[1])));
-        }
-    }
+    const rtest::Marginals marg = rtest::runHmcChain(drv, nMoves, stride, [&](long /*i*/, bool /*acc*/) {
+        r.phi2.add(wrapPi(static_cast<double>(s.q()[1])));
+    });
+    r.accepted = marg.accepted;
+    r.moves = marg.attempted;
     return r;
 }
 

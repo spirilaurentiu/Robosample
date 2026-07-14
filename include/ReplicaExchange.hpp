@@ -1,19 +1,24 @@
 #pragma once
 
-// ============================================================================
-//  Replica-exchange object model (docs/specs/replica-exchange-nonequilibrium-
-//  work.md). Stage 1: REMC (parallel-tempering) label-swap. Stage 2b/2c:
-//  RENE/REBASONTOP driven exchange (B5/B6, WORK_* fields + F4 atomic commit)
-//  and RENEMC's acceptance algebra (B6/INV-10) are implemented; RENEMC's OWN
-//  velocity/NMA driven-round-loop wiring is a Stage 2c TODO (see
-//  Context::RunREX) -- it reuses the ALREADY-EXISTING DistortOption::NMA
-//  momentum-draw distortion (World::reinitialize), not a new mechanism, but
-//  the round-loop partitioning + INV-10 pairing enforcement for it is not
-//  wired end-to-end yet. NONE of the Stage 2b/2c code in this header/its
-//  Context.cpp counterpart has been compiled or run (coordinator directive,
-//  "drop compiling and running entirely") -- treat it as reviewed-on-paper
-//  only until a build confirms it.
-// ============================================================================
+/**
+ * @file ReplicaExchange.hpp
+ * @brief Replica-exchange value types: the run-type/topology enums and the
+ *        `Replica` / `ThermodynamicState` records the label-swap driver owns.
+ *
+ * These are plain data carriers with no behavior beyond `commitWorkAsFinal`;
+ * all sampling logic lives in Context (ReplicaExchangeDriver.cpp,
+ * SwapAcceptance.cpp, DrivenRexDriver.cpp). The label-swap design keeps a
+ * replica's configuration in place and swaps only its thermodynamic-state
+ * label, so the two inverse index maps that realize the swap live on Context,
+ * not on these types.
+ *
+ * @note Runtime-verified surface: only `RUN_TYPE::REMC` and `RUN_TYPE::Default`
+ *       are exercised by a run. The RENE/REBASONTOP/RENEMC fields
+ *       (`WORK_*`, `referenceWORK_potential`) and their acceptance paths are
+ *       compiled-but-not-runtime-exercised (ARCHITECTURE OQ-5); their
+ *       contracts below are stated from source, not from a run.
+ * @see docs/specs/replica-exchange-nonequilibrium-work.md
+ */
 
 #include <cstdint>
 #include <vector>
@@ -21,78 +26,104 @@
 #include "World.hpp"     // AcceptRejectMode
 #include "robot_math.hpp" // robo::Vec3
 
-// Exchange acceptance rule selecting the outer Markov chain over
-// thermodynamic-state permutations (spec B9). RUN_TYPE::Default runs
-// independent replicas with no exchange attempts.
+/**
+ * @brief Selects the outer Markov chain over thermodynamic-state permutations:
+ *        which acceptance rule (if any) a replica-exchange round applies.
+ *
+ * Passed to `Context::RunREX`. Chooses the acceptance branch in
+ * `Context::attemptREXSwap` and the round structure in the driver.
+ *
+ * @note Runtime-exercised: `Default`, `REMC`. `RENE`/`REBASONTOP` are wired but
+ *       uncompiled/untested (OQ-5). `RENEMC`'s acceptance formula is wired and
+ *       unit-tested in isolation, but its driven round-loop is unimplemented:
+ *       `Context::RunREX(RENEMC, ...)` throws `std::logic_error`.
+ */
 enum class RUN_TYPE : std::uint8_t {
-    Default = 0,
-    REMC,       // Stage 1: label-swap parallel tempering (B6 ETerm_equal).
-    RENEMC,     // Stage 2b: acceptance (ETerm_nonequil) wired; round-loop drive is Stage 2c TODO.
-    RENE,       // Stage 2b: driven (BAT-scaling, work-based, WTerm) -- fully wired.
-    REBASONTOP  // Stage 2b: RENE work-swaps + interleaved REMC sub-rounds (D4) -- fully wired.
+    Default = 0, ///< Independent replicas; no exchange attempts.
+    REMC,        ///< Label-swap parallel tempering, `ETerm_equal` acceptance (B6).
+    RENEMC,      ///< `ETerm_nonequil` acceptance wired and tested; round-loop drive unimplemented (throws).
+    RENE,        ///< Driven BAT-scaling exchange, work-based `WTerm` acceptance (uncompiled).
+    REBASONTOP   ///< RENE work-swaps plus interleaved REMC sub-rounds (uncompiled).
 };
 
-// Exchange topology (spec B7): Neighboring pairs adjacent thermodynamic
-// states with alternating parity; All draws random pairs.
+/**
+ * @brief Exchange topology: how `mixReplicas` chooses which state pairs to
+ *        attempt each round.
+ *
+ * @note `Neighboring` (the default) attempts adjacent thermodynamic-state pairs
+ *       with round-alternating parity; `All` draws random distinct pairs
+ *       (`nSwapAttempts` draws).
+ */
 enum class ReplicaMixingScheme : std::uint8_t {
     All = 0,
     Neighboring = 1
 };
 
-// A persistent molecular configuration: committed Cartesian coordinates plus
-// the energies measured on them (spec B1 ownership table, INV-6), PLUS the
-// nonequilibrium TRIAL state (B2) held apart from the committed state until
-// accept/reject. There are R of them (spec B0); worlds hold no persistent
-// per-replica state between rounds (INV-3) -- a replica's coordinates are the
-// only thing that survives across a Gibbs sweep.
+/**
+ * @brief One replica: a persistent molecular configuration, the energies
+ *        measured on it, and (for driven run types) the nonequilibrium trial
+ *        state held apart until accept/reject.
+ *
+ * Owned by Context in a `vector<Replica>` sized `R = temperatures.size()`. A
+ * replica's `atomsLocations` is the only per-replica state that survives a
+ * Gibbs sweep; Worlds hold none (INV-3). The committed block and the trial
+ * block are kept separate so a driven swap can commit atomically on accept.
+ *
+ * @invariant INV-6: `potential` equals the OpenMM potential energy of
+ *            `atomsLocations`. The driver refreshes it before every swap
+ *            attempt.
+ *
+ * @note The `WORK_*` / `referenceWORK_*` trial fields are populated only during
+ *       a driven round (RENE/REBASONTOP; RENEMC when its round-loop lands) and
+ *       are uncompiled/untested (OQ-5). REMC/Default never touch them.
+ */
 class Replica {
     public:
     // ---- committed (equilibrium) state -----------------------------------
-    // Committed Cartesian coordinates, nm, engine/OpenMM atom order.
+    /// Committed Cartesian coordinates (nm, engine/OpenMM atom order). The
+    /// configuration whose label a swap moves.
     std::vector<robo::Vec3> atomsLocations;
 
-    // U(atomsLocations), the OpenMM potential energy of the committed
-    // configuration (INV-6: "a replica's stored potential SHALL equal the
-    // energy of its stored coordinates"). REMC/Default never populate a
-    // Fixman term here (D3: Fixman never enters the swap acceptance), so
-    // `potential`/`referencePotential` coincide for those run types; RENE/
-    // REBASONTOP still keep them equal for the SAME reason (D3's exclusion is
-    // unconditional, not REMC-specific) -- the split exists purely for
-    // interface parity with the ORIGINAL's two-potential design (B1), not
-    // because this port ever diverges them.
+    /// OpenMM potential energy of @ref atomsLocations (INV-6). @ref potential
+    /// and @ref referencePotential coincide for every run type: Fixman is
+    /// excluded from both unconditionally (D3). The pair exists for interface
+    /// parity with the original two-potential design, not because they diverge.
     double potential = 0.0;
-    double referencePotential = 0.0;
-    // Committed Fixman potential (diagnostic only, D3/F6: computed by the
-    // sampler for the Boltzmann-marginal biconditional INV-7, but NEVER added
-    // into `potential`/`referencePotential` or any acceptance exponent).
-    // Tracked so F4's atomic commit (INV-4) has a real quantity to promote
-    // atomically alongside coordinates + potential + referencePotential.
+    double referencePotential = 0.0; ///< @see potential
+    /// Committed Fixman potential, diagnostic only: computed by the sampler but
+    /// never added into @ref potential / @ref referencePotential or any
+    /// acceptance exponent (D3/INV-7). Tracked so the atomic commit has all
+    /// four committed quantities to promote together.
     double FixmanPotential = 0.0;
 
-    // ---- nonequilibrium trial state (B2, B5) -----------------------------
-    // Populated only during a DRIVEN round (RENE/REBASONTOP; RENEMC once its
-    // round-loop lands, Stage 2c). Reset to 0 (WORK/WORK_Jacobian) and
-    // reseeded from the committed endpoint (WORK_atomsLocations) at the start
-    // of each driven range (INV-5) by Context::driveReplica.
-    std::vector<robo::Vec3> WORK_atomsLocations; // x^tau, the driven endpoint (== x' under D7)
-    double WORK_potential = 0.0;                 // U(x^tau), unreduced physical PE
-    double referenceWORK_potential = 0.0;        // == WORK_potential (D3 Fixman exclusion, mirrors referencePotential)
-    double WORK_FixmanPotential = 0.0;           // trial Fixman (diagnostic only, D3)
-    // Accumulated per-driven-range work/Jacobian (B5, B12 "live += accumulation"):
-    // reset once per driven range, accumulated once per driven world visited
-    // in that range (a range is normally a single D7 mdSteps=0 scaling world,
-    // but B12 requires correctness for a multi-driven-world schedule too).
-    double WORK = 0.0;          // sum of per-driven-world (U_curr - U_prev) (B5; Fixman excluded, D3)
-    double WORK_Jacobian = 0.0; // sum of per-driven-world getDistortJacobianDetLog() (B5/D6)
+    // ---- nonequilibrium trial state (driven run types only) --------------
+    std::vector<robo::Vec3> WORK_atomsLocations; ///< Driven endpoint x^tau (== x' when mdSteps==0).
+    double WORK_potential = 0.0;                 ///< U(x^tau), unreduced physical PE.
+    double referenceWORK_potential = 0.0;        ///< == @ref WORK_potential (Fixman excluded, D3).
+    double WORK_FixmanPotential = 0.0;           ///< Trial Fixman (diagnostic only, D3).
+    /// Accumulated nonequilibrium work over the driven range: sum of per-driven
+    /// -world (U_curr - U_prev), Fixman excluded (D3/B5). Reset once per driven
+    /// range, accumulated once per driven World visited.
+    double WORK = 0.0;
+    /// Accumulated log-Jacobian over the driven range: sum of per-driven-world
+    /// `getDistortJacobianDetLog()` (D6). A forced-reject sentinel of
+    /// `-infinity` set by `driveReplica` on a domain-invalid drive.
+    double WORK_Jacobian = 0.0;
 
-    // F4 atomic commit (INV-4): on an ACCEPTED driven swap, promote the WORK_*
-    // trial to committed, ALL FOUR quantities together -- coordinates,
-    // potential, referencePotential, FixmanPotential -- so no partial/
-    // inconsistent state is ever visible (the F4 Critical bug this replaces:
-    // the original committed coords + potential only, silently leaving
-    // referencePotential/FixmanPotential stale). Never called on reject
-    // (nothing to promote; the committed state already stands, INV-3/B6 step
-    // 7 "On reject: nothing").
+    /**
+     * @brief Promote the trial block to committed atomically (all four
+     *        quantities: coordinates, potential, referencePotential,
+     *        FixmanPotential).
+     *
+     * @pre Called only on an accepted driven swap, after the `WORK_*` trial has
+     *      been populated by `Context::driveReplica`. Never called on reject
+     *      (the committed state already stands) and never for REMC/Default
+     *      (their accept is a label swap only).
+     * @post `atomsLocations`, `potential`, `referencePotential`,
+     *       `FixmanPotential` equal their `WORK_*` counterparts. No partial
+     *       state is ever observable.
+     * @note Part of the uncompiled driven path (OQ-5).
+     */
     void commitWorkAsFinal() {
         atomsLocations = WORK_atomsLocations;
         potential = WORK_potential;
@@ -101,27 +132,35 @@ class Replica {
     }
 };
 
-// A temperature and a per-world simulation schedule (spec B1, B0). There are
-// T of them, canonically R == T (B0) -- Context asserts this, never assumes
-// it.
+/**
+ * @brief One thermodynamic state: a target temperature plus the per-World
+ *        simulation schedule a replica runs while it occupies this state.
+ *
+ * Defines the target Boltzmann distribution (via @ref temperature) for whichever
+ * replica the driver's inverse index maps currently place here. Owned by
+ * Context in a `vector<ThermodynamicState>` sized `T`, canonically `T == R`
+ * (Context asserts this at setup, never assumes it).
+ *
+ * @note The schedule fields let the driver reset each shared World's
+ *       temperature / timestep / MD-step-count / accept-mode every round from
+ *       the state currently occupying it. Populated from the Worlds' own
+ *       configuration at setup and identical across states for the runtime-
+ *       exercised REMC/Default path; they diverge only on the uncompiled driven
+ *       path (OQ-5).
+ */
 class ThermodynamicState {
     public:
-    double temperature = 300.0;
+    double temperature = 300.0; ///< Target temperature (K); fixes this state's Boltzmann distribution.
 
-    // Same world-index ordering for every state (B0 NOTE): [0..W-1]. Kept
-    // explicit (rather than implicit 0..W-1) so a future permutation/subset
-    // schedule (B12) does not require an interface change.
+    /// World visitation order for a Gibbs sweep at this state; entry `pos` names
+    /// the World index run at schedule position `pos`. Held explicit (not
+    /// implicit 0..W-1) so a future permutation/subset schedule needs no
+    /// interface change; currently `[0..W-1]` for every state.
     std::vector<int> worldIndexes;
 
-    // Per-world schedule, one entry per position in worldIndexes (spec I1/I3
-    // "World runtime setters" Consequences bullet: these let the exchange
-    // driver reset each world's timestep/MD-step-count/accept-mode every
-    // round from the state currently occupying it). Stage 1 copies these
-    // from the worlds' own configuration at setup time and they are
-    // identical across states (B0: "per-world distort/flow/integrator
-    // vectors are identical across states"); Stage 2's driven segment (D7:
-    // mdSteps == 0 for distortOption < 0 worlds) is where they diverge.
+    /// Per-schedule-position runtime overrides, one entry per @ref worldIndexes
+    /// position, applied to the shared World before it runs at this state.
     std::vector<double> timeSteps;
-    std::vector<int> mdSteps;
-    std::vector<AcceptRejectMode> acceptRejectModes;
+    std::vector<int> mdSteps;                        ///< @see timeSteps
+    std::vector<AcceptRejectMode> acceptRejectModes; ///< @see timeSteps
 };

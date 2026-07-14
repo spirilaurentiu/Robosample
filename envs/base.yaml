@@ -56,6 +56,7 @@ dependencies:
   - pandas
   - matplotlib
   - seaborn
+  - sympy
 
   # Pip packages
   - pip:

@@ -28,6 +28,7 @@
 #include "RobotState.hpp"
 #include "StatTest.hpp"
 #include "TestHelpers.hpp"
+#include "support/TestPhysConstants.hpp"
 
 using namespace robo;
 using rtest::attachAtoms;
@@ -36,12 +37,11 @@ using rtest::buildBentTorsionChain;
 using rtest::buildForest;
 using rtest::HmcDriver;
 using rtest::Rng;
+using rtest::phys::kB;
+using rtest::phys::kT300;
 using rtest::stat::MeanAccumulator;
 
 namespace {
-
-constexpr double kB = 0.0083144626;
-constexpr double kT300 = kB * 300.0;
 
 // Measure <2 KE> over many momentum draws and assert it equals kT * nDofExpected
 // within 4 standard errors.

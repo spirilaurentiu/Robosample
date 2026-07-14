@@ -34,15 +34,26 @@ struct Box {
     double angleGamma{90.0}; ///< angle between A and B (degrees)
 };
 
-/// Streaming DCD writer.
-///
-/// Open once, call append() per frame, let the destructor (or close()) patch
-/// NFRAMES in the header.  Non-copyable, movable.
+/**
+ * @brief Streaming single-file CHARMM DCD trajectory writer.
+ *
+ * @par Lifecycle (required order)
+ * Default-construct, then initialize() exactly once, then append() once per
+ * frame, then close() (or let the destructor call it). The header's NFRAMES /
+ * NSTEP fields are back-patched at close(), so the file is only complete after
+ * close()/destruction. Non-copyable, movable.
+ *
+ * @par Caller contract (unit and frame boundary)
+ * The writer performs @b no unit conversion and @b no periodic imaging. It
+ * stores the coordinates it is handed verbatim (narrowed to 32-bit float) and
+ * treats the Box it is handed as already being in the CHARMM on-disk convention
+ * (side lengths, degree angles). The CHARMM DCD convention is Angstrom; the
+ * caller (workflow/OutputWriter) is responsible for converting engine nm to
+ * Angstrom (x10) and for whole-molecule periodic imaging before calling
+ * append(). This class owns only its file descriptor and byte layout.
+ */
 class Writer {
     public:
-    /// @param path      Output path.
-    /// @param numAtoms  Atoms per frame.
-    /// @param withBox   Write CHARMM periodic-box EXTRA_BLOCK (default: true).
     Writer() noexcept = default;
     ~Writer() noexcept;
 
@@ -52,13 +63,16 @@ class Writer {
     Writer(Writer&&) noexcept;
     auto operator=(Writer&&) noexcept -> Writer&;
 
-    /// Append one trajectory frame.
-    ///
-    /// @tparam Vec  Anything with .data() → const double* and size ≥ 3*numAtoms.
-    ///              The interleaved layout x0 y0 z0 … xN yN zN is required.
-    /// @param box   Periodic box for this frame. Ignored unless the writer was
-    ///              opened withBox=true; supply the per-frame box under PBC so the
-    ///              trajectory images correctly in analysis tools.
+    /**
+     * @brief Append one trajectory frame.
+     * @tparam Vec any type with .data() -> const double* and size >= 3*numAtoms.
+     * @param[in] coords borrowed interleaved buffer x0 y0 z0 ... xN yN zN, read
+     *        only for the duration of the call; values are stored verbatim as
+     *        float (caller supplies Angstrom, imaged coordinates).
+     * @param[in] box periodic box for this frame in the CHARMM on-disk convention.
+     *        Ignored unless the writer was opened withBox=true.
+     * @pre initialize() has been called.
+     */
     template <typename Vec>
     auto append(const Vec& coords, const Box& box = Box{}) -> void {
         assert(fileFd_ >= 0 && "dcd::Writer: not initialized");
@@ -70,6 +84,15 @@ class Writer {
         ++frameCount_;
     }
 
+    /**
+     * @brief Open the output file and write the DCD header. Call once, before any
+     *        append().
+     * @param[in] path output file path; opened for writing (truncating).
+     * @param[in] numAtoms atoms per frame; every append() coordinate buffer must
+     *        hold at least 3*numAtoms values in interleaved order.
+     * @param[in] withBox write the CHARMM periodic-box EXTRA_BLOCK per frame.
+     * @throws std::runtime_error if already initialized or the file cannot be opened.
+     */
     auto initialize(const std::string& path, int numAtoms, bool withBox = true) -> void;
 
     /// Flush, patch NFRAMES in the header, and close.  Idempotent.

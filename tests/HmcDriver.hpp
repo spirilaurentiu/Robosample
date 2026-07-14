@@ -44,11 +44,11 @@
 #include <vector>
 
 #include "Constraints.hpp"
-#include "EngineHelpers.hpp"
 #include "RobotEngine.hpp"
 #include "RobotIntegrator.hpp" // template definitions of stepTo / verletStep
 #include "RobotModel.hpp"
 #include "RobotState.hpp"
+#include "engine_helpers.hpp"
 #include "robot_math.hpp"
 
 namespace rtest {

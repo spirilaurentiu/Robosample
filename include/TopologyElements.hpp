@@ -6,6 +6,12 @@
 
 #include "RobotModel.hpp"
 
+/**
+ * @brief Nonbonded interaction treatment requested for the OpenMM system,
+ *        mirroring OpenMM's NonbondedForce method enum.
+ * @note The periodic methods (CutoffPeriodic, Ewald, PME) require
+ *       SystemTopology::boxVectors to be set; NoCutoff forbids periodic boundaries.
+ */
 enum NonbondedMethod : std::uint8_t {
     // No cutoff is applied to nonbonded interactions. The full set of N^2 interactions is computed exactly.
     // This necessarily means that periodic boundary conditions cannot be used. This is the default.
@@ -29,44 +35,72 @@ enum NonbondedMethod : std::uint8_t {
     PME,
 };
 
+/**
+ * @brief Structure-of-arrays payload describing one molecular system at the
+ *        Python<->engine boundary: atoms, bonded terms, nonbonded parameters,
+ *        z-matrix, periodic box, and virtual sites.
+ *
+ * @par Producer / consumer and lifetime
+ * Owned by @c Context as a public member for the whole run. Filled in place from
+ * Python (the producer) after parsing the prmtop/inpcrd, then read by
+ * World::buildModel / ModelBuilder and the OpenMM system builder (the consumers).
+ * It is an input snapshot: the engine treats it as read-only after the build.
+ *
+ * @par Index and array conventions
+ * Atom arrays are indexed by the global BFS atom index (the array position is the
+ * index, matching the OpenMM particle order). All parallel arrays in one section
+ * share that section's index (e.g. every @c atoms* array is indexed by atom;
+ * every @c bonds* array by bond). The @c *Begin / @c *End vectors are CSR-style
+ * half-open ranges [begin,end) per molecule (length @c numMolecules), slicing the
+ * per-interaction arrays; @c atomsBegin[mol] doubles as molecule @p mol's root atom.
+ *
+ * @par Units (INV-3, consistent MD system)
+ * Lengths nm, angles radians, energies kJ/mol, charge in elementary units,
+ * mass in daltons, temperature in kelvin. Per-field units are annotated inline.
+ *
+ * @note The sub-struct split of this god-struct is deferred behind a decision
+ *       record; it is documented here as it stands.
+ */
 struct SystemTopology {
     // -------------------------------------------------------------------------
     // Molecule ranges  -- [begin, end) into each array above; length == numMolecules
     // -------------------------------------------------------------------------
 
+    /** @brief Number of molecules; the length of every @c *Begin / @c *End range
+     *  array and of @c rootMobilities. */
     int numMolecules{0};
-    std::vector<int> atomsBegin;
-    std::vector<int> atomsEnd;
-    std::vector<int> bondsBegin;
+    std::vector<int> atomsBegin; ///< Per-molecule first atom index; also the molecule's root atom.
+    std::vector<int> atomsEnd;   ///< Per-molecule one-past-last atom index.
+    std::vector<int> bondsBegin;             ///< Per-molecule [begin,end) into the @c bonds* arrays.
     std::vector<int> bondsEnd;
-    std::vector<int> anglesBegin;
+    std::vector<int> anglesBegin;            ///< Per-molecule [begin,end) into the @c angles* arrays.
     std::vector<int> anglesEnd;
-    std::vector<int> periodicTorsionsBegin;
+    std::vector<int> periodicTorsionsBegin;  ///< Per-molecule [begin,end) into the @c periodicTorsions* arrays.
     std::vector<int> periodicTorsionsEnd;
-    std::vector<int> harmonicTorsionsBegin;
+    std::vector<int> harmonicTorsionsBegin;  ///< Per-molecule [begin,end) into the @c harmonicTorsions* arrays.
     std::vector<int> harmonicTorsionsEnd;
-    std::vector<int> zMatrixBegin;
+    std::vector<int> zMatrixBegin;           ///< Per-molecule [begin,end) into the @c zMatrix* arrays.
     std::vector<int> zMatrixEnd;
-    std::vector<int> ureyBradleyBegin;
+    std::vector<int> ureyBradleyBegin;       ///< Per-molecule [begin,end) into the @c ureyBradley* arrays.
     std::vector<int> ureyBradleyEnd;
-    std::vector<int> scaling14Begin;
+    std::vector<int> scaling14Begin;         ///< Per-molecule [begin,end) into the @c scaling14* arrays.
     std::vector<int> scaling14End;
-    std::vector<int> exclusionBegin;
+    std::vector<int> exclusionBegin;         ///< Per-molecule [begin,end) into the @c exclusion* arrays.
     std::vector<int> exclusionEnd;
-    std::vector<int> atomsRootIndex;
-    std::vector<JointType> rootMobilities;
+    std::vector<int> atomsRootIndex;         ///< Per-molecule root atom index (BFS root of each molecule's tree).
+    std::vector<JointType> rootMobilities;   ///< Per-molecule joint attaching that molecule's root to Ground.
 
     // -------------------------------------------------------------------------
     // Atom arrays  (BFS order, unit-converted)
     // -------------------------------------------------------------------------
 
-    int numAtoms{0};
-    std::vector<std::string> atomsUniqueName;
-    std::vector<int> atomsNonbondedIndex;
-    std::vector<int> atomsPrmtopIndex;
+    int numAtoms{0};                              ///< Number of atoms; length of every @c atoms* array.
+    std::vector<std::string> atomsUniqueName;     ///< Per-atom unique name (analysis/IO label).
+    std::vector<int> atomsNonbondedIndex;         ///< Per-atom index into the nonbonded parameter tables.
+    std::vector<int> atomsPrmtopIndex;            ///< Per-atom original prmtop index (pre-BFS-reorder).
 
-    std::vector<std::string> atomsElementName;
-    std::vector<std::string> atomsElementSymbol;
+    std::vector<std::string> atomsElementName;    ///< Per-atom element name.
+    std::vector<std::string> atomsElementSymbol;  ///< Per-atom element symbol.
     std::vector<double> atomsMass;    ///< Mass.                               [daltons]
     std::vector<double> atomsCharge;  ///< Partial charge.                     [e]
     std::vector<double> atomsSigma;   ///< Lennard-Jones sigma (vdW radius).   [nm]
@@ -76,8 +110,8 @@ struct SystemTopology {
     std::vector<double> atomsX;       ///< x coordinate (reference structure). [nm]
     std::vector<double> atomsY;       ///< y coordinate (reference structure). [nm]
     std::vector<double> atomsZ;       ///< z coordinate (reference structure). [nm]
-    std::vector<int> atomsAtomicNumber;
-    std::vector<int> atomsNumBondsInvolved;
+    std::vector<int> atomsAtomicNumber;    ///< Per-atom atomic number Z.
+    std::vector<int> atomsNumBondsInvolved; ///< Per-atom count of bonds incident on the atom.
 
     // -------------------------------------------------------------------------
     // Bond arrays  (BFS order)
@@ -172,30 +206,30 @@ struct SystemTopology {
     // CMAP torsion arrays
     // -------------------------------------------------------------------------
 
-    int cmapGridSize{0};
-    std::vector<double> cmapGridEnergy;
+    int cmapGridSize{0};                     ///< Side length of each square CMAP energy grid.
+    std::vector<double> cmapGridEnergy;      ///< Flattened CMAP correction grids (kJ/mol).
 
-    std::vector<int> cmapTorsionMapIndex;
-    std::vector<int> cmapTorsionA1;
-    std::vector<int> cmapTorsionA2;
-    std::vector<int> cmapTorsionA3;
-    std::vector<int> cmapTorsionA4;
-    std::vector<int> cmapTorsionB1;
-    std::vector<int> cmapTorsionB2;
-    std::vector<int> cmapTorsionB3;
-    std::vector<int> cmapTorsionB4;
+    std::vector<int> cmapTorsionMapIndex;    ///< Per-CMAP-term index of the grid it uses.
+    std::vector<int> cmapTorsionA1;          ///< First torsion, atom 1 (global index).
+    std::vector<int> cmapTorsionA2;          ///< First torsion, atom 2.
+    std::vector<int> cmapTorsionA3;          ///< First torsion, atom 3.
+    std::vector<int> cmapTorsionA4;          ///< First torsion, atom 4.
+    std::vector<int> cmapTorsionB1;          ///< Second torsion, atom 1.
+    std::vector<int> cmapTorsionB2;          ///< Second torsion, atom 2.
+    std::vector<int> cmapTorsionB3;          ///< Second torsion, atom 3.
+    std::vector<int> cmapTorsionB4;          ///< Second torsion, atom 4.
 
-    bool hasNBfix = false;
-    int numNBTypes = 0;
-    std::vector<double> aCoef;
-    std::vector<double> bCoef;
+    bool hasNBfix = false;                   ///< Whether explicit NBFIX off-diagonal LJ tables are present.
+    int numNBTypes = 0;                      ///< Number of Lennard-Jones atom types (side of the aCoef/bCoef tables).
+    std::vector<double> aCoef;               ///< NBFIX A-coefficient table, numNBTypes^2 (LJ r^-12 term).
+    std::vector<double> bCoef;               ///< NBFIX B-coefficient table, numNBTypes^2 (LJ r^-6 term).
 
-    bool useGBSAOBC2 = false;
-    double gbsaSolventDielectric = 78.5;
-    double gbsaSoluteDielectric = 1.0;
+    bool useGBSAOBC2 = false;                ///< Enable GBSA-OBC2 implicit solvent.
+    double gbsaSolventDielectric = 78.5;     ///< GBSA solvent dielectric constant.
+    double gbsaSoluteDielectric = 1.0;       ///< GBSA solute dielectric constant.
 
-    NonbondedMethod nonbondedMethod = NonbondedMethod::NoCutoff;
-    double nonbondedCutoff = 1.2;
+    NonbondedMethod nonbondedMethod = NonbondedMethod::NoCutoff; ///< Nonbonded treatment for the OpenMM system.
+    double nonbondedCutoff = 1.2;            ///< Nonbonded cutoff distance (nm); used by the cutoff/periodic methods.
 
     // -------------------------------------------------------------------------
     // Periodic box (explicit solvent)
@@ -227,7 +261,7 @@ struct SystemTopology {
     // Indices are global/BFS atom indices (the OpenMM particle order). Only the
     // 3-particle average type is represented here (covers OPC/TIP4P/-Ew/-2005);
     // out-of-plane sites (e.g. TIP5P) would need an additional type.
-    int numVirtualSites{0};
+    int numVirtualSites{0};        ///< Number of 3-particle-average virtual sites; length of every @c vs* array.
     std::vector<int> vsSite;       ///< global index of the massless EP particle.
     std::vector<int> vsAtom1;      ///< parent atom 1 (global index).
     std::vector<int> vsAtom2;      ///< parent atom 2 (global index).
@@ -236,7 +270,7 @@ struct SystemTopology {
     std::vector<double> vsWeight2; ///< weight on parent 2.
     std::vector<double> vsWeight3; ///< weight on parent 3.
 
-    double thermostatTemperature = 300.0;
-    double collisionFrequency = 1.0;
-    int seed = 0;
+    double thermostatTemperature = 300.0; ///< Target temperature (K) for the OpenMM thermostat.
+    double collisionFrequency = 1.0;      ///< Thermostat collision/friction frequency (1/ps).
+    int seed = 0;                         ///< RNG seed handed to the OpenMM integrator/thermostat.
 };

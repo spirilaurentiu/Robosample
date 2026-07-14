@@ -24,6 +24,14 @@
 
 #include "robot_math.hpp"
 
+/**
+ * @brief Joint (mobilizer) identity for one body: the single per-body tag the
+ *        engine branches on in place of virtual dispatch.
+ * @note The DOF count, q width, quaternion use, constant-H_FM property, and
+ *       root-legality of each value are given by the static predicates on
+ *       RobotModel; those predicates are the single source of truth for
+ *       joint-type facts.
+ */
 enum class JointType : std::uint8_t {
     Rigid = 0,       // 0 dof
     Torsion,         // 1 dof  rotation about the bond axis (the canonical dihedral)
@@ -54,6 +62,33 @@ enum class JointType : std::uint8_t {
 //   * Frame-graph ancestry names: self / parent / grandParent (root-ward).
 //     (refChild only exists if the legacy A1 orientation switch is kept.)
 // ----------------------------------------------------------------------------
+/**
+ * @brief Immutable, precomputed articulated-robot topology for one World: the
+ *        body forest, generalized-coordinate index tables, static joint frames,
+ *        mass properties, atom<->body maps, loop-closure (z-matrix) records, and
+ *        the joint-fact predicates the solver queries.
+ *
+ * @par Ownership and immutability boundary
+ * Owned by @c World by value and built once by ModelBuilder (World::buildModel),
+ * the sole writer. After the build it is @b const for the life of the World and
+ * every solver function takes it as @c const @c RobotModel&; it is rebuilt only
+ * on a root-mobility change. Two field classes are exceptions to "set once at
+ * build": bodyMass / bodyCom_B / bodyUnitInertia_B / atomStation_B are
+ * recomputed on every coordinate transfer (marked in their group comments), and
+ * bodyMassScale is a sampling-time run-constant. The topology and index tables
+ * (sizes, tree, q/u offsets, joint frames, z-matrix) are fixed after the build.
+ *
+ * @par Index and ordering conventions
+ * Atoms and bodies are in topological/BFS order (parent index < child index,
+ * Ground == body 0); the array position is the index. The q/u offset tables
+ * (bodyQIndex/bodyNQ/bodyUIndex/bodyNU/bodyUSqIndex) define the
+ * generalized-coordinate layout the mass metric (INV-5) and constraints (INV-6)
+ * read; @c nq exceeds @c nu only for quaternion bodies. See the field-group
+ * comments for each array's index space and unit; ModelBuilder is the producer.
+ *
+ * @note SoA, no vtables: joint behavior is dispatched on bodyJoint[b] via the
+ *       static predicates below, not through polymorphism.
+ */
 struct RobotModel {
     // ---- system sizes ------------------------------------------------------
     int numBodies = 0; // includes Ground == body 0
@@ -156,6 +191,11 @@ struct RobotModel {
     std::vector<int> bodyZRow; // [numBodies] index into zI/zJ/zK/zL, or -1 (Rigid bodies)
 
     // ---- convenience -------------------------------------------------------
+    /**
+     * @brief Whether body @p b stores its orientation as a 4-wide unit quaternion
+     *        (and so must be renormalized each Verlet step).
+     * @param[in] b body index in [0, numBodies).
+     */
     [[nodiscard]] bool isQuaternionBody(int b) const {
         return jointUsesQuaternion(bodyJoint[b]);
     }
@@ -165,6 +205,10 @@ struct RobotModel {
     // the engine's q/u layout, the quaternion renormalizer) reads these, so a
     // new joint is defined in exactly one spot. nq differs from nu only for the
     // quaternion bodies (orientation stored as a 4-wide unit quaternion).
+    /**
+     * @brief Number of generalized speeds (DOF) a joint of type @p jt contributes.
+     * @return 0 (Rigid) up to 6 (Free); the value used to size bodyNU and lay out u.
+     */
     [[nodiscard]] static constexpr int jointNU(JointType jt) {
         switch (jt) {
             case JointType::Rigid:
@@ -186,6 +230,11 @@ struct RobotModel {
         }
         return 0;
     }
+    /**
+     * @brief Number of generalized coordinates (q width) for a joint of type @p jt.
+     * @return jointNU(jt) for non-quaternion joints; the quaternion-inflated width
+     *         for Ball (4), FreeLine (7), and Free (7).
+     */
     [[nodiscard]] static constexpr int jointNQ(JointType jt) {
         // Quaternion bodies inflate the orientation block from 3 (rotational u)
         // to 4 (unit quaternion q): Ball (4), FreeLine (4 + 3 trans = 7), Free
@@ -200,9 +249,17 @@ struct RobotModel {
                 return jointNU(jt);
         }
     }
+    /**
+     * @brief Whether type @p jt stores orientation as a unit quaternion (Ball,
+     *        FreeLine, Free), making @c nq > @c nu for that body.
+     */
     [[nodiscard]] static constexpr bool jointUsesQuaternion(JointType jt) {
         return jt == JointType::Ball || jt == JointType::FreeLine || jt == JointType::Free;
     }
+    /**
+     * @brief Whether type @p jt contributes any DOF; false only for Rigid, which
+     *        welds its two atoms into one rigid unit.
+     */
     [[nodiscard]] static constexpr bool jointIsFlexible(JointType jt) {
         return jt != JointType::Rigid; // Weld/Rigid welds its two atoms into one rigid unit
     }
@@ -210,6 +267,14 @@ struct RobotModel {
     // the engine's mobilizer-bias acceleration uses the cheap centripetal path.
     // The other three (BendStretch, SphericalCoords, FreeLine) have q-dependent
     // H_FM and go through the general HDot_FM*u term.
+    /**
+     * @brief Whether the joint matrix H_FM is constant in the inboard F frame, so
+     *        HDot_FM == 0.
+     * @return true for the seven constant-H_FM joints (engine uses the cheap
+     *         centripetal mobilizer-bias path); false for BendStretch,
+     *         SphericalCoords, FreeLine (q-dependent H_FM, general HDot_FM*u term).
+     * @note Consumed in RobotEngine::realizeVelocity to select the bias path.
+     */
     [[nodiscard]] static constexpr bool jointHasConstantHFM(JointType jt) {
         switch (jt) {
             case JointType::Rigid:
@@ -229,6 +294,13 @@ struct RobotModel {
     // are defined against a BOND axis that does not exist at the Ground hinge, so
     // they are rejected there (validated in World::buildModel). This is a rule on
     // ONE enum, not a second enum.
+    /**
+     * @brief Whether type @p jt may attach a molecule root to Ground.
+     * @return true for Free, Cartesian, Rigid, FreeLine, Ball, Torsion; false for
+     *         the bond-axis joints (Slider/Cylinder/BendStretch/SphericalCoords),
+     *         which have no bond axis at the Ground hinge.
+     * @note Enforced in World::buildModel; a scaled joint can never be a root.
+     */
     [[nodiscard]] static constexpr bool jointIsLegalRoot(JointType jt) {
         switch (jt) {
             case JointType::Free:

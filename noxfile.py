@@ -101,7 +101,14 @@ def tests(session):
     # real ctest error and should still abort. Detect "tests failed" from the
     # log ctest writes; the build dir was just wiped, so it can't be stale.
     session.log("Running C++ tests with CTest...")
-    session.run("ctest", "--test-dir", BUILD_RELWITHDEBINFO, "-j", success_codes=[0, 8])
+    # -LE openmm: never run OpenMM's own third-party suite here. It is off by
+    # default (built only under -DBUILD_OPENMM_TESTS=ON) and has its own opt-in
+    # session, `nox -s openmm_tests`. The exclude is belt-and-suspenders in case
+    # a build dir was configured with the option on.
+    session.run(
+        "ctest", "--test-dir", BUILD_RELWITHDEBINFO, "-j", "-LE", "openmm",
+        success_codes=[0, 8],
+    )
     if (
         BUILD_RELWITHDEBINFO / "Testing" / "Temporary" / "LastTestsFailed.log"
     ).exists():
@@ -178,6 +185,40 @@ def tests(session):
         session.error(
             "Test failures occurred — coverage and badge were still generated above."
         )
+
+
+@nox.session(python=False)
+def openmm_tests(session):
+    """Run OpenMM's own test suite (opt-in; OFF by default, like slow tests).
+
+    OpenMM's tests are third-party. We run them only when we have modified
+    vendored OpenMM, to catch regressions. They are excluded from `nox -s tests`
+    and are not even compiled unless BUILD_OPENMM_TESTS is set -- this session
+    configures the Tests preset with -DBUILD_OPENMM_TESTS=ON, builds, and runs
+    the "openmm" ctest label.
+
+    The tests are SMALL systems (<= ~10k particles), so many share one GPU: each
+    GPU test runs in single, mixed, AND double precision as independent, parallel
+    ctest cases. -j is bounded (default 8) so VRAM is not oversubscribed; override
+    with `--`, e.g.  nox -s openmm_tests -- -j 16 -R Cuda_Nonbonded.
+    """
+    if "CONDA_PREFIX" not in os.environ:
+        session.error(
+            "CONDA_PREFIX not found. Please activate your mamba environment first."
+        )
+
+    session.log("Configuring and building the Tests preset with OpenMM tests ON...")
+    session.run("cmake", "--preset", TEST_PRESET, "-DBUILD_OPENMM_TESTS=ON")
+    session.run("cmake", "--build", "--preset", TEST_PRESET)
+
+    # Default to a bounded -j so the small GPU tests share one GPU without
+    # oversubscribing VRAM; the user can override the whole ctest arg list via
+    # posargs (e.g. a higher -j, a -R name filter, or --output-on-failure).
+    ctest_args = list(session.posargs) or ["-j", "8", "--output-on-failure"]
+    session.run(
+        "ctest", "--test-dir", BUILD_RELWITHDEBINFO, "-L", "openmm", *ctest_args,
+        success_codes=[0, 8],
+    )
 
 
 def is_perf_unrestricted():

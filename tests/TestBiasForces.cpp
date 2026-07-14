@@ -17,7 +17,7 @@
 //  silent regression to the documented bugs turns the suite red.
 //
 //  No World / forcefield: generalized forces are set directly (calcUDot), and
-//  the integrator tests use the OpenMM-free ZeroBridge below.
+//  the integrator tests use the OpenMM-free HarmonicBridge<NoForcePolicy> below.
 //
 //  NOT PORTED (no operator in Robosample): reaction forces
 //  (calcMobilizerReactionForces); gravity (none in Robosample).
@@ -34,11 +34,14 @@
 #include "RobotModel.hpp"
 #include "RobotState.hpp"
 #include "TestHelpers.hpp"
+#include "support/HarmonicBridge.hpp"
 
 using namespace robo;
 using rtest::BodySpec;
 using rtest::buildForest;
+using rtest::HarmonicBridge;
 using rtest::NearVec3;
+using rtest::NoForcePolicy;
 using rtest::randomizeState;
 using rtest::Rng;
 
@@ -136,25 +139,6 @@ std::vector<SpatialVec> mobBiasByFD(const RobotModel& m, RobotState& s, Real h =
     }
     return aMob;
 }
-
-// OpenMM-free zero-force bridge matching the verletStep contract: clears every
-// per-body spatial force and every mobility force, exactly like ForceBridge does
-// before accumulating (here it accumulates nothing). With zero applied force the
-// ONLY thing driving udot is the velocity-dependent bias -- which is the point.
-struct ZeroBridge {
-    const RobotModel& m;
-    explicit ZeroBridge(const RobotModel& model)
-        : m(model) {
-    }
-    void evaluate(RobotState& s) {
-        for (int b = 0; b < m.numBodies; ++b) {
-            s.bodyForceG()[b] = SpatialVec(Vec3(0), Vec3(0));
-        }
-        for (int i = 0; i < m.nu; ++i) {
-            s.mobilityForce()[i] = Real(0);
-        }
-    }
-};
 
 // Spatial angular momentum of a single rigid body about its OWN COM, in Ground.
 // Spatial momentum about the body origin Bo is h = Mk_G * V_GB = [L_Bo ; p];
@@ -428,7 +412,7 @@ TEST(BiasForces, FreeBodyConservesAngularMomentum) {
         u[2] = Real(0.5);
         u[3] = u[4] = u[5] = 0;
 
-        ZeroBridge bridge(m);
+        HarmonicBridge<NoForcePolicy> bridge(m, s);
         const ConstraintSet cset; // empty -> unconstrained
 
         // seed the derivative chain (mirrors TestIntegrator's seedDerivatives).

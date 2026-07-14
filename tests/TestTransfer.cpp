@@ -21,12 +21,12 @@
 #include <gtest/gtest.h>
 #include <vector>
 
-#include "EngineHelpers.hpp" // rotationToQuaternion (build a root q' for the rigid map)
 #include "RobotBuilders.hpp"
 #include "RobotEngine.hpp"
 #include "RobotModel.hpp"
 #include "RobotState.hpp"
 #include "TestHelpers.hpp"
+#include "engine_helpers.hpp" // rotationToQuaternion (build a root q' for the rigid map)
 
 using namespace robo;
 using rtest::attachAtoms;

@@ -593,6 +593,8 @@ different approximation) is a declared change under Contract rule 2 - not a sile
 
 ## Output Format
 
+Load `styles/decision.md` (rationale) and `styles/review.md` (the reviewer handoff) before writing this up.
+
 Provide:
 
 ### 1. Performance Analysis

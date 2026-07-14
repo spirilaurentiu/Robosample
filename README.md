@@ -412,3 +412,71 @@ Too see coding language stats, run:
 ```bash
 github-linguist --breakdown | head
 ```
+
+## Large Language Models and other AI infrastructure
+
+We make extensive use of **Claude Code**, **scite.ai**, **`arxiv-mcp-server`** and **Wolfram Engine**.
+
+### Claude Code
+
+Install by running `curl -fsSL https://claude.ai/install.sh | bash`.
+
+### Scite
+
+Add the MCP server: `claude mcp add scite --transport http https://api.scite.ai/mcp`.
+
+Run `claude`, then `/mcp`, then authenticate if not already prompted to. When copy-pasting the URL address, make sure to exclude newline and whitespace characters.
+
+### `arxiv-mcp-server`
+
+Install `uv`:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.bashrc
+```
+
+Install the MCP server:
+
+```bash
+uv tool install arxiv-mcp-server
+claude mcp add arxiv uv tool run arxiv-mcp-server
+```
+
+### Wolfram Engine 15.0
+
+Create a Wolfram account. Get a free [licence](https://wolfram.com/engine/free-license). Download the [engine](https://www.wolfram.com/engine/).
+
+Turn on your `conda` environment and install: `sudo bash ~/Downloads/WolframEngine_15_LIN.sh`. Press `Enter` through the prompts to accept the defaults.
+
+Check installation: `wolframscript -version`.
+
+Activate: `wolframscript -activate`. Wolfram ID is the account email and the password is the account password.
+
+Test the engine: `wolframscript -code "Integrate[x*Sin[x], x]"` which should return `-(x*Cos[x]) + Sin[x]`.
+
+To test compilers, run `wolframscript` and execute:
+
+```text
+Needs["CCompilerDriver`"]
+CCompilers[]
+CreateExecutable["int main(){return 0;}", "test"]
+
+Needs["CUDALink`"]
+CUDAQ[]
+CUDAInformation[]
+
+Needs["OpenCLLink`"]
+OpenCLQ[]
+```
+
+To connect to Claude MCP, run `wolframscript` and execute:
+
+```text
+PacletInstall["Wolfram/AgentTools"]
+Needs["Wolfram`AgentTools`"]
+Wolfram`AgentTools`InstallMCPServer["ClaudeCode", "Wolfram"]
+Quit[]
+```
+
+When running `claude mcp list`, you should see Wolfram listed there.

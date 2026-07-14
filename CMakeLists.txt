@@ -13,6 +13,14 @@ option(USE_REFERENCE "Enable Reference backend" OFF)
 option(USE_OPENCL "Enable OpenCL backend" OFF)
 option(USE_CUDA "Enable CUDA backend" OFF)
 
+# Build and register OpenMM's own test suite (third-party). OFF by default: these
+# are OpenMM's tests, not ours, ~100+ executables, and we only need them when we
+# have modified vendored OpenMM. Off-by-default mirrors the ROBOSAMPLE_SLOW_TESTS
+# gate: a normal `nox -s tests` neither compiles nor runs them; `nox -s
+# openmm_tests` configures with -DBUILD_OPENMM_TESTS=ON and runs the "openmm"
+# ctest label. Effective only in the Tests build type (BUILD_TESTING).
+option(BUILD_OPENMM_TESTS "Build and register OpenMM's own test suite" OFF)
+
 # Enforce mutual exclusivity. Without this guard a typo (two backends on, or
 # none) configures cleanly and then misbehaves at runtime, which is hard to
 # trace back to the build. Count how many are enabled and fail fast otherwise.
@@ -139,9 +147,9 @@ include(${CMAKE_SOURCE_DIR}/cmake_modules/OpenMM.cmake)
 
 # file(GLOB ROBOSAMPLE_C_SOURCE_FILES ${CMAKE_SOURCE_DIR}/format/src/*.c)
 
-file(GLOB ROBOSAMPLE_CXX_SOURCE_FILES ${CMAKE_SOURCE_DIR}/src/*.cpp)
+file(GLOB_RECURSE ROBOSAMPLE_CXX_SOURCE_FILES ${CMAKE_SOURCE_DIR}/src/*.cpp)
 
-file(GLOB ROBOSAMPLE_SOURCE_INCLUDE_FILES ${CMAKE_SOURCE_DIR}/include/*.h*)
+file(GLOB_RECURSE ROBOSAMPLE_SOURCE_INCLUDE_FILES ${CMAKE_SOURCE_DIR}/include/*.h*)
 
 # =============================================================================
 # Profile-Guided Optimization (PGO) flags
@@ -563,18 +571,24 @@ if(BUILD_TESTING)
                  CXX_EXTENSIONS OFF
                  INTERPROCEDURAL_OPTIMIZATION FALSE)
 
-    # Our tests are ASan binaries AND run sampling on the GPU, so on a GPU
-    # backend they need: * RESOURCE_LOCK "gpu" - one at a time, so ctest -j
-    # never oversubscribes the single VRAM pool / set of CUDA contexts. *
-    # ASAN_OPTIONS=protect_shadow_gap=0 - stop ASan reserving the shadow gap so
-    # the CUDA driver can map its virtual address range (otherwise cuCtxCreate
-    # reports CUDA_ERROR_OUT_OF_MEMORY even on an empty GPU). * detect_leaks=0 -
-    # the CUDA driver's intentional allocations otherwise trip LSan at exit,
-    # which -fno-sanitize-recover turns into a hard fail. (Drop this and use an
-    # LSan suppressions file if you want to keep leak detection on our own
-    # code.)
+    # GPU resource lock: opt-in, not automatic. TestAlchemy is the only
+    # Robosample test that constructs a real OpenMM Context (TESTS.md section
+    # 1); every other test drives forces through the pure-C++
+    # AnalyticForceBridge/HarmonicBridge and never touches OpenMM/CUDA.
+    # Stamping the lock on every CUDA-linked test (the pre-TEST-001 behavior)
+    # serialized the WHOLE ~300-test suite under one "gpu" resource even
+    # though ~299 of them never need it, defeating `ctest -j`. On a GPU
+    # backend, TestAlchemy alone needs: * RESOURCE_LOCK "gpu" - one at a time,
+    # so ctest -j never oversubscribes the single VRAM pool / set of CUDA
+    # contexts. * ASAN_OPTIONS=protect_shadow_gap=0 - stop ASan reserving the
+    # shadow gap so the CUDA driver can map its virtual address range
+    # (otherwise cuCtxCreate reports CUDA_ERROR_OUT_OF_MEMORY even on an empty
+    # GPU). * detect_leaks=0 - the CUDA driver's intentional allocations
+    # otherwise trip LSan at exit, which -fno-sanitize-recover turns into a
+    # hard fail. (Drop this and use an LSan suppressions file if you want to
+    # keep leak detection on our own code.)
     set(_robo_test_props LABELS "robosample")
-    if(USE_CUDA OR USE_OPENCL)
+    if((USE_CUDA OR USE_OPENCL) AND TEST_NAME STREQUAL "TestAlchemy")
       list(
         APPEND
         _robo_test_props
@@ -604,13 +618,16 @@ if(BUILD_TESTING)
   # test runtime via the vendored cnpy (tests/third_party/cnpy) + a
   # CMake-defined fixture-dir macro. Test-scoped only -- no other test needs
   # cnpy/zlib, so this is added onto the TestRoboticsOracle* targets alone
-  # rather than into robosample_add_test()/robosample_objects. Matches BOTH
-  # TestRoboticsOracle (Scope A, tests/fixtures/robotics_oracle) and
-  # TestRoboticsOracleMolecule (Scope B,
-  # tests/fixtures/robotics_oracle_molecules) -- same cnpy/JSON machinery,
-  # disjoint fixture directories (§4.2/§9).
+  # rather than into robosample_add_test()/robosample_objects. Matches the
+  # Scope-A case-family split binaries (tests/fixtures/robotics_oracle,
+  # TEST-005: SingleState/MultiSystem/Aggregate/Fuzz) and the Scope-B molecule
+  # split binaries (tests/fixtures/robotics_oracle_molecules:
+  # MoleculeSymbolic/MoleculeNumeric) -- same cnpy/JSON machinery, disjoint
+  # fixture directories (§4.2/§9).
   # ---------------------------------------------------------------------------
-  foreach(_oracle_target TestRoboticsOracle TestRoboticsOracleMolecule)
+  foreach(_oracle_target TestRoboticsOracleSingleState TestRoboticsOracleMultiSystem
+                         TestRoboticsOracleAggregate TestRoboticsOracleFuzz
+                         TestRoboticsOracleMoleculeSymbolic TestRoboticsOracleMoleculeNumeric)
     if(TARGET ${_oracle_target})
       find_package(ZLIB REQUIRED)
       target_sources(
@@ -642,6 +659,10 @@ if(BUILD_TESTING)
   # flag/link sets, so they carry no sanitizer instrumentation and no libasan -
   # which is exactly what removes the CUDA OOM and the UBSan vptr report.
   # ===========================================================================
+
+  # Off-by-default (BUILD_OPENMM_TESTS): skip building/registering the ~100+
+  # third-party OpenMM test executables entirely unless explicitly requested.
+  if(BUILD_OPENMM_TESTS)
 
   set(_omm ${CMAKE_SOURCE_DIR}/openmm)
 
@@ -698,13 +719,29 @@ if(BUILD_TESTING)
                  CXX_EXTENSIONS OFF
                  INTERPROCEDURAL_OPTIMIZATION FALSE)
 
+    # OpenMM's own tests are SMALL systems (<= ~10k particles, most far fewer;
+    # tens of MB VRAM each), so unlike our ASan sampling tests they need NO
+    # exclusive GPU access -- many share one GPU via independent CUDA contexts.
+    # They carry LABELS "openmm" (never "robosample") and NO RESOURCE_LOCK, so
+    # `ctest -j` runs them concurrently across all precisions; the
+    # `nox -s openmm_tests` session bounds -j so VRAM is never oversubscribed.
+    # The label also keeps them out of the default run (`nox -s tests` uses
+    # `-LE openmm`).
     if(IS_GPU)
-      set(PRECISION mixed) # single double
-      foreach(_prec ${PRECISION})
+      # GPU platforms read the precision on argv[1]. Run all three so a change to
+      # OpenMM is checked in single, mixed, AND double -- each an independent,
+      # parallel ctest case.
+      foreach(_prec single mixed double)
         add_test(NAME ${_tgt}_${_prec} COMMAND ${_tgt} ${_prec})
-        set_tests_properties(${_tgt}_${_prec} PROPERTIES LABELS "openmm"
-                                                         RESOURCE_LOCK "gpu")
+        set_tests_properties(${_tgt}_${_prec} PROPERTIES LABELS "openmm")
       endforeach()
+    else()
+      # CPU / reference / serialization / platform-independent API tests: no
+      # precision arg, no GPU. These were previously BUILT but never registered
+      # (the old function add_test'd only the GPU branch), so they never ran.
+      # Each carries its own main(); register it once.
+      add_test(NAME ${_tgt} COMMAND ${_tgt})
+      set_tests_properties(${_tgt} PROPERTIES LABELS "openmm")
     endif()
 
   endfunction()
@@ -743,5 +780,7 @@ if(BUILD_TESTING)
       robosample_add_openmm_test(${_src} ${_prefix} ${_is_gpu})
     endforeach()
   endforeach()
+
+  endif() # BUILD_OPENMM_TESTS
 
 endif(BUILD_TESTING)

@@ -93,6 +93,126 @@ BatCoordSample readBatCoord(const RobotModel& model, const std::vector<Vec3>& at
     return out;
 }
 
+// Result of one body's "bend" step: the (possibly rotated) bond direction
+// and whether the angle DOF was actually displaced (false for the
+// degenerate zK<0 / collinear-axis skips, self-consistent with
+// outNScaled/outLnJac not counting them).
+struct BendResult {
+    Vec3 bondDir;
+    bool displaced = false;
+};
+
+// The "bend" step of applyBatScaling's D7 map: rigid rotation of the scaled
+// body's subtree about the axis perpendicular to the (zI,zJ,zK) plane,
+// pivoting at zJ, by the angle DELTA between the scaled theta1 and theta0.
+// Callers gate this on sel.theta (undefined for Slider/Cylinder, which have
+// no angle DOF). Mutates atomPos for every atom in `subtree`.
+//
+// FP note (INV-7, dedup scope): this reads theta INLINE, not via
+// readBatCoord -- readBatCoord's cosTheta = dot(v1,v2)/(r*r2) and this
+// cosTheta0 = dot(bondDir, ez) on pre-normalized vectors agree
+// mathematically but round differently, so routing this through
+// readBatCoord would perturb dtheta and the rotated positions (a B3
+// bitwise violation). See the ticket's FP note for the full argument.
+BendResult applyBend(std::vector<Vec3>& atomPos,
+                     const Vec3& posJ,
+                     int zK,
+                     int zI,
+                     double s,
+                     const std::unordered_map<int, double>& anchorTheta,
+                     const std::vector<int>& subtree,
+                     Vec3 bondDir) {
+    BendResult result{bondDir, false};
+    if (zK < 0) {
+        return result;
+    }
+    const Vec3 v2 = atomPos[zK] - posJ;
+    const double n2 = v2.norm();
+    if (!(n2 > 1e-9) || std::isnan(n2)) {
+        return result;
+    }
+    const Vec3 ez = v2 / n2;
+    double cosTheta0 = dot(bondDir, ez);
+    cosTheta0 = std::min(1.0, std::max(-1.0, cosTheta0));
+    const double theta0 = std::acos(cosTheta0);
+    Vec3 axis = ez % bondDir; // perpendicular to the (zI,zJ,zK) plane
+    const double axisNorm = axis.norm();
+    if (!(axisNorm > 1e-9) || std::isnan(theta0)) {
+        // (zI-zJ) parallel/antiparallel to (zK-zJ) -- the bend
+        // axis is undefined at this exact geometry; skip the angle
+        // DOF for this body only (self-consistent: not counted in
+        // outNScaled either, since the map did not move it).
+        return result;
+    }
+    axis = axis / axisNorm;
+    const double muTheta = lookupOr(anchorTheta, zI, 0.0);
+    const double theta1 = (s * theta0) - ((s - 1.0) * muTheta);
+    // A bond angle's physical domain is (0, pi); std::sin(theta1)
+    // <= 0 outside it would make calcBatVolumeLogJac's ln(sin
+    // theta1) term undefined. FAIL LOUD here (Rule 11) instead
+    // of the silent sinTheta<=0 skip calcBatVolumeLogJac used to
+    // apply on its own -- that guard, by itself, made the map
+    // MOVE the atom while the Jacobian silently dropped the
+    // term, corrupting lnJac (caught by this file's V5 FD gate:
+    // an aggressive (s, anchor) pair pushed theta1 past pi).
+    // Callers (Stage 2b) SHALL treat this as an invalid/
+    // automatic-reject drive, not retry with a different s.
+    if (!(theta1 > 0.0 && theta1 < Pi) || std::isnan(theta1)) {
+        throw std::domain_error(
+            "applyBatScaling: scaled angle theta1=" + std::to_string(theta1)
+            + " is outside the physical domain (0, pi) for body zI=" + std::to_string(zI)
+            + " (theta0=" + std::to_string(theta0) + ", s=" + std::to_string(s)
+            + ", mu_theta=" + std::to_string(muTheta) + ")");
+    }
+    const double dtheta = theta1 - theta0;
+    for (int a : subtree) {
+        const Vec3 rel = atomPos[a] - posJ;
+        atomPos[a] = posJ + rotateAboutAxis(rel, axis, dtheta);
+    }
+    result.bondDir = rotateAboutAxis(bondDir, axis, dtheta);
+    result.displaced = true;
+    return result;
+}
+
+// The "stretch" step of applyBatScaling's D7 map: rigid translation of the
+// scaled body's subtree along the (possibly bend-rotated) bond direction by
+// the DELTA in r. Every scaled joint type has this DOF (D5). Mutates
+// atomPos for every atom in `subtree`. Returns whether the DOF was
+// displaced (always true on success; a domain violation throws instead of
+// returning false, matching applyBatScaling's fail-loud contract).
+//
+// `r0` is the STRETCH radial read, bitwise-identical to
+// readBatCoord(...).r (same atomPos[zI]-atomPos[zJ] subtraction, same
+// .norm()) -- callers SHALL source it from readBatCoord so the map and the
+// Cartesian log-Jacobian (calcBatVolumeLogJac -> readBatCoord) read the
+// same r (INV-7).
+bool applyStretch(std::vector<Vec3>& atomPos,
+                  double r0,
+                  int zI,
+                  double s,
+                  const std::unordered_map<int, double>& anchorR,
+                  const std::vector<int>& subtree,
+                  const Vec3& bondDir) {
+    const double muR = lookupOr(anchorR, zI, 0.0);
+    const double r1 = (s * r0) - ((s - 1.0) * muR);
+    // Bond length's physical domain is r1 > 0 (calcBatVolumeLogJac's
+    // ln(r1) term is undefined otherwise) -- fail loud (Rule 11), same
+    // rationale as the theta1 domain guard above.
+    if (!(r1 > 0.0) || std::isnan(r1)) {
+        throw std::domain_error(
+            "applyBatScaling: scaled bond length r1=" + std::to_string(r1)
+            + " is outside the physical domain (r1 > 0) for body zI=" + std::to_string(zI)
+            + " (r0=" + std::to_string(r0) + ", s=" + std::to_string(s)
+            + ", mu_r=" + std::to_string(muR) + ")");
+    }
+    const double dr = r1 - r0;
+    const Vec3 shift = bondDir * dr;
+    for (int a : subtree) {
+        atomPos[a] += shift;
+    }
+    return true;
+}
+
 } // namespace
 
 int countScaledDofsStatic(const RobotModel& model) {
@@ -150,7 +270,13 @@ std::vector<Vec3> applyBatScaling(const RobotModel& model,
 
         const Vec3 posJ = atomPos[zJ];
         Vec3 bondVec = atomPos[zI] - posJ;
-        const double r0 = bondVec.norm();
+        // Bitwise-identical to readBatCoord(...).r (same atomPos[zI]-
+        // atomPos[zJ] subtraction, same .norm()) -- sourcing it from
+        // readBatCoord makes the map and the Cartesian log-Jacobian
+        // (calcBatVolumeLogJac -> readBatCoord) read the same r (INV-7).
+        // This does NOT replace applyBatScaling's own domain guard below
+        // with readBatCoord's r > 0.0 guard -- that guard stays here.
+        const double r0 = readBatCoord(model, atomPos, b).r;
         if (!(r0 > 1e-9) || std::isnan(r0)) {
             continue; // degenerate zero-length bond (flagged edge case)
         }
@@ -160,72 +286,19 @@ std::vector<Vec3> applyBatScaling(const RobotModel& model,
         collectSubtreeAtoms(model, b, subtree);
 
         // ---- bend (theta), if this joint scales an angle -------------------
-        if (sel.theta && zK >= 0) {
-            const Vec3 v2 = atomPos[zK] - posJ;
-            const double n2 = v2.norm();
-            if (n2 > 1e-9 && !std::isnan(n2)) {
-                const Vec3 ez = v2 / n2;
-                double cosTheta0 = dot(bondDir, ez);
-                cosTheta0 = std::min(1.0, std::max(-1.0, cosTheta0));
-                const double theta0 = std::acos(cosTheta0);
-                Vec3 axis = ez % bondDir; // perpendicular to the (zI,zJ,zK) plane
-                const double axisNorm = axis.norm();
-                if (axisNorm > 1e-9 && !std::isnan(theta0)) {
-                    axis = axis / axisNorm;
-                    const double muTheta = lookupOr(anchorTheta, zI, 0.0);
-                    const double theta1 = (s * theta0) - ((s - 1.0) * muTheta);
-                    // A bond angle's physical domain is (0, pi); std::sin(theta1)
-                    // <= 0 outside it would make calcBatVolumeLogJac's ln(sin
-                    // theta1) term undefined. FAIL LOUD here (Rule 11) instead
-                    // of the silent sinTheta<=0 skip calcBatVolumeLogJac used to
-                    // apply on its own -- that guard, by itself, made the map
-                    // MOVE the atom while the Jacobian silently dropped the
-                    // term, corrupting lnJac (caught by this file's V5 FD gate:
-                    // an aggressive (s, anchor) pair pushed theta1 past pi).
-                    // Callers (Stage 2b) SHALL treat this as an invalid/
-                    // automatic-reject drive, not retry with a different s.
-                    if (!(theta1 > 0.0 && theta1 < Pi) || std::isnan(theta1)) {
-                        throw std::domain_error(
-                            "applyBatScaling: scaled angle theta1=" + std::to_string(theta1)
-                            + " is outside the physical domain (0, pi) for body zI=" + std::to_string(zI)
-                            + " (theta0=" + std::to_string(theta0) + ", s=" + std::to_string(s)
-                            + ", mu_theta=" + std::to_string(muTheta) + ")");
-                    }
-                    const double dtheta = theta1 - theta0;
-                    for (int a : subtree) {
-                        const Vec3 rel = atomPos[a] - posJ;
-                        atomPos[a] = posJ + rotateAboutAxis(rel, axis, dtheta);
-                    }
-                    bondDir = rotateAboutAxis(bondDir, axis, dtheta);
-                    ++nScaled;
-                }
-                // else: (zI-zJ) parallel/antiparallel to (zK-zJ) -- the bend
-                // axis is undefined at this exact geometry; skip the angle
-                // DOF for this body only (self-consistent: not counted in
-                // outNScaled either, since the map did not move it).
+        if (sel.theta) {
+            const BendResult bend = applyBend(atomPos, posJ, zK, zI, s, anchorTheta, subtree, bondDir);
+            bondDir = bend.bondDir;
+            if (bend.displaced) {
+                ++nScaled;
             }
         }
 
         // ---- stretch (r): every scaled joint type has this ------------------
         if (sel.r) {
-            const double muR = lookupOr(anchorR, zI, 0.0);
-            const double r1 = (s * r0) - ((s - 1.0) * muR);
-            // Bond length's physical domain is r1 > 0 (calcBatVolumeLogJac's
-            // ln(r1) term is undefined otherwise) -- fail loud (Rule 11), same
-            // rationale as the theta1 domain guard above.
-            if (!(r1 > 0.0) || std::isnan(r1)) {
-                throw std::domain_error(
-                    "applyBatScaling: scaled bond length r1=" + std::to_string(r1)
-                    + " is outside the physical domain (r1 > 0) for body zI=" + std::to_string(zI)
-                    + " (r0=" + std::to_string(r0) + ", s=" + std::to_string(s)
-                    + ", mu_r=" + std::to_string(muR) + ")");
+            if (applyStretch(atomPos, r0, zI, s, anchorR, subtree, bondDir)) {
+                ++nScaled;
             }
-            const double dr = r1 - r0;
-            const Vec3 shift = bondDir * dr;
-            for (int a : subtree) {
-                atomPos[a] += shift;
-            }
-            ++nScaled;
         }
     }
 

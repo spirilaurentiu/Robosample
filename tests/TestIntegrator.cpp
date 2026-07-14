@@ -24,11 +24,14 @@
 #include "RobotModel.hpp"
 #include "RobotState.hpp"
 #include "TestHelpers.hpp"
+#include "support/HarmonicBridge.hpp"
 
 using namespace robo;
 using rtest::attachAtoms;
 using rtest::BodySpec;
 using rtest::buildForest;
+using rtest::HarmonicBridge;
+using rtest::PoisonForcePolicy;
 using rtest::randomizeState;
 using rtest::Rng;
 
@@ -703,26 +706,6 @@ TEST(Integrator, StepToReachesEndTimeDeterministically) {
     }
 }
 
-// A test-only bridge that injects a non-finite body force, to drive the
-// reject-and-restore path of verletStep without OpenMM. Same evaluate() contract.
-struct InfForceBridge {
-    const RobotModel& model;
-    explicit InfForceBridge(const RobotModel& m)
-        : model(m) {
-    }
-    void evaluate(RobotState& s) {
-        SpatialVec* BF = s.bodyForceG();
-        for (int b = 0; b < model.numBodies; ++b) {
-            BF[b] = SpatialVec(Vec3(0), Vec3(0));
-        }
-        Real* mob = s.mobilityForce();
-        for (int i = 0; i < model.nu; ++i) {
-            mob[i] = 0;
-        }
-        BF[1].linear[0] = std::numeric_limits<Real>::infinity(); // poison one body force
-    }
-};
-
 // ---------------------------------------------------------------------------
 //  P5.6: a bad step (non-finite force, OR an absurdly large h) makes verletStep
 //        return false AND leave q,u EXACTLY equal to the pre-step snapshot. The
@@ -743,7 +726,7 @@ TEST(Integrator, BadStepReturnsFalseAndRestores) {
         buildSeeded(m, s, r, 60.0, store); // valid derivative seed via the finite bridge
 
         std::vector<Real> q0(s.q(), s.q() + m.nq), u0(s.u(), s.u() + m.nu);
-        InfForceBridge bad(m);
+        HarmonicBridge<PoisonForcePolicy> bad(m, s);
         const bool ok = RobotEngine::verletStep(m, s, bad, cset, kSafeH);
         EXPECT_FALSE(ok) << "verletStep accepted a step with a non-finite force";
         for (int i = 0; i < m.nq; ++i) {

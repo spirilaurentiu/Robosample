@@ -34,10 +34,10 @@
 #include <vector>
 
 #include "Constraints.hpp"
-#include "EngineHelpers.hpp"
 #include "RobotEngine.hpp"
 #include "RobotModel.hpp"
 #include "RobotState.hpp"
+#include "engine_helpers.hpp"
 #include "robot_math.hpp"
 
 namespace rtest {

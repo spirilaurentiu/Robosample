@@ -40,6 +40,8 @@
 #include "RobotModel.hpp"
 #include "RobotState.hpp"
 #include "TestHelpers.hpp"
+#include "support/SamplingHarness.hpp"
+#include "support/TestPhysConstants.hpp"
 
 using namespace robo;
 using rtest::attachAtoms;
@@ -47,10 +49,9 @@ using rtest::BodySpec;
 using rtest::buildForest;
 using rtest::HmcDriver;
 using rtest::Rng;
+using rtest::phys::kT300;
 
 namespace {
-
-constexpr double kT300 = 0.0083144626 * 300.0;
 
 // A Free-rooted torsion chain whose first and last bodies carry atoms that we will
 // tie together with loop-closure distance constraints to form a ring.
@@ -229,14 +230,13 @@ TEST(CyclicBoltzmann, ConstrainedRingStaysOnManifold) {
 
     const DistanceConstraint& d = cs.distance[0];
     double worst = 0.0;
-    long accepted = 0;
-    for (int i = 0; i < 3000; ++i) {
-        accepted += drv.move() ? 1 : 0;
+    const rtest::Marginals marg = rtest::runHmcChain(drv, 3000, /*stride*/ 1, [&](long /*i*/, bool /*acc*/) {
         RobotEngine::realizePosition(m, s);
         RobotEngine::fillAtomPositionsFromBodies(m, s);
         const double dist = (s.atomPosG()[d.atomA] - s.atomPosG()[d.atomB]).norm();
         worst = std::max(worst, std::abs(dist - static_cast<double>(d.restLength)));
-    }
+    });
+    const long accepted = marg.accepted;
     EXPECT_GT(accepted, 0) << "no move accepted on the constrained ring";
     EXPECT_LT(worst, 1e-4) << "ring drifted off the loop-closure manifold (worst |dist-d0|=" << worst << ")";
 }

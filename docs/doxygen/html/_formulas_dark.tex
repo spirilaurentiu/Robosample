@@ -1,0 +1,81 @@
+\documentclass{article}
+\usepackage{ifthen}
+\usepackage{epsfig}
+\usepackage[utf8]{inputenc}
+\usepackage{xcolor}
+\color{white}
+\pagecolor{black}
+\usepackage{newunicodechar}
+  \makeatletter
+    \def\doxynewunicodechar#1#2{%
+    \@tempswafalse
+    \edef\nuc@tempa{\detokenize{#1}}%
+    \if\relax\nuc@tempa\relax
+      \nuc@emptyargerr
+    \else
+      \edef\@tempb{\expandafter\@car\nuc@tempa\@nil}%
+      \nuc@check
+      \if@tempswa
+        \@namedef{u8:\nuc@tempa}{#2}%
+      \fi
+    \fi
+  }
+  \makeatother
+  \doxynewunicodechar{⁻}{${}^{-}$}% Superscript minus
+  \doxynewunicodechar{²}{${}^{2}$}% Superscript two
+  \doxynewunicodechar{³}{${}^{3}$}% Superscript three
+
+\pagestyle{empty}
+\begin{document}
+$ (s r - (s-1)\mu_r,\; s\theta - (s-1)\mu_\theta) $
+\pagebreak
+
+$ \delta q = -M^{-1} G^\top (G M^{-1} G^\top)^{-1} C $
+\pagebreak
+
+$ G M^{-1} G^\top $
+\pagebreak
+
+$ D_b = H_b^\top P_b H_b $
+\pagebreak
+
+$ \sum \ln|\lambda_k| $
+\pagebreak
+
+$ D = H^\top P H $
+\pagebreak
+
+$ V \, \mathrm{diag}(d) \, V^\top = Ain $
+\pagebreak
+
+$ S = V \, \mathrm{diag}(\sqrt{\lambda}) \, V^\top $
+\pagebreak
+
+$ S = V \, \mathrm{diag}(1/\sqrt{\lambda}) \, V^\top $
+\pagebreak
+
+$ K_{ab} = \partial^2 V / \partial s_a \partial s_b $
+\pagebreak
+
+$ \tilde H = N^\top K N $
+\pagebreak
+
+$ N = \sqrt{M^{-1}} $
+\pagebreak
+
+$ N^\top M N = I $
+\pagebreak
+
+$ \omega_k^2 $
+\pagebreak
+
+$ v_k = N y_k $
+\pagebreak
+
+$ \dot q = N(q)\,\omega_{FM} $
+\pagebreak
+
+$ \tfrac12 (0,\omega)\otimes q $
+\pagebreak
+
+\end{document}

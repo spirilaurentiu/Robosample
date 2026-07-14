@@ -678,23 +678,17 @@ PYBIND11_MODULE(robo_bindings, m) {
         .def("calc_openmm_potential_energy",
              &Context::calcOpenMMPotentialEnergy,
              "Set the reference coordinates and return the OpenMM potential energy [kJ/mol].")
-        .def(
-            "set_separate_force_groups",
-            [](Context& /*ctx*/, bool enabled) {
-                OpenMMContext::get().setSeparateForceGroups(enabled);
-            },
-            py::arg("enabled"),
-            "Enable/disable separate OpenMM force groups for each Force.")
-        .def(
-            "set_enforce_periodic_box",
-            [](Context& /*ctx*/, bool enabled) {
-                OpenMMContext::get().setEnforcePeriodicBox(enabled);
-            },
-            py::arg("enabled"),
-            "Whether OpenMM wraps coordinates into the primary box when state is "
-            "pulled back. MUST stay False (the default) under explicit solvent so "
-            "the robot engine receives whole molecules; energies/forces are "
-            "unaffected (minimum image is always applied internally).")
+        .def("set_separate_force_groups",
+             &Context::setSeparateForceGroups,
+             py::arg("enabled"),
+             "Enable/disable separate OpenMM force groups for each Force.")
+        .def("set_enforce_periodic_box",
+             &Context::setEnforcePeriodicBox,
+             py::arg("enabled"),
+             "Whether OpenMM wraps coordinates into the primary box when state is "
+             "pulled back. MUST stay False (the default) under explicit solvent so "
+             "the robot engine receives whole molecules; energies/forces are "
+             "unaffected (minimum image is always applied internally).")
         .def("calc_openmm_potential_energy_by_group",
              &Context::computePotentialEnergyByGroup,
              "Compute potential energy by OpenMM force group, returning (group, name, energy) tuples.");

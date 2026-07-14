@@ -26,90 +26,33 @@
 #include "StatTest.hpp"
 #include "TeleportMove.hpp"
 #include "TestHelpers.hpp"
+#include "support/HarmonicBridge.hpp"
+#include "support/TestPhysConstants.hpp"
 
 using namespace robo;
 using rtest::attachAtoms;
 using rtest::BodySpec;
 using rtest::buildForest;
+using rtest::HarmonicBridge;
 using rtest::jointRotation;
+using rtest::LambdaWellPolicy;
 using rtest::Rng;
 using rtest::teleportFreeRoot;
+using rtest::phys::kT300;
 using rtest::stat::chiSquareCritical;
 using rtest::stat::chiSquareStatistic;
 using rtest::stat::expectedFromWeights;
 using rtest::stat::Histogram;
+using rtest::stat::slowEnabled;
 
 namespace {
 
-constexpr double kT300 = 0.0083144626 * 300.0;
+using LambdaWellBridge = HarmonicBridge<LambdaWellPolicy>;
 
-bool slowEnabled() {
-    return std::getenv("ROBOSAMPLE_SLOW_TESTS") != nullptr;
-}
-
-// A λ-scaled harmonic bridge: V = λ · ½k · Σ|r_a − anchor_a|², F = −λk(r−anchor).
-// At λ=0 it is a true ghost (V=0, F=0); at λ=1 it is an external well. Same
-// per-atom→per-body reduction as ForceBridge/AnalyticForceBridge.
-class LambdaWellBridge {
-    public:
-    LambdaWellBridge(const RobotModel& m, const RobotState& s0, Real k)
-        : model_(m)
-        , k_(k)
-        , anchor_(static_cast<std::size_t>(m.numAtoms)) {
-        const Vec3* p = s0.atomPosG();
-        for (int a = 0; a < m.numAtoms; ++a) {
-            anchor_[static_cast<std::size_t>(a)] = p[a];
-        }
-    }
-    void setLambda(Real l) {
-        lambda_ = l;
-    }
-    [[nodiscard]] Vec3 atomForce(const Vec3* pos, int a) const {
-        if (model_.atomMass[a] == Real(0)) {
-            return Vec3(0);
-        }
-        return (anchor_[static_cast<std::size_t>(a)] - pos[a]) * (k_ * lambda_);
-    }
-    [[nodiscard]] Real calcPotentialEnergy(const RobotState& s) const {
-        const Vec3* pos = s.atomPosG();
-        Real u = 0;
-        for (int a = 0; a < model_.numAtoms; ++a) {
-            if (model_.atomMass[a] == Real(0)) {
-                continue;
-            }
-            const Vec3 d = pos[a] - anchor_[static_cast<std::size_t>(a)];
-            u += dot(d, d);
-        }
-        return Real(0.5) * k_ * lambda_ * u;
-    }
-    void evaluate(RobotState& s) {
-        SpatialVec* BF = s.bodyForceG();
-        for (int b = 0; b < model_.numBodies; ++b) {
-            BF[b] = SpatialVec(Vec3(0), Vec3(0));
-        }
-        Real* mob = s.mobilityForce();
-        for (int i = 0; i < model_.nu; ++i) {
-            mob[i] = Real(0);
-        }
-        const Vec3* posG = s.atomPosG();
-        const Transform* X_GB = s.X_GB();
-        for (int a = 0; a < model_.numAtoms; ++a) {
-            if (model_.atomMass[a] == Real(0)) {
-                continue;
-            }
-            const int b = model_.atomBody[a];
-            const Vec3 f = atomForce(posG, a);
-            const Vec3 r = posG[a] - X_GB[b].p();
-            BF[b][1] += f;
-            BF[b][0] += r % f;
-        }
-    }
-
-    private:
-    const RobotModel& model_;
-    Real k_, lambda_ = 1.0;
-    std::vector<Vec3> anchor_;
-};
+// LambdaWellBridge (a type alias, above) is a λ-scaled harmonic bridge: V = λ ·
+// ½k · Σ|r_a − anchor_a|², F = −λk(r−anchor). At λ=0 it is a true ghost (V=0,
+// F=0); at λ=1 it is an external well. Same per-atom→per-body reduction as
+// ForceBridge/AnalyticForceBridge (HarmonicBridge<LambdaWellPolicy>).
 
 // One free-rooted "solute" body carrying real atoms.
 RobotModel solute() {
