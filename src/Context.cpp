@@ -1002,10 +1002,14 @@ void Context::Initialize() {
 
 	worlds[0].setDuMMAtomIndexes(); // REVISE
 
+	std::cout << "DEBUG: Context::Initialize 0: DuMMAtomIndexes set" << std::endl << std::flush;
+
 	// @TODO take a look
 	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
 		worlds[worldIx].setMyContext(this);
 	}
+
+	std::cout << "DEBUG: Context::Initialize 0.1: MyContext set for all worlds" << std::endl << std::flush;
 
 	// Initialize the Z matrix
 	int firstWIx = 0;
@@ -1018,11 +1022,15 @@ void Context::Initialize() {
 	calcZMatrixTable();
 	PrintZMatrixTable();
 
+	std::cout << "DEBUG: Context::Initialize 0.2: Z-matrix table calculated and printed" << std::endl << std::flush;
+
 	reallocZMatrixBAT();
 	calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
 	PrintZMatrixBAT();
 	PrintZMatrixMobods(firstWIx, lastAdvancedState);
 	Print_TRANSFORMERS_Work();
+
+	std::cout << "DEBUG: Context::Initialize 0.3: Z-matrix BAT calculated and printed" << std::endl << std::flush;
 	
 	//std::cout << "DEBUG nofReplicas " << nofReplicas << std::endl << std::flush;
 
@@ -1031,6 +1039,8 @@ void Context::Initialize() {
 		replicas[k].calcZMatrixBAT(firstWorldsAtomsLocations);
 		//replicas[k].PrintZMatrixBAT();
 	}
+
+	std::cout << "DEBUG: Context::Initialize 0.4: Z-matrix BAT calculated for all replicas" << std::endl << std::flush;
 	
 	// They all start with replica 0 coordinates
 	// TODO does not work in debug
@@ -1042,6 +1052,8 @@ void Context::Initialize() {
 		//scout("Context::initializeFromFile PrintSubZMatrixBAT: ") << eol;
 		//world.updSampler(0)->PrintSubZMatrixBAT();
 	}
+
+	std::cout << "DEBUG: Context::Initialize 1: Z-matrix and BAT added" << std::endl << std::flush;
 
 	// Set a vector of replica pairs for exchanges
 	//exchangePairs.resize(nofReplicas);
@@ -1071,6 +1083,8 @@ void Context::Initialize() {
 	// Initialize OpenMM
 	OMMRef_initialize();
 	//OMMRef_calcPotential(true, true);
+
+	std::cout << "DEBUG: Context::Initialize 2: OpenMM initialized" << std::endl << std::flush;
 }
 
 
