@@ -1,6 +1,11 @@
 #region: Imports
+import faulthandler
 import sys
-sys.path.append("/home/laurentiu/git6/Robosample/bin")
+from pathlib import Path
+
+faulthandler.enable()
+
+sys.path.append("/home/laurentiu/git6/robo_rebas/Robosample/bin")
 import flexor
 import mdtraj as md
 import argparse
@@ -8,6 +13,9 @@ import robosample
 #import batstat
 import numpy as np
 #endregion
+
+# Debug print with flush
+print("DEBUG_PY 0 imports done", flush=True)
 
 mobilityMap = {
 	"Cartesian": robosample.BondMobility.Translation,
@@ -50,7 +58,6 @@ def printFlexibilities(flexibilities):
 		print(flexibilities[flexIx].i, flexibilities[flexIx].j, flexibilities[flexIx].mobility)
 #
 
-#region: Parse the arguments
 def str2bool(v):
     if isinstance(v, bool):
         return v
@@ -60,7 +67,89 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
-	
+
+
+# Temperatures distribution of REX (TODO: solve differential eq.)
+def REX_Ts_ini(nof_replicas, base_temp, base_tdiff, dratio=0.0):
+    """
+    Calculate the temperatures for a replica exchange.
+    """
+    # 1. Create the sequence of ratios: [Tratio, Tratio + dratio, Tratio + 2*dratio...]
+    initial_ratio = (base_temp + base_tdiff) / base_temp
+    ratios = initial_ratio + np.arange(nof_replicas - 1) * dratio
+
+    # 2. Prepend 1.0 for the first replica (which stays at base_temp)
+    full_ratios = np.concatenate(([1.0], ratios))
+
+    return base_temp * np.cumprod(full_ratios)
+#
+
+# Temperature distribution functions
+def REX_Ts(mode, n_replicas, T_min, T_max, **kwargs):
+    """
+    Master function to generate temperature distributions.
+    Modes: 'logit', 'probit', 'arcsin', 'exp', 'power'
+    """
+    steps = np.arange(n_replicas)
+
+    if mode == 'gompertz':
+        # b controls displacement, c controls growth rate
+        b, c = kwargs.get('b', 5), kwargs.get('c', 10)
+        raw_vals = np.exp(-b * np.exp(-c * steps))
+        
+    elif mode == 'sine':
+        # Using the first quarter of a sine wave (0 to 90 degrees)
+        raw_vals = 1 - np.cos(steps * (np.pi / 2))
+        
+    elif mode == 'asym_sig':
+        # k controls the "steepness"
+        # shift controls where the midpoint is (0.5 is symmetric)
+        k = kwargs.get('k', 10)
+        shift = kwargs.get('shift', 0.7) # 0.7 makes it stay slow longer
+        raw_vals = 1 / (1 + np.exp(-k * (steps - shift)))
+            
+    elif mode == 'exp':
+        baseDiff = kwargs.get('baseDiff', 10.0)
+        ratio = (T_min + baseDiff) / T_min
+        raw_vals = np.zeros(n_replicas, dtype=np.float64)
+        for replIx in range(n_replicas):
+            raw_vals[replIx] = T_min * (ratio ** replIx)
+        return raw_vals
+        
+    elif mode in ['logit', 'probit', 'arcsin']:
+        # Define the internal mapping range to avoid +/- infinity
+        # Logit/Probit need (0, 1), Arcsin needs (-1, 1)
+        if mode == 'arcsin':
+            x = np.linspace(-0.95, 0.95, n_replicas)
+            raw_vals = np.arcsin(x)
+        elif mode == 'probit':
+            x = np.linspace(0.05, 0.95, n_replicas)
+            raw_vals = scipy.special.ndtri(x)
+        else: # logit
+            x = np.linspace(0.05, 0.95, n_replicas)
+            raw_vals = scipy.special.logit(x)
+
+    elif mode == 'power':
+        p = kwargs.get('power', 2.0)
+        x = np.linspace(0, 1, n_replicas)
+        raw_vals = x ** p
+        Ts = T_min + (T_max - T_min) * raw_vals
+
+    else:
+        raise ValueError(f"Unknown mode: {mode}")
+                
+    # Normalize and Scale
+    norm = (raw_vals - raw_vals[0]) / (raw_vals[-1] - raw_vals[0])
+    Ts = T_min + (T_max - T_min) * norm
+
+    # Use your custom print function
+    headers = ["Index", "Raw_Val", "Temp"]
+    data = [steps, raw_vals, Ts]
+    
+    return Ts
+#
+
+#region: Parse the arguments
 parser = argparse.ArgumentParser(description='Process PDB code and seed.')
 parser.add_argument('--name', type=str, help='Name of the simulation.')
 parser.add_argument('--top', type=str, help='Relative path to the .prmtop file.')
@@ -68,6 +157,7 @@ parser.add_argument('--rst7', type=str, help='Relative path to the .rst7 file.')
 parser.add_argument('--rstDir', type=str, help='Restart directory.')
 parser.add_argument('--equilSteps', type=int, help='The number of equilibration steps.')
 parser.add_argument('--prodSteps', type=int, help='The number of production steps.')
+parser.add_argument('--nofREXes', type=int, help='Unsupported by the installed two-argument RunREX API.')
 parser.add_argument('--writeFreq', type=int, help='CSV and DCD write frequency.')
 parser.add_argument('--baseTemperature', default=300.00, type=float, help='Temperature of the first replica.')
 parser.add_argument('--baseTdiff', type=float, default=10.0, help='Temperature difference between the first two replicas.')
@@ -80,6 +170,26 @@ parser.add_argument('--FixmanTorque', type=str2bool, nargs='+', default=[],
 parser.add_argument('--roll', type=str2bool, nargs='+', default=[],
 					help='Roll over.')
 args = parser.parse_args()
+
+if args.nofREXes is not None:
+	parser.error('--nofREXes is not supported by the installed RunREX API.')
+if args.nofReplicas < 1:
+	parser.error('--nofReplicas must be at least 1.')
+for option, values in (('--FixmanTorque', args.FixmanTorque), ('--roll', args.roll)):
+	if len(values) != 1 + len(args.flexFNs):
+		parser.error(f'{option} requires one value per world ({1 + len(args.flexFNs)} values).')
+if args.rstDir is None:
+	parser.error('--rstDir must contain ligand.s0.rst7, ligand.s1.rst7, etc.')
+missing_restarts = [
+	str(Path(args.rstDir) / f'ligand.s{replIx}.rst7')
+	for replIx in range(args.nofReplicas)
+	if not (Path(args.rstDir) / f'ligand.s{replIx}.rst7').is_file()
+]
+if missing_restarts:
+	parser.error(
+		'Missing replica restart files: ' + ', '.join(missing_restarts)
+		+ '. Set --rstDir to the directory containing these files (including the seed subdirectory, if used).'
+	)
 #endregion
 
 # Create robosample context
@@ -220,15 +330,15 @@ for worldIx in range(1, nofWorlds):
 
 # Replica exchange
 temperatures = np.zeros(nof_replicas, dtype=np.float64)
-Tratio = (args.baseTemperature + args.baseTdiff) / args.baseTemperature
-for replIx in range(nof_replicas):
-    temperatures[replIx] = args.baseTemperature * (Tratio**replIx)
+
+temperatures = REX_Ts_ini(nof_replicas, args.baseTemperature, args.baseTdiff, dratio=0.0)
 
 # Add replicas
 integrators = [robosample.IntegratorType.OMMVV] + ((nofWorlds - 1) * [robosample.IntegratorType.VERLET])
 
 # Add replicas with coordinates
-context.addReplicasAndLoadCoordinates(args.top, args.rstDir, nof_replicas)
+if not context.addReplicasAndLoadCoordinates(args.top, args.rstDir, nof_replicas):
+	raise RuntimeError(f'Failed to load replica coordinates from {args.rstDir}; initialization aborted.')
 
 # Add thermodynamic states
 for replIx in range(nof_replicas):
