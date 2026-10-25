@@ -5922,7 +5922,7 @@ void Context::incrementNofSamples(void){
 }
 
 /*!
- * <!--  -->
+ * <!-- Transfer Thermodynamics states thermoIx Qstats with index srcStatsWIx to destStatsWIx Worlds's sampler -->
 */
 void Context::transferQStatistics(int thermoIx, int srcStatsWIx, int destStatsWIx)
 {
@@ -6287,7 +6287,12 @@ void Context::runReplicaWorldRange(
 					if(thWCnt != 0){ // don't transfer if it's the first world in the range and it's also the first world overall
 
 						//std::cout << "Before Context::runReplicaWorldRange transferCoordinates_WorldToWorld" << std::endl << std::flush; currWorld.PrintStages(); // FIXTORROLL
+						auto start = std::chrono::steady_clock::now(); // TIMER
 						transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);
+						auto end = std::chrono::steady_clock::now(); // TIMER
+						std::chrono::duration<double> seconds = end - start; // TIMER
+						std::cout << "TIMER Context::transferCoordinates_WorldToWorld " << replicaIx << " " << seconds.count() << "\n";
+						
 						//transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx); //
 					}
 				}				
@@ -6306,7 +6311,12 @@ void Context::runReplicaWorldRange(
 				#pragma endregion ROLL_SET
 
 				bool validated = true;
+				
+				auto start = std::chrono::steady_clock::now(); // TIMER
 				validated = RunWorld(wIx, string("REX, ") + to_string(replicaIx) + string(", ") + to_string(thermoIx) + ", " + to_string(wIx)) && validated;
+				auto end = std::chrono::steady_clock::now(); // TIMER
+				std::chrono::duration<double> seconds = end - start; // TIMER
+				std::cout << "TIMER Context::RunWorld " << replicaIx << " " << seconds.count() << "\n";
 				
 				#pragma region ROLL_RESET
 				if(thermoIx != 0){
@@ -6322,14 +6332,22 @@ void Context::runReplicaWorldRange(
 				// ========================  EQUILIBRIUM TRANSFER TO REPLICA  ======================
 				if(distortIx == 0){
 
+					start = std::chrono::steady_clock::now(); // TIMER
 					transferCoordinates_WorldToReplica(wIx, replicaIx);
+					end = std::chrono::steady_clock::now(); // TIMER
+					seconds = end - start; // TIMER
+					std::cout << "TIMER Context::transferCoordinates_WorldToReplica " << replicaIx << " " << seconds.count() << "\n";
 
 					// Calculate Q statistics
+					start = std::chrono::steady_clock::now(); // TIMER
 					if(sampler_p->getAcc() == true){
 						thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
 					}else{
 						thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
 					}
+					end = std::chrono::steady_clock::now(); // TIMER
+					seconds = end - start; // TIMER
+					std::cout << "TIMER Context::calcQStats " << replicaIx << " " << seconds.count() << "\n";
 
 				} // __end__ Equilibrium
 
@@ -6338,7 +6356,11 @@ void Context::runReplicaWorldRange(
 
 					bool intoWORK = true;
 
+					start = std::chrono::steady_clock::now(); // TIMER
 					transferCoordinates_WorldToReplica(wIx, replicaIx, intoWORK);
+					end = std::chrono::steady_clock::now(); // TIMER
+					seconds = end - start; // TIMER
+					std::cout << "TIMER Context::transferCoordinates_WorldToReplica " << replicaIx << " " << seconds.count() << "\n";
 
 				} // __end__ Non/Equilibrium
 
@@ -6441,11 +6463,23 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			# pragma endregion CONVENIENT_VARS_REPLICA
 
 			// Update BAT map for all the replica's world
+			auto start = std::chrono::steady_clock::now(); // TIMER
 			updSubZMatrixBATsToAllWorlds(replicaIx);
+			auto end = std::chrono::steady_clock::now(); // TIMER
+			std::chrono::duration<double> seconds = end - start; // TIMER
+			std::cout << "TIMER Context::updSubZMatrixBATsToAllWorlds " << replicaIx << " " << seconds.count() << "\n";
 
+			start = std::chrono::steady_clock::now(); // TIMER
 			setReplicasWorldsParameters(replicaIx, false, true, mixi);
+			end = std::chrono::steady_clock::now(); // TIMER
+			seconds = end - start; // TIMER
+			std::cout << "TIMER Context::setReplicasWorldsParameters " << replicaIx << " " << seconds.count() << "\n";
 
+			start = std::chrono::steady_clock::now(); // TIMER
 			transferCoordinates_ReplicaToWorld(replicaIx, 0);
+			end = std::chrono::steady_clock::now(); // TIMER
+			seconds = end - start; // TIMER
+			std::cout << "TIMER Context::transferCoordinates_ReplicaToWorld " << replicaIx << " " << seconds.count() << "\n";
 
 			// # pragma region HARDCODED_ROLL_PARAMS // @TODO DELETE
 			// int HARDCODED_ROLL_WIX = 1;
@@ -6467,9 +6501,19 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			// } // @TODO DELETE
 			// # pragma endregion HARDCODED_ROLL_PARAMS // @TODO DELETE
 			
+			// Transfer Thermostate thermoIx Qstats with index srcStatsWIx to destStatsWIx Worlds's sampler
+			// srcStatsWIx and destStatsWIx mean different things here
+			start = std::chrono::steady_clock::now(); // TIMER
 			transferQStatistics(thermoIx, thermoWorldIxs[wPart.nofEquilibriumWorlds - 1], thermoWorldIxs[wPart.nofEquilibriumWorlds - 1]);
+			end = std::chrono::steady_clock::now(); // TIMER
+			seconds = end - start; // TIMER
+			std::cout << "TIMER Context::transferQStatistics " << replicaIx << " " << seconds.count() << "\n";
 
+			start = std::chrono::steady_clock::now(); // TIMER
 			runReplicaWorldRange(replicaIx, 0, wPart.nofEquilibriumWorlds, false);
+			end = std::chrono::steady_clock::now(); // TIMER
+			seconds = end - start; // TIMER
+			std::cout << "TIMER Context::runReplicaWorldRange " << replicaIx << " " << seconds.count() << "\n";
 
 			// Write log and DCD
 			if(wPart.nofNonequilibriumWorlds == 0){
@@ -6480,7 +6524,12 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			thermoState.incrementNofSamples(1);
 
 			SimTK::State& state = worlds[thermoWorldIxs[wPart.N2_wCnt]].integ->updAdvancedState();
+
+			start = std::chrono::steady_clock::now(); // TIMER
 			replica.calcZMatrixBAT( worlds[thermoWorldIxs[wPart.N2_wCnt]].getAtomsLocationsInGround( state ));
+			end = std::chrono::steady_clock::now(); // TIMER
+			seconds = end - start; // TIMER
+			std::cout << "TIMER Context::calcZMatrixBAT " << replicaIx << " " << seconds.count() << "\n";
 
 		} // _end_ loop through replicas (EQUILIBRIUM)
 
@@ -6591,7 +6640,12 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 		} // _end_ loop through replicas (NON-EQUILIBRIUM) RUN B
 
+		auto start = std::chrono::steady_clock::now(); // TIMER
 		mixReplicas(mixi, 0);
+		auto end = std::chrono::steady_clock::now(); // TIMER
+		std::chrono::duration<double> seconds = end - start; // TIMER
+		std::cout << "TIMER Context::mixReplicas " << mixi << " " << seconds.count() << "\n";
+
 		mixi++;
     	PrintNofAcceptedSwapsMatrix();
 

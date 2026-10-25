@@ -4238,7 +4238,12 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 	updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
 	
 	validated = true;
-    validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose); // FIXTOR_RESTORE
+
+	auto start = std::chrono::steady_clock::now(); // TIMER
+	validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose); // FIXTOR_RESTORE
+	auto end = std::chrono::steady_clock::now(); // TIMER
+	std::chrono::duration<double> seconds = end - start; // TIMER
+	std::cout << "TIMER World::reinitialize " << seconds.count() << "\n";
 	//std::cout << "After  World::generateSamples sampler.reinitialize" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
 
     auto runSamplingLoop = [&](SimTK::State& state) {
@@ -4248,7 +4253,11 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
                 updSampler(0)->getMsg_InitialParams(worldOutStream);
             }
 
+			start = std::chrono::steady_clock::now(); // TIMER
             validated = updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
+			end = std::chrono::steady_clock::now(); // TIMER
+			seconds = end - start; // TIMER
+			std::cout << "TIMER World::sample_iteration " << seconds.count() << "\n";
 
             if (verbose) {worldOutStream << std::endl;}
         }

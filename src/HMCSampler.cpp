@@ -1723,7 +1723,12 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 //std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 //world->PrintSimbodyStateCache(someState); // FIXTORROLL
 
+				auto start = std::chrono::steady_clock::now(); // TIMER
 				world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
+				auto end = std::chrono::steady_clock::now(); // TIMER
+				std::chrono::duration<double> seconds = end - start; // TIMER
+				std::cout << "TIMER HMCSampler::integrateTrajectory stepTo " << seconds.count() << "\n";
+
 
 //std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" world->timeStepper->stepTo "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
@@ -4143,22 +4148,37 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 	}
 
 	// Initialize velocities
+	auto start = std::chrono::steady_clock::now(); // TIMER
 	perturbVelocities(someState, VelocitiesPerturbMethod::TO_T);
+	auto end = std::chrono::steady_clock::now(); // TIMER
+	std::chrono::duration<double> seconds = end - start; // TIMER
+	std::cout << "TIMER HMCSampler::propose perturbVelocities " << seconds.count() << "\n";
 
 	//std::cout << "After  HMCSampler::propose perturbVelocities" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 	// Store the proposed energies
+	start = std::chrono::steady_clock::now(); // TIMER
 	calcProposedKineticAndTotalEnergyOld(someState);
+	end = std::chrono::steady_clock::now(); // TIMER
+	seconds = end - start; // TIMER
+	std::cout << "TIMER HMCSampler::propose calcProposedKineticAndTotalEnergyOld " << seconds.count() << "\n";
 
 	//std::cout << "After  HMCSampler::propose calcProposedKineticAndTotalEnergyOld" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 		// Integrate trajectory
+		start = std::chrono::steady_clock::now(); // TIMER
 		integrateTrajectory(someState, useNUTS);
-
+		end = std::chrono::steady_clock::now(); // TIMER
+		seconds = end - start; // TIMER
+		std::cout << "TIMER HMCSampler::propose integrateTrajectory " << seconds.count() << "\n";
 		//std::cout << "After  HMCSampler::propose integrateTrajectory" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 		// Perturb Q, QDot or QDotDot
+		start = std::chrono::steady_clock::now(); // TIMER
 		perturb_Q_QDot_QDotDot(someState);
+		end = std::chrono::steady_clock::now(); // TIMER
+		seconds = end - start; // TIMER
+		std::cout << "TIMER HMCSampler::propose perturb_Q_QDot_QDotDot " << seconds.count() << "\n";
 
 		//std::cout << "After  HMCSampler::propose perturb_Q_QDot_QDotDot" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
@@ -4170,7 +4190,12 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 
 	// Get all new energies after integration
 	if (!proposeExceptionCaught) {
+
+		start = std::chrono::steady_clock::now(); // TIMER
 		calcNewEnergies(someState);
+		end = std::chrono::steady_clock::now(); // TIMER
+		seconds = end - start; // TIMER
+		std::cout << "TIMER HMCSampler::propose calcNewEnergies " << seconds.count() << "\n";
 
 		//std::cout << "After  HMCSampler::propose calcNewEnergies" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
@@ -4547,38 +4572,6 @@ def simulate_hmc_step(e):
 bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& samplerOutStream, bool verbose)
 {
 
-	// // Warm up
-	// bool warmup = true;
-	// SimTK::Real e = 0.002;          // Initial step size (2 fs)
-	// SimTK::Real log_e_avg = 0.0;    // Average log step size
-	// SimTK::Real running_sum = 0.0;  
-	// SimTK::Real gamma = 0.15;       // Increased adaptation damping
-	// SimTK::Real t0 = 50;           // Increased early iteration stability
-	// SimTK::Real kappa = 0.75;      // Keep decay rate the same
-	// SimTK::Real mu = std::log(10 * e); // Initial value based on heuristic
-	// SimTK::Real target_accept = 0.651; // Target acceptance rate
-	// int n_warmup = 1000;
-	// for (int i = 0; i < n_warmup; i++) {
-	// 	if (!warmup || integratorType != IntegratorType::VERLET) {
-	// 		break;
-	// 	}
-	// 	// Simulate one HMC step and get acceptance probability
-	// 	setTimestep(e, false);
-	// 	SimTK::Real accept_prob = propose(someState, false); // You'll need this function
-	// 	bool accepted = propose(someState, false);
-	// 	// Update running average using actual acceptance probability
-	// 	running_sum += target_accept - accept_prob;
-	// 	// Updated dual averaging formula without sqrt(i)
-	// 	SimTK::Real log_e = mu - (running_sum / (t0 + i)) / gamma;
-	// 	// Update step size
-	// 	e = std::exp(log_e);
-	// 	log_e_avg = (1 - std::pow(i, -kappa)) * log_e_avg + std::pow(i, -kappa) * log_e;
-	// 	if (i % 10 == 0) {
-	// 		std::cout << "Iteration " << i << ": Step size = " << e 
-	// 				<< ", Acceptance Rate = " << accept_prob << std::endl;
-	// 	}
-	// }
-
 	// Flag if anything goes wrong during simulation
 	bool validated = true;
 
@@ -4593,7 +4586,14 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 
 	// PROPOSE
 	// Generate a trial move in the stochastic chain
+	
+	auto start = std::chrono::steady_clock::now(); // TIMER
 	validated = propose(someState, false) && validated;
+	auto end = std::chrono::steady_clock::now(); // TIMER
+	std::chrono::duration<double> seconds = end - start; // TIMER
+	std::cout << "TIMER HMCSampler::sample_iteration propose " << seconds.count() << "\n";
+	
+	
 	//std::cout << "After  HMCSampler::sample_iteration propose" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 	#pragma region REBAS_TEST

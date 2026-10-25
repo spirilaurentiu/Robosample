@@ -4,6 +4,9 @@
 			"path": ".."
 		}
 	],
+	"clangd.arguments": [
+    "--compile-commands-dir=${workspaceFolder}/buildpy"
+	],
 	"settings": {
 		"files.associations": {
 			"cctype": "cpp",
