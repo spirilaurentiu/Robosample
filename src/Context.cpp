@@ -7916,22 +7916,52 @@ SimTK::State& Context::setAtoms_SP_NEW(
 	// Match Compound and DuMM coordinates
 	someState = setAtoms_CompoundsAndDuMM(destWIx, someState, otherWorldsAtomsLocations);
 
+	Context_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_CompoundsAndDuMM "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 	// Set default child mobod inboard (X_PF) and outboard (X_BM) frames
 	// This method only uses internal coordinates per molecule bonds info
 	setAtoms_XPF_XBM(destWIx);
+
+	Context_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_XPF_XBM "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
 
 	// Recover the modified state (may not be necessary)
 	destWorld.compoundSystem->realizeTopology();
 	someState = destWorld.compoundSystem->updDefaultState();
 
+	Context_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER Context::setAtoms_SP_NEW__realizeTopology "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 	// Set every mobod's mass properties
 	someState = setAtoms_MassProperties(destWIx);
 
+	Context_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_MassProperties "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	
 	// Set X_FMs
 	someState = setAtoms_XFM(destWIx, someState);
 
+	Context_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_XFM "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 	// Realize position
 	destWorld.compoundSystem->realize(someState, SimTK::Stage::Position);
+
+	Context_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER Context::setAtoms_SP_NEW__realizePosition "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
 
 	//std::cout << someState.getSystemStage() << std::endl;
 	return someState;
