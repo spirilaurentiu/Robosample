@@ -6956,6 +6956,10 @@ void Context::transferCoordinates_WorldToWorld(int srcWIx, int destWIx)
 	// Get BAT coordinates
 	calcZMatrixBAT(srcWIx, otherWorldsAtomsLocations);
 
+	Context_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER Context::transferCoordinates_WorldToWorld__calcZMatrixBAT "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
 	//PrintZMatrixTableAndBAT();
 	//PrintZMatrixMobods(srcWIx, lastAdvancedState);
 	//Print_TRANSFORMERS_Work();
@@ -6963,12 +6967,22 @@ void Context::transferCoordinates_WorldToWorld(int srcWIx, int destWIx)
 	// Pass compounds to the new world
 	passTopologiesToNewWorld(destWIx);
 
+	Context_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER Context::transferCoordinates_WorldToWorld__passTopologiesToNewWorld "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 	// Focus on destination world
 	World& destWorld = worlds[destWIx];
 	SimTK::State& someState = currentAdvancedState;
 
 	// New setAtomsLocations
 	currentAdvancedState = setAtoms_SP_NEW(destWIx, someState, otherWorldsAtomsLocations);
+
+	Context_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER Context::transferCoordinates_WorldToWorld__setAtoms_SP_NEW "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
 
 	// SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(srcWIx, destWIx);
 	// SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(srcWIx, destWIx, false);
