@@ -4239,11 +4239,12 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 	
 	validated = true;
 
-	auto start = std::chrono::steady_clock::now(); // TIMER
 	validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose); // FIXTOR_RESTORE
-	auto end = std::chrono::steady_clock::now(); // TIMER
-	std::chrono::duration<double> seconds = end - start; // TIMER
-	std::cout << "TIMER World::reinitialize " << seconds.count() << "\n";
+
+	World_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER World::reinitialize "
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			World_time_point.time_since_epoch()).count() << "\n";		// TIMER
 	//std::cout << "After  World::generateSamples sampler.reinitialize" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
 
     auto runSamplingLoop = [&](SimTK::State& state) {
@@ -4253,11 +4254,12 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
                 updSampler(0)->getMsg_InitialParams(worldOutStream);
             }
 
-			start = std::chrono::steady_clock::now(); // TIMER
             validated = updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
-			end = std::chrono::steady_clock::now(); // TIMER
-			seconds = end - start; // TIMER
-			std::cout << "TIMER World::sample_iteration " << seconds.count() << "\n";
+
+			World_time_point = std::chrono::steady_clock::now(); // TIMER
+			std::cout << "TIMER World::sample_iteration "
+					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+					World_time_point.time_since_epoch()).count() << "\n";		// TIMER
 
             if (verbose) {worldOutStream << std::endl;}
         }

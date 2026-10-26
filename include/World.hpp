@@ -766,6 +766,8 @@ public:
 
 public:
 
+	std::chrono::steady_clock::time_point World_time_point;
+
 	SimTK::Vector BMps;
 	SimTK::Vector PFrs;
 

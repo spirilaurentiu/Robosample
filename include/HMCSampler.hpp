@@ -731,6 +731,8 @@ public:
 
 protected:
 
+	std::chrono::steady_clock::time_point pHMC_time_point;
+
 	# pragma region REBAS_TEST
 	int replicaIx;
 	int thermoStateIx;

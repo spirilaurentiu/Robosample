@@ -854,6 +854,8 @@ public:
 
 private:
 
+	std::chrono::steady_clock::time_point Context_time_point;
+
 	std::vector<int> worldsRolls;
 
 	//OpenMMPluginInterface refOpenMMPlugin; // __refOMM__
