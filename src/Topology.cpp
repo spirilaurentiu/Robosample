@@ -480,9 +480,13 @@ int Topology::getNumber(SimTK::Compound::AtomIndex cAIx)
 */
 void Topology::calcAtomsTopTransforms()
 {
+	std::vector<SimTK::Transform> atomFrameCache(getNumAtoms());
+	invalidateAtomFrameCache(atomFrameCache, getNumAtoms());
+	calcDefaultAtomFramesInCompoundFrame(atomFrameCache);
+
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 		SimTK::Compound::AtomIndex aIx = (subAtomList[i]).getCompoundAtomIndex();
-		aIx2TopTransform[aIx] = calcDefaultAtomFrameInCompoundFrame(aIx);
+		aIx2TopTransform[aIx] = atomFrameCache[aIx];
 	}
 }
 
