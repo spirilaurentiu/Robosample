@@ -2873,6 +2873,12 @@ World::setAtoms_Compound_Match(
 	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets
 )
 {
+
+	World_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER World::setAtoms_Compound_Match__START "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			World_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 	// Gather Top transforms for all the Compounds
 	std::vector<SimTK::Transform> G_X_Ts;
 
@@ -2923,7 +2929,7 @@ World::setAtoms_Compound_Match(
 	std::cout << "TIMER World::setAtoms_Compound_Match__matchDefaultDihedralAngles "			// TIMER
 			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 			World_time_point.time_since_epoch()).count() << "\n";		// TIMER
-			
+
 	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchTopLevelTransform\n";
 	currTopology.matchDefaultTopLevelTransform(atomTargets);
 
@@ -2935,8 +2941,18 @@ World::setAtoms_Compound_Match(
 	// Get the Ground to Top Transform
 	G_X_T = currTopology.getTopLevelTransform();
 
+	World_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER World::setAtoms_Compound_Match__getTopLevelTransform "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			World_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 	// Recalculate atom frames in top compound frame
 	currTopology.calcAtomsTopTransforms();
+
+	World_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER World::setAtoms_Compound_Match__calcAtomsTopTransforms "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			World_time_point.time_since_epoch()).count() << "\n";		// TIMER
 
 	return G_X_T;
 }
