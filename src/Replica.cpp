@@ -1,5 +1,7 @@
 #include "Replica.hpp"
 
+#include <stdexcept>
+
 // Get coordinates from this replica
 const std::vector<std::vector<std::pair <bSpecificAtom*, SimTK::Vec3>>>&
 	Replica::getAtomsLocationsInGround() const
@@ -449,78 +451,7 @@ void Replica::reallocZMatrixBAT(void){
 void
 Replica::calcZMatrixBAT_WORK(void)
 {
-
-	// Iterate molecules
-	int allCnt = 0;
-
-	int topoIx = 0;
-
-	// Get locations of this molecule
-	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
-	for (int i = 0; i < topologies.size(); i++) {
-		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> temp;
-		extractAtomTargets(i, get_WORK_AtomsLocationsInGround(), temp);
-		atomTargets.insert(temp.begin(), temp.end());
-	}
-
-	int rowCnt = 0;
-	SimTK::Real bondLength, bondBend, bondTorsion;
-	for (const auto& row : zMatrixTable) {
-		
-		bondLength = SimTK::NaN;
-		bondBend = SimTK::NaN;
-		bondTorsion = SimTK::NaN;
-
-		SimTK::Compound::AtomIndex a0_cAIx, a1_cAIx;
-		
-		// Calculate bond length
-		a0_cAIx = atoms[row[0]].getCompoundAtomIndex();
-		a1_cAIx = atoms[row[1]].getCompoundAtomIndex();
-		SimTK::Vec3 a0loc = findAtomTarget(atomTargets, a0_cAIx);
-		SimTK::Vec3 a1loc = findAtomTarget(atomTargets, a1_cAIx);
-
-		SimTK::Vec3 v_a0a1 = a0loc - a1loc;
-		SimTK::Real bondLength = std::sqrt(SimTK::dot(v_a0a1, v_a0a1));
-
-		if(row[2] >= 0){
-
-			SimTK::Compound::AtomIndex a2_cAIx;
-			a2_cAIx = atoms[row[2]].getCompoundAtomIndex();
-			SimTK::Vec3 a2loc = findAtomTarget(atomTargets, a2_cAIx);
-
-			// Calculate angle
-			UnitVec3 v1(v_a0a1);
-			UnitVec3 v2(a2loc - a1loc);
-
-			Real dotProduct = SimTK::dot(v1, v2);
-			assert(dotProduct < 1.1);
-			assert(dotProduct > -1.1);
-			if (dotProduct > 1.0) dotProduct = 1.0;
-			if (dotProduct < -1.0) dotProduct = -1.0;
-			bondBend = std::acos(dotProduct);
-
-			if(row[3] >= 0){
-				SimTK::Compound::AtomIndex
-					a3_cAIx = atoms[row[3]].getCompoundAtomIndex();
-				SimTK::Vec3 a3loc = findAtomTarget(atomTargets, a3_cAIx);
-
-				bondTorsion = bDihedral(a0loc, a1loc, a2loc, a3loc);
-			}
-
-		} // angle
-		
-		setZMatrixBATValue(rowCnt, 0, bondLength);
-		setZMatrixBATValue(rowCnt, 1, bondBend);
-		setZMatrixBATValue(rowCnt, 2, bondTorsion);
-
-		if(row[3] == -2){
-			topoIx++;
-		}
-
-		rowCnt++;
-
-	} // every zMatrix row		
-
+	calcZMatrixBAT(get_WORK_AtomsLocationsInGround());
 }
 
 
@@ -535,43 +466,60 @@ Replica::calcZMatrixBAT(
 		otherWorldsAtomsLocations)
 {
 
-	// Iterate molecules
-	int allCnt = 0;
-
-	int topoIx = 0;
-
-	// Get locations of this molecule
-	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
-	for (int i = 0; i < topologies.size(); i++) {
-		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> temp;
-		extractAtomTargets(i, otherWorldsAtomsLocations, temp);
-		atomTargets.insert(temp.begin(), temp.end());
+	std::vector<SimTK::Vec3> atomLocations(atoms.size());
+	std::vector<bool> hasLocation(atoms.size(), false);
+	for (const auto& moleculeLocations : otherWorldsAtomsLocations) {
+		for (const auto& atomLocation : moleculeLocations) {
+			if (atomLocation.first == nullptr) {
+				throw std::invalid_argument("Replica::calcZMatrixBAT: null atom in coordinates");
+			}
+			const int atomIx = atomLocation.first->getNumber();
+			if (atomIx < 0 || static_cast<size_t>(atomIx) >= atoms.size()) {
+				throw std::out_of_range("Replica::calcZMatrixBAT: invalid global atom index "
+					+ std::to_string(atomIx));
+			}
+			if (hasLocation[atomIx]) {
+				throw std::invalid_argument("Replica::calcZMatrixBAT: duplicate coordinates for atom "
+					+ std::to_string(atomIx));
+			}
+			atomLocations[atomIx] = atomLocation.second;
+			hasLocation[atomIx] = true;
+		}
 	}
+
+	const auto getLocation = [&](int atomIx) -> const SimTK::Vec3& {
+		if (atomIx < 0 || static_cast<size_t>(atomIx) >= atomLocations.size()) {
+			throw std::out_of_range("Replica::calcZMatrixBAT: invalid Z-matrix atom index "
+				+ std::to_string(atomIx));
+		}
+		if (!hasLocation[atomIx]) {
+			throw std::invalid_argument("Replica::calcZMatrixBAT: missing coordinates for atom "
+				+ std::to_string(atomIx));
+		}
+		return atomLocations[atomIx];
+	};
 
 	int rowCnt = 0;
 	SimTK::Real bondLength, bondBend, bondTorsion;
 	for (const auto& row : zMatrixTable) {
+		if (row.size() < 4) {
+			throw std::invalid_argument("Replica::calcZMatrixBAT: Z-matrix row has fewer than four indexes");
+		}
 		
 		bondLength = SimTK::NaN;
 		bondBend = SimTK::NaN;
 		bondTorsion = SimTK::NaN;
 
-		SimTK::Compound::AtomIndex a0_cAIx, a1_cAIx;
-		
 		// Calculate bond length
-		a0_cAIx = atoms[row[0]].getCompoundAtomIndex();
-		a1_cAIx = atoms[row[1]].getCompoundAtomIndex();
-		SimTK::Vec3 a0loc = findAtomTarget(atomTargets, a0_cAIx);
-		SimTK::Vec3 a1loc = findAtomTarget(atomTargets, a1_cAIx);
+		SimTK::Vec3 a0loc = getLocation(row[0]);
+		SimTK::Vec3 a1loc = getLocation(row[1]);
 
 		SimTK::Vec3 v_a0a1 = a0loc - a1loc;
 		SimTK::Real bondLength = std::sqrt(SimTK::dot(v_a0a1, v_a0a1));
 
 		if(row[2] >= 0){
 
-			SimTK::Compound::AtomIndex a2_cAIx;
-			a2_cAIx = atoms[row[2]].getCompoundAtomIndex();
-			SimTK::Vec3 a2loc = findAtomTarget(atomTargets, a2_cAIx);
+			SimTK::Vec3 a2loc = getLocation(row[2]);
 
 			// Calculate angle
 			UnitVec3 v1(v_a0a1);
@@ -585,9 +533,7 @@ Replica::calcZMatrixBAT(
 			bondBend = std::acos(dotProduct);
 
 			if(row[3] >= 0){
-				SimTK::Compound::AtomIndex
-					a3_cAIx = atoms[row[3]].getCompoundAtomIndex();
-				SimTK::Vec3 a3loc = findAtomTarget(atomTargets, a3_cAIx);
+				SimTK::Vec3 a3loc = getLocation(row[3]);
 
 				bondTorsion = bDihedral(a0loc, a1loc, a2loc, a3loc);
 			}
@@ -597,10 +543,6 @@ Replica::calcZMatrixBAT(
 		setZMatrixBATValue(rowCnt, 0, bondLength);
 		setZMatrixBATValue(rowCnt, 1, bondBend);
 		setZMatrixBATValue(rowCnt, 2, bondTorsion);
-
-		if(row[3] == -2){
-			topoIx++;
-		}
 
 		rowCnt++;
 
