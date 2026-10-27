@@ -1020,15 +1020,15 @@ void Context::Initialize() {
 
 	// Get Z-matrix indexes table	
 	calcZMatrixTable();
-	PrintZMatrixTable();
+	//PrintZMatrixTable();
 
 	std::cout << "DEBUG: Context::Initialize 0.2: Z-matrix table calculated and printed" << std::endl << std::flush;
 
 	reallocZMatrixBAT();
 	calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
-	PrintZMatrixBAT();
-	PrintZMatrixMobods(firstWIx, lastAdvancedState);
-	Print_TRANSFORMERS_Work();
+	//PrintZMatrixBAT();
+	//PrintZMatrixMobods(firstWIx, lastAdvancedState);
+	//Print_TRANSFORMERS_Work();
 
 	std::cout << "DEBUG: Context::Initialize 0.3: Z-matrix BAT calculated and printed" << std::endl << std::flush;
 	
