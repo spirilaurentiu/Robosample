@@ -2885,17 +2885,52 @@ World::setAtoms_Compound_Match(
 	bool flipAllChirality = false;
 	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultBondLengths\n";
 	currTopology.matchDefaultBondLengths(atomTargets);
+
+	World_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER World::setAtoms_Compound_Match__matchDefaultBondLengths "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			World_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultAtomChirality\n";
 	currTopology.matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
+	
+	World_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER World::setAtoms_Compound_Match__matchDefaultAtomChirality "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			World_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 	//currTopology.PrintCompoundGeometry(atomTargets);
 	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultBondAngles\n";
 	currTopology.matchDefaultBondAngles(atomTargets);
+
+	World_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER World::setAtoms_Compound_Match__matchDefaultBondAngles "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			World_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultDirections\n";
 	currTopology.matchDefaultDirections(atomTargets);
+
+	World_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER World::setAtoms_Compound_Match__matchDefaultDirections "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			World_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultDihedralAngles\n";
 	currTopology.matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
+
+	World_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER World::setAtoms_Compound_Match__matchDefaultDihedralAngles "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			World_time_point.time_since_epoch()).count() << "\n";		// TIMER
+			
 	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchTopLevelTransform\n";
 	currTopology.matchDefaultTopLevelTransform(atomTargets);
+
+	World_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER World::setAtoms_Compound_Match__matchDefaultTopLevelTransform "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			World_time_point.time_since_epoch()).count() << "\n";		// TIMER
 
 	// Get the Ground to Top Transform
 	G_X_T = currTopology.getTopLevelTransform();

@@ -7423,9 +7423,19 @@ SimTK::State& Context::setAtoms_CompoundsAndDuMM(
 		destWorld.extractAtomTargets(
 			topoIx, otherWorldsAtomsLocations, atomTargets);
 
+		Context_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER Context::setAtoms_SP_NEW__extractAtomTargets "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 		// Use Molmodel's Compound match functions to set the new conf
 		G_X_T = destWorld.setAtoms_Compound_Match(
 			topoIx, atomTargets);
+
+		Context_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_Compound_Match "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
 
 		//matchDefaultConfiguration(topoIx, atomTargets);
 
@@ -7439,11 +7449,22 @@ SimTK::State& Context::setAtoms_CompoundsAndDuMM(
 		destWorld.setAtoms_Compound_FramesAndLocsInMobods(
 			topoIx, atomTargets, locs);
 
+		Context_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_Compound_FramesAndLocsInMobods "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 		// 2.2 DUMM
 		///////////////////////////////////////////////////////////
 
 		// Set atoms' stations on body
 		destWorld.setAtoms_SetDuMMStations(topoIx, locs);
+
+		Context_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_SetDuMMStations "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 	} // every Topology
 
 	return someState;
