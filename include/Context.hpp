@@ -1137,6 +1137,8 @@ private:
 
 	std::vector<std::vector<int>> zMatrixTable;
 	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
+	std::vector<SimTK::Vec3> atomLocations;
+	std::vector<unsigned char> hasAtomLocation;
 
 	/**	
 	* @brief Add a new row to the zMatrixTable

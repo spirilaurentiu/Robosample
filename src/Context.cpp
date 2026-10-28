@@ -9071,8 +9071,9 @@ Context::calcZMatrixBAT(
 		otherWorldsAtomsLocations)
 {
 
-	std::vector<SimTK::Vec3> atomLocations(atoms.size());
-	std::vector<bool> hasLocation(atoms.size(), false);
+	atomLocations.resize(atoms.size());
+	hasAtomLocation.resize(atoms.size());
+	std::fill(hasAtomLocation.begin(), hasAtomLocation.end(), 0);
 	for (const auto& moleculeLocations : otherWorldsAtomsLocations) {
 		for (const auto& atomLocation : moleculeLocations) {
 			if (atomLocation.first == nullptr) {
@@ -9083,12 +9084,12 @@ Context::calcZMatrixBAT(
 				throw std::out_of_range("Context::calcZMatrixBAT: invalid global atom index "
 					+ std::to_string(atomIx));
 			}
-			if (hasLocation[atomIx]) {
+			if (hasAtomLocation[atomIx]) {
 				throw std::invalid_argument("Context::calcZMatrixBAT: duplicate coordinates for atom "
 					+ std::to_string(atomIx));
 			}
 			atomLocations[atomIx] = atomLocation.second;
-			hasLocation[atomIx] = true;
+			hasAtomLocation[atomIx] = 1;
 		}
 	}
 
@@ -9097,7 +9098,7 @@ Context::calcZMatrixBAT(
 			throw std::out_of_range("Context::calcZMatrixBAT: invalid Z-matrix atom index "
 				+ std::to_string(atomIx));
 		}
-		if (!hasLocation[atomIx]) {
+		if (!hasAtomLocation[atomIx]) {
 			throw std::invalid_argument("Context::calcZMatrixBAT: missing coordinates for atom "
 				+ std::to_string(atomIx));
 		}

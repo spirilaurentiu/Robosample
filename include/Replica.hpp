@@ -203,6 +203,8 @@ private:
 
 	std::vector<std::vector<int>>& zMatrixTable;
 	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
+	std::vector<SimTK::Vec3> zMatrixAtomLocations;
+	std::vector<unsigned char> hasZMatrixAtomLocation;
 	
 
 	//std::vector<SimTK::QIndex> QIxs;

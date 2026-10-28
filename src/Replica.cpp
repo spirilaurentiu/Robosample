@@ -466,8 +466,9 @@ Replica::calcZMatrixBAT(
 		otherWorldsAtomsLocations)
 {
 
-	std::vector<SimTK::Vec3> atomLocations(atoms.size());
-	std::vector<bool> hasLocation(atoms.size(), false);
+	zMatrixAtomLocations.resize(atoms.size());
+	hasZMatrixAtomLocation.resize(atoms.size());
+	std::fill(hasZMatrixAtomLocation.begin(), hasZMatrixAtomLocation.end(), 0);
 	for (const auto& moleculeLocations : otherWorldsAtomsLocations) {
 		for (const auto& atomLocation : moleculeLocations) {
 			if (atomLocation.first == nullptr) {
@@ -478,25 +479,25 @@ Replica::calcZMatrixBAT(
 				throw std::out_of_range("Replica::calcZMatrixBAT: invalid global atom index "
 					+ std::to_string(atomIx));
 			}
-			if (hasLocation[atomIx]) {
+			if (hasZMatrixAtomLocation[atomIx]) {
 				throw std::invalid_argument("Replica::calcZMatrixBAT: duplicate coordinates for atom "
 					+ std::to_string(atomIx));
 			}
-			atomLocations[atomIx] = atomLocation.second;
-			hasLocation[atomIx] = true;
+			zMatrixAtomLocations[atomIx] = atomLocation.second;
+			hasZMatrixAtomLocation[atomIx] = 1;
 		}
 	}
 
 	const auto getLocation = [&](int atomIx) -> const SimTK::Vec3& {
-		if (atomIx < 0 || static_cast<size_t>(atomIx) >= atomLocations.size()) {
+		if (atomIx < 0 || static_cast<size_t>(atomIx) >= zMatrixAtomLocations.size()) {
 			throw std::out_of_range("Replica::calcZMatrixBAT: invalid Z-matrix atom index "
 				+ std::to_string(atomIx));
 		}
-		if (!hasLocation[atomIx]) {
+		if (!hasZMatrixAtomLocation[atomIx]) {
 			throw std::invalid_argument("Replica::calcZMatrixBAT: missing coordinates for atom "
 				+ std::to_string(atomIx));
 		}
-		return atomLocations[atomIx];
+		return zMatrixAtomLocations[atomIx];
 	};
 
 	int rowCnt = 0;
