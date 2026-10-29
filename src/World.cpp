@@ -2526,6 +2526,10 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
 		thisWorldsAtomsLocations;
 
+	if(samplers[0]->getIntegratorType() == IntegratorType::OMMVV){
+		forceField->updateOMMAtomLocationCache();
+	}
+
 	// Iterate through topologies
 	for (auto& topology : (*topologies)){
 
@@ -2548,7 +2552,10 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 
 			SimTK::Vec3 location;
 			if(samplers[0]->getIntegratorType() == IntegratorType::OMMVV){
-				location = forceField->calcAtomLocationInGroundFrameThroughOMM(dAIx);
+
+				location = forceField->OMM_getAtomPositionFromCache(dAIx);
+				//location = forceField->calcAtomLocationInGroundFrameThroughOMM(dAIx);
+
 			}else{
 				location = topology.calcAtomLocationInGroundFrameThroughSimbody(compoundAtomIndex, *forceField, *matter, state);
 			}
@@ -2564,9 +2571,15 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 		}
 
 		World_time_point = std::chrono::steady_clock::now(); // TIMER
-		std::cout << "TIMER World::getAtomsLocationsInGround__calcAtomLocationInGroundFrame "			// TIMER
+		if(samplers[0]->getIntegratorType() == IntegratorType::OMMVV){
+			std::cout << "TIMER World::getAtomsLocationsInGround__calcAtomLocationInGroundFrame_OMM "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				World_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		}else{
+			std::cout << "TIMER World::getAtomsLocationsInGround__calcAtomLocationInGroundFrame_Simbody "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				World_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		}
 
 		thisWorldsAtomsLocations.emplace_back(currentTopologyAtomsLocations);
 	}

@@ -223,11 +223,7 @@ public:
 		* 10. Geometry calculations
 		* 11  Task spaces
 		* 12. Constraints
-	* @param filename input file name
-	* @return succes of the function
 	*/	
-	bool initializeFromFile(const std::string& filename);
-
 
 	/**@}**/
 
