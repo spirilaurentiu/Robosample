@@ -2516,14 +2516,21 @@ std::vector< std::vector<
 std::pair <bSpecificAtom *, SimTK::Vec3 > > >
 World::getAtomsLocationsInGround(SimTK::State & state)
 {
+
+	World_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER World::getAtomsLocationsInGround__start "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			World_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 	// Return vector
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
-		returnVector;
+		thisWorldsAtomsLocations;
 
 	// Iterate through topologies
 	for (auto& topology : (*topologies)){
-		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
-		currentTopologyInfo.reserve(topology.subAtomList.size());
+
+		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyAtomsLocations;
+		currentTopologyAtomsLocations.reserve(topology.subAtomList.size());
 
 		// Iterate through atoms
 		for (auto& atom : topology.subAtomList) {
@@ -2534,6 +2541,11 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 			// Get DuMM atom index too for OpenMM
 			const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
 
+			// World_time_point = std::chrono::steady_clock::now(); // TIMER
+			// std::cout << "TIMER World::getAtomsLocationsInGround__getDuMMAtomIndex "			// TIMER
+			// 		<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			// 		World_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 			SimTK::Vec3 location;
 			if(samplers[0]->getIntegratorType() == IntegratorType::OMMVV){
 				location = forceField->calcAtomLocationInGroundFrameThroughOMM(dAIx);
@@ -2541,15 +2553,25 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 				location = topology.calcAtomLocationInGroundFrameThroughSimbody(compoundAtomIndex, *forceField, *matter, state);
 			}
 
+			// World_time_point = std::chrono::steady_clock::now(); // TIMER
+			// std::cout << "TIMER World::getAtomsLocationsInGround__calcAtomLocationInGroundFrame "			// TIMER
+			// 		<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			// 		World_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 			// std::cout << "getAtomsLocationsInGround " << dAIx << " " << location << std::endl;
 
-			currentTopologyInfo.emplace_back(&atom, location);
+			currentTopologyAtomsLocations.emplace_back(&atom, location);
 		}
 
-		returnVector.emplace_back(currentTopologyInfo);
+		World_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER World::getAtomsLocationsInGround__calcAtomLocationInGroundFrame "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				World_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
+		thisWorldsAtomsLocations.emplace_back(currentTopologyAtomsLocations);
 	}
 
-	return returnVector;
+	return thisWorldsAtomsLocations;
 }
 
 /** Order: bAtomList

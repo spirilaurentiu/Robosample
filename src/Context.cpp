@@ -6953,6 +6953,11 @@ void Context::transferCoordinates_WorldToWorld(int srcWIx, int destWIx)
 		otherWorldsAtomsLocations =
 	worlds[srcWIx].getAtomsLocationsInGround(lastAdvancedState);
 
+	Context_time_point = std::chrono::steady_clock::now(); // TIMER
+	std::cout << "TIMER Context::transferCoordinates_WorldToWorld__getAtomsLocationsInGround "			// TIMER
+			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+
 	// Get BAT coordinates
 	calcZMatrixBAT(srcWIx, otherWorldsAtomsLocations);
 
