@@ -2518,8 +2518,8 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 {
 
 	World_time_point = std::chrono::steady_clock::now(); // TIMER
-	std::cout << "TIMER World::getAtomsLocationsInGround__start "			// TIMER
-			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+	std::cout << "TIMER World::getAtomsLocationsInGround__start_" << static_cast<int>(samplers[0]->getIntegratorType())
+			<< " " << std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 			World_time_point.time_since_epoch()).count() << "\n";		// TIMER
 
 	// Return vector
