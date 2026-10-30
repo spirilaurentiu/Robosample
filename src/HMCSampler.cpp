@@ -1724,11 +1724,14 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 //world->PrintSimbodyStateCache(someState); // FIXTORROLL
 
 				world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
+				
 
-				pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
-				std::cout << "TIMER HMCSampler::integrateTrajectory_stepTo "			// TIMER
-							<< std::chrono::duration_cast<std::chrono::nanoseconds>(	// TIMER
-        					pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+				if(DEBUG_ROBO == 1){ // TIMER
+					pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
+					std::cout << "TIMER HMCSampler::integrateTrajectory_stepTo "			// TIMER
+								<< std::chrono::duration_cast<std::chrono::nanoseconds>(	// TIMER
+	        					pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+				} // DEBUG_ROBO TIMER
 
 //std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" world->timeStepper->stepTo "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
@@ -1880,18 +1883,22 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 			// Actual openmm integration
 			dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
 
-			pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
-			std::cout << "TIMER HMCSampler::integrateTrajectory_OMM_integrateTrajectory "			// TIMER
-						<< std::chrono::duration_cast<std::chrono::nanoseconds>(	// TIMER
-						pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+			if(DEBUG_ROBO == 1){ // TIMER
+				pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
+				std::cout << "TIMER HMCSampler::integrateTrajectory_OMM_integrateTrajectory "			// TIMER
+							<< std::chrono::duration_cast<std::chrono::nanoseconds>(	// TIMER
+							pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+			} // DEBUG_ROBO TIMER
 
 			// Somewhere, the topology gets ruined
 			system->realizeTopology();
 
-			pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
-			std::cout << "TIMER HMCSampler::integrateTrajectory_OMM_realizeTopology "			// TIMER
-						<< std::chrono::duration_cast<std::chrono::nanoseconds>(	// TIMER
-						pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER			
+			if(DEBUG_ROBO == 1){ // TIMER
+				pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
+				std::cout << "TIMER HMCSampler::integrateTrajectory_OMM_realizeTopology "			// TIMER
+							<< std::chrono::duration_cast<std::chrono::nanoseconds>(	// TIMER
+							pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER			
+			} // DEBUG_ROBO TIMER
 
 		}catch(const std::exception&){
 			// Send general message
@@ -4160,40 +4167,50 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 	// Initialize velocities
 	perturbVelocities(someState, VelocitiesPerturbMethod::TO_T);
 
-	pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
-	std::cout << "TIMER HMCSampler::propose__perturbVelocities " 			// TIMER
-				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-				pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	
+	if(DEBUG_ROBO == 1){ // TIMER
+		pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER HMCSampler::propose__perturbVelocities " 			// TIMER
+					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+					pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	} // DEBUG_ROBO TIMER
 
 	//std::cout << "After  HMCSampler::propose perturbVelocities" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 	// Store the proposed energies
 	calcProposedKineticAndTotalEnergyOld(someState);
 	
-	pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
-	std::cout << "TIMER HMCSampler::propose__calcProposedKineticAndTotalEnergyOld " 
-				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-				pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	if(DEBUG_ROBO == 1){ // TIMER
+		pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER HMCSampler::propose__calcProposedKineticAndTotalEnergyOld " 
+					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+					pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	} // DEBUG_ROBO TIMER
 
 	//std::cout << "After  HMCSampler::propose calcProposedKineticAndTotalEnergyOld" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 		// Integrate trajectory
 		integrateTrajectory(someState, useNUTS);
 		
-		pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
-		std::cout << "TIMER HMCSampler::propose__integrateTrajectory " 
-				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-				pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		
+		if(DEBUG_ROBO == 1){ // TIMER
+			pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
+			std::cout << "TIMER HMCSampler::propose__integrateTrajectory " 
+					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+					pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		} // DEBUG_ROBO TIMER
 		//std::cout << "After  HMCSampler::propose integrateTrajectory" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 		// Perturb Q, QDot or QDotDot
 		perturb_Q_QDot_QDotDot(someState);
 
 
-		pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
-		std::cout << "TIMER HMCSampler::propose__perturb_Q_QDot_QDotDot " 
-				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-				pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		if(DEBUG_ROBO == 1){ // TIMER
+			pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
+			std::cout << "TIMER HMCSampler::propose__perturb_Q_QDot_QDotDot " 
+					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+					pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		} // DEBUG_ROBO TIMER
 
 		//std::cout << "After  HMCSampler::propose perturb_Q_QDot_QDotDot" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
@@ -4208,10 +4225,12 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 
 		calcNewEnergies(someState);
 
-		pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
-		std::cout << "TIMER HMCSampler::propose__calcNewEnergies " 
-				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-				pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		if(DEBUG_ROBO == 1){ // TIMER
+			pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
+			std::cout << "TIMER HMCSampler::propose__calcNewEnergies " 
+					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+					pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		} // DEBUG_ROBO TIMER
 
 		//std::cout << "After  HMCSampler::propose calcNewEnergies" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
@@ -4605,10 +4624,12 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 	
 	validated = propose(someState, false) && validated;
 
-	pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
-	std::cout << "TIMER HMCSampler::sample_iteration__propose "			// TIMER
-			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-			pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	if(DEBUG_ROBO == 1){ // TIMER
+		pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER HMCSampler::sample_iteration__propose "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	} // DEBUG_ROBO TIMER
 	
 	
 	//std::cout << "After  HMCSampler::sample_iteration propose" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL

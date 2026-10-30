@@ -5947,10 +5947,12 @@ void Context::runReplicaWorldRange(
 
 						transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);
 
-						Context_time_point = std::chrono::steady_clock::now(); // TIMER
-						std::cout << "TIMER Context::transferCoordinates_WorldToWorld "
-								<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-								Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+						if(DEBUG_ROBO == 1){ // TIMER
+							Context_time_point = std::chrono::steady_clock::now(); // TIMER
+							std::cout << "TIMER Context::transferCoordinates_WorldToWorld "
+									<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+									Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+						} // DEBUG_ROBO TIMER
 						
 						//transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx); //
 					}
@@ -5973,10 +5975,12 @@ void Context::runReplicaWorldRange(
 				
 				validated = RunWorld(wIx, string("REX, ") + to_string(replicaIx) + string(", ") + to_string(thermoIx) + ", " + to_string(wIx)) && validated;
 				
-				Context_time_point = std::chrono::steady_clock::now(); // TIMER
-				std::cout << "TIMER Context::RunWorld "
-						<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-						Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+				if(DEBUG_ROBO == 1){ // TIMER
+					Context_time_point = std::chrono::steady_clock::now(); // TIMER
+					std::cout << "TIMER Context::RunWorld "
+							<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+							Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+				} // DEBUG_ROBO TIMER
 				
 				#pragma region ROLL_RESET
 				if(thermoIx != 0){
@@ -5995,10 +5999,12 @@ void Context::runReplicaWorldRange(
 
 					transferCoordinates_WorldToReplica(wIx, replicaIx);
 
-					Context_time_point = std::chrono::steady_clock::now(); // TIMER
-					std::cout << "TIMER Context::transferCoordinates_WorldToReplica "
-							<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-							Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+					if(DEBUG_ROBO == 1){ // TIMER
+						Context_time_point = std::chrono::steady_clock::now(); // TIMER
+						std::cout << "TIMER Context::transferCoordinates_WorldToReplica "
+								<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+								Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+					} // DEBUG_ROBO TIMER
 
 					// Calculate Q statistics
 					if(sampler_p->getAcc() == true){
@@ -6007,10 +6013,12 @@ void Context::runReplicaWorldRange(
 						thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
 					}
 
-					Context_time_point = std::chrono::steady_clock::now(); // TIMER					
-					std::cout << "TIMER Context::calcQStats "
-							<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-							Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+					if(DEBUG_ROBO == 1){ // TIMER
+						Context_time_point = std::chrono::steady_clock::now(); // TIMER					
+						std::cout << "TIMER Context::calcQStats "
+								<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+								Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+					} // DEBUG_ROBO TIMER
 
 				} // __end__ Equilibrium
 
@@ -6021,10 +6029,12 @@ void Context::runReplicaWorldRange(
 
 					transferCoordinates_WorldToReplica(wIx, replicaIx, intoWORK);
 					
-					Context_time_point = std::chrono::steady_clock::now(); // TIMER					
-					std::cout << "TIMER Context::transferCoordinates_WorldToReplica "
-							<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-							Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+					if(DEBUG_ROBO == 1){ // TIMER
+						Context_time_point = std::chrono::steady_clock::now(); // TIMER					
+						std::cout << "TIMER Context::transferCoordinates_WorldToReplica "
+								<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+								Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+					} // DEBUG_ROBO TIMER
 
 				} // __end__ Non/Equilibrium
 
@@ -6129,24 +6139,29 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			// Update BAT map for all the replica's world
 			updSubZMatrixBATsToAllWorlds(replicaIx);
 			
-			Context_time_point = std::chrono::steady_clock::now(); // TIMER
-			std::cout << "TIMER Context::updSubZMatrixBATsToAllWorlds " 
-						<< std::chrono::duration_cast<std::chrono::nanoseconds>(
-        				Context_time_point.time_since_epoch()).count() << "\n";
-
+			if(DEBUG_ROBO == 1){ // TIMER
+				Context_time_point = std::chrono::steady_clock::now(); // TIMER
+				std::cout << "TIMER Context::updSubZMatrixBATsToAllWorlds " 
+							<< std::chrono::duration_cast<std::chrono::nanoseconds>(
+	        				Context_time_point.time_since_epoch()).count() << "\n";
+			} // DEBUG_ROBO TIMER
 			setReplicasWorldsParameters(replicaIx, false, true, mixi);
 			
-			Context_time_point = std::chrono::steady_clock::now(); // TIMER
-			std::cout << "TIMER Context::setReplicasWorldsParameters "
-						<< std::chrono::duration_cast<std::chrono::nanoseconds>(
-        				Context_time_point.time_since_epoch()).count() << "\n";
+			if(DEBUG_ROBO == 1){ // TIMER
+				Context_time_point = std::chrono::steady_clock::now(); // TIMER
+				std::cout << "TIMER Context::setReplicasWorldsParameters "
+							<< std::chrono::duration_cast<std::chrono::nanoseconds>(
+	        				Context_time_point.time_since_epoch()).count() << "\n";
+			} // DEBUG_ROBO TIMER
 
 			transferCoordinates_ReplicaToWorld(replicaIx, 0);
 
-			Context_time_point = std::chrono::steady_clock::now(); // TIMER
-			std::cout << "TIMER Context::transferCoordinates_ReplicaToWorld "
-						<< std::chrono::duration_cast<std::chrono::nanoseconds>(
-        				Context_time_point.time_since_epoch()).count() << "\n";
+			if(DEBUG_ROBO == 1){ // TIMER
+				Context_time_point = std::chrono::steady_clock::now(); // TIMER
+				std::cout << "TIMER Context::transferCoordinates_ReplicaToWorld "
+							<< std::chrono::duration_cast<std::chrono::nanoseconds>(
+	        				Context_time_point.time_since_epoch()).count() << "\n";
+			} // DEBUG_ROBO TIMER
 
 			// # pragma region HARDCODED_ROLL_PARAMS // @TODO DELETE
 			// int HARDCODED_ROLL_WIX = 1;
@@ -6172,17 +6187,22 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			// srcStatsWIx and destStatsWIx mean different things here			
 			transferQStatistics(thermoIx, thermoWorldIxs[wPart.nofEquilibriumWorlds - 1], thermoWorldIxs[wPart.nofEquilibriumWorlds - 1]);
 			
-			Context_time_point = std::chrono::steady_clock::now(); // TIMER
-			std::cout << "TIMER Context::transferQStatistics " 
-						<< std::chrono::duration_cast<std::chrono::nanoseconds>(
-        				Context_time_point.time_since_epoch()).count() << "\n";
+			if(DEBUG_ROBO == 1){ // TIMER
+				Context_time_point = std::chrono::steady_clock::now(); // TIMER
+				std::cout << "TIMER Context::transferQStatistics " 
+							<< std::chrono::duration_cast<std::chrono::nanoseconds>(
+	        				Context_time_point.time_since_epoch()).count() << "\n";
+			} // DEBUG_ROBO TIMER
+
 
 			runReplicaWorldRange(replicaIx, 0, wPart.nofEquilibriumWorlds, false);
 			
-			Context_time_point = std::chrono::steady_clock::now(); // TIMER
-			std::cout << "TIMER Context::runReplicaWorldRange " 
-						<< std::chrono::duration_cast<std::chrono::nanoseconds>(
-        				Context_time_point.time_since_epoch()).count() << "\n";
+			if(DEBUG_ROBO == 1){ // TIMER
+				Context_time_point = std::chrono::steady_clock::now(); // TIMER
+				std::cout << "TIMER Context::runReplicaWorldRange " 
+							<< std::chrono::duration_cast<std::chrono::nanoseconds>(
+	        				Context_time_point.time_since_epoch()).count() << "\n";
+			} // DEBUG_ROBO TIMER
 
 			// Write log and DCD
 			if(wPart.nofNonequilibriumWorlds == 0){
@@ -6195,10 +6215,12 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			SimTK::State& state = worlds[thermoWorldIxs[wPart.N2_wCnt]].integ->updAdvancedState();
 			replica.calcZMatrixBAT( worlds[thermoWorldIxs[wPart.N2_wCnt]].getAtomsLocationsInGround( state ));
 
-			Context_time_point = std::chrono::steady_clock::now(); // TIMER
-			std::cout << "TIMER Context::calcZMatrixBAT " 
-						<< std::chrono::duration_cast<std::chrono::nanoseconds>(
-        				Context_time_point.time_since_epoch()).count() << "\n";
+			if(DEBUG_ROBO == 1){ // TIMER
+				Context_time_point = std::chrono::steady_clock::now(); // TIMER
+				std::cout << "TIMER Context::calcZMatrixBAT " 
+							<< std::chrono::duration_cast<std::chrono::nanoseconds>(
+	        				Context_time_point.time_since_epoch()).count() << "\n";
+			} // DEBUG_ROBO TIMER
 
 		} // _end_ loop through replicas (EQUILIBRIUM)
 
@@ -6311,10 +6333,12 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 		mixReplicas(mixi, 0);
 
-		Context_time_point = std::chrono::steady_clock::now(); // TIMER
-		std::cout << "TIMER Context::mixReplicas "							// TIMER
-				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		if(DEBUG_ROBO == 1){ // TIMER
+			Context_time_point = std::chrono::steady_clock::now(); // TIMER
+			std::cout << "TIMER Context::mixReplicas "							// TIMER
+					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+					Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		} // DEBUG_ROBO TIMER
 
 		mixi++;
     	PrintNofAcceptedSwapsMatrix();
@@ -6610,29 +6634,36 @@ void Context::transferCoordinates_WorldToWorld(int srcWIx, int destWIx)
 		otherWorldsAtomsLocations =
 	worlds[srcWIx].getAtomsLocationsInGround(lastAdvancedState);
 
-	Context_time_point = std::chrono::steady_clock::now(); // TIMER
-	std::cout << "TIMER Context::transferCoordinates_WorldToWorld__getAtomsLocationsInGround "			// TIMER
-			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	if(DEBUG_ROBO == 1){ // TIMER
+		Context_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER Context::transferCoordinates_WorldToWorld__getAtomsLocationsInGround "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	} // DEBUG_ROBO TIMER
 
 	// Get BAT coordinates
 	calcZMatrixBAT(srcWIx, otherWorldsAtomsLocations);
 
-	Context_time_point = std::chrono::steady_clock::now(); // TIMER
-	std::cout << "TIMER Context::transferCoordinates_WorldToWorld__calcZMatrixBAT "			// TIMER
-			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	//PrintZMatrixTableAndBAT();
+	if(DEBUG_ROBO == 1){ // TIMER
+		Context_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER Context::transferCoordinates_WorldToWorld__calcZMatrixBAT "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	} // DEBUG_ROBO TIMER
+
+			//PrintZMatrixTableAndBAT();
 	//PrintZMatrixMobods(srcWIx, lastAdvancedState);
 	//Print_TRANSFORMERS_Work();
 	
 	// Pass compounds to the new world
 	passTopologiesToNewWorld(destWIx);
 
-	Context_time_point = std::chrono::steady_clock::now(); // TIMER
-	std::cout << "TIMER Context::transferCoordinates_WorldToWorld__passTopologiesToNewWorld "			// TIMER
-			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	if(DEBUG_ROBO == 1){ // TIMER
+		Context_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER Context::transferCoordinates_WorldToWorld__passTopologiesToNewWorld "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	} // DEBUG_ROBO TIMER
 
 	// Focus on destination world
 	World& destWorld = worlds[destWIx];
@@ -6641,10 +6672,12 @@ void Context::transferCoordinates_WorldToWorld(int srcWIx, int destWIx)
 	// New setAtomsLocations
 	currentAdvancedState = setAtoms_SP_NEW(destWIx, someState, otherWorldsAtomsLocations);
 
-	Context_time_point = std::chrono::steady_clock::now(); // TIMER
-	std::cout << "TIMER Context::transferCoordinates_WorldToWorld__setAtoms_SP_NEW "			// TIMER
-			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	if(DEBUG_ROBO == 1){ // TIMER
+		Context_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER Context::transferCoordinates_WorldToWorld__setAtoms_SP_NEW "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	} // DEBUG_ROBO TIMER
 
 	// SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(srcWIx, destWIx);
 	// SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(srcWIx, destWIx, false);
@@ -7085,19 +7118,24 @@ SimTK::State& Context::setAtoms_CompoundsAndDuMM(
 		destWorld.extractAtomTargets(
 			topoIx, otherWorldsAtomsLocations, atomTargets);
 
-		Context_time_point = std::chrono::steady_clock::now(); // TIMER
-		std::cout << "TIMER Context::setAtoms_SP_NEW__extractAtomTargets "			// TIMER
-				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		if(DEBUG_ROBO == 1){ // TIMER
+			Context_time_point = std::chrono::steady_clock::now(); // TIMER
+			std::cout << "TIMER Context::setAtoms_SP_NEW__extractAtomTargets "			// TIMER
+					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+					Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		} // DEBUG_ROBO TIMER
+
 
 		// Use Molmodel's Compound match functions to set the new conf
 		G_X_T = destWorld.setAtoms_Compound_Match(
 			topoIx, atomTargets);
 
-		Context_time_point = std::chrono::steady_clock::now(); // TIMER
-		std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_Compound_Match "			// TIMER
-				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		if(DEBUG_ROBO == 1){ // TIMER
+			Context_time_point = std::chrono::steady_clock::now(); // TIMER
+			std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_Compound_Match "			// TIMER
+					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+					Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		} // DEBUG_ROBO TIMER
 
 		//matchDefaultConfiguration(topoIx, atomTargets);
 
@@ -7111,10 +7149,12 @@ SimTK::State& Context::setAtoms_CompoundsAndDuMM(
 		destWorld.setAtoms_Compound_FramesAndLocsInMobods(
 			topoIx, atomTargets, locs);
 
-		Context_time_point = std::chrono::steady_clock::now(); // TIMER
-		std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_Compound_FramesAndLocsInMobods "			// TIMER
-				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		if(DEBUG_ROBO == 1){ // TIMER
+			Context_time_point = std::chrono::steady_clock::now(); // TIMER
+			std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_Compound_FramesAndLocsInMobods "			// TIMER
+					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+					Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		} // DEBUG_ROBO TIMER
 
 		// 2.2 DUMM
 		///////////////////////////////////////////////////////////
@@ -7122,10 +7162,12 @@ SimTK::State& Context::setAtoms_CompoundsAndDuMM(
 		// Set atoms' stations on body
 		destWorld.setAtoms_SetDuMMStations(topoIx, locs);
 
-		Context_time_point = std::chrono::steady_clock::now(); // TIMER
-		std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_SetDuMMStations "			// TIMER
-				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		if(DEBUG_ROBO == 1){ // TIMER
+			Context_time_point = std::chrono::steady_clock::now(); // TIMER
+			std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_SetDuMMStations "			// TIMER
+					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+					Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		} // DEBUG_ROBO TIMER
 
 	} // every Topology
 
@@ -7599,52 +7641,64 @@ SimTK::State& Context::setAtoms_SP_NEW(
 	// Match Compound and DuMM coordinates
 	someState = setAtoms_CompoundsAndDuMM(destWIx, someState, otherWorldsAtomsLocations);
 
-	Context_time_point = std::chrono::steady_clock::now(); // TIMER
-	std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_CompoundsAndDuMM "			// TIMER
-			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	if(DEBUG_ROBO == 1){ // TIMER
+		Context_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_CompoundsAndDuMM "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	} // DEBUG_ROBO TIMER
 
 	// Set default child mobod inboard (X_PF) and outboard (X_BM) frames
 	// This method only uses internal coordinates per molecule bonds info
 	setAtoms_XPF_XBM(destWIx);
 
-	Context_time_point = std::chrono::steady_clock::now(); // TIMER
-	std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_XPF_XBM "			// TIMER
-			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	if(DEBUG_ROBO == 1){ // TIMER
+		Context_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_XPF_XBM "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	} // DEBUG_ROBO TIMER
 
 	// Recover the modified state (may not be necessary)
 	destWorld.compoundSystem->realizeTopology();
 	someState = destWorld.compoundSystem->updDefaultState();
 
-	Context_time_point = std::chrono::steady_clock::now(); // TIMER
-	std::cout << "TIMER Context::setAtoms_SP_NEW__realizeTopology "			// TIMER
-			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	if(DEBUG_ROBO == 1){ // TIMER
+		Context_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER Context::setAtoms_SP_NEW__realizeTopology "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	} // DEBUG_ROBO TIMER
 
 	// Set every mobod's mass properties
 	someState = setAtoms_MassProperties(destWIx);
 
-	Context_time_point = std::chrono::steady_clock::now(); // TIMER
-	std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_MassProperties "			// TIMER
-			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	if(DEBUG_ROBO == 1){ // TIMER
+		Context_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_MassProperties "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	} // DEBUG_ROBO TIMER
 	
 	// Set X_FMs
 	someState = setAtoms_XFM(destWIx, someState);
 
-	Context_time_point = std::chrono::steady_clock::now(); // TIMER
-	std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_XFM "			// TIMER
-			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	if(DEBUG_ROBO == 1){ // TIMER
+		Context_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_XFM "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	} // DEBUG_ROBO TIMER
 
 	// Realize position
 	destWorld.compoundSystem->realize(someState, SimTK::Stage::Position);
 
-	Context_time_point = std::chrono::steady_clock::now(); // TIMER
-	std::cout << "TIMER Context::setAtoms_SP_NEW__realizePosition "			// TIMER
-			<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
-			Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	if(DEBUG_ROBO == 1){ // TIMER
+		Context_time_point = std::chrono::steady_clock::now(); // TIMER
+		std::cout << "TIMER Context::setAtoms_SP_NEW__realizePosition "			// TIMER
+				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
+	} // DEBUG_ROBO TIMER
 
 	//std::cout << someState.getSystemStage() << std::endl;
 	return someState;
