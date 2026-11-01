@@ -3779,6 +3779,19 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 		//pe_n = compoundSystem->calcPotentialEnergy(someState);
 	}
 
+	if(DEBUG_ROBO == 1){ // TIMER
+		pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
+		if(this->integratorType == IntegratorType::OMMVV){
+			std::cout << "TIMER HMCSampler::calcNewEnergies_OMM_calcPotentialEnergy " 			// TIMER
+						<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+						pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		}else{
+			std::cout << "TIMER HMCSampler::calcNewEnergies_MBS_calcPotentialEnergy " 			// TIMER
+						<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+						pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		}
+	} // DEBUG_ROBO TIMER
+
 	// Get new Fixman potential
 	if(useFixman){
 		if(this->integratorType == IntegratorType::OMMVV){
@@ -3792,6 +3805,19 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 		logSineSqrGamma2_n = 0.0;
 	}
 
+	if(DEBUG_ROBO == 1){ // TIMER
+		pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
+		if(this->integratorType == IntegratorType::OMMVV){
+			std::cout << "TIMER HMCSampler::calcNewEnergies_OMM_CartesianFixmanPotential " 			// TIMER
+						<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+						pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		}else{
+			std::cout << "TIMER HMCSampler::calcNewEnergies_calcFixman " 			// TIMER
+						<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+						pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		}
+	} // DEBUG_ROBO TIMER	
+
 	// Get new kinetic energy
 	if(this->integratorType == IntegratorType::OMMVV){
 		ke_n = OMM_calcKineticEnergy();
@@ -3799,6 +3825,19 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 		system->realize(someState, SimTK::Stage::Velocity);
 		ke_n = matter->calcKineticEnergy(someState);
 	}
+
+	if(DEBUG_ROBO == 1){ // TIMER
+		pHMC_time_point = std::chrono::steady_clock::now(); // TIMER
+		if(this->integratorType == IntegratorType::OMMVV){
+			std::cout << "TIMER HMCSampler::calcNewEnergies_OMM_calcKineticEnergy " 			// TIMER
+						<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+						pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		}else{
+			std::cout << "TIMER HMCSampler::calcNewEnergies_calcKineticEnergy " 			// TIMER
+						<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
+						pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
+		}
+	} // DEBUG_ROBO TIMER
 
 	ke_n *= (this->unboostKEFactor); // TODO: Check
 

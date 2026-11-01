@@ -107,7 +107,7 @@
 #include "pcg_random.hpp"
 
 #ifndef DEBUG_ROBO
-#define DEBUG_ROBO 0
+#define DEBUG_ROBO 1
 #endif
 
 // #ifdef DEBUG_ROBO
