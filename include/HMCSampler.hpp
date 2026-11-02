@@ -421,6 +421,8 @@ public:
 
 	double OMM_calcKineticEnergy(void);
 
+	std::pair<SimTK::Real, SimTK::Real> OMM_calcPotentialAndKineticEnergies(void);
+
 	void OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& positions);
 
 	void OMM_To_Simbody_setAtomsLocations(SimTK::State& someState);

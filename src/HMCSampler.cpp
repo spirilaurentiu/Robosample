@@ -2501,6 +2501,10 @@ double HMCSampler::OMM_calcPotentialEnergy(void){
 	return dumm->OMM_calcPotentialEnergy();
 }
 
+std::pair<SimTK::Real, SimTK::Real> HMCSampler::OMM_calcPotentialAndKineticEnergies(void){
+	return dumm->OMM_calcPotentialAndKineticEnergies();
+}
+
 void HMCSampler::OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& positions)
 {
 		// std::cout << "HMCSampler::OMM_storeOMMConfiguration_X sizes "
@@ -3765,15 +3769,21 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 	//(world->updMyContext())->calcZMatrixBAT( (*world).getAtomsLocationsInGround( someState ) );
 	//world->calcZMatrixBAT( someState );
 
+	if(this->integratorType == IntegratorType::OMMVV){
+		std::pair<SimTK::Real, SimTK::Real> energies = OMM_calcPotentialAndKineticEnergies();
+		pe_n = energies.first;
+		ke_n = energies.second;
+	}
+
+
 	// Get new potential energy
 	if(this->integratorType == IntegratorType::OMMVV){
-		pe_n = OMM_calcPotentialEnergy();
+		//pe_n = OMM_calcPotentialEnergy();
 	}else{
 		pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
 
 		//SimTK::Real pe_temp = dumm->calcFullPotentialEnergyOpenMM(someState);
 		//std::cout<<"DEBUG pe_n pe_temp " << pe_n <<" "<< pe_temp << std::endl;
-		
 		//pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState);// DOESN'T WORK WITH OPENMM
 		// TODO: replace with the following after checking is the same thing
 		//pe_n = compoundSystem->calcPotentialEnergy(someState);
@@ -3820,7 +3830,7 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 
 	// Get new kinetic energy
 	if(this->integratorType == IntegratorType::OMMVV){
-		ke_n = OMM_calcKineticEnergy();
+		//ke_n = OMM_calcKineticEnergy();
 	}else{
 		system->realize(someState, SimTK::Stage::Velocity);
 		ke_n = matter->calcKineticEnergy(someState);
