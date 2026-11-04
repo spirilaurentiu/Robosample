@@ -4699,7 +4699,7 @@ void Context::mixAllReplicas(int nSwapAttempts)
 	}
 }
 
-void Context::prepareExchangePairs(int rexRound, int oddity)
+void Context::prepareExchangePairs(int mixi, int oddity)
 {
     exchangePairList.clear();
     // No need to fill exchangePairs with -1 if you use the list for the actual loop
@@ -4712,7 +4712,7 @@ void Context::prepareExchangePairs(int rexRound, int oddity)
     // int startIdx = (phase == 1 || phase == 2) ? 1 : 0;
 
 	// 2-step cyclic scheme (simpler)
-	int startIdx = (rexRound + oddity) % 2;
+	int startIdx = (mixi + oddity) % 2;
 
     for (int thIx = startIdx; thIx + 1 < K; thIx += 2)
     {
@@ -6224,7 +6224,9 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 		} // _end_ loop through replicas (EQUILIBRIUM)
 
-		if(getRunType() == RUN_TYPE::REBASONTOP) {
+		RUN_TYPE originalRunType = getRunType();
+
+		if((originalRunType == RUN_TYPE::REBASONTOP) or (originalRunType == RUN_TYPE::REMC)) {
 			setRunType(RUN_TYPE::REMC);
 			for(int remcIx = 0; remcIx < 6; remcIx++){
 				prepareExchangePairs(mixi, 0);
@@ -6233,7 +6235,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 				//PrintNofAcceptedSwapsMatrix();
 			}
 			PrintNofAcceptedSwapsMatrix();
-			setRunType(RUN_TYPE::REBASONTOP);
+			setRunType(originalRunType);
     	}
 
 		// @@@@@@@@@@ LOOP THROUGH REPLICAS (NON-EQUILIBRIUM) ------------------- RUN A ----------->
