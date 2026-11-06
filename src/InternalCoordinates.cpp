@@ -72,7 +72,10 @@ bool equal_bond(const BOND& lhs, const BOND& rhs) {
 }
 
 
-
+/*!
+ * <!-- This function computes the root atom(s) for the internal coordinates -->
+ */
+ /*
 bool InternalCoordinates::computeRoot(
 	const std::vector<bSpecificAtom>& bAtomList)
 {
@@ -82,12 +85,12 @@ bool InternalCoordinates::computeRoot(
 	terminalAtoms.reserve(bAtomList.size());
 
 	for (const auto& atom : bAtomList) {
-		if (atom.getVisited()) { // Laurentiu
+		if (atom.getVisited()) {
 			continue;
 		}
 
 		AmberAtom amberAtom(atom);
-		if (isTerminal(amberAtom)) {
+		if (isTerminal(amberAtom)) { // nbonds = 0 OR 1
 			terminalAtoms.push_back(amberAtom);
 		}
 	}
@@ -98,7 +101,7 @@ bool InternalCoordinates::computeRoot(
 	}
 
 	// Create this root
-	roots.push_back(root); // Laurentiu
+	roots.push_back(root);
 
 	// First root atom: lowest index terminal atom
 	sortByIndex(terminalAtoms, false);
@@ -145,7 +148,115 @@ bool InternalCoordinates::computeRoot(
 	return true;
 
 }
+*/
 
+/*!
+ * <!-- This function computes the root atom(s) for the internal coordinates -->
+ */
+bool InternalCoordinates::computeRoot(
+    const std::vector<bSpecificAtom>& bAtomList)
+{
+
+    std::vector<AmberAtom> terminalAtoms;
+    std::vector<AmberAtom> unvisitedAtoms;
+
+    // 1. Gather terminal and unvisited atoms
+    for (const auto& atom : bAtomList) {
+        if (atom.getVisited()) {
+            continue;
+        }
+
+        AmberAtom amberAtom(atom);
+        unvisitedAtoms.push_back(amberAtom);
+        
+        if (isTerminal(amberAtom)) { // nbonds = 0 OR 1
+            terminalAtoms.push_back(amberAtom);
+        }
+    }
+
+    if (unvisitedAtoms.empty()) {
+        return false; // Everything has been visited
+    }
+
+    // Create this root
+    roots.push_back(root);
+
+    // 2. First root atom: lowest index terminal atom, OR lowest unvisited if a cycle
+    if (!terminalAtoms.empty()) {
+        sortByIndex(terminalAtoms, false);
+        roots.back().first = terminalAtoms[0].amberId;
+    } else {
+        // Fallback for cycles (e.g. TIP3P with H-H constraints, Benzene)
+        sortByIndex(unvisitedAtoms, false);
+        roots.back().first = unvisitedAtoms[0].amberId;
+    }
+    
+    const auto& firstAtom = bAtomList[roots.back().first];
+
+    // 3. Second root atom
+    if (firstAtom.getNumBonds() == 0) {
+        return true;
+    } else {
+        std::vector<AmberAtom> candidates;
+        for (auto i : firstAtom.neighborsIndex) {
+            candidates.push_back(AmberAtom(bAtomList[i]));
+        }
+        
+        // Prefer non-terminal neighbors if available
+        std::vector<AmberAtom> nonTerminalCandidates;
+        for (const auto& c : candidates) {
+            if (!isTerminal(c)) nonTerminalCandidates.push_back(c);
+        }
+
+        if (!nonTerminalCandidates.empty()) {
+            sortByIndex(nonTerminalCandidates, false);
+            roots.back().second = nonTerminalCandidates[0].amberId;
+        } else {
+            sortByIndex(candidates, false);
+            roots.back().second = candidates[0].amberId;
+        }
+    }
+    
+    const auto& secondAtom = bAtomList[roots.back().second];
+
+    // 4. Third root atom
+    if (secondAtom.getNumBonds() <= 1) {
+        return true;
+    } else {
+        std::vector<AmberAtom> candidates;
+        for (auto i : secondAtom.neighborsIndex) {
+            // CRITICAL FIX: Prevent backtracking to the first atom
+            if (i == roots.back().first) continue; 
+            
+            candidates.push_back(AmberAtom(bAtomList[i]));
+        }
+        
+        if (candidates.empty()){
+			return true;
+		}
+
+        std::vector<AmberAtom> nonTerminalCandidates;
+        for (const auto& c : candidates) {
+            if (!isTerminal(c)) nonTerminalCandidates.push_back(c);
+        }
+
+        if (!nonTerminalCandidates.empty()) {
+            sortByIndex(nonTerminalCandidates, false);
+            roots.back().third = nonTerminalCandidates[0].amberId;
+        } else {
+            sortByIndex(candidates, false);
+            roots.back().third = candidates[0].amberId;
+        }
+    }
+
+	if(DEBUG_GRAPH == 1){
+		std::cout << "InternalCoordinates::computeRoot "
+			<< roots.back().first << ", " << roots.back().second << ", " << roots.back().third
+			<< std::endl << std::flush;
+	}
+
+    return true;
+}
 
 
 void InternalCoordinates::computeBAT(std::vector<bSpecificAtom>& bAtomList) {

@@ -1011,6 +1011,12 @@ private:
 	void loadAtoms(const AmberReader& reader);
 	void loadBonds(const AmberReader& reader);
 	void loadAngles(const AmberReader& reader);
+
+	// Append zero-k DUMM_ANGLEs for bonded 1-2-3 triples absent from the
+	// prmtop (e.g. rigid TIP3P water, which has no angle entries). DuMM
+	// requires bend parameters for every cross-body bonded triple.
+	void synthesizeMissingBends();
+
 	void loadTorsions(const AmberReader& reader);
 
 	void setAtomsCompounds();

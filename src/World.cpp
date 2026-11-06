@@ -2517,12 +2517,12 @@ std::pair <bSpecificAtom *, SimTK::Vec3 > > >
 World::getAtomsLocationsInGround(SimTK::State & state)
 {
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		World_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER World::getAtomsLocationsInGround__start_" << static_cast<int>(samplers[0]->getIntegratorType())
 				<< " " << std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				World_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	// Return vector
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
@@ -2572,7 +2572,7 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 			currentTopologyAtomsLocations.emplace_back(&atom, location);
 		}
 
-		if(DEBUG_ROBO == 1){ // TIMER
+		if(DEBUG_SPEED == 1){ // TIMER
 			World_time_point = std::chrono::steady_clock::now(); // TIMER
 			if(samplers[0]->getIntegratorType() == IntegratorType::OMMVV){
 				std::cout << "TIMER World::getAtomsLocationsInGround__calcAtomLocationInGroundFrame_OMM "			// TIMER
@@ -2583,7 +2583,7 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 					World_time_point.time_since_epoch()).count() << "\n";		// TIMER
 			}
-		} // DEBUG_ROBO TIMER
+		} // DEBUG_SPEED TIMER
 
 		thisWorldsAtomsLocations.emplace_back(currentTopologyAtomsLocations);
 	}
@@ -2913,12 +2913,12 @@ World::setAtoms_Compound_Match(
 )
 {
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		World_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER World::setAtoms_Compound_Match__START "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				World_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	// Gather Top transforms for all the Compounds
 	std::vector<SimTK::Transform> G_X_Ts;
@@ -2937,83 +2937,83 @@ World::setAtoms_Compound_Match(
 	currTopology.matchDefaultBondLengths(atomTargets, true);
 
 	
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		World_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER World::setAtoms_Compound_Match__matchDefaultBondLengths "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				World_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultAtomChirality\n";
 	currTopology.matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality, true);
 	
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		World_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER World::setAtoms_Compound_Match__matchDefaultAtomChirality "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				World_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	//currTopology.PrintCompoundGeometry(atomTargets);
 	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultBondAngles\n";
 	currTopology.matchDefaultBondAngles(atomTargets, true);
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		World_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER World::setAtoms_Compound_Match__matchDefaultBondAngles "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				World_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultDirections\n";
 	currTopology.matchDefaultDirections(atomTargets, true);
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		World_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER World::setAtoms_Compound_Match__matchDefaultDirections "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				World_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultDihedralAngles\n";
 	currTopology.matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds, true);
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		World_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER World::setAtoms_Compound_Match__matchDefaultDihedralAngles "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				World_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchTopLevelTransform\n";
 	currTopology.matchDefaultTopLevelTransform(atomTargets);
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		World_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER World::setAtoms_Compound_Match__matchDefaultTopLevelTransform "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				World_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	// Get the Ground to Top Transform
 	G_X_T = currTopology.getTopLevelTransform();
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		World_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER World::setAtoms_Compound_Match__getTopLevelTransform "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				World_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	// Recalculate atom frames in top compound frame
 	currTopology.calcAtomsTopTransforms();
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		World_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER World::setAtoms_Compound_Match__calcAtomsTopTransforms "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				World_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	return G_X_T;
 }
@@ -4353,12 +4353,12 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 
 	validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose); // FIXTOR_RESTORE
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		World_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER World::generateSamples__reinitialize "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				World_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	//std::cout << "After  World::generateSamples sampler.reinitialize" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
 
@@ -4371,12 +4371,12 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 
             validated = updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
 
-			if(DEBUG_ROBO == 1){ // TIMER
+			if(DEBUG_SPEED == 1){ // TIMER
 				World_time_point = std::chrono::steady_clock::now(); // TIMER
 				std::cout << "TIMER World::sample_iteration "
 						<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 						World_time_point.time_since_epoch()).count() << "\n";		// TIMER
-			} // DEBUG_ROBO TIMER
+			} // DEBUG_SPEED TIMER
 
 					
             if (verbose) {worldOutStream << std::endl;}

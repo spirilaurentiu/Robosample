@@ -106,11 +106,15 @@
 #include "trim.hpp"
 #include "pcg_random.hpp"
 
-#ifndef DEBUG_ROBO
-#define DEBUG_ROBO 0
+#ifndef DEBUG_SPEED
+#define DEBUG_SPEED 0
 #endif
 
-// #ifdef DEBUG_ROBO
+#ifndef DEBUG_GRAPH
+#define DEBUG_GRAPH 1
+#endif
+
+// #ifdef DEBUG_SPEED
 // #define TRACE(STR) printf("%s", STR);
 // #else
 // #define TRACE(STR)

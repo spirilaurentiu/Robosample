@@ -3,6 +3,7 @@
 #include "Sampler.hpp"
 #include "readAmberInput.hpp"
 
+#include <iostream>
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
 
@@ -412,6 +413,84 @@ void Context::loadAngles(const AmberReader& reader) {
 	}
 }
 
+/*! <!-- Append zero-k DUMM_ANGLEs for bonded 1-2-3 triples not covered by
+ * the prmtop angle sections (e.g. rigid TIP3P water, whose geometry is kept
+ * by SETTLE bond constraints and which therefore has no angle entries).
+ * DuMM requires bend parameters for every cross-body bonded triple at
+ * realizeTopology. Zero force constants add no energy or force.
+ * Requires loadBonds (neighbors) and loadAtoms (coordinates) to have run. -->
+ **/
+void Context::synthesizeMissingBends() {
+
+	// Key: (min(end1, end2), center, max(end1, end2))
+	auto makeKey = [](int end1, int center, int end2) {
+		return std::array<int, 3>{
+			std::min(end1, end2), center, std::max(end1, end2)};
+	};
+
+	// Index the triples already covered by the prmtop
+	std::set<std::array<int, 3>> coveredTriples;
+	for (const auto& angle : dummAngles) {
+		coveredTriples.insert(makeKey(angle.first, angle.second, angle.third));
+	}
+
+	std::size_t nofSynthesized = 0;
+
+	// Every pair of neighbors of a center atom forms a 1-2-3 triple
+	for (std::size_t aCnt = 0; aCnt < atoms.size(); aCnt++) {
+
+		const int center = static_cast<int>(aCnt);
+		const std::vector<int>& neighbors = atoms[aCnt].neighborsIndex;
+
+		for (std::size_t n1 = 0; n1 < neighbors.size(); n1++) {
+			for (std::size_t n2 = n1 + 1; n2 < neighbors.size(); n2++) {
+
+				const int a1 = neighbors[n1];
+				const int a3 = neighbors[n2];
+
+				if ( !coveredTriples.insert(makeKey(a1, center, a3)).second ) {
+					continue; // already covered by prmtop or synthesized
+				}
+
+				// Geometric equilibrium angle from input coordinates
+				SimTK::Vec3 v1(atoms[a1].getX() - atoms[center].getX(),
+				               atoms[a1].getY() - atoms[center].getY(),
+				               atoms[a1].getZ() - atoms[center].getZ());
+				SimTK::Vec3 v3(atoms[a3].getX() - atoms[center].getX(),
+				               atoms[a3].getY() - atoms[center].getY(),
+				               atoms[a3].getZ() - atoms[center].getZ());
+
+				SimTK::Real equilDeg = 109.47; // fallback
+				const SimTK::Real norms = v1.norm() * v3.norm();
+				if (norms > SimTK::Real(1e-12)) {
+					SimTK::Real cosTheta = SimTK::dot(v1, v3) / norms;
+					cosTheta = std::max(SimTK::Real(-1),
+					           std::min(SimTK::Real(1), cosTheta));
+					equilDeg = std::acos(cosTheta) * SimTK_RADIAN_TO_DEGREE;
+				}
+
+				DUMM_ANGLE synth;
+				synth.first = a1;
+				synth.second = center;
+				synth.third = a3;
+				synth.k = 0.0; // no energy contribution, only satisfies
+				               // DuMM's bend parameter requirement
+				synth.equil = equilDeg;
+
+				dummAngles.push_back(synth);
+				nofSynthesized++;
+			}
+		}
+	}
+
+	if (nofSynthesized > 0) {
+		std::cerr << "[WARNING] Context::synthesizeMissingBends: added "
+			<< nofSynthesized << " zero-k bend(s) for bonded triples"
+			<< " without prmtop angle entries (e.g. rigid water)."
+			<< std::endl << std::flush;
+	}
+}
+
 /*! <!-- Set dumm torsion list to be used in World generateDummParams. --> **/
 void Context::loadTorsions(const AmberReader& reader) {
 	// There are multiple torsions defined with the same four indices
@@ -578,27 +657,52 @@ void Context::addBiotypes() {
  * 12. Constraints -->
 */
 void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
+
 	
+	if(DEBUG_GRAPH == 1){
+		std::cout << "Context::loadAmberSystem START " << prmtop << " " << inpcrd << std::endl << std::flush;
+	}
+
 	// Load Amber files
-	std::cout << "Context: Loading Amber files: " << prmtop << " " << inpcrd << std::endl << std::flush;
 	AmberReader reader;
 	reader.readAmberFiles(inpcrd, prmtop);
+
+	if(DEBUG_GRAPH == 1){
+		std::cout << "Context::loadAmberSystem readAmberFiles" << std::endl << std::flush;
+	}
 
 	// Read Amber and load Gmolmodel lists
 	loadAtoms(reader);     // bSpecificAtom list
 	loadBonds(reader);     // bBond list
 	loadAngles(reader);    // DUMM_ANGLE list for generateParams
+	synthesizeMissingBends(); // zero-k bends for triples absent from prmtop
 	loadTorsions(reader);  // DUMM_TORSIONlist for generateParams	
+
+	if(DEBUG_GRAPH == 1){
+		std::cout << "Context::loadAmberSystem loadAtoms/Bonds/Angles/Torsions" << std::endl << std::flush;
+	}
 
 	// Calculate InternalCoordinates BONDS / BAT graphs
 	calc_Gmolmodel_Graph(); 
+	
+	if(DEBUG_GRAPH == 1){
+		std::cout << "Context::loadAmberSystem calc_Gmolmodel_Graph" << std::endl << std::flush;
+	}
 
 	// Construct a Compound for every atom
 	setAtomsCompounds();
 
+	if(DEBUG_GRAPH == 1){
+		std::cout << "Context::loadAmberSystem setAtomsCompounds" << std::endl << std::flush;
+	}
+
 	// Biotype will be used to look up molecular
 	// force field specific parameters for an atom type
 	addBiotypes();
+
+	if(DEBUG_GRAPH == 1){
+		std::cout << "Context::loadAmberSystem addBiotypes" << std::endl << std::flush;
+	}
 
 	// // Calculate InternalCoordinates BONDS / BAT graphs
 	// calc_Gmolmodel_Graph();
@@ -606,11 +710,23 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	// bBonds to BAT / InternalCoordinates bonds map
 	load_BONDS_to_bonds( internCoords.getBonds() );
 
+	if(DEBUG_GRAPH == 1){
+		std::cout << "Context::loadAmberSystem load_BONDS_to_bonds" << std::endl << std::flush;
+	}
+
 	// InternalCoordinates -> Molmodel Compound graphs with bondAtom
 	build_Molmodel_AcyclicGraphs();
 
+	if(DEBUG_GRAPH == 1){
+		std::cout << "Context::loadAmberSystem build_Molmodel_AcyclicGraphs" << std::endl << std::flush;
+	}
+
 	// Close rings
 	addRingClosingBonds_All(); 
+
+	if(DEBUG_GRAPH == 1){
+		std::cout << "Context::loadAmberSystem addRingClosingBonds_All" << std::endl << std::flush;
+	}
 
 	//PrintAtoms();
 	//PrintBonds();
@@ -622,9 +738,17 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	// Generate Topologies sub_array views (also sort bonds - not BONDS)
 	generateTopologiesSubarrays();
 
+	if(DEBUG_GRAPH == 1){
+		std::cout << "Context::loadAmberSystem generateTopologiesSubarrays" << std::endl << std::flush;
+	}
+
 	// Match Compounds configurations to atoms Cartesian coords
 	matchDefaultConfigurations();
-	TRACE("Context::loadAmberSystem: END");
+
+	if(DEBUG_GRAPH == 1){
+		std::cout << "Context::loadAmberSystem matchDefaultConfigurations" << std::endl << std::flush;
+	}
+
 }
 
 /*! <!-- Set atom masses --> */
@@ -2020,27 +2144,29 @@ void Context::closeARingWithThisBond(Topology& topology, bBond& bond, int molIx)
 	bSpecificAtom &rightNode = atoms[bond.j];
 
 	std::stringstream sbuff;
-	if (leftNode.getNumber() == topology.baseAtomNumber) {
-		sbuff << leftNode.getName() << "/bond" << leftNode.getFreebonds();
-	} else {
+	//if (leftNode.getNumber() == topology.baseAtomNumber) {
+	//	sbuff << leftNode.getName() << "/bond" << leftNode.getFreebonds();
+	//} else {
 		sbuff << leftNode.getName() << "/bond" << leftNode.getNBonds() - leftNode.getFreebonds() + 1;
-	}
+	//}
 
 	std::stringstream otsbuff;
-	if (rightNode.getNumber() == topology.baseAtomNumber) {
-		otsbuff << rightNode.getName() << "/bond" << rightNode.getFreebonds();
-	} else {
+	//if (rightNode.getNumber() == topology.baseAtomNumber) {
+	//	otsbuff << rightNode.getName() << "/bond" << rightNode.getFreebonds();
+	//} else {
 		otsbuff << rightNode.getName() << "/bond" << rightNode.getNBonds() - rightNode.getFreebonds() + 1;
-	}
+	//}
 
 	// ======================== ACTUAL BONDING ========================
-	// scout("Bonding ring ")
-	// 	<< child.getName() <<" " << child.getInName()
-	// 	<<" " << child.getNumber() <<" " << sbuff.str() <<" "
-	// 	<< "to " << parent.getName() <<" " << parent.getInName() <<" "
-	// 	<< parent.getNumber() <<" "
-	// 	<< "with bond center name " << otsbuff.str() <<" "
-	// 	<< eolf;
+	if(DEBUG_GRAPH == 1){
+		std::cout << "Bonding ring "
+		<< child.getName() <<" " << child.getInName()
+		<<" " << child.getNumber() <<" " << sbuff.str() <<" "
+		<< "to " << parent.getName() <<" " << parent.getInName() <<" "
+		<< parent.getNumber() <<" "
+		<< "with bond center name " << otsbuff.str() <<" "
+		<< std::endl << std::flush;
+	}
 
 	topology.addRingClosingBond(
 			(sbuff.str()).c_str(),
@@ -2296,6 +2422,8 @@ void Context::addRingClosingBonds_All(void)
 
 			int molIx = left.getMoleculeIndex();
 
+			assert("Invalid molecule index" && (molIx >= 0 && molIx < getNofMolecules()));
+
 			bond.setMoleculeIndex(molIx);
 
 			Topology& topology = topologies[molIx];
@@ -2358,7 +2486,7 @@ void Context::generateSubAtomLists(void){
 	// 	cout << molRanges[cnt].first << " " << molRanges[cnt].second << eol;
 	// }
 
-	std::cout << molRanges.size() << " " << getNofMolecules() << std::endl;
+	std::cout << "MolRanges: " << molRanges.size() << " " << getNofMolecules() << std::endl << std::flush;
 
 	assert("atoms molecule indexes different than nofMols" &&
 		(molRanges.size() == getNofMolecules()));
@@ -2932,8 +3060,6 @@ void Context::bAddDummAngleParams(AmberReader& amberReader)
 	// Iterate worlds
 	for(size_t wCnt = 0; wCnt < worlds.size(); wCnt++){
 
-		// scout("World ") << wCnt << eol;
-
 		// Get world and its force field
 		World& world = worlds[wCnt];
 		SimTK::DuMMForceFieldSubsystem& dumm = *(world.forceField);
@@ -2959,16 +3085,16 @@ void Context::bAddDummAngleParams(AmberReader& amberReader)
 				atoms[a3].getDummAtomClassIndex()) );
 
 			// Check if we already have this angle
-			bool foundit = false;
+			bool alreadyInDuMM = false;
 			for(auto& row:allAnglesACIxs){
 				if ( IsTheSameAngle (thisAngleACIxs, row) ){
-					foundit = true;
+					alreadyInDuMM = true;
 					break;
 				}
 			}
 
 			// Add angle to Dumm
-			if (  !foundit ){ // angle was not found
+			if ( !alreadyInDuMM ){ // angle was not found
 			
 				dumm.defineBondBend_KA(
 					atoms[a1].getDummAtomClassIndex(),
@@ -2982,19 +3108,99 @@ void Context::bAddDummAngleParams(AmberReader& amberReader)
 				// Put the entry in our map too
 				allAnglesACIxs.push_back(thisAngleACIxs);
 
-				// scout("angle ")
-				// 	<< a1 <<" " << a2 <<" " << a3 <<" "
-				// 	<< atoms[a1].getInName() <<" "
-				// 	<< atoms[a2].getInName() <<" "
-				// 	<< atoms[a3].getInName() <<" "
-				// 	<< amberReader.getAnglesForceK(angCnt) <<" "
-				// 	<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE 
-				// 		* amberReader.getAnglesEqval(angCnt)))
-				// 	<< eol;
-			}
-		}		
+				if(DEBUG_GRAPH == 1){
+					std::cout << "angle "
+						<< a1 <<" " << a2 <<" " << a3 <<" "
+						<< atoms[a1].getInName() <<" "
+						<< atoms[a2].getInName() <<" "
+						<< atoms[a3].getInName() <<" "
+						<< amberReader.getAnglesForceK(angCnt) <<" "
+						<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE 
+							* amberReader.getAnglesEqval(angCnt)))
+						<< std::endl << std::flush;
+				}
+			} // if not already in DuMM
+
+		} // every angle read from AmberReader
+
+		// ========== Synthesize missing bends for bonded triples ==========
+        // DuMM requires bend parameters for every cross-body 1-2-3 triple
+        // in the bond graph. Rigid-water prmtops (TIP3P) carry no angle
+        // entries (SETTLE), so define zero-k bends with the geometric
+        // equilibrium angle for any triple not covered by the prmtop.
+        for(size_t aCnt = 0; aCnt < atoms.size(); aCnt++){
+
+            const std::vector<int>& neighbors = atoms[aCnt].neighborsIndex;
+
+            // Every pair of neighbors of a center atom forms a 1-2-3 triple
+            for(size_t n1 = 0; n1 < neighbors.size(); n1++){
+                for(size_t n2 = n1 + 1; n2 < neighbors.size(); n2++){
+
+                    int a1 = neighbors[n1];
+                    int a2 = static_cast<int>(aCnt);   // center
+                    int a3 = neighbors[n2];
+
+                    // Class triple for dedup against prmtop-defined bends
+                    std::vector<SimTK::DuMM::AtomClassIndex> thisACIxs;
+                    thisACIxs.push_back( SimTK::DuMM::AtomClassIndex(
+                        atoms[a1].getDummAtomClassIndex()) );
+                    thisACIxs.push_back( SimTK::DuMM::AtomClassIndex(
+                        atoms[a2].getDummAtomClassIndex()) );
+                    thisACIxs.push_back( SimTK::DuMM::AtomClassIndex(
+                        atoms[a3].getDummAtomClassIndex()) );
+
+                    bool alreadyInDuMM = false;
+                    for(const auto& row : allAnglesACIxs){
+                        if( IsTheSameAngle(thisACIxs, row) ){
+                            alreadyInDuMM = true;
+                            break;
+                        }
+                    }
+                    if( alreadyInDuMM ){ continue; }
+
+                    // Geometric equilibrium angle from input coordinates
+                    SimTK::Vec3 v1(atoms[a1].getX() - atoms[a2].getX(),
+                                   atoms[a1].getY() - atoms[a2].getY(),
+                                   atoms[a1].getZ() - atoms[a2].getZ());
+                    SimTK::Vec3 v3(atoms[a3].getX() - atoms[a2].getX(),
+                                   atoms[a3].getY() - atoms[a2].getY(),
+                                   atoms[a3].getZ() - atoms[a2].getZ());
+
+                    SimTK::Real equilDeg = 109.47; // fallback
+                    const SimTK::Real norms = v1.norm() * v3.norm();
+                    if(norms > SimTK::Real(1e-12)){
+                        SimTK::Real cosTheta = SimTK::dot(v1, v3) / norms;
+                        cosTheta = std::max(SimTK::Real(-1),
+                                   std::min(SimTK::Real(1), cosTheta));
+                        equilDeg = std::acos(cosTheta) * SimTK_RADIAN_TO_DEGREE;
+                    }
+
+                    std::cerr << "[WARNING]: Synthesized zero-k bend for triple "
+                        << a1 << " " << a2 << " " << a3
+                        << " (" << atoms[a1].getName()
+                        << "-"  << atoms[a2].getName()
+                        << "-"  << atoms[a3].getName()
+                        << ") equil " << equilDeg << " deg"
+                        << std::endl << std::flush;
+
+                    dumm.defineBondBend_KA(
+                        atoms[a1].getDummAtomClassIndex(),
+                        atoms[a2].getDummAtomClassIndex(),
+                        atoms[a3].getDummAtomClassIndex(),
+                        0.0,        // zero force constant: no energy, only
+                                    // satisfies DuMM's topology requirement
+                        equilDeg);
+
+                    allAnglesACIxs.push_back(thisACIxs);
+                }
+            }
+        }
+        // ================== end synthesized bends ==================
+
+
 
 	} // every world
+
 }
 
 /*!
@@ -5947,12 +6153,12 @@ void Context::runReplicaWorldRange(
 
 						transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);
 
-						if(DEBUG_ROBO == 1){ // TIMER
+						if(DEBUG_SPEED == 1){ // TIMER
 							Context_time_point = std::chrono::steady_clock::now(); // TIMER
 							std::cout << "TIMER Context::transferCoordinates_WorldToWorld "
 									<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 									Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-						} // DEBUG_ROBO TIMER
+						} // DEBUG_SPEED TIMER
 						
 						//transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx); //
 					}
@@ -5975,12 +6181,12 @@ void Context::runReplicaWorldRange(
 				
 				validated = RunWorld(wIx, string("REX, ") + to_string(replicaIx) + string(", ") + to_string(thermoIx) + ", " + to_string(wIx)) && validated;
 				
-				if(DEBUG_ROBO == 1){ // TIMER
+				if(DEBUG_SPEED == 1){ // TIMER
 					Context_time_point = std::chrono::steady_clock::now(); // TIMER
 					std::cout << "TIMER Context::RunWorld "
 							<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 							Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-				} // DEBUG_ROBO TIMER
+				} // DEBUG_SPEED TIMER
 				
 				#pragma region ROLL_RESET
 				if(thermoIx != 0){
@@ -5999,12 +6205,12 @@ void Context::runReplicaWorldRange(
 
 					transferCoordinates_WorldToReplica(wIx, replicaIx);
 
-					if(DEBUG_ROBO == 1){ // TIMER
+					if(DEBUG_SPEED == 1){ // TIMER
 						Context_time_point = std::chrono::steady_clock::now(); // TIMER
 						std::cout << "TIMER Context::transferCoordinates_WorldToReplica "
 								<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 								Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-					} // DEBUG_ROBO TIMER
+					} // DEBUG_SPEED TIMER
 
 					// Calculate Q statistics
 					if(sampler_p->getAcc() == true){
@@ -6013,12 +6219,12 @@ void Context::runReplicaWorldRange(
 						thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
 					}
 
-					if(DEBUG_ROBO == 1){ // TIMER
+					if(DEBUG_SPEED == 1){ // TIMER
 						Context_time_point = std::chrono::steady_clock::now(); // TIMER					
 						std::cout << "TIMER Context::calcQStats "
 								<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 								Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-					} // DEBUG_ROBO TIMER
+					} // DEBUG_SPEED TIMER
 
 				} // __end__ Equilibrium
 
@@ -6029,12 +6235,12 @@ void Context::runReplicaWorldRange(
 
 					transferCoordinates_WorldToReplica(wIx, replicaIx, intoWORK);
 					
-					if(DEBUG_ROBO == 1){ // TIMER
+					if(DEBUG_SPEED == 1){ // TIMER
 						Context_time_point = std::chrono::steady_clock::now(); // TIMER					
 						std::cout << "TIMER Context::transferCoordinates_WorldToReplica "
 								<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 								Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-					} // DEBUG_ROBO TIMER
+					} // DEBUG_SPEED TIMER
 
 				} // __end__ Non/Equilibrium
 
@@ -6139,29 +6345,29 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			// Update BAT map for all the replica's world
 			updSubZMatrixBATsToAllWorlds(replicaIx);
 			
-			if(DEBUG_ROBO == 1){ // TIMER
+			if(DEBUG_SPEED == 1){ // TIMER
 				Context_time_point = std::chrono::steady_clock::now(); // TIMER
 				std::cout << "TIMER Context::updSubZMatrixBATsToAllWorlds " 
 							<< std::chrono::duration_cast<std::chrono::nanoseconds>(
 	        				Context_time_point.time_since_epoch()).count() << "\n";
-			} // DEBUG_ROBO TIMER
+			} // DEBUG_SPEED TIMER
 			setReplicasWorldsParameters(replicaIx, false, true, mixi);
 			
-			if(DEBUG_ROBO == 1){ // TIMER
+			if(DEBUG_SPEED == 1){ // TIMER
 				Context_time_point = std::chrono::steady_clock::now(); // TIMER
 				std::cout << "TIMER Context::setReplicasWorldsParameters "
 							<< std::chrono::duration_cast<std::chrono::nanoseconds>(
 	        				Context_time_point.time_since_epoch()).count() << "\n";
-			} // DEBUG_ROBO TIMER
+			} // DEBUG_SPEED TIMER
 
 			transferCoordinates_ReplicaToWorld(replicaIx, 0);
 
-			if(DEBUG_ROBO == 1){ // TIMER
+			if(DEBUG_SPEED == 1){ // TIMER
 				Context_time_point = std::chrono::steady_clock::now(); // TIMER
 				std::cout << "TIMER Context::transferCoordinates_ReplicaToWorld "
 							<< std::chrono::duration_cast<std::chrono::nanoseconds>(
 	        				Context_time_point.time_since_epoch()).count() << "\n";
-			} // DEBUG_ROBO TIMER
+			} // DEBUG_SPEED TIMER
 
 			// # pragma region HARDCODED_ROLL_PARAMS // @TODO DELETE
 			// int HARDCODED_ROLL_WIX = 1;
@@ -6187,22 +6393,22 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			// srcStatsWIx and destStatsWIx mean different things here			
 			transferQStatistics(thermoIx, thermoWorldIxs[wPart.nofEquilibriumWorlds - 1], thermoWorldIxs[wPart.nofEquilibriumWorlds - 1]);
 			
-			if(DEBUG_ROBO == 1){ // TIMER
+			if(DEBUG_SPEED == 1){ // TIMER
 				Context_time_point = std::chrono::steady_clock::now(); // TIMER
 				std::cout << "TIMER Context::transferQStatistics " 
 							<< std::chrono::duration_cast<std::chrono::nanoseconds>(
 	        				Context_time_point.time_since_epoch()).count() << "\n";
-			} // DEBUG_ROBO TIMER
+			} // DEBUG_SPEED TIMER
 
 
 			runReplicaWorldRange(replicaIx, 0, wPart.nofEquilibriumWorlds, false);
 			
-			if(DEBUG_ROBO == 1){ // TIMER
+			if(DEBUG_SPEED == 1){ // TIMER
 				Context_time_point = std::chrono::steady_clock::now(); // TIMER
 				std::cout << "TIMER Context::runReplicaWorldRange " 
 							<< std::chrono::duration_cast<std::chrono::nanoseconds>(
 	        				Context_time_point.time_since_epoch()).count() << "\n";
-			} // DEBUG_ROBO TIMER
+			} // DEBUG_SPEED TIMER
 
 			// Write log and DCD
 			if(wPart.nofNonequilibriumWorlds == 0){
@@ -6215,12 +6421,12 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			SimTK::State& state = worlds[thermoWorldIxs[wPart.N2_wCnt]].integ->updAdvancedState();
 			replica.calcZMatrixBAT( worlds[thermoWorldIxs[wPart.N2_wCnt]].getAtomsLocationsInGround( state ));
 
-			if(DEBUG_ROBO == 1){ // TIMER
+			if(DEBUG_SPEED == 1){ // TIMER
 				Context_time_point = std::chrono::steady_clock::now(); // TIMER
 				std::cout << "TIMER Context::calcZMatrixBAT " 
 							<< std::chrono::duration_cast<std::chrono::nanoseconds>(
 	        				Context_time_point.time_since_epoch()).count() << "\n";
-			} // DEBUG_ROBO TIMER
+			} // DEBUG_SPEED TIMER
 
 		} // _end_ loop through replicas (EQUILIBRIUM)
 
@@ -6335,12 +6541,12 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 		mixReplicas(mixi, 0);
 
-		if(DEBUG_ROBO == 1){ // TIMER
+		if(DEBUG_SPEED == 1){ // TIMER
 			Context_time_point = std::chrono::steady_clock::now(); // TIMER
 			std::cout << "TIMER Context::mixReplicas "							// TIMER
 					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 					Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-		} // DEBUG_ROBO TIMER
+		} // DEBUG_SPEED TIMER
 
 		mixi++;
     	PrintNofAcceptedSwapsMatrix();
@@ -6636,22 +6842,22 @@ void Context::transferCoordinates_WorldToWorld(int srcWIx, int destWIx)
 		otherWorldsAtomsLocations =
 	worlds[srcWIx].getAtomsLocationsInGround(lastAdvancedState);
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		Context_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER Context::transferCoordinates_WorldToWorld__getAtomsLocationsInGround "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	// Get BAT coordinates
 	calcZMatrixBAT(srcWIx, otherWorldsAtomsLocations);
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		Context_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER Context::transferCoordinates_WorldToWorld__calcZMatrixBAT "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 			//PrintZMatrixTableAndBAT();
 	//PrintZMatrixMobods(srcWIx, lastAdvancedState);
@@ -6660,12 +6866,12 @@ void Context::transferCoordinates_WorldToWorld(int srcWIx, int destWIx)
 	// Pass compounds to the new world
 	passTopologiesToNewWorld(destWIx);
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		Context_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER Context::transferCoordinates_WorldToWorld__passTopologiesToNewWorld "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	// Focus on destination world
 	World& destWorld = worlds[destWIx];
@@ -6674,12 +6880,12 @@ void Context::transferCoordinates_WorldToWorld(int srcWIx, int destWIx)
 	// New setAtomsLocations
 	currentAdvancedState = setAtoms_SP_NEW(destWIx, someState, otherWorldsAtomsLocations);
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		Context_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER Context::transferCoordinates_WorldToWorld__setAtoms_SP_NEW "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	// SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(srcWIx, destWIx);
 	// SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(srcWIx, destWIx, false);
@@ -7120,24 +7326,24 @@ SimTK::State& Context::setAtoms_CompoundsAndDuMM(
 		destWorld.extractAtomTargets(
 			topoIx, otherWorldsAtomsLocations, atomTargets);
 
-		if(DEBUG_ROBO == 1){ // TIMER
+		if(DEBUG_SPEED == 1){ // TIMER
 			Context_time_point = std::chrono::steady_clock::now(); // TIMER
 			std::cout << "TIMER Context::setAtoms_SP_NEW__extractAtomTargets "			// TIMER
 					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 					Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-		} // DEBUG_ROBO TIMER
+		} // DEBUG_SPEED TIMER
 
 
 		// Use Molmodel's Compound match functions to set the new conf
 		G_X_T = destWorld.setAtoms_Compound_Match(
 			topoIx, atomTargets);
 
-		if(DEBUG_ROBO == 1){ // TIMER
+		if(DEBUG_SPEED == 1){ // TIMER
 			Context_time_point = std::chrono::steady_clock::now(); // TIMER
 			std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_Compound_Match "			// TIMER
 					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 					Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-		} // DEBUG_ROBO TIMER
+		} // DEBUG_SPEED TIMER
 
 		//matchDefaultConfiguration(topoIx, atomTargets);
 
@@ -7151,12 +7357,12 @@ SimTK::State& Context::setAtoms_CompoundsAndDuMM(
 		destWorld.setAtoms_Compound_FramesAndLocsInMobods(
 			topoIx, atomTargets, locs);
 
-		if(DEBUG_ROBO == 1){ // TIMER
+		if(DEBUG_SPEED == 1){ // TIMER
 			Context_time_point = std::chrono::steady_clock::now(); // TIMER
 			std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_Compound_FramesAndLocsInMobods "			// TIMER
 					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 					Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-		} // DEBUG_ROBO TIMER
+		} // DEBUG_SPEED TIMER
 
 		// 2.2 DUMM
 		///////////////////////////////////////////////////////////
@@ -7164,12 +7370,12 @@ SimTK::State& Context::setAtoms_CompoundsAndDuMM(
 		// Set atoms' stations on body
 		destWorld.setAtoms_SetDuMMStations(topoIx, locs);
 
-		if(DEBUG_ROBO == 1){ // TIMER
+		if(DEBUG_SPEED == 1){ // TIMER
 			Context_time_point = std::chrono::steady_clock::now(); // TIMER
 			std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_SetDuMMStations "			// TIMER
 					<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 					Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-		} // DEBUG_ROBO TIMER
+		} // DEBUG_SPEED TIMER
 
 	} // every Topology
 
@@ -7643,64 +7849,64 @@ SimTK::State& Context::setAtoms_SP_NEW(
 	// Match Compound and DuMM coordinates
 	someState = setAtoms_CompoundsAndDuMM(destWIx, someState, otherWorldsAtomsLocations);
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		Context_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_CompoundsAndDuMM "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	// Set default child mobod inboard (X_PF) and outboard (X_BM) frames
 	// This method only uses internal coordinates per molecule bonds info
 	setAtoms_XPF_XBM(destWIx);
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		Context_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_XPF_XBM "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	// Recover the modified state (may not be necessary)
 	destWorld.compoundSystem->realizeTopology();
 	someState = destWorld.compoundSystem->updDefaultState();
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		Context_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER Context::setAtoms_SP_NEW__realizeTopology "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	// Set every mobod's mass properties
 	someState = setAtoms_MassProperties(destWIx);
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		Context_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_MassProperties "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 	
 	// Set X_FMs
 	someState = setAtoms_XFM(destWIx, someState);
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		Context_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER Context::setAtoms_SP_NEW__setAtoms_XFM "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	// Realize position
 	destWorld.compoundSystem->realize(someState, SimTK::Stage::Position);
 
-	if(DEBUG_ROBO == 1){ // TIMER
+	if(DEBUG_SPEED == 1){ // TIMER
 		Context_time_point = std::chrono::steady_clock::now(); // TIMER
 		std::cout << "TIMER Context::setAtoms_SP_NEW__realizePosition "			// TIMER
 				<< std::chrono::duration_cast<std::chrono::nanoseconds>( 	// TIMER
 				Context_time_point.time_since_epoch()).count() << "\n";		// TIMER
-	} // DEBUG_ROBO TIMER
+	} // DEBUG_SPEED TIMER
 
 	//std::cout << someState.getSystemStage() << std::endl;
 	return someState;
