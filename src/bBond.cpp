@@ -84,6 +84,10 @@ bool bBond::isRingClosing() const {
   return this->ring_closing;
 }
 
+bool bBond::isConstrained() const {
+  return this->constrained;
+}
+
 /*
 bool bBond::isRigid() const {
   if(this->rigid == 1)
@@ -143,6 +147,11 @@ void bBond::setUScaleFactor(int which, float argUScaleFactor)
 /*! <!--  --> */
 void bBond::setAsRingClosing(){
   this->ring_closing = true;
+}
+
+/*! <!-- Mark as rigid distance constraint (SETTLE/CCMA in OpenMM) --> */
+void bBond::setAsConstrained(){
+  this->constrained = true;
 }
 
 SimTK::Compound::BondIndex bBond::getBondIndex() const {

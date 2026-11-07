@@ -395,6 +395,51 @@ void Context::loadBonds(const AmberReader& reader) {
 	}
 }
 
+/*! <!-- Mark one bond as rigidly constrained (by prmtop atom indices).
+ * Consumed by World::registerConstraints -> DuMM -> OpenMM plugin. --> */
+bool Context::constrainBond(int amberIx1, int amberIx2)
+{
+	for (auto& bond : bonds) {
+		if (bond.isThisMe(amberIx1, amberIx2)) {
+			bond.setAsConstrained();
+			return true;
+		}
+	}
+
+	std::cerr << "[WARNING] Context::constrainBond: no bond between "
+		<< amberIx1 << " and " << amberIx2 << std::endl;
+	return false;
+}
+
+/*! <!-- Constrain all bonds internal to rigid-water residues. OpenMM
+ * applies SETTLE to fully-constrained three-atom molecules. --> */
+void Context::constrainRigidWaterBonds()
+{
+	static const std::set<std::string> waterResNames =
+		{"WAT", "HOH", "TP3", "TIP3", "SPC", "SOL"};
+
+	std::size_t nofConstrained = 0;
+
+	for (auto& bond : bonds) {
+		const bSpecificAtom& a1 = atoms[bond.i];
+		const bSpecificAtom& a2 = atoms[bond.j];
+
+		// Both ends in the same water residue
+		if ((a1.residueIndex == a2.residueIndex) &&
+		    (waterResNames.count(a1.getResidueName()) != 0) &&
+		    (waterResNames.count(a2.getResidueName()) != 0)) {
+			bond.setAsConstrained();
+			nofConstrained++;
+		}
+	}
+
+	if (nofConstrained > 0) {
+		std::cerr << "[INFO] Context::constrainRigidWaterBonds: "
+			<< nofConstrained << " water bond(s) constrained."
+			<< std::endl;
+	}
+}
+
 /*! <!-- Set dumm angle list to be used in World generateDummParams. --> **/
 void Context::loadAngles(const AmberReader& reader) {
 	dummAngles.reserve(reader.getNumberAngles());
@@ -674,6 +719,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	// Read Amber and load Gmolmodel lists
 	loadAtoms(reader);     // bSpecificAtom list
 	loadBonds(reader);     // bBond list
+	constrainRigidWaterBonds(); // SETTLE waters in OpenMM worlds
 	loadAngles(reader);    // DUMM_ANGLE list for generateParams
 	synthesizeMissingBends(); // zero-k bends for triples absent from prmtop
 	loadTorsions(reader);  // DUMM_TORSIONlist for generateParams	
@@ -1686,6 +1732,11 @@ void Context::addWorld(
 		topologies[topologyIx].loadAIx2MbxMap();
 	}
     if(MEMDEBUG){stdcout_memdebug("Context::addWorld 3");}
+
+	// Register rigid distance constraints with DuMM (OpenMM SETTLE/CCMA).
+	// Needs modeled compounds (valid DuMM atom indices); must precede
+	// realizeTopology / OpenMM initialization.
+	worlds.back().registerConstraints(atoms, bonds);
 
 	// This is one to many map
 	worlds.back().loadMbx2AIxMap();

@@ -57,12 +57,14 @@ class bBond /* : public intpair */ {
 
 		// bool isInRing() const;
 		bool isRingClosing() const;
+		bool isConstrained() const;
 		//bool isRigid() const;
 		SimTK::BondMobility::Mobility getBondMobility(int whichWorld) const;
 		// int ringNo() const;
 
 		// void setInRing();
 		void setAsRingClosing();
+		void setAsConstrained();
 		//void setAsRigid();
 
 		void addBondMobility(SimTK::BondMobility::Mobility someMobility);	
@@ -120,6 +122,8 @@ class bBond /* : public intpair */ {
     	int moleculeIndex = -111111;
 		// bool inring = false;
 		bool ring_closing = false;
+		// rigid distance constraint (SETTLE/CCMA in OpenMM worlds)
+		bool constrained = false;
 		// bool _isFirst = false;
 
 };

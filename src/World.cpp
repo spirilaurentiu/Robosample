@@ -183,6 +183,40 @@ void World::generateDummParams(const std::vector<bSpecificAtom>& atoms,
 	}
 }
 
+/*! <!-- Register constrained bonds with DuMM as rigid distance constraints.
+ * Consumed by the OpenMM plugin (SETTLE for fully-constrained 3-atom
+ * molecules, CCMA otherwise). Requires modeled compounds. --> */
+void World::registerConstraints(const std::vector<bSpecificAtom>& atoms,
+	const std::vector<bBond>& bonds)
+{
+	std::size_t nofRegistered = 0;
+
+	for (const auto& bond : bonds) {
+		if ( !bond.isConstrained() ) { continue; }
+
+		const bSpecificAtom& a1 = atoms[bond.i];
+		const bSpecificAtom& a2 = atoms[bond.j];
+
+		const Topology& topology = (*topologies)[bond.getMoleculeIndex()];
+
+		const SimTK::DuMM::AtomIndex dAIx1 =
+			topology.getDuMMAtomIndex(a1.getCompoundAtomIndex());
+		const SimTK::DuMM::AtomIndex dAIx2 =
+			topology.getDuMMAtomIndex(a2.getCompoundAtomIndex());
+
+		// prmtop equilibrium length is in Angstrom; DuMM wants nm
+		forceField->defineConstraint(dAIx1, dAIx2,
+			bond.getForceEquil() * SimTK::DuMM::Ang2Nm);
+
+		nofRegistered++;
+	}
+
+	if (nofRegistered > 0) {
+		std::cout << "World::registerConstraints: " << nofRegistered
+			<< " constraint(s) registered with DuMM." << std::endl;
+	}
+}
+
 
 /** Print a Compound Cartesian coordinates as given by
 	 * Compound::calcAtomLocationInGroundFrame **/
@@ -3984,6 +4018,7 @@ std::size_t World::getNofSamplers() const
 */
 bool World::addSampler(SamplerName samplerName,
 	IntegratorType integratorType,
+	SimTK::Real boostTemp,
 	ThermostatName thermostatName,
 	bool useFixmanPotential)
 {
@@ -4041,6 +4076,8 @@ bool World::addSampler(SamplerName samplerName,
 
 	forceField->setOpenMMMasses(masses);
 
+	forceField->setDuMMTemperature(boostTemp);
+
 	// This is needed because each call to forceField invalidates the topology cache
 	// As far as I understand, you cannot modify forceField afther this call
 	realizeTopology();
@@ -4085,7 +4122,7 @@ void World::useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep) {
 	if (ommvv) {
 		forceField->setUseOpenMMIntegration(true);
 		forceField->setUseOpenMMCalcOnlyNonBonded(false);
-		forceField->setDuMMTemperature(boostTemp);
+		// forceField->setDuMMTemperature(boostTemp);
 		forceField->setDuMMTimestep(timestep);
 	} else {
 		forceField->setUseOpenMMCalcOnlyNonBonded(false);

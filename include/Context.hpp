@@ -164,6 +164,14 @@ public:
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
 
 	/**
+	 * @brief Mark a bond between two prmtop atom indices as rigidly
+	 * constrained (SETTLE/CCMA in OpenMM worlds). Callable from Python,
+	 * e.g. for CYS-CYS disulfide bridges. Call after loadAmberSystem and
+	 * before addWorld. Returns false if no such bond exists.
+	*/
+	bool constrainBond(int amberIx1, int amberIx2);
+
+	/**
 	 * @brief Set Molmodel atom masses from out list of atoms
 	*/
 	void setAtomMasses();
@@ -1010,6 +1018,11 @@ private:
 	
 	void loadAtoms(const AmberReader& reader);
 	void loadBonds(const AmberReader& reader);
+
+	/** Mark all bonds of rigid-water residues (WAT/HOH/TP3...) as
+	 * constrained, including the H1-H2 SETTLE bond. */
+	void constrainRigidWaterBonds();
+
 	void loadAngles(const AmberReader& reader);
 
 	// Append zero-k DUMM_ANGLEs for bonded 1-2-3 triples absent from the

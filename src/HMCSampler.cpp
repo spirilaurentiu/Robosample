@@ -1720,7 +1720,6 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 
 				UCache = someState.getU();
 
-//std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 //world->PrintSimbodyStateCache(someState); // FIXTORROLL
 
 				world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
@@ -1733,18 +1732,12 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 	        					pHMC_time_point.time_since_epoch()).count() << "\n";		// TIMER
 				} // DEBUG_SPEED TIMER
 
-//std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" world->timeStepper->stepTo "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
-
 				// system->realize(someState, SimTK::Stage::Position);
 				system->realize(someState, SimTK::Stage::Acceleration);
-
-//std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" realizeAcceleration "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 				UDotCache = someState.getUDot();
 				// std::cout << "UDotCache size " << uDot.size() << std::endl;
 				
-//std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" someState.getUDot() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
-
 				return;
 			}catch(const std::exception&){
 				proposeExceptionCaught = true;
@@ -1880,6 +1873,13 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 		// each body should be an atom
 		assert(matter->getNumBodies() == dumm->getNumAtoms() + 1);
 		try {
+
+
+			if(DEBUG_GRAPH == 1){
+				std::cout << "HMCSampler::integrateTrajectory DuMM T " << dumm->getOpenMMtemperature() << std::endl << std::flush;
+			}
+
+
 			// Actual openmm integration
 			dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
 

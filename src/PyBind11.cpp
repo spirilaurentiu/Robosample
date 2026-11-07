@@ -96,6 +96,10 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("setNonbonded", &Context::setNonbonded, "Set nonbonded method and cutoff.")
         .def("setGBSA", &Context::setGBSA, "Set GBSA.")
         .def("loadAmberSystem", &Context::loadAmberSystem, "Load an Amber system.")
+        .def("constrainBond", &Context::constrainBond,
+            "Rigidly constrain the bond between two prmtop atom indices "
+            "(e.g. CYS-CYS disulfide). Call after loadAmberSystem and "
+            "before addWorld.")
         .def("addWorld", &Context::addWorld, "Add an empty world.")
         .def("getWorld", (World& (Context::*)(std::size_t which)) &Context::getWorld, py::return_value_policy::reference, "Gets the world at the specified index.");
 

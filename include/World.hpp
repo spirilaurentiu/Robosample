@@ -158,6 +158,13 @@ public:
 		const std::vector<DUMM_TORSION>& dummTorsions,
 		const ELEMENT_CACHE& elementCache);
 
+	/** Pass constrained bonds to DuMM as rigid distance constraints
+	 * (consumed by the OpenMM plugin: SETTLE/CCMA). Requires compounds
+	 * to be modeled (DuMM atom indices valid). Must run before
+	 * realizeTopology / OpenMM initialization. **/
+	void registerConstraints(const std::vector<bSpecificAtom>& atoms,
+		const std::vector<bBond>& bonds);
+
 	/** Creates a topology object and based on amberReader forcefield
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
 	void AddMolecule(
@@ -603,6 +610,7 @@ public:
 	/** Add a sampler to the World **/
 	bool addSampler(SamplerName samplerName,
 		IntegratorType integratorType,
+		SimTK::Real boostTemp,
 		ThermostatName thermostatName,
 		bool useFixmanPotential);
 
