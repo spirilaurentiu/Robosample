@@ -93,6 +93,8 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("setVerbose", &Context::setVerbose, "Control if you want extraneous output to cout.")
         .def("setPdbRestartFreq", &Context::setPdbRestartFreq, "Set the PDB restart frequency.")
         .def("setPrintFreq", &Context::setPrintFreq, "Set the print frequency.")
+        .def("setRstFreq", &Context::setRstFreq, "Set the restart frequency.")
+        .def("getRstFreq", &Context::getRstFreq, "Get the restart frequency.")
         .def("setNonbonded", &Context::setNonbonded, "Set nonbonded method and cutoff.")
         .def("setGBSA", &Context::setGBSA, "Set GBSA.")
         .def("loadAmberSystem", &Context::loadAmberSystem, "Load an Amber system.")

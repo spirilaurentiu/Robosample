@@ -80,47 +80,79 @@ catch(std::exception e){
 
 }
 
+/*! < Append a frame to the trajectory file > */
+// void TrajectoryObject::appendFrame (
+//                     const std::string& TrajectoryType,
+//                     const std::vector<TARGET_TYPE>& AtomsXcoord,
+//                     const std::vector<TARGET_TYPE>& AtomsYcoord,
+//                     const std::vector<TARGET_TYPE>& AtomsZcoord
+//                     )
+// {
+//     try{
+//         if (TrajectoryType == "dcd"){
+//             timestep.coords = (float *)malloc(3*sizeof(float)*natoms);
+//             float *pos = timestep.coords;
+//             for (int j=0; j < natoms; j++) {
+//                 *(pos++) = AtomsXcoord[j];
+//                 *(pos++) = AtomsYcoord[j];
+//                 *(pos++) = AtomsZcoord[j];
+//             }
+//             int write_status = write_timestep(dcd, &timestep);
+//             if (write_status) {
+//                 fprintf(stderr, "error in write_timestep on frame %d\n", nsets);
+//             }
+//             nsets++;
+//         }else{
+//             fprintf(stderr, "Only dcd format is supported - for now ...\n");
+//         }
+//     }catch(std::exception e){
+//         std::cout << "Error in appendng timestep to Trajectory File\n";
+//         std::cout << e.what() << '\n';
+//     }
+// }
 
-void TrajectoryObject::appendFrame (
-                    const std::string& TrajectoryType,
-                    const std::vector<TARGET_TYPE>& AtomsXcoord,
-                    const std::vector<TARGET_TYPE>& AtomsYcoord,
-                    const std::vector<TARGET_TYPE>& AtomsZcoord
-                    )
+void TrajectoryObject::appendFrame(
+    const std::string& TrajectoryType,
+    const std::vector<TARGET_TYPE>& AtomsXcoord,
+    const std::vector<TARGET_TYPE>& AtomsYcoord,
+    const std::vector<TARGET_TYPE>& AtomsZcoord)
 {
-
-try
-{
-  if (TrajectoryType == "dcd")
-  {
-    timestep.coords = (float *)malloc(3*sizeof(float)*natoms);
-
-    float *pos = timestep.coords;
-
-    for (int j=0; j < natoms; j++) {
-      *(pos++) = AtomsXcoord[j];
-      *(pos++) = AtomsYcoord[j];
-      *(pos++) = AtomsZcoord[j];
+    if (TrajectoryType != "dcd") {
+        throw std::invalid_argument("Only dcd format is supported");
     }
 
-    int write_status = write_timestep(dcd, &timestep);
+    if (natoms <= 0) {
+        throw std::invalid_argument("Invalid trajectory atom count");
+    }
 
-    if (write_status) {
-        fprintf(stderr, "error in write_timestep on frame %d\n", nsets);
-      }
+    const auto count = static_cast<std::size_t>(natoms);
+    if (AtomsXcoord.size() != count ||
+        AtomsYcoord.size() != count ||
+        AtomsZcoord.size() != count) {
+        throw std::invalid_argument("Trajectory coordinate count mismatch");
+    }
 
-    nsets++;
+    if (!dcd) {
+        throw std::runtime_error("DCD writer is not open");
+    }
 
-  }
-  else{
-    fprintf(stderr, "Only dcd format is supported - for now ...\n");
-  }
+    if (count > coordinateBuffer.max_size() / 3) {
+        throw std::length_error("Trajectory coordinate buffer is too large");
+    }
+    coordinateBuffer.resize(3 * count);
 
-}
+    for (std::size_t j = 0; j < count; ++j) {
+        coordinateBuffer[3 * j]     = static_cast<float>(AtomsXcoord[j]);
+        coordinateBuffer[3 * j + 1] = static_cast<float>(AtomsYcoord[j]);
+        coordinateBuffer[3 * j + 2] = static_cast<float>(AtomsZcoord[j]);
+    }
 
-catch(std::exception e){
-  std::cout << "Error in appendng timestep to Trajectory File\n";
-  std::cout << e.what() << '\n';
-}
+    molfile_timestep_t frame{};
+    frame.coords = coordinateBuffer.data();
 
+    if (write_timestep(dcd, &frame) != 0) {
+        throw std::runtime_error("Failed to write DCD frame");
+    }
+
+    ++nsets;
 }

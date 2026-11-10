@@ -4,6 +4,7 @@
 #include "readAmberInput.hpp"
 
 #include <iostream>
+#include <string>
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
 
@@ -158,15 +159,12 @@ void Context::PrintAtomsDebugInfo(void){
 
  bool Context::addReplicasAndLoadCoordinates(const std::string& prmtop, const std::string& restartDir, int nofReplicas) {
     std::vector<std::string> inpcrdFNs;
-    if(MEMDEBUG){stdcout_memdebug("Context::addReplicasAndLoadCoordinates 0");}
 
     // Add replicas
     for (int replCnt = 0; replCnt < nofReplicas; replCnt++) {
         std::string inpcrd = restartDir + "/ligand.s" + std::to_string(replCnt) + ".rst7";
         inpcrdFNs.push_back(inpcrd);
     }
-
-    if(MEMDEBUG){stdcout_memdebug("Context::addReplicasAndLoadCoordinates 1");}
 
     for (int replCnt = 0; replCnt < nofReplicas; replCnt++) {
         // Check if the inpcrd file exists
@@ -176,8 +174,6 @@ void Context::PrintAtomsDebugInfo(void){
         }
 
         loadAtomsCoordinates(prmtop, inpcrdFNs[replCnt]);
-
-    	if(MEMDEBUG){stdcout_memdebug("Context::addReplicasAndLoadCoordinates 2");}
 
         std::cout << "Loaded coordinates of replica " << replCnt << " from " << inpcrdFNs[replCnt] << std::endl;
         addReplica(replCnt);
@@ -6310,7 +6306,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 	#pragma region SHOULDNT_BELONG_HERE
 
-	// desk_mass_related
+	// Set DuMM masses
 	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
 		for (auto& atom : atoms) {
 			
@@ -6481,8 +6477,8 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 		} // _end_ loop through replicas (EQUILIBRIUM)
 
+		// Exchange after equilibrium sampling
 		RUN_TYPE originalRunType = getRunType();
-
 		if((originalRunType == RUN_TYPE::REBASONTOP) or (originalRunType == RUN_TYPE::REMC)) {
 			setRunType(RUN_TYPE::REMC);
 			for(int remcIx = 0; remcIx < 6; remcIx++){
@@ -6543,7 +6539,6 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		mixReplicas(mixi, 0);
 		mixi++;
     	//PrintNofAcceptedSwapsMatrix();
-
 
 		// @@@@@@@@@@ LOOP THROUGH REPLICAS (NON-EQUILIBRIUM) ------------------- RUN B ----------->
 
@@ -6606,6 +6601,9 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
 		}
 
+		// Write restart files
+		writeRestart(mixi);
+
 		this->nofRounds++; 
 
 	} // end rounds
@@ -6616,12 +6614,51 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 }
 
+/*! <!-- Run replica exchange protocol --> */
+void Context::writeRestart(int mixi) {
+    // Checks
+    if (rstFreq <= 0 || mixi <= 0 || mixi % rstFreq != 0) {
+        return;
+    }
 
+    // Build timestamp <yyyymmddHHMM>
+    std::time_t now = std::time(nullptr);
+    char timestamp[32];
+    std::strftime(timestamp, sizeof(timestamp), "%Y%m%d%H%M", std::localtime(&now));
 
+    // Strip any path prefix from baseName so "rest.<name>" is a valid folder name
+    auto slashPos = baseName.find_last_of('/');
+    std::string cleanName = (slashPos == std::string::npos) ? baseName : baseName.substr(slashPos + 1);
+    std::string newRestartDir = "rest." + cleanName + "." + timestamp;
 
+    // 1. Rename existing restartDir (if any), and ensure newRestartDir exists
+    if (!restartDir.empty() && restartDir != newRestartDir) {
+        std::rename(restartDir.c_str(), newRestartDir.c_str());
+    }
+    mkdir(newRestartDir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
+    // Verify the directory is writable before calling WriteRst7 (which doesn't check fopen)
+    std::ofstream corrFile(newRestartDir + "/corr.txt");
+    if (!corrFile.is_open()) {
+        std::cerr << "[ERROR] Failed to write restart files to " << newRestartDir << std::endl;
+        return;
+    }
+    restartDir = newRestartDir;
 
+    // 2. Write replica to thermo state correspondence in corr.txt
+    for (size_t replicaIx = 0; replicaIx < nofReplicas; ++replicaIx) {
+        corrFile << replicaIx << " " << replica2ThermoIxs[replicaIx] << "\n";
+    }
 
+    // 3. Write a rst7 file for each thermodynamic state
+    for (size_t thermoIx = 0; thermoIx < nofThermodynamicStates; ++thermoIx) {
+        int replicaIx = thermo2ReplicaIxs[thermoIx];
+        std::string rstFile = restartDir + "/ligand.s" + std::to_string(thermoIx) + ".rst7";
+        replicas[replicaIx].WriteRst7(rstFile);
+    }
+
+    std::cout << "Restart files written to " << restartDir << std::endl;
+}
 
 void Context::writeU(const std::unordered_map<std::string, SimTK::Real>& cache, std::ofstream& foutBinary) {
     for (const auto& item : cache) {
@@ -8495,12 +8532,12 @@ void Context::setPdbRestartFreq(int argFreq)
 
 const std::string& Context::getRestartDir() const
 {
-	return this->restartDir;
+	return this->startDir;
 }
 
 void Context::setRestartDir(const std::string& argRestartDir)
 {
-	this->restartDir = argRestartDir;
+	this->startDir = argRestartDir;
 }
 
 // Write pdb

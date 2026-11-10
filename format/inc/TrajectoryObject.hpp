@@ -31,9 +31,9 @@ class TrajectoryObject{
       std::string TrajectoryType;
       std::string TrajectoryFile;
 
-      int unitcell;
-      int natoms;
-      int nsets;
+      int unitcell = 0;
+      int natoms = 0;
+      int nsets = 0;
 
       // ~TrajectoryObject();
 
@@ -56,9 +56,11 @@ class TrajectoryObject{
 
 
       // for DCD type
-      void * dcdhandle_po;
-      dcdhandle *dcd;
+      void * dcdhandle_po = nullptr;
+      dcdhandle *dcd = nullptr;
       molfile_timestep_t timestep;
+
+      std::vector<float> coordinateBuffer;
 
 };
 

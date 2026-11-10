@@ -793,6 +793,13 @@ public:
 	void RunREX(int equilRounds, int prodRounds);
 	//void RunREX_Gibbs(int equilRounds, int prodRounds);
 
+	// Write restart files for the current mixi
+	void writeRestart(int mixi);
+
+	// Setter and getter for rstFreq
+	void setRstFreq(int freq){ rstFreq = freq; }
+	int getRstFreq() const { return rstFreq; }
+
 	void Run();
 
 	/**@}**/
@@ -919,9 +926,11 @@ private:
 
 	int pdbRestartFreq = false;
 	int printFreq = -1;
+	int rstFreq = 100; // Completed rounds between checkpoints; 0 disables writing.
 
 	std::string molDir;
 	std::string outputDir;
+	std::string startDir;
 	std::string restartDir;
 	std::string pdbPrefix;
 
