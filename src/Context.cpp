@@ -1,4 +1,5 @@
 #include "Context.hpp"
+#include "Robo.hpp"
 #include "World.hpp"
 #include "Sampler.hpp"
 #include "readAmberInput.hpp"
@@ -16,6 +17,9 @@
 */
 Context::Context(const std::string& baseName_arg, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq)
 {
+
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::Context START");}
+
 	// Set the base name of the simulation
 	std::cout << "Context with base name: " << baseName + "_" + std::to_string(seed) << std::endl << std::flush;
 	this->baseName = baseName_arg + "_" + std::to_string(seed);
@@ -56,6 +60,9 @@ Context::Context(const std::string& baseName_arg, uint32_t seed, uint32_t thread
 
 	foutU = std::ofstream(baseName + "_U.bin", std::ios::binary | std::ios::app);
 	foutUDot = std::ofstream(baseName + "_U_dot.bin", std::ios::binary | std::ios::app);
+
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::Context END");}
+
 }
 
 void Context::setVerbose(bool verbose){
@@ -160,6 +167,8 @@ void Context::PrintAtomsDebugInfo(void){
  bool Context::addReplicasAndLoadCoordinates(const std::string& prmtop, const std::string& restartDir, int nofReplicas) {
     std::vector<std::string> inpcrdFNs;
 
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::addReplicasAndLoadCoordinates BEGIN");}
+
     // Add replicas
     for (int replCnt = 0; replCnt < nofReplicas; replCnt++) {
         std::string inpcrd = restartDir + "/ligand.s" + std::to_string(replCnt) + ".rst7";
@@ -175,10 +184,12 @@ void Context::PrintAtomsDebugInfo(void){
 
         loadAtomsCoordinates(prmtop, inpcrdFNs[replCnt]);
 
+		if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::addReplicasAndLoadCoordinates");}
+
         std::cout << "Loaded coordinates of replica " << replCnt << " from " << inpcrdFNs[replCnt] << std::endl;
         addReplica(replCnt);
 
-		if(MEMDEBUG){stdcout_memdebug("Context::addReplicasAndLoadCoordinates 3");}
+		if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::addReplicasAndLoadCoordinates END");}
 
     }
 
@@ -708,17 +719,25 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	AmberReader reader;
 	reader.readAmberFiles(inpcrd, prmtop);
 
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem reader.readAmberFiles");}
+
 	if(DEBUG_GRAPH == 1){
 		std::cout << "Context::loadAmberSystem readAmberFiles" << std::endl << std::flush;
 	}
 
 	// Read Amber and load Gmolmodel lists
 	loadAtoms(reader);     // bSpecificAtom list
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem loadAtoms");}
 	loadBonds(reader);     // bBond list
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem loadBonds");}
 	constrainRigidWaterBonds(); // SETTLE waters in OpenMM worlds
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem constrainRigidWaterBonds");}
 	loadAngles(reader);    // DUMM_ANGLE list for generateParams
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem loadAngles");}
 	synthesizeMissingBends(); // zero-k bends for triples absent from prmtop
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem synthesizeMissingBends");}
 	loadTorsions(reader);  // DUMM_TORSIONlist for generateParams	
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem loadTorsions");}
 
 	if(DEBUG_GRAPH == 1){
 		std::cout << "Context::loadAmberSystem loadAtoms/Bonds/Angles/Torsions" << std::endl << std::flush;
@@ -726,6 +745,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	// Calculate InternalCoordinates BONDS / BAT graphs
 	calc_Gmolmodel_Graph(); 
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem calc_Gmolmodel_Graph");}
 	
 	if(DEBUG_GRAPH == 1){
 		std::cout << "Context::loadAmberSystem calc_Gmolmodel_Graph" << std::endl << std::flush;
@@ -733,6 +753,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	// Construct a Compound for every atom
 	setAtomsCompounds();
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem setAtomsCompounds");}
 
 	if(DEBUG_GRAPH == 1){
 		std::cout << "Context::loadAmberSystem setAtomsCompounds" << std::endl << std::flush;
@@ -741,6 +762,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	// Biotype will be used to look up molecular
 	// force field specific parameters for an atom type
 	addBiotypes();
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem addBiotypes");}
 
 	if(DEBUG_GRAPH == 1){
 		std::cout << "Context::loadAmberSystem addBiotypes" << std::endl << std::flush;
@@ -751,6 +773,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	// bBonds to BAT / InternalCoordinates bonds map
 	load_BONDS_to_bonds( internCoords.getBonds() );
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem load_BONDS_to_bonds");}
 
 	if(DEBUG_GRAPH == 1){
 		std::cout << "Context::loadAmberSystem load_BONDS_to_bonds" << std::endl << std::flush;
@@ -758,6 +781,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	// InternalCoordinates -> Molmodel Compound graphs with bondAtom
 	build_Molmodel_AcyclicGraphs();
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem build_Molmodel_AcyclicGraphs");}
 
 	if(DEBUG_GRAPH == 1){
 		std::cout << "Context::loadAmberSystem build_Molmodel_AcyclicGraphs" << std::endl << std::flush;
@@ -765,6 +789,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	// Close rings
 	addRingClosingBonds_All(); 
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem addRingClosingBonds_All");}
 
 	if(DEBUG_GRAPH == 1){
 		std::cout << "Context::loadAmberSystem addRingClosingBonds_All" << std::endl << std::flush;
@@ -779,6 +804,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	// Generate Topologies sub_array views (also sort bonds - not BONDS)
 	generateTopologiesSubarrays();
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem generateTopologiesSubarrays");}
 
 	if(DEBUG_GRAPH == 1){
 		std::cout << "Context::loadAmberSystem generateTopologiesSubarrays" << std::endl << std::flush;
@@ -786,6 +812,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	// Match Compounds configurations to atoms Cartesian coords
 	matchDefaultConfigurations();
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem matchDefaultConfigurations");}
 
 	if(DEBUG_GRAPH == 1){
 		std::cout << "Context::loadAmberSystem matchDefaultConfigurations" << std::endl << std::flush;
@@ -1560,9 +1587,7 @@ void Context::addWorld(
 	bool useOpenMM,
 	bool visual, SimTK::Real visualizerFrequency) {
 
-	TRACE("Context::addWorld");
-
-    if(MEMDEBUG){stdcout_memdebug("Context::addWorld 0");}
+    if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::addWorld START");}
 
 	int tz = -1;
 	for (const auto& f : flexibilities) {
@@ -1577,7 +1602,8 @@ void Context::addWorld(
 	// Create new world and add its index
 	worldIndexes.push_back(worldIndexes.size());
 	worlds.emplace_back(worldIndexes.back(), nofMols, visual, visualizerFrequency);
-    if(MEMDEBUG){stdcout_memdebug("Context::addWorld 1");}
+
+    if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::addWorld worlds.emplace_back");}
 
 	// @TODO should only pass natoms to worlds
 	worlds.back().setMyContext(this);
@@ -1704,7 +1730,7 @@ void Context::addWorld(
 
 	// 
 	worlds.back().AllocateCoordBuffers(natoms);
-    if(MEMDEBUG){stdcout_memdebug("Context::addWorld 2");}
+    if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::addWorld 2");}
 
 	// desk_mass_related
 	// for (auto& atom : atoms) {
@@ -1717,8 +1743,6 @@ void Context::addWorld(
 	for(std::size_t topologyIx = 0; topologyIx < topologies.size(); topologyIx++) {
 
 		// Add topologies to CompoundSystem and add it to the visualizer's vector of molecules
-		std::cout << "NUM TOPOLOGIES " << worlds.back().topologies->size() << std::endl;
-		std::cout << "REQUESTED " << topologyIx << std::endl;
 		worlds.back().adoptTopology(topologyIx);
 
 		// Was "Cartesian"
@@ -1727,7 +1751,7 @@ void Context::addWorld(
 		// This is many to one map
 		topologies[topologyIx].loadAIx2MbxMap();
 	}
-    if(MEMDEBUG){stdcout_memdebug("Context::addWorld 3");}
+    if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::addWorld 3");}
 
 	// Register rigid distance constraints with DuMM (OpenMM SETTLE/CCMA).
 	// Needs modeled compounds (valid DuMM atom indices); must precede
@@ -1739,7 +1763,7 @@ void Context::addWorld(
 
 	// Allocate whatever needed Simbody dependent vectors from World here
 	worlds.back().allocateStatsContainers();
-    if(MEMDEBUG){stdcout_memdebug("Context::addWorld 4");}
+    if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::addWorld 4");}
 
 	// print the inertia tensors of all bodies
 	// PrintSimbodyMobods();
@@ -1902,10 +1926,10 @@ void Context::setRootAtom(Topology& topology, int rootAmberIx)
 	topology.convertInboardBondCenterToOutboard();
 	topology.baseSetFlag = 1;
 
-	scout("rootAmberIx root ") 
-	// << rootAtom.getName() <<" " << rootAtom.getInName() 
-	<< " " << rootAmberIx 
-	<< eol;	
+	// scout("rootAmberIx root ") 
+	// // << rootAtom.getName() <<" " << rootAtom.getInName() 
+	// << " " << rootAmberIx 
+	// << eol;	
 }
 
 /*!
@@ -6304,6 +6328,8 @@ void Context::runReplicaWorldRange(
 void Context::RunREX(int equilRounds, int prodRounds)
 {
 
+	if(DEBUG_MEMORY){stdcout_memdebug("Context::RunREX BEGIN");}
+
 	#pragma region SHOULDNT_BELONG_HERE
 
 	// Set DuMM masses
@@ -6370,6 +6396,8 @@ void Context::RunREX(int equilRounds, int prodRounds)
 	// @@@@@@@@@@ LOOP THROUGH ROUNDS --------------------------------------------------------->
 	int mixi = 0;
 	for(size_t cyclIx = 0; cyclIx < equilRounds + prodRounds; cyclIx++) {
+
+		if(DEBUG_MEMORY){stdcout_memdebug("Context::RunREX cyclIx_BEGIN_" + std::to_string(cyclIx));}
 
 		// Update work scale factors
 		//prepareExchangePairs(mixi, 0);
@@ -6605,6 +6633,8 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		writeRestart(mixi);
 
 		this->nofRounds++; 
+
+		if(DEBUG_MEMORY){stdcout_memdebug("Context::RunREX cyclIx_END_" + std::to_string(cyclIx));}
 
 	} // end rounds
 

@@ -111,8 +111,18 @@
 #endif
 
 #ifndef DEBUG_GRAPH
-#define DEBUG_GRAPH 1
+#define DEBUG_GRAPH 0
 #endif
+
+#ifndef DEBUG_MEMORY
+#define DEBUG_MEMORY 1
+#endif
+
+
+#ifndef MEMDEBUG
+#define MEMDEBUG 1
+#endif
+
 
 // #ifdef DEBUG_SPEED
 // #define TRACE(STR) printf("%s", STR);

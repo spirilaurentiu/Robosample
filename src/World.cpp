@@ -977,19 +977,11 @@ void World::addMembrane(const SimTK::Real halfThickness)
 const SimTK::State& World::realizeTopology()
 {
 
-    if(MEMDEBUG){
-		std::cout << "World::realizeTopology memory 1\n" << exec("free") << std::endl << std::flush;
-		std::cout << "World::realizeTopology memory 1\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-		std::cout << "World::realizeTopology memory 1\n" << getResourceUsage() << " kB" << std::endl << std::flush;
-	}
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("World::realizeTopology BEGIN");}
 
 	const SimTK::State& returnState = compoundSystem->realizeTopology();
 
-    if(MEMDEBUG){
-		std::cout << "World::realizeTopology memory 2\n" << exec("free") << std::endl << std::flush;
-		std::cout << "World::realizeTopology memory 2\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-		std::cout << "World::realizeTopology memory 2\n" << getResourceUsage() << " kB" << std::endl << std::flush;
-	}
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("World::realizeTopology realizeTopology");}
 
 	// for ( unsigned int i = 0; i < this->topologies.size(); i++){
 	//    ((this->topologies)[i])->loadMobodsRelatedMaps();
@@ -4022,6 +4014,9 @@ bool World::addSampler(SamplerName samplerName,
 	ThermostatName thermostatName,
 	bool useFixmanPotential)
 {
+
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("World::addSampler BEGIN");}
+
 	// Integrate with OpenMM if the integrator is OpenMM Velocity Verlet (OMMVV)
 	if (integratorType == IntegratorType::OMMVV) {
 		forceField->setUseOpenMMIntegration(true);
@@ -4035,11 +4030,7 @@ bool World::addSampler(SamplerName samplerName,
 	// forceField->setUseOpenMMCalcOnlyNonBonded(integratorType != IntegratorType::OMMVV);
 	forceField->setUseOpenMMCalcOnlyNonBonded(false);
 
-    if(MEMDEBUG){
-		std::cout << "World::addSampler memory 1\n" << exec("free") << std::endl << std::flush;
-		std::cout << "World::addSampler memory 1\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-		std::cout << "World::addSampler memory 1\n" << getResourceUsage() << " kB" << std::endl << std::flush;
-	}
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("World::addSampler_forceField->setUseOpenMMCalcOnlyNonBonded");}
 
 	// Set atom masses to OpenMM
 	int natoms = 0;
@@ -4058,6 +4049,7 @@ bool World::addSampler(SamplerName samplerName,
 	// 	}
 	// }
 
+	// Set masses
 	for (const auto& topology : *topologies) {
 		for (const auto& atom : topology.subAtomList) {
 			SimTK::mdunits::Mass mass = atom.getMass();
@@ -4079,30 +4071,40 @@ bool World::addSampler(SamplerName samplerName,
 	forceField->setDuMMTemperature(boostTemp);
 
 	// This is needed because each call to forceField invalidates the topology cache
-	// As far as I understand, you cannot modify forceField afther this call
+	// As far as I understand, you cannot modify forceField after this call
 	realizeTopology();
 
-    if(MEMDEBUG){
-		std::cout << "World::addSampler memory 2.\n" << exec("free") << std::endl << std::flush;
-		std::cout << "World::addSampler memory 2.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-		std::cout << "World::addSampler memory 2.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
-	}
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("World::addSampler_realizeTopology");}
 
 	// We only use HMCSampler for now
 	if(samplerName == SamplerName::HMC) {
 
 		// Construct a new sampler
-		samplers.emplace_back(std::make_unique<HMCSampler>(*this, *compoundSystem, *matter, *topologies, *forceField, *forces, *timeStepper));
+		samplers.emplace_back(std::make_unique<HMCSampler>(
+			*this, 
+			*compoundSystem,
+			*matter,
+			*topologies,
+			*forceField,
+			*forces,
+			*timeStepper));
+		
+		if(DEBUG_MEMORY == 1){stdcout_memdebug("World::addSampler_samplers.emplace_back");}
+
 		auto& sampler = dynamic_cast<HMCSampler&>(*samplers.back());
 
 		// Initialize the sampler
 		SimTK::State& worldAdvancedState = integ->updAdvancedState();
 		sampler.initialize(worldAdvancedState);
 
+		if(DEBUG_MEMORY == 1){stdcout_memdebug("World::addSampler_sampler.initialize");}
+
 		// Set sampler parameters
 		sampler.setIntegratorType(integratorType);
 		sampler.setThermostat(thermostatName);
 		sampler.setSeed(randomEngine);
+
+		if(DEBUG_MEMORY == 1){stdcout_memdebug("World::addSampler_sampler.setIntegratorType");}
 
 		// TODO should this be inherited from parent world?
 		if (useFixmanPotential) {
@@ -4112,6 +4114,8 @@ bool World::addSampler(SamplerName samplerName,
 		std::cerr << "Unknown sampler name" << std::endl;
 		return false;
 	}
+
+	if(DEBUG_MEMORY == 1){stdcout_memdebug("World::addSampler END");}
 
 	return true;
 }

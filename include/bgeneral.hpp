@@ -42,10 +42,6 @@
 #define TARGET_TYPE double
 #endif
 
-#ifndef MEMDEBUG
-#define MEMDEBUG 0
-#endif
-
 using namespace std;
 
 // Smart trace
