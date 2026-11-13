@@ -582,26 +582,36 @@ void Context::loadTorsions(const AmberReader& reader) {
 		}
 
 		// Define parameters
-		if (periodicity >= 1) {
-			dummTorsion.period[0] = static_cast<int>(reader.getDihedralsPeriod(t));
-			dummTorsion.k[0] = reader.getDihedralsForceK(t);
-			dummTorsion.phase[0] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t)));
-		}
-		if (periodicity >= 2) {
-			dummTorsion.period[1] = static_cast<int>(reader.getDihedralsPeriod(t + 1));
-			dummTorsion.k[1] = reader.getDihedralsForceK(t + 1);
-			dummTorsion.phase[1] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t + 1)));
-		}
-		if (periodicity >= 3) {
-			dummTorsion.period[2] = static_cast<int>(reader.getDihedralsPeriod(t + 2));
-			dummTorsion.k[2] = reader.getDihedralsForceK(t + 2);
-			dummTorsion.phase[2] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t + 2)));
-		}
-		if (periodicity >= 4) {
-			dummTorsion.period[3] = static_cast<int>(reader.getDihedralsPeriod(t + 3));
-			dummTorsion.k[3] = reader.getDihedralsForceK(t + 3);
-			dummTorsion.phase[3] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t + 3)));
-		}
+		// if (periodicity >= 1) {
+		// 	dummTorsion.period[0] = static_cast<int>(reader.getDihedralsPeriod(t));
+		// 	dummTorsion.k[0] = reader.getDihedralsForceK(t);
+		// 	dummTorsion.phase[0] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t)));
+		// }
+		// if (periodicity >= 2) {
+		// 	dummTorsion.period[1] = static_cast<int>(reader.getDihedralsPeriod(t + 1));
+		// 	dummTorsion.k[1] = reader.getDihedralsForceK(t + 1);
+		// 	dummTorsion.phase[1] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t + 1)));
+		// }
+		// if (periodicity >= 3) {
+		// 	dummTorsion.period[2] = static_cast<int>(reader.getDihedralsPeriod(t + 2));
+		// 	dummTorsion.k[2] = reader.getDihedralsForceK(t + 2);
+		// 	dummTorsion.phase[2] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t + 2)));
+		// }
+		// if (periodicity >= 4) {
+		// 	dummTorsion.period[3] = static_cast<int>(reader.getDihedralsPeriod(t + 3));
+		// 	dummTorsion.k[3] = reader.getDihedralsForceK(t + 3);
+		// 	dummTorsion.phase[3] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t + 3)));
+		// }
+dummTorsion.period.resize(periodicity);
+dummTorsion.k.resize(periodicity);
+dummTorsion.phase.resize(periodicity);
+for (int p = 0; p < periodicity; ++p) {
+    dummTorsion.period[p] = static_cast<int>(reader.getDihedralsPeriod(t + p));
+    dummTorsion.k[p] = reader.getDihedralsForceK(t + p);
+    dummTorsion.phase[p] = static_cast<SimTK::Real>(
+        ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t + p)));
+}
+
 
 		dummTorsions.push_back(dummTorsion);
 	}

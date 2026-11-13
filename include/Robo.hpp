@@ -115,12 +115,12 @@
 #endif
 
 #ifndef DEBUG_MEMORY
-#define DEBUG_MEMORY 1
+#define DEBUG_MEMORY 0
 #endif
 
 
 #ifndef MEMDEBUG
-#define MEMDEBUG 1
+#define MEMDEBUG 0
 #endif
 
 

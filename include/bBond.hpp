@@ -139,9 +139,9 @@ struct DUMM_ANGLE {
 
 struct DUMM_TORSION {
 	// These values are filled according to num (see below)
-	std::array<int, 4> period { 0, 0, 0, 0 };
-	std::array<SimTK::Real, 4> k { 0, 0, 0, 0 };
-	std::array<SimTK::Real, 4> phase { 0, 0, 0, 0 };
+	std::vector<int> period;
+	std::vector<SimTK::Real> k;
+	std::vector<SimTK::Real> phase;
 
 	// How many impropers with these four indices are present here
 	int num = 0; 

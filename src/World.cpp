@@ -131,54 +131,57 @@ void World::generateDummParams(const std::vector<bSpecificAtom>& atoms,
 
 		// Define dihedrals
 		if (!torsion.improper) {
-			switch(torsion.num) {
-				case 1:
-					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						torsion.period[0], torsion.k[0], torsion.phase[0]);
-					break;
-					
-				case 2:
-					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						torsion.period[0], torsion.k[0], torsion.phase[0],
-						torsion.period[1], torsion.k[1], torsion.phase[1]);
-					break;
-
-				case 3:
-					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						torsion.period[0], torsion.k[0], torsion.phase[0],
-						torsion.period[1], torsion.k[1], torsion.phase[1],
-						torsion.period[2], torsion.k[2], torsion.phase[2]);
-					break;
-
-				case 4:
-					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						torsion.period[0], torsion.k[0], torsion.phase[0],
-						torsion.period[1], torsion.k[1], torsion.phase[1],
-						torsion.period[2], torsion.k[2], torsion.phase[2],
-						torsion.period[3], torsion.k[3], torsion.phase[3]);
-					break;
-			}
+			// switch(torsion.num) {
+			// 	case 1:
+			// 		forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+			// 			torsion.period[0], torsion.k[0], torsion.phase[0]);
+			// 		break;
+			// 	case 2:
+			// 		forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+			// 			torsion.period[0], torsion.k[0], torsion.phase[0],
+			// 			torsion.period[1], torsion.k[1], torsion.phase[1]);
+			// 		break;
+			// 	case 3:
+			// 		forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+			// 			torsion.period[0], torsion.k[0], torsion.phase[0],
+			// 			torsion.period[1], torsion.k[1], torsion.phase[1],
+			// 			torsion.period[2], torsion.k[2], torsion.phase[2]);
+			// 		break;
+			// 	case 4:
+			// 		forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+			// 			torsion.period[0], torsion.k[0], torsion.phase[0],
+			// 			torsion.period[1], torsion.k[1], torsion.phase[1],
+			// 			torsion.period[2], torsion.k[2], torsion.phase[2],
+			// 			torsion.period[3], torsion.k[3], torsion.phase[3]);
+			// 		break;
+			// }
+			for (int p = 0; p < torsion.num; ++p) {
+				forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.period[p], torsion.k[p], torsion.phase[p]);
+			}			
 		} else {
 			// Define impropers
-			switch(torsion.num) {
-				case 1:
-					forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						torsion.period[0], torsion.k[0], torsion.phase[0]);
-					break;
-					
-				case 2:
-					forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						torsion.period[0], torsion.k[0], torsion.phase[0],
-						torsion.period[1], torsion.k[1], torsion.phase[1]);
-					break;
-
-				case 3:
-					forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						torsion.period[0], torsion.k[0], torsion.phase[0],
-						torsion.period[1], torsion.k[1], torsion.phase[1],
-						torsion.period[2], torsion.k[2], torsion.phase[2]);
-					break;
-			}
+			// switch(torsion.num) {
+			// 	case 1:
+			// 		forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+			// 			torsion.period[0], torsion.k[0], torsion.phase[0]);
+			// 		break;
+			// 	case 2:
+			// 		forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+			// 			torsion.period[0], torsion.k[0], torsion.phase[0],
+			// 			torsion.period[1], torsion.k[1], torsion.phase[1]);
+			// 		break;
+			// 	case 3:
+			// 		forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+			// 			torsion.period[0], torsion.k[0], torsion.phase[0],
+			// 			torsion.period[1], torsion.k[1], torsion.phase[1],
+			// 			torsion.period[2], torsion.k[2], torsion.phase[2]);
+			// 		break;
+			// }
+			    for (int p = 0; p < torsion.num; ++p) {
+        			forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+            			torsion.period[p], torsion.k[p], torsion.phase[p]);
+    }
 		}
 	}
 }
