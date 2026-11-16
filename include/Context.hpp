@@ -145,11 +145,12 @@ public:
 	void setRequiredNofRounds(int argNofRounds);
 
 	/**	
-	* @brief Set nonbonded method and cutoff distance.
+	* @brief Set nonbonded method and cutoff distance. Set the GBSA scale factor.
 	* @param method NoCutoff = 0, CutoffNonPeriodic = 1, CutoffPeriodic = 2, Ewald = 3, PME = 4, LJPME = 5
 	* @param cutoff Cutoff distance in nanometers.
+	* @param GBSAScaleFactorArg GBSA scale factor (valid range is 0 to 1).
 	*/
-	void setNonbonded(int method, SimTK::Real cutoff);
+	void setNonbonded(int method, SimTK::Real cutoff, SimTK::Real GBSAScaleFactorArg);
 
 	RUN_TYPE getRunType(void) const;
 	void setRunType(RUN_TYPE runTypeArg);
@@ -237,7 +238,7 @@ public:
 
 
 	void setNumThreads(int threads);
-	void setGBSA(SimTK::Real globalScaleFactor);
+	//void setGBSA(SimTK::Real globalScaleFactor);
 	void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
 
 	//void setRootMobilitiesFromFlexFiles(void);

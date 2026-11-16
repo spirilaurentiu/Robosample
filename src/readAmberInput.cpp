@@ -1,6 +1,7 @@
 #include "readAmberInput.hpp"
 #include <assert.h>
 #include <algorithm>
+#include <sstream>
 #include <string>
 #include <cctype>
 
@@ -103,6 +104,9 @@ try
     else if (line.find("LENNARD_JONES_BCOEF") != std::string::npos)
         readLennardJonesBCOEF();
 
+    else if (line.find("FLAG BOX_DIMENSIONS") != std::string::npos)
+        readBoxDimensions();
+
   }
   
   readLennardJonesRVdWEpsilon();
@@ -147,15 +151,55 @@ void AmberReader::readInpcrd(const std::string& inpcrdfile) {
     // Next line contains one or two values
     // The first is the number of atoms present in this file
     // The second, if present, stores the simulation time
-    // We ignore both values
     getline(inpcrd, line);
+
+    NumberAtoms2 = 0;
+    std::istringstream headerStream(line);
+    if (!(headerStream >> NumberAtoms2) || NumberAtoms2 < 0) {
+      printf("Error in inpcrd file : invalid atom count in %s\n", inpcrdfile.c_str());
+      exit(1);
+    }
+
+    AtomsXcoord.clear();
+    AtomsYcoord.clear();
+    AtomsZcoord.clear();
+    Rst7BoxDimensions.clear();
 
     // Read the coordinates
     SimTK::Real x, y, z;
-    while(inpcrd >> x >> y >> z) {
+    int atomCount = 0;
+    while(atomCount < NumberAtoms2 && (inpcrd >> x >> y >> z)) {
       AtomsXcoord.push_back(x);
       AtomsYcoord.push_back(y);
       AtomsZcoord.push_back(z);
+      ++atomCount;
+    }
+
+    if (atomCount != NumberAtoms2) {
+      printf("Error in inpcrd file : expected %d atoms, read %d in %s\n",
+             NumberAtoms2, atomCount, inpcrdfile.c_str());
+      exit(1);
+    }
+
+    // Read optional trailing velocities (3 * NumberAtoms2) and/or 6-value box record [a, b, c, alpha, beta, gamma]
+    SimTK::Real lastSix[6] = {0, 0, 0, 0, 0, 0};
+    std::size_t trailingCount = 0;
+    SimTK::Real trailingVal;
+    while (inpcrd >> trailingVal) {
+      lastSix[trailingCount % 6] = trailingVal;
+      ++trailingCount;
+    }
+
+    const std::size_t velFloats = static_cast<std::size_t>(NumberAtoms2) * 3;
+    if (trailingCount == 6 || trailingCount == velFloats + 6) {
+      Rst7BoxDimensions.reserve(6);
+      const std::size_t startIdx = trailingCount - 6;
+      for (std::size_t i = 0; i < 6; ++i) {
+        Rst7BoxDimensions.push_back(lastSix[(startIdx + i) % 6]);
+      }
+    } else if (trailingCount != 0 && trailingCount != velFloats) {
+      printf("Warning in inpcrd file : unexpected %zu trailing values in %s\n",
+             trailingCount, inpcrdfile.c_str());
     }
 
     inpcrd.close();
@@ -198,6 +242,8 @@ void AmberReader::readPointers(){
       NumberBondsTypes = FlagPointers[15];
       NumberAnglesTypes = FlagPointers[16];
       NumberDihedralsTypes = FlagPointers[17];
+
+      IfBox = FlagPointers[27];
 
   }
 
@@ -604,7 +650,17 @@ void AmberReader::readPointers(){
       }
     }
 
-
+    void AmberReader::readBoxDimensions(){
+      getline(prmtop, line);
+      BoxDimensions.clear();
+      for(global_i = 0; global_i < 4; global_i++)
+      {
+        if (prmtop >> temp_val)
+        {
+          BoxDimensions.push_back(temp_val);
+        }
+      }
+    }
 
 
 
@@ -718,6 +774,28 @@ int AmberReader::getDihedralsAtomsIndex(int dihIndex, int atomIndx)
 {
 	assert( atomIndx > 0 && atomIndx < 4 );
 	return DihedralsAtomsIndex[ dihIndex ][ atomIndx ];
+}
+
+int AmberReader::getIfBox() const {
+  return IfBox;
+}
+
+const std::vector<SimTK::Real>& AmberReader::getBoxDimensions() const {
+  return BoxDimensions;
+}
+
+SimTK::Real AmberReader::getBoxDimensions(int p) const {
+  assert(p >= 0 && p < static_cast<int>(BoxDimensions.size()));
+  return BoxDimensions[p];
+}
+
+const std::vector<SimTK::Real>& AmberReader::getRst7BoxDimensions() const {
+  return Rst7BoxDimensions;
+}
+
+SimTK::Real AmberReader::getRst7BoxDimensions(int p) const {
+  assert(p >= 0 && p < static_cast<int>(Rst7BoxDimensions.size()));
+  return Rst7BoxDimensions[p];
 }
 
 //HOREA

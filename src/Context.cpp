@@ -8913,30 +8913,72 @@ void Context::setNumThreads(int threads) {
 }
 
 /*! <!--
-* @brief Set nonbonded method and cutoff distance.
+* @brief Set nonbonded method and cutoff distance. Set the GBSA scale factor.
 * @param method NoCutoff = 0, CutoffNonPeriodic = 1, CutoffPeriodic = 2, Ewald = 3, PME = 4, LJPME = 5
 * @param cutoff Cutoff distance in nanometers.
+* @param GBSAScaleFactorArg GBSA scale factor (valid range is 0 to 1).
  --> */
-void Context::setNonbonded(int method, SimTK::Real cutoff) {
-
-	nonbondedMethod = method;
-
-	if (cutoff < 0) {
-		std::cerr << "Invalid cutoff requested (negative value). Default cutoff of 1.2 nm will be used instead." << std::endl;
-		nonbondedCutoff = 1.2;
-    }else{
-		nonbondedCutoff = cutoff;
+ void Context::setNonbonded(int method,
+                           SimTK::Real cutoff,
+                           SimTK::Real GBSAScaleFactorArg)
+{
+    if (!worlds.empty()) {
+        throw std::logic_error(
+            "Context::setNonbonded must be called before addWorld(); "
+            "existing worlds would not be updated.");
     }
+
+    // Note: DuMMForceFieldSubsystem::setNonbondedMethod currently only accepts 0..1
+    // unless widened for PBC (2..5).
+    if (method < 0 || method > 5) {
+        throw std::invalid_argument(
+            "Context::setNonbonded: invalid method " + std::to_string(method) +
+            " (expected 0=NoCutoff .. 5=LJPME).");
+    }
+
+    if (!std::isfinite(cutoff) || cutoff < 0 || (method != 0 && cutoff <= 0)) {
+        throw std::invalid_argument(
+            "Context::setNonbonded: invalid cutoff (must be finite, >= 0, "
+            "and > 0 when using a cutoff/periodic method).");
+    }
+
+    if (!std::isfinite(GBSAScaleFactorArg) || GBSAScaleFactorArg < 0.0 || GBSAScaleFactorArg > 1.0) {
+        throw std::invalid_argument(
+            "Context::setNonbonded: gbsaScaleFactor must be finite and in [0, 1].");
+    }
+
+    // Implicit solvent (GBSA) is incompatible with periodic boundary conditions
+    if (method >= 2 && GBSAScaleFactorArg > 0.0) {
+        throw std::invalid_argument(
+            "Context::setNonbonded: GBSA (gbsaScaleFactor > 0) cannot be "
+            "combined with periodic nonbonded methods (method >= 2).");
+    }
+
+    nonbondedMethod = method;
+    nonbondedCutoff = cutoff;
+    gbsaGlobalScaleFactor = GBSAScaleFactorArg;
 }
 
-void Context::setGBSA(SimTK::Real globalScaleFactor) {
-	if (globalScaleFactor < 0 && globalScaleFactor > 1) {
-		std::cerr << "Invalid GBSA scale factor (valid range is 0 to 1). Default value of 0.0 will be used instead." << std::endl;
-		gbsaGlobalScaleFactor = 0.0;
-	}else{
-		gbsaGlobalScaleFactor = globalScaleFactor;
-	}
-}
+// void Context::setNonbonded(int methodIndex, SimTK::Real cutoff) {
+// 	nonbondedMethod = methodIndex;
+// 	if (cutoff < 0) {
+// 		std::cerr << "Invalid cutoff requested (negative value). Default cutoff of 1.2 nm will be used instead." << std::endl;
+// 		nonbondedCutoff = 1.2;
+//     }else{
+// 		nonbondedCutoff = cutoff;
+//     }
+// }
+/*! <!--
+* @brief Set the GBSA scale factor.
+ --> */
+// void Context::setGBSA(SimTK::Real GBSAScaleFactorArg) {
+// 	if (GBSAScaleFactorArg < 0 || GBSAScaleFactorArg > 1) {
+// 		std::cerr << "Invalid GBSA scale factor (valid range is 0 to 1). Default value of 0.0 will be used instead." << std::endl;
+// 		gbsaGlobalScaleFactor = 0.0;
+// 	}else{
+// 		gbsaGlobalScaleFactor = GBSAScaleFactorArg;
+// 	}
+// }
 
 void Context::setForceFieldScaleFactors(SimTK::Real globalScaleFactor) {
 	useAmberForceFieldScaleFactors = false;

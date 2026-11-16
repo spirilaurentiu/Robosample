@@ -122,6 +122,12 @@ public:
     const std::string& getResidueLabel(int i) const;
     int getResidueIndex(int i) const;
 
+    int getIfBox() const;
+    const std::vector<SimTK::Real>& getBoxDimensions() const;
+    SimTK::Real getBoxDimensions(int p) const;
+    const std::vector<SimTK::Real>& getRst7BoxDimensions() const;
+    SimTK::Real getRst7BoxDimensions(int p) const;
+
     // Other
     // SimTK::Real getDihedralsSCEE(int p);
     // SimTK::Real getDihedralsSCNB(int p);
@@ -206,6 +212,9 @@ private:
     int NumberAnglesTypes;
     int NumberDihedralsTypes;
     int LennardJonesTypes;
+    int IfBox = 0;
+    std::vector<SimTK::Real> BoxDimensions;
+    std::vector<SimTK::Real> Rst7BoxDimensions;
 
     std::vector<int> AtomsTypesIndex;
     std::vector<SimTK::Real> AtomsScreenGBIS;
@@ -277,4 +286,5 @@ private:
 
     void readNumberExcludedAtomsList();
     void readExcludedAtomsList();
+    void readBoxDimensions();
 };
