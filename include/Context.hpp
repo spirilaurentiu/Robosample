@@ -150,13 +150,15 @@ public:
 	* @param cutoff Cutoff distance in nanometers.
 	* @param GBSAScaleFactorArg GBSA scale factor (valid range is 0 to 1).
 	*/
-	void setNonbonded(int method, SimTK::Real cutoff, SimTK::Real GBSAScaleFactorArg);
+	void setNonbonded(int method = 0, SimTK::Real cutoff = 1.2, SimTK::Real GBSAScaleFactorArg = 0.0);
+
+	void setIsPBC(int isPBC_arg){this->IfBox = isPBC_arg;}
+	void setPBCBox(SimTK::Real PBC_boxLength_Xarg, SimTK::Real PBC_boxLength_Yarg, SimTK::Real PBC_boxLength_Zarg,
+			       SimTK::Real PBC_angle_alphaarg, SimTK::Real PBC_angle_betaarg, SimTK::Real PBC_angle_gammaarg);
 
 	RUN_TYPE getRunType(void) const;
 	void setRunType(RUN_TYPE runTypeArg);
 	RUN_TYPE setRunType(const std::string& runTypeArgStr);
-
-
 
 	/**	
 	* @brief Read Amber files.
@@ -1041,6 +1043,7 @@ private:
 	void synthesizeMissingBends();
 
 	void loadTorsions(const AmberReader& reader);
+	void loadRstBoxDimensions(const AmberReader& reader);
 
 	void setAtomsCompounds();
 	void addBiotypes();
@@ -1057,6 +1060,16 @@ private:
 
 	bool useAmberForceFieldScaleFactors = true;
 	SimTK::Real globalForceFieldScaleFactor = 1.0; // Used in place of Amber scaling (not default)
+
+    int IfBox = 0;
+
+	double PBC_angle_alpha = 0;
+	double PBC_angle_beta = 0;
+	double PBC_angle_gamma = 0;
+
+	double PBC_boxLength_X = 0;
+	double PBC_boxLength_Y = 0;
+	double PBC_boxLength_Z = 0;
 
 	// Random number generator
 	Random32 randomEngine;

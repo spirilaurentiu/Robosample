@@ -95,7 +95,11 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("setPrintFreq", &Context::setPrintFreq, "Set the print frequency.")
         .def("setRstFreq", &Context::setRstFreq, "Set the restart frequency.")
         .def("getRstFreq", &Context::getRstFreq, "Get the restart frequency.")
-        .def("setNonbonded", &Context::setNonbonded, "Set nonbonded method, cutoff, and GBSA scale factor.")
+        .def("setNonbonded", &Context::setNonbonded,
+            py::arg("method") = 0,
+            py::arg("cutoff") = 1.2,
+            py::arg("GBSAScaleFactorArg") = 0.0,
+            "Set nonbonded method, cutoff, and GBSA scale factor.")
         //.def("setGBSA", &Context::setGBSA, "Set GBSA.")
         .def("loadAmberSystem", &Context::loadAmberSystem, "Load an Amber system.")
         .def("constrainBond", &Context::constrainBond,

@@ -114,8 +114,8 @@ void testAlanineDipeptide(int seed) {
 	// c.setNonbonded(0, 1.2); // default - set for each world
 	c.setPdbRestartFreq(0); // WRITE_PDBS
 	c.setPrintFreq(50); // PRINT_FREQ
-	c.setNonbonded(0, 1.2);
-	c.setGBSA(1);
+	c.setNonbonded(0, 1.2, 1.0);
+	//c.setGBSA(1);
 	c.setVerbose(true);
 
 	c.loadAmberSystem("alanine-dipeptide/alanine-dipeptide.prmtop", "alanine-dipeptide/alanine-dipeptide.rst7");
@@ -493,7 +493,7 @@ int main(int argc, char **argv)
 	// Set nonbonded method and cutoff
 	context.setNonbonded(0, 1.2);
 
-	context.setGBSA(0.0);
+	//context.setGBSA(0.0);
 
 	context.setAtomMasses();
 

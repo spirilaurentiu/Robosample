@@ -164,8 +164,12 @@ void Context::PrintAtomsDebugInfo(void){
 	return flexibilities;
  }
 
- bool Context::addReplicasAndLoadCoordinates(const std::string& prmtop, const std::string& restartDir, int nofReplicas) {
-    std::vector<std::string> inpcrdFNs;
+ bool Context::addReplicasAndLoadCoordinates(
+	const std::string& prmtop,
+	const std::string& restartDir,
+	int nofReplicas) {
+    
+	std::vector<std::string> inpcrdFNs;
 
 	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::addReplicasAndLoadCoordinates BEGIN");}
 
@@ -617,6 +621,46 @@ for (int p = 0; p < periodicity; ++p) {
 	}
 }
 
+/*!
+ * @brief Load box dimensions from Amber restart file
+ * @param reader AmberReader object containing the restart file data
+ */
+void Context::loadRstBoxDimensions(const AmberReader& reader) {
+
+	this->IfBox = reader.getIfBox();
+
+    if (!this->IfBox) {
+        return;
+    }
+
+	// Check if the box information is available in the restart file
+	if (reader.getRst7BoxDimensions().size() != 6) {
+		std::cerr << "Amber restart file does not contain valid box dimensions." << std::endl;
+		return;
+	}
+
+	if (IfBox) {
+		PBC_boxLength_X = reader.getRst7BoxDimensions(0) * OpenMM::NmPerAngstrom;
+		PBC_boxLength_Y = reader.getRst7BoxDimensions(1) * OpenMM::NmPerAngstrom;
+		PBC_boxLength_Z = reader.getRst7BoxDimensions(2) * OpenMM::NmPerAngstrom;
+
+		PBC_angle_alpha = reader.getRst7BoxDimensions(3) * SimTK_DEGREE_TO_RADIAN;
+		PBC_angle_beta = reader.getRst7BoxDimensions(4) * SimTK_DEGREE_TO_RADIAN;
+		PBC_angle_gamma = reader.getRst7BoxDimensions(5) * SimTK_DEGREE_TO_RADIAN;
+	}
+}
+
+void Context::setPBCBox(
+	SimTK::Real PBC_boxLength_Xarg, SimTK::Real PBC_boxLength_Yarg, SimTK::Real PBC_boxLength_Zarg,
+	SimTK::Real PBC_angle_alphaarg, SimTK::Real PBC_angle_betaarg, SimTK::Real PBC_angle_gammaarg)
+{
+	PBC_boxLength_X = PBC_boxLength_Xarg;
+	PBC_boxLength_Y = PBC_boxLength_Yarg;
+	PBC_boxLength_Z = PBC_boxLength_Zarg;
+	PBC_angle_alpha = PBC_angle_alphaarg;
+	PBC_angle_beta = PBC_angle_betaarg;
+	PBC_angle_gamma = PBC_angle_gammaarg;
+}
 
 void Context::PrintBond(bBond& bond)
 {
@@ -748,6 +792,8 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem synthesizeMissingBends");}
 	loadTorsions(reader);  // DUMM_TORSIONlist for generateParams	
 	if(DEBUG_MEMORY == 1){stdcout_memdebug("Context::loadAmberSystem loadTorsions");}
+
+	loadRstBoxDimensions(reader);
 
 	if(DEBUG_GRAPH == 1){
 		std::cout << "Context::loadAmberSystem loadAtoms/Bonds/Angles/Torsions" << std::endl << std::flush;
@@ -894,11 +940,11 @@ void Context::Initialize() {
 	
 	//std::cout << "DEBUG nofReplicas " << nofReplicas << std::endl << std::flush;
 
-	for(int k = 0; k < nofReplicas; k++){
-		replicas[k].reallocZMatrixBAT();
-		replicas[k].calcZMatrixBAT(firstWorldsAtomsLocations);
-		//replicas[k].PrintZMatrixBAT();
-	}
+    for(int k = 0; k < nofReplicas; k++){
+        replicas[k].reallocZMatrixBAT();
+        replicas[k].calcZMatrixBAT(replicas[k].getAtomsLocationsInGround());
+        //replicas[k].PrintZMatrixBAT();
+    }
 
 	std::cout << "DEBUG: Context::Initialize 0.4: Z-matrix BAT calculated for all replicas" << std::endl << std::flush;
 	
@@ -1020,17 +1066,17 @@ std::string Context::OMMRef_initialize(void)
                     // ----------------------------------------------
                     #ifdef __PBC__ // _pbc_
 
-						double angle_alpha = 1.5708;
-						double angle_beta = 1.5708;
-						double angle_gamma = 1.5708;
+						PBC_angle_alpha = 1.5708;
+						PBC_angle_beta = 1.5708;
+						PBC_angle_gamma = 1.5708;
 
-						double boxLength_X = 10; // Example box length in angstroms
-						double boxLength_Y = 10; // Example box length in angstroms
-						double boxLength_Z = 10; // Example box length in angstroms
+						PBC_boxLength_X = 10;
+						PBC_boxLength_Y = 10;
+						PBC_boxLength_Z = 10;
 
 						auto periodicBoxVectors = computePeriodicBoxVectors_Context(
-							boxLength_X, boxLength_Y, boxLength_Z,
-							angle_alpha, angle_beta, angle_gamma);
+							PBC_boxLength_X, PBC_boxLength_Y, PBC_boxLength_Z,
+							PBC_angle_alpha, PBC_angle_beta, PBC_angle_gamma);
 
 						OpenMM::Vec3 pbcVector_X = std::get<0>(periodicBoxVectors);
 						OpenMM::Vec3 pbcVector_Y = std::get<1>(periodicBoxVectors);
@@ -1626,9 +1672,18 @@ void Context::addWorld(
 	}
 
 	// Set the nonbonded method and cutoff
+	if (nonbondedMethod > 1 && !IfBox){
+		throw std::runtime_error("Periodic nonbonded method requires PBC box dimensions.");
+	}
 	worlds.back().updForceField()->setNonbondedMethod(nonbondedMethod);
 	worlds.back().updForceField()->setNonbondedCutoff(nonbondedCutoff);
 
+	if(IfBox) {
+		worlds.back().updForceField()->setPBCBox(
+			PBC_boxLength_X, PBC_boxLength_Y, PBC_boxLength_Z,
+			PBC_angle_alpha, PBC_angle_beta, PBC_angle_gamma);
+	}
+	
 	// If requested, add Fixman torque as an additional force subsystem
 	if (fixmanTorque) {
 		worlds.back().addFixmanTorque();
@@ -4164,28 +4219,56 @@ void Context::setNofReplicas(const size_t& argNofReplicas)
  * <!-- Adds a replica to the vector of Replica objects and sets the coordinates
  * of the replica's atomsLocations -->
 */
+// void Context::addReplica(int index)
+// {
+// 	// Add replica and the vector of worlds
+// 	replicas.emplace_back(Replica(index
+// 		, atoms
+// 		, roots
+// 		, topologies
+// 		, internCoords
+// 		, zMatrixTable));
+// 	// Set replicas coordinates
+//     // std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> referenceAtomsLocationsFromFile;
+// 	// replicas.back().setAtomsLocationsInGround(referenceAtomsLocationsFromFile);
+// 	// replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocationsFromFile);
+// 	const auto& referenceAtomsLocations = worlds[0].getCurrentAtomsLocationsInGround();
+// 	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
+// 	replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocations);
+// 	// Increment nof replicas
+// 	nofReplicas++;
+// }
 void Context::addReplica(int index)
 {
-	// Add replica and the vector of worlds
-	replicas.emplace_back(Replica(index
-		, atoms
-		, roots
-		, topologies
-		, internCoords
-		, zMatrixTable));
+    // Add replica and the vector of worlds
+    replicas.emplace_back(Replica(index
+        , atoms
+        , roots
+        , topologies
+        , internCoords
+        , zMatrixTable));
 
-	// Set replicas coordinates
+    // Build coordinates from the currently loaded atom coordinates in topologies
+    std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> referenceAtomsLocations;
+    referenceAtomsLocations.reserve(topologies.size());
 
-    // std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> referenceAtomsLocationsFromFile;
-	// replicas.back().setAtomsLocationsInGround(referenceAtomsLocationsFromFile);
-	// replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocationsFromFile);
+    for (auto& topology : topologies) {
+        std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
+        currentTopologyInfo.reserve(topology.subAtomList.size());
 
-	const auto& referenceAtomsLocations = worlds[0].getCurrentAtomsLocationsInGround();
-	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
-	replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocations);
+        for (auto& atom : topology.subAtomList) {
+            SimTK::Vec3 location(atom.getX(), atom.getY(), atom.getZ());
+            currentTopologyInfo.emplace_back(&atom, location);
+        }
 
-	// Increment nof replicas
-	nofReplicas++;
+        referenceAtomsLocations.emplace_back(std::move(currentTopologyInfo));
+    }
+
+    replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
+    replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocations);
+
+    // Increment nof replicas
+    nofReplicas++;
 }
 
 void Context::addThermodynamicState(
@@ -8942,9 +9025,9 @@ void Context::setNumThreads(int threads) {
             "and > 0 when using a cutoff/periodic method).");
     }
 
-    if (!std::isfinite(GBSAScaleFactorArg) || GBSAScaleFactorArg < 0.0 || GBSAScaleFactorArg > 1.0) {
+    if (!std::isfinite(GBSAScaleFactorArg) || GBSAScaleFactorArg < 0.0 || GBSAScaleFactorArg >= 4.0) {
         throw std::invalid_argument(
-            "Context::setNonbonded: gbsaScaleFactor must be finite and in [0, 1].");
+            "Context::setNonbonded: gbsaScaleFactor must be finite and in [0, 4].");
     }
 
     // Implicit solvent (GBSA) is incompatible with periodic boundary conditions
@@ -8953,6 +9036,12 @@ void Context::setNumThreads(int threads) {
             "Context::setNonbonded: GBSA (gbsaScaleFactor > 0) cannot be "
             "combined with periodic nonbonded methods (method >= 2).");
     }
+
+	// Don't call periodic if ifBox is not set
+	if (!IfBox && method >= 2) {
+		throw std::invalid_argument(
+			"Context::setNonbonded: periodic nonbonded methods (method >= 2) require box information (ifBox must be true).");
+	}
 
     nonbondedMethod = method;
     nonbondedCutoff = cutoff;
@@ -9094,7 +9183,7 @@ Context::calcZMatrixTable(void)
 			continue;
 		}
 
-		std::cout << "BONDS " << BONDS[0].first << " " << BONDS[0].second << std::endl;
+		//std::cout << "BONDS " << BONDS[0].first << " " << BONDS[0].second << std::endl;
 		addZMatrixTableRow(std::vector<int> {
 			BONDS[0].first,
 			BONDS[0].second,
