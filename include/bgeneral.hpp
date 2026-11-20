@@ -509,6 +509,14 @@ void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header
  */
 //void PrintTransform(SimTK::Transform T, int decimal_places, std::string header = "unknown", std::string rowPrefix = "");
 
+/**  @brief Compute the circular difference between two angles with a given period.
+ *
+ * @param angle1 The first angle.
+ * @param angle2 The second angle.
+ * @param period The period of the circular domain (e.g., 2*Pi for full circle).
+ * @return The circular difference between angle1 and angle2.
+ */
+SimTK::Real bCircularDiff(SimTK::Real angle1, SimTK::Real angle2, SimTK::Real period);
 /*
  * Angle
  */

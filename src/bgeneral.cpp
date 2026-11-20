@@ -962,8 +962,16 @@ void PrintMat33(SimTK::Mat33 M, int decimal_places,
 //     }
 // }
 
-/*! <-- Angle
-  --> */
+/*! <-- Circular difference --> */
+SimTK::Real bCircularDiff(SimTK::Real angle1, SimTK::Real angle2, SimTK::Real period)
+{
+    SimTK::Real diff = std::fmod(angle2 - angle1, period);
+    if (diff < -period / 2) diff += period;
+    if (diff > period / 2) diff -= period;
+    return diff;
+}
+
+/*! <-- Angle --> */
 SimTK::Real bAngle(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2)
 {
 	SimTK::Vec3 v01 = pos1 - pos0;
@@ -974,9 +982,7 @@ SimTK::Real bAngle(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2)
 	return std::acos(angleCos);
 }
 
-/*! <--
- * Dihedral angle
-  --> */
+/*! <-- Dihedral angle --> */
 SimTK::Real bDihedral(
 SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2, SimTK::Vec3& pos3)
 {

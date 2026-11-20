@@ -9453,7 +9453,7 @@ Context::calcInternalBATJacobianLog(void)
 
 
 /*!
- * <!-- zmatrixbat_ Get BAT coordinates modifyable by a selected world -->
+ * <!-- zmatrixbat_ Get BAT coordinates modifiable by a selected world -->
 */
 void
 Context::addSubZMatrixBATsToWorld(
@@ -9469,16 +9469,63 @@ Context::addSubZMatrixBATsToWorld(
 
 	// Iterate ZMatrix and bonds
 	int prevMolIx = -1;
+	int BOIx = 0;
 	size_t zMatCnt = 0;
 	for (const auto& row : zMatrixTable) {
 
 		std::vector<SimTK::Real>& BATrow = updZMatrixBATRow(zMatCnt);
 		std::vector<SimTK::Real>& replicaBATrow = replicas[replicaIx].updZMatrixBATRow(zMatCnt);
 
-		assert( (std::abs(BATrow[0] - replicaBATrow[0]) < 0.00001 || std::isnan(BATrow[0])) &&
-				(std::abs(BATrow[1] - replicaBATrow[1]) < 0.00001 || std::isnan(BATrow[1])) &&
-				(std::abs(BATrow[2] - replicaBATrow[2]) < 0.00001 || std::isnan(BATrow[2])) &&
-				"BATrow and replicaBATrow not equal.");
+		bool hasAngle = (row[2] >= 0);
+		bool hasTorsion = hasAngle && (row[3] >= 0);
+
+		bool distanceIsNan = std::isnan(BATrow[0]);
+		bool angleIsNan = std::isnan(BATrow[1]) && hasAngle;
+		bool torsionIsNan = std::isnan(BATrow[2]) && hasTorsion;
+
+		bool rDistanceIsNan = std::isnan(replicaBATrow[0]);
+		bool rAngleIsNan = std::isnan(replicaBATrow[1]) && hasAngle;
+		bool rTorsionIsNan = std::isnan(replicaBATrow[2]) && hasTorsion;
+
+		bool assertNaNs = !(
+			(distanceIsNan || rDistanceIsNan) ||
+			(angleIsNan || rAngleIsNan) ||
+			(torsionIsNan || rTorsionIsNan));
+
+		if(!assertNaNs){
+			std::cerr << "distanceIsNan: " << distanceIsNan << ", rDistanceIsNan: " << rDistanceIsNan << std::endl;
+			std::cerr << "angleIsNan: " << angleIsNan << ", rAngleIsNan: " << rAngleIsNan << std::endl;
+			std::cerr << "torsionIsNan: " << torsionIsNan << ", rTorsionIsNan: " << rTorsionIsNan << std::endl;
+
+			assert(assertNaNs && "ZMatrix contains NaNs.");
+		}
+
+		SimTK::Real distanceDiff = BATrow[0] - replicaBATrow[0];
+		SimTK::Real angleDiff = BATrow[1] - replicaBATrow[1];
+		SimTK::Real torsionDiff = bCircularDiff(BATrow[2], replicaBATrow[2], SimTK::Pi * 2);
+
+		SimTK::Real distanceDiffAbs = std::abs(distanceDiff);
+		SimTK::Real angleDiffAbs = std::abs(angleDiff);
+		SimTK::Real torsionDiffAbs = std::abs(torsionDiff);
+
+		bool angleOk = hasAngle
+			? (angleDiffAbs < ANGLE_DIFF_TOLL)
+			: (std::isnan(BATrow[1]) && std::isnan(replicaBATrow[1]));
+		bool torsionOk = hasTorsion
+			? (torsionDiffAbs < TORSION_DIFF_TOLL)
+			: (std::isnan(BATrow[2]) && std::isnan(replicaBATrow[2]));
+
+		// Assert and print
+		bool assertCondition = (distanceDiffAbs < BOND_DIFF_TOLL) && angleOk && torsionOk;
+
+		if(!assertCondition){ // print debug information
+			std::cerr << "distanceDiffAbs: " << distanceDiffAbs << std::endl;
+			std::cerr << "angleDiffAbs: " << angleDiffAbs << std::endl;
+			std::cerr << "torsionDiffAbs: " << torsionDiffAbs << std::endl;
+			std::cerr << "BATrow and replicaBATrow not equal." << std::endl << std::flush;
+		}
+
+		assert( assertCondition && "BATrow and replicaBATrow not equal.");
 
 		// scout("BATrow_ref") <<" ";
 		// for (SimTK::Real BATvalue : BATrow) {
@@ -9501,7 +9548,6 @@ Context::addSubZMatrixBATsToWorld(
 		Topology& topology = topologies[childMolIx];
 
 		// Iterate BONDS and get bond // ======================================
-		int BOIx;
 		if(prevMolIx != childMolIx){
 			BOIx = 0;
 		}

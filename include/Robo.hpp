@@ -99,6 +99,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
+#include <numbers> // C++20 for std::numbers::pi
 
 #include "bgeneral.hpp"
 #include "readAmberInput.hpp"
@@ -118,11 +119,21 @@
 #define DEBUG_MEMORY 0
 #endif
 
-
 #ifndef MEMDEBUG
 #define MEMDEBUG 0
 #endif
 
+#ifndef BOND_DIFF_TOLL
+#define BOND_DIFF_TOLL 0.00001
+#endif
+
+#ifndef ANGLE_DIFF_TOLL
+#define ANGLE_DIFF_TOLL 0.0001
+#endif
+
+#ifndef TORSION_DIFF_TOLL
+#define TORSION_DIFF_TOLL 0.0001
+#endif
 
 // #ifdef DEBUG_SPEED
 // #define TRACE(STR) printf("%s", STR);
