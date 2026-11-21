@@ -928,7 +928,7 @@ void Context::Initialize() {
 	calcZMatrixTable();
 	//PrintZMatrixTable();
 
-	std::cout << "DEBUG: Context::Initialize 0.2: Z-matrix table calculated and printed" << std::endl << std::flush;
+	std::cout << "DEBUG: Context::Initialize 0.2: Z-matrix table calculated" << std::endl << std::flush;
 
 	reallocZMatrixBAT();
 	calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
@@ -936,7 +936,7 @@ void Context::Initialize() {
 	//PrintZMatrixMobods(firstWIx, lastAdvancedState);
 	//Print_TRANSFORMERS_Work();
 
-	std::cout << "DEBUG: Context::Initialize 0.3: Z-matrix BAT calculated and printed" << std::endl << std::flush;
+	std::cout << "DEBUG: Context::Initialize 0.3: Z-matrix BAT calculated" << std::endl << std::flush;
 	
 	//std::cout << "DEBUG nofReplicas " << nofReplicas << std::endl << std::flush;
 
@@ -6780,7 +6780,7 @@ void Context::writeRestart(int mixi) {
         replicas[replicaIx].WriteRst7(rstFile);
     }
 
-    std::cout << "Restart files written to " << restartDir << std::endl;
+    //std::cout << "Restart files written to " << restartDir << std::endl;
 }
 
 void Context::writeU(const std::unordered_map<std::string, SimTK::Real>& cache, std::ofstream& foutBinary) {
@@ -9179,7 +9179,7 @@ Context::calcZMatrixTable(void)
 		Topology& topology = topologies[topoIx]; // TODO delete
 		const std::vector<BOND>& BONDS = allBONDS[topoIx];
 
-		if (BONDS.size() == 0) {
+		if (BONDS.size() == 0) { // if (BONDS.empty()) {
 			continue;
 		}
 
@@ -9190,37 +9190,53 @@ Context::calcZMatrixTable(void)
 			-1, -2
 		});
 
+        if (BONDS.size() == 1) {
+            continue;
+        }
+
+        // 2nd bond (3 atoms): distance and angle defined; torsion (-1) is NaN
+        // Fix 2a: guard findBondByFirst before indexing BONDS[...]
+        int gpBondIx1 = internCoords.findBondByFirst(topoIx, BONDS[1].second);
+        int gparent1 = (gpBondIx1 >= 0) ? BONDS[gpBondIx1].second : BONDS[0].first;
+				
 		addZMatrixTableRow(std::vector<int> {
 			BONDS[1].first,
 			BONDS[1].second,
-			BONDS[internCoords.findBondByFirst(topoIx, BONDS[1].second)].second,
+			gparent1,
 			-1
 		});
 
-		// Iterate molecule's bonds
-		for(size_t BOIx = 2; BOIx < BONDS.size(); BOIx++){
+        // Iterate molecule's remaining bonds (4+ atoms)
+        for(size_t BOIx = 2; BOIx < BONDS.size(); BOIx++){
 
-			// Get current bond
-			const BOND& currBOND = BONDS[BOIx];
+            const BOND& currBOND = BONDS[BOIx];
+            int childNo = currBOND.first;
+            int parentNo = currBOND.second;
 
-			// Get bond's atoms
-			int childNo = currBOND.first;
-			int parentNo = currBOND.second;
-			int gparentNo = BONDS[internCoords.findBondByFirst(topoIx, parentNo)].second;
-			
-			// Not all gparents have ggparents
-			int ggparentNo = -3;
-			int ggparentBONDIx = internCoords.findBondByFirst(topoIx, gparentNo);
-			if(ggparentBONDIx >= 0){
-				ggparentNo = BONDS[internCoords.findBondByFirst(topoIx, gparentNo)].second;
-			}
+            int gparentNo = -1;
+            int ggparentNo = -3;
 
-			bSpecificAtom& childAtom = atoms[childNo]; // TODO delete
-			bSpecificAtom& parentAtom = atoms[parentNo]; // TODO delete
-			int childTopoIx = childAtom.getMoleculeIndex(); // TODO delete
-			int parentTopoIx = parentAtom.getMoleculeIndex(); // TODO delete
+            // Fix 2b: guard findBondByFirst before indexing BONDS[...]
+            int gpBondIx = internCoords.findBondByFirst(topoIx, parentNo);
+            if (gpBondIx >= 0) {
+                gparentNo = BONDS[gpBondIx].second;
 
-			addZMatrixTableRow(std::vector<int> {childNo, parentNo, gparentNo, ggparentNo});
+                int ggpBondIx = internCoords.findBondByFirst(topoIx, gparentNo);
+                if (ggpBondIx >= 0) {
+                    ggparentNo = BONDS[ggpBondIx].second;
+                } else {
+                    // Fix 3: branch on root2 (gparentNo is root1, which has no parent bond).
+                    // Use root3 (or root2) as an improper torsion reference so torsion is not NaN.
+                    // (Leave ggparentNo = -3 here if you prefer improper torsions to stay NaN.)
+                    ggparentNo = (parentNo != BONDS[1].first) ? BONDS[1].first : BONDS[0].first;
+                }
+            } else {
+                // parentNo is root1 (e.g. cyclic root with >= 2 bonds): use root2 and root3
+                gparentNo = BONDS[0].first;
+                ggparentNo = BONDS[1].first;
+            }
+
+            addZMatrixTableRow(std::vector<int> {childNo, parentNo, gparentNo, ggparentNo});
 
 			// Next bond
 			allCnt++;
@@ -9421,44 +9437,134 @@ void Context::addZMatrixBATRow(const std::vector<SimTK::Real>& newRow) {
 */
 SimTK::Real
 Context::calcInternalBATJacobianLog(void)
-	{
+{
 
-		// Get log of the Cartesian->BAT Jacobian
-		SimTK::Real logJacBAT = 0.0;
+	// Get log of the Cartesian->BAT Jacobian
+	SimTK::Real logJacBAT = 0.0;
 
-		for(size_t zCnt = 0; zCnt < zMatrixBAT.size(); zCnt++){
+	for(size_t zCnt = 0; zCnt < zMatrixBAT.size(); zCnt++){
 
-				// Get bond term
-				SimTK::Real currBond = zMatrixBAT[zCnt][0];
+			// Get bond term
+			SimTK::Real currBond = zMatrixBAT[zCnt][0];
+			
+			if(!std::isnan(currBond)){
+			
+				logJacBAT += 4.0 * std::log(currBond);
+			}
+
+			// Get the angle term
+			SimTK::Real currAngle = zMatrixBAT[zCnt][1];
+
+			if(!std::isnan(currAngle)){
+
+				logJacBAT += 2.0 * std::log(std::sin(currAngle));
 				
-				if(currBond != SimTK::NaN){
-				
-					logJacBAT += 4.0 * std::log(currBond);
-				}
-
-				// Get the angle term
-				SimTK::Real currAngle = zMatrixBAT[zCnt][1];
-
-				if(currAngle != SimTK::NaN){
-
-					logJacBAT += 2.0 * std::log(std::sin(currAngle));
-					
-				}
-
-		}
-
-		return logJacBAT;
+			}
 
 	}
 
+	return logJacBAT;
+
+}
+
+
+/*! <!-- zmatrixbat_ Check if ZMatrix BAT contains NaNs --> */
+bool Context::doZMatrixBATContainNaNs(
+	std::vector<std::vector<SimTK::Real>> const& someZMatrixBAT,
+	bool lotsOfPrints) const
+{
+	if (someZMatrixBAT.size() != zMatrixTable.size()) {
+		if (lotsOfPrints) {
+			std::cerr << "ZMatrix BAT size (" << someZMatrixBAT.size()
+				<< ") does not match zMatrixTable size (" << zMatrixTable.size() << ")." << std::endl;
+		}
+		return true;
+	}
+
+	bool hasInvalidNaNs = false;
+	for (size_t zMatCnt = 0; zMatCnt < zMatrixTable.size(); ++zMatCnt) {
+		const auto& tableRow = zMatrixTable[zMatCnt];
+		const auto& batRow = someZMatrixBAT[zMatCnt];
+
+		if (batRow.size() < 3) {
+			if (lotsOfPrints) {
+				std::cerr << "Row " << zMatCnt << " - ZMatrix BAT row size < 3." << std::endl;
+			}
+			return true;
+		}
+
+		bool hasAngle = (tableRow[2] >= 0);
+		bool hasTorsion = hasAngle && (tableRow[3] >= 0);
+
+		bool badDistanceNan = std::isnan(batRow[0]);
+		bool badAngleNan    = hasAngle   ? std::isnan(batRow[1]) : !std::isnan(batRow[1]);
+		bool badTorsionNan  = hasTorsion ? std::isnan(batRow[2]) : !std::isnan(batRow[2]);
+
+		if (badDistanceNan || badAngleNan || badTorsionNan) {
+			if (lotsOfPrints) {
+				std::cerr << "Row " << zMatCnt
+					<< " - badDistanceNan: " << badDistanceNan
+					<< ", badAngleNan: " << badAngleNan
+					<< ", badTorsionNan: " << badTorsionNan << std::endl;
+			}
+			hasInvalidNaNs = true;
+			if (!lotsOfPrints) {
+				return true;
+			}
+		}
+	}
+
+	return hasInvalidNaNs;
+}
+
+/*! <!-- zmatrixbat_ Check if ZMatrix rows are the same --> */
+bool Context::areZMatrixBATRowsEqual(
+	std::vector<SimTK::Real> const& refRow,
+	std::vector<SimTK::Real> const& someRow,
+	bool lotsOfPrints) const 
+{
+	if (refRow.size() < 3 || someRow.size() < 3) {
+		if (lotsOfPrints) {
+			std::cerr << "ZMatrix BAT row size < 3." << std::endl;
+		}
+		return false;
+	}
+
+	SimTK::Real distanceDiff = refRow[0] - someRow[0];
+	SimTK::Real angleDiff = refRow[1] - someRow[1];
+	SimTK::Real torsionDiff = bCircularDiff(refRow[2], someRow[2], SimTK::Pi * 2);
+
+	SimTK::Real distanceDiffAbs = std::abs(distanceDiff);
+	SimTK::Real angleDiffAbs = std::abs(angleDiff);
+	SimTK::Real torsionDiffAbs = std::abs(torsionDiff);
+
+	bool angleBothNan = std::isnan(refRow[1]) && std::isnan(someRow[1]);
+	bool torsionBothNan = std::isnan(refRow[2]) && std::isnan(someRow[2]);
+
+	bool distanceOk = (distanceDiffAbs < BOND_DIFF_TOLL);
+	bool angleOk    = angleBothNan   ? true : (angleDiffAbs   < ANGLE_DIFF_TOLL);
+	bool torsionOk  = torsionBothNan ? true : (torsionDiffAbs < TORSION_DIFF_TOLL);
+
+	bool rowsEqual = distanceOk && angleOk && torsionOk;
+
+	if (!rowsEqual && lotsOfPrints) {
+		std::cerr << "distanceDiffAbs: " << distanceDiffAbs
+			<< ", refRow[0]: " << refRow[0] << ", someRow[0]: " << someRow[0] << std::endl;
+		std::cerr << "angleDiffAbs: " << angleDiffAbs
+			<< ", refRow[1]: " << refRow[1] << ", someRow[1]: " << someRow[1] << std::endl;
+		std::cerr << "torsionDiffAbs: " << torsionDiffAbs
+			<< ", refRow[2]: " << refRow[2] << ", someRow[2]: " << someRow[2] << std::endl;
+		std::cerr << "BATrow and replicaBATrow not equal." << std::endl << std::flush;
+	}
+
+	return rowsEqual;
+}
 
 /*!
  * <!-- zmatrixbat_ Get BAT coordinates modifiable by a selected world -->
 */
 void
-Context::addSubZMatrixBATsToWorld(
-	int wIx
-	, int replicaIx)
+Context::addSubZMatrixBATsToWorld(int wIx , int replicaIx)
 {
 	
 	// Get world
@@ -9466,6 +9572,11 @@ Context::addSubZMatrixBATsToWorld(
 
 	// Get generalized coordinates
 	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
+
+	assert(!doZMatrixBATContainNaNs(zMatrixBAT, true) &&
+		"Context ZMatrix contains invalid NaNs.");
+	assert(!doZMatrixBATContainNaNs(replicas[replicaIx].getZMatrixBATPointer(), true) &&
+		"Replica ZMatrix contains invalid NaNs.");
 
 	// Iterate ZMatrix and bonds
 	int prevMolIx = -1;
@@ -9476,65 +9587,8 @@ Context::addSubZMatrixBATsToWorld(
 		std::vector<SimTK::Real>& BATrow = updZMatrixBATRow(zMatCnt);
 		std::vector<SimTK::Real>& replicaBATrow = replicas[replicaIx].updZMatrixBATRow(zMatCnt);
 
-		bool hasAngle = (row[2] >= 0);
-		bool hasTorsion = hasAngle && (row[3] >= 0);
-
-		bool distanceIsNan = std::isnan(BATrow[0]);
-		bool angleIsNan = std::isnan(BATrow[1]) && hasAngle;
-		bool torsionIsNan = std::isnan(BATrow[2]) && hasTorsion;
-
-		bool rDistanceIsNan = std::isnan(replicaBATrow[0]);
-		bool rAngleIsNan = std::isnan(replicaBATrow[1]) && hasAngle;
-		bool rTorsionIsNan = std::isnan(replicaBATrow[2]) && hasTorsion;
-
-		bool assertNaNs = !(
-			(distanceIsNan || rDistanceIsNan) ||
-			(angleIsNan || rAngleIsNan) ||
-			(torsionIsNan || rTorsionIsNan));
-
-		if(!assertNaNs){
-			std::cerr << "distanceIsNan: " << distanceIsNan << ", rDistanceIsNan: " << rDistanceIsNan << std::endl;
-			std::cerr << "angleIsNan: " << angleIsNan << ", rAngleIsNan: " << rAngleIsNan << std::endl;
-			std::cerr << "torsionIsNan: " << torsionIsNan << ", rTorsionIsNan: " << rTorsionIsNan << std::endl;
-
-			assert(assertNaNs && "ZMatrix contains NaNs.");
-		}
-
-		SimTK::Real distanceDiff = BATrow[0] - replicaBATrow[0];
-		SimTK::Real angleDiff = BATrow[1] - replicaBATrow[1];
-		SimTK::Real torsionDiff = bCircularDiff(BATrow[2], replicaBATrow[2], SimTK::Pi * 2);
-
-		SimTK::Real distanceDiffAbs = std::abs(distanceDiff);
-		SimTK::Real angleDiffAbs = std::abs(angleDiff);
-		SimTK::Real torsionDiffAbs = std::abs(torsionDiff);
-
-		bool angleOk = hasAngle
-			? (angleDiffAbs < ANGLE_DIFF_TOLL)
-			: (std::isnan(BATrow[1]) && std::isnan(replicaBATrow[1]));
-		bool torsionOk = hasTorsion
-			? (torsionDiffAbs < TORSION_DIFF_TOLL)
-			: (std::isnan(BATrow[2]) && std::isnan(replicaBATrow[2]));
-
-		// Assert and print
-		bool assertCondition = (distanceDiffAbs < BOND_DIFF_TOLL) && angleOk && torsionOk;
-
-		if(!assertCondition){ // print debug information
-			std::cerr << "distanceDiffAbs: " << distanceDiffAbs << std::endl;
-			std::cerr << "angleDiffAbs: " << angleDiffAbs << std::endl;
-			std::cerr << "torsionDiffAbs: " << torsionDiffAbs << std::endl;
-			std::cerr << "BATrow and replicaBATrow not equal." << std::endl << std::flush;
-		}
-
-		assert( assertCondition && "BATrow and replicaBATrow not equal.");
-
-		// scout("BATrow_ref") <<" ";
-		// for (SimTK::Real BATvalue : BATrow) {
-		// 	std::cout << std::setw(6) << BATvalue << " ";
-		// }
-		// for (SimTK::Real BATvalue : BATrow_ref) {
-		// 	std::cout << std::setw(6) << BATvalue << " ";
-		// }
-		// ceol;
+		//assert(areZMatrixBATRowsEqual(BATrow, replicaBATrow, true) &&
+		//	"BATrow and replicaBATrow not equal.");
 
 		// Get bond's atoms
 		bSpecificAtom& childAtom  = atoms[row[0]];

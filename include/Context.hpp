@@ -1249,6 +1249,29 @@ private:
 	SimTK::Real
 	calcInternalBATJacobianLog(void);
 
+
+	/**
+	* @brief Check if a ZMatrix BAT contains invalid NaNs relative to zMatrixTable
+	* @param someZMatrixBAT The BAT matrix to check
+	* @param lotsOfPrints If true, print detailed NaN diagnostics on failure
+	* @return True if invalid NaNs (or missing expected NaNs) are found, false otherwise
+	*/
+	bool doZMatrixBATContainNaNs(
+		std::vector<std::vector<SimTK::Real>> const& someZMatrixBAT,
+		bool lotsOfPrints = false) const ;
+
+	/**	
+	* @brief Check if two ZMatrix BAT rows are the same
+	* @param refRow The BAT row from the current context
+	* @param someRow The BAT row from the replica context
+	* @param lotsOfPrints If true, print detailed comparison information
+	* @return True if the rows are considered equal, false otherwise
+	*/
+	bool areZMatrixBATRowsEqual(
+		std::vector<SimTK::Real> const& refRow,
+		std::vector<SimTK::Real> const& someRow,
+		bool lotsOfPrints = false) const ;
+
 	/**
 	* @brief zmatrixbat_ Add BAT coordinates 
 	* @param

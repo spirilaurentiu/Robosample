@@ -612,7 +612,7 @@ Replica::calcInternalBATJacobianLog(void)
 				// Get bond term
 				SimTK::Real currBond = zMatrixBAT[zCnt][0];
 				
-				if(currBond != SimTK::NaN){
+				if(!std::isnan(currBond)){
 				
 					logJacBAT += 4.0 * std::log(currBond);
 				}
@@ -620,7 +620,7 @@ Replica::calcInternalBATJacobianLog(void)
 				// Get the angle term
 				SimTK::Real currAngle = zMatrixBAT[zCnt][1];
 
-				if(currAngle != SimTK::NaN){
+				if(!std::isnan(currAngle)){
 
 					logJacBAT += 2.0 * std::log(std::sin(currAngle));
 					
